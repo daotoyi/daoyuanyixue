@@ -454,6 +454,15 @@ const JIEPAN_PROMPTS = {
   health: '请以资深命理师口吻，结合八字分析此人【健康状况】：体质特点、易患方面的提示与养生建议。语言专业亲切，不超过300字。',
 }
 
+/* 奇门遁甲 AI 解盘模块 */
+const QIMEN_PROMPTS = {
+  zongping: '请以奇门遁甲大师口吻，结合该奇门盘分析【整体格局】：值符值使状态、吉凶门星组合、用神所处宫位提示当前时运特点，给出3-5条实用建议，语言专业亲切，不超过300字。',
+  yongshen: '请以奇门遁甲大师口吻，结合该奇门盘分析【用神方位】：有利方位、求谋方向、出行宜忌，提示当前最应把握的方向。语言专业亲切，不超过300字。',
+  career: '请以奇门遁甲大师口吻，结合该奇门盘分析此人【事业前程】：当前职场处境、适合的行业方位、发展建议与时机提示。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  wealth: '请以奇门遁甲大师口吻，结合该奇门盘分析此人【财富格局】：财运吉凶、求财方位与方式、理财建议与忌讳。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  marriage: '请以奇门遁甲大师口吻，结合该奇门盘分析此人【婚姻感情】：感情状态、相处方位提示、婚恋建议与注意事项。给出3-5条实用建议，语言专业亲切，不超过300字。',
+}
+
 async function aiJiepan(data) {
   // 优先环境变量, 其次本地配置文件 (config.local.js 已被 gitignore)
   let key = process.env.DEEPSEEK_KEY
@@ -466,14 +475,25 @@ async function aiJiepan(data) {
   }
   if (!key) return fail('AI 服务未配置（需设置 DEEPSEEK_KEY）')
   const { module } = data
-  if (!JIEPAN_PROMPTS[module]) return fail('未知解盘模块')
-  const baziInfo = data.bazi || {}
-  const prompt = `【八字信息】性别:${baziInfo.gender || '男'}，四柱:${baziInfo.ganZhi ? baziInfo.ganZhi.join(' ') : ''}，五行分布:${baziInfo.wxText || ''}，日主:${baziInfo.dayGanName || ''}${baziInfo.strength ? '（' + baziInfo.strength + '）' : ''}，空亡:${baziInfo.kongwang || ''}。\n${JIEPAN_PROMPTS[module]}`
+  // 奇门解盘: data.qimen 存在时走奇门模板
+  const qimenInfo = data.qimen
+  const prompts = qimenInfo ? QIMEN_PROMPTS : JIEPAN_PROMPTS
+  if (!prompts[module]) return fail('未知解盘模块')
+  let prompt, system
+  if (qimenInfo) {
+    const g = (list) => list.map((p) => `${p.palace}宫 ${p.tian || '-'}/${p.di || '-'} ${p.door || '无门'} ${p.star || ''} ${p.shen || ''}`).join('；')
+    prompt = `【奇门盘信息】${qimenInfo.ju}，起局:${qimenInfo.qiJu === 'zhirun' ? '置闰' : '拆补'}，排盘:${qimenInfo.paiPan === 'feipan' ? '飞盘' : '转盘'}，节气:${qimenInfo.jieqi || ''}，四柱:${qimenInfo.sizhu || ''}，旬首:${qimenInfo.xunName || ''}${qimenInfo.xunShouQi || ''}，空亡:${qimenInfo.xunKong || ''}，值符:${qimenInfo.zhiFu || ''}，值使:${qimenInfo.zhiShi || ''}，马星:${qimenInfo.maZhi || ''}。九宫：${g(qimenInfo.palaces || [])}。\n${prompts[module]}`
+    system = '你是一位精通奇门遁甲、传统术数文化的资深大师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。'
+  } else {
+    const baziInfo = data.bazi || {}
+    prompt = `【八字信息】性别:${baziInfo.gender || '男'}，四柱:${baziInfo.ganZhi ? baziInfo.ganZhi.join(' ') : ''}，五行分布:${baziInfo.wxText || ''}，日主:${baziInfo.dayGanName || ''}${baziInfo.strength ? '（' + baziInfo.strength + '）' : ''}，空亡:${baziInfo.kongwang || ''}。\n${prompts[module]}`
+    system = '你是一位精通子平八字、传统命理文化的资深命理师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。'
+  }
   try {
     const res = await httpGetJson('https://api.deepseek.com/chat/completions', { key }, {
       model: 'deepseek-chat',
       messages: [
-        { role: 'system', content: '你是一位精通子平八字、传统命理文化的资深命理师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。' },
+        { role: 'system', content: system },
         { role: 'user', content: prompt },
       ],
       temperature: 0.8,

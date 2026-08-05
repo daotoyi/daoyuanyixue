@@ -339,16 +339,111 @@
 
     <!-- ===== 奇门遁甲 ===== -->
     <view v-else-if="tab === 'qimen'" class="pp-body">
-      <view class="qm-grid">
-        <view class="qm-cell" v-for="p in data.qimen.palaces" :key="p.gong">
-          <text class="qm-gong">{{ p.gong }}</text>
-          <text class="qm-palace">{{ p.palace }}{{ p.element }}</text>
-          <text class="qm-door">{{ p.door }}</text>
-          <text class="qm-star">{{ p.star }}</text>
+      <!-- 内容行: 可手动填写 -->
+      <view class="qm-content-row">
+        <text class="qm-c-label">内容</text>
+        <input class="qm-c-input" v-model="qmContent" placeholder="可手动填写备注（如：出行吉凶 / 择日）" placeholder-class="qm-c-ph" />
+      </view>
+
+      <!-- 时间(农历+阳历) + 旬首/局数 -->
+      <view class="qm-head">
+        <view class="qm-head-l">
+          <text class="qm-lunar">农历 {{ data.bazi.lunarText }}</text>
+          <text class="qm-solar">{{ data.bazi.solarText }}</text>
+        </view>
+        <view class="qm-head-r">
+          <text class="qm-xun">旬首 {{ data.qimen.xunName }}{{ data.qimen.xunShouQi }}</text>
+          <text class="qm-ju">{{ data.qimen.ju }} · {{ data.qimen.jieqi }}</text>
         </view>
       </view>
-      <view class="br-line"><text class="br-k">日干支：</text><text class="br-v">{{ data.qimen.dayName }}</text></view>
-      <view class="pp-tip">※ 简化排盘，仅供参考</view>
+
+      <!-- 元信息: 排盘方式/起局方式/四柱空亡/旬首/局数/值符/值使/马星 -->
+      <view class="qm-meta">
+        <view class="qm-meta-row"><text class="qm-mk">方式</text><text class="qm-mv">{{ qmPaiPanText }} · {{ qmQiJuText }}</text></view>
+        <view class="qm-meta-row"><text class="qm-mk">四柱</text><text class="qm-mv">{{ data.bazi.ganZhi.join(' ') }}　空亡 {{ data.bazi.kongwang }}</text></view>
+        <view class="qm-meta-row"><text class="qm-mk">旬首</text><text class="qm-mv">{{ data.qimen.xunName }}{{ data.qimen.xunShouQi }} · 落{{ data.qimen.xunShouGong }}宫</text></view>
+        <view class="qm-meta-row"><text class="qm-mk">局数</text><text class="qm-mv">{{ data.qimen.ju }}</text></view>
+        <view class="qm-meta-row"><text class="qm-mk">值符</text><text class="qm-mv">{{ data.qimen.zhiFu }}</text></view>
+        <view class="qm-meta-row"><text class="qm-mk">值使</text><text class="qm-mv">{{ data.qimen.zhiShi }}</text></view>
+        <view class="qm-meta-row"><text class="qm-mk">马星</text><text class="qm-mv">驿马在{{ data.qimen.maZhi }}</text></view>
+      </view>
+
+      <!-- 开关按钮: 地盘八神 / 长生状态 (填充色) -->
+      <view class="qm-toggles">
+        <view class="qm-toggle" :class="{ on: showDiShen }" @tap="showDiShen = !showDiShen"><text>地盘八神</text></view>
+        <view class="qm-toggle" :class="{ on: showChangSheng }" @tap="showChangSheng = !showChangSheng"><text>长生状态</text></view>
+      </view>
+
+      <!-- 九宫盘 -->
+      <view class="qm-grid">
+        <view class="qm-cell" v-for="p in data.qimen.palaces" :key="p.gong">
+          <view class="qm-gong">{{ p.name }}</view>
+          <view class="qm-palace">{{ p.palace }}{{ p.element }}</view>
+          <view class="qm-shen" v-if="p.shen">{{ showDiShen ? (p.diShen || '') : p.shen }}</view>
+          <view class="qm-tian-di">
+            <text class="qm-tian" :class="'wx-' + qmWxOf(p.tian)">{{ p.tian || '—' }}</text>
+            <text class="qm-di" :class="'wx-' + qmWxOf(p.di)">{{ p.di || '—' }}</text>
+          </view>
+          <view class="qm-chs" v-if="showChangSheng && p.changSheng">{{ p.changSheng }}</view>
+          <view class="qm-door">{{ p.door || (p.gong === 5 ? '寄坤' : '—') }}</view>
+          <view class="qm-star">{{ p.star || '' }}</view>
+          <view class="qm-ge" v-if="p.ge && p.ge.length">
+            <text v-for="g in p.ge" :key="g" :class="'ge-' + qmGeClass(g)">{{ g }}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 格局示意 (图例) -->
+      <view class="qm-legend">
+        <view class="qm-lg-item"><text class="ge-dot ge-red"></text>入墓</view>
+        <view class="qm-lg-item"><text class="ge-dot ge-orange"></text>击刑</view>
+        <view class="qm-lg-item"><text class="ge-dot ge-purple"></text>门迫</view>
+        <view class="qm-lg-item"><text class="ge-dot ge-darkred"></text>刑+墓</view>
+        <view class="qm-lg-item"><text class="ge-dot ge-green"></text>驿马</view>
+      </view>
+
+      <!-- AI 智能解盘 (仿八字) -->
+      <view class="pp-block jp-section">
+        <view class="pp-block-head">AI 智能解盘</view>
+        <view class="jp-block" v-for="m in qmFreeModules" :key="m.key">
+          <view class="jp-block-head" @tap="toggleQmJp(m.key)">
+            <text class="jp-block-icon">{{ m.icon }}</text>
+            <text class="jp-block-name">{{ m.name }}</text>
+            <text class="jp-free-tag">免费</text>
+            <text class="jp-arrow">{{ qmOpenJp[m.key] ? '▲' : '▼' }}</text>
+          </view>
+          <view class="jp-content" v-if="qmOpenJp[m.key]">
+            <view class="jp-ai-loading" v-if="qmAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+            <text class="jp-para" v-for="(t, i) in qmData[m.key]" :key="i">{{ t }}</text>
+            <text class="jp-ai-tag" v-if="qmAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+          </view>
+        </view>
+        <view class="jp-block paid" v-for="m in qmPaidModules" :key="m.key">
+          <view class="jp-block-head" @tap="unlockQmJp(m)">
+            <text class="jp-block-icon">{{ m.icon }}</text>
+            <text class="jp-block-name">{{ m.name }}</text>
+            <view class="jp-paid-tag">
+              <text v-if="!isQmUnlocked(m.key)">¥9.9 解锁</text>
+              <text v-else class="jp-unlocked">已解锁</text>
+            </view>
+            <text class="jp-arrow">{{ qmOpenJp[m.key] ? '▲' : '▼' }}</text>
+          </view>
+          <view class="jp-content" v-if="qmOpenJp[m.key] && isQmUnlocked(m.key)">
+            <view class="jp-ai-loading" v-if="qmAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+            <text class="jp-para" v-for="(t, i) in qmData[m.key]" :key="i">{{ t }}</text>
+            <text class="jp-ai-tag" v-if="qmAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+          </view>
+          <view class="jp-lock" v-if="!isQmUnlocked(m.key) && qmOpenJp[m.key]">
+            <text class="jp-lock-icon">🔒</text>
+            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+            <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>¥9.9 立即解锁</text></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 保存排盘 (填充色按钮) -->
+      <view class="qm-save" @tap="saveQimen"><text>💾 保存此盘</text></view>
+      <view class="pp-tip">※ 起局/排盘为简化近似推算，仅供学习参考</view>
     </view>
 
     <!-- ===== 紫微斗数 ===== -->
@@ -408,6 +503,123 @@ const liushiList = ref([])
 const HISTORY_KEY = 'paipan_history'
 const showHistory = ref(false)
 const historyList = ref([])
+
+/* ===== 奇门遁甲 ===== */
+const qmContent = ref('')
+const showDiShen = ref(false)
+const showChangSheng = ref(false)
+const qmPaiPanText = computed(() => (data.value && data.value.qimen && data.value.qimen.paiPan === 'feipan' ? '飞盘' : '转盘'))
+const qmQiJuText = computed(() => (data.value && data.value.qimen && data.value.qimen.qiJu === 'zhirun' ? '置闰' : '拆补'))
+function qmWxOf(g) {
+  if (!g) return ''
+  const idx = GAN.indexOf(g)
+  return idx >= 0 ? GAN_WX[idx] : ''
+}
+function qmGeClass(g) {
+  if (g === '入墓') return 'red'
+  if (g === '击刑') return 'orange'
+  if (g === '门迫') return 'purple'
+  if (g.includes('墓')) return 'darkred'
+  if (g === '驿马') return 'green'
+  return 'red'
+}
+/* 奇门 AI 解盘 (仿八字: 免费2 + 付费3) */
+const qmData = ref({ zongping: [], yongshen: [], career: [], wealth: [], marriage: [] })
+const qmAiLoading = ref({ zongping: false, yongshen: false, career: false, wealth: false, marriage: false })
+const qmAiDone = ref({})
+const qmOpenJp = ref({ zongping: true, yongshen: false, career: false, wealth: false, marriage: false })
+const QM_PAID_KEY = 'qimen_paid_v1'
+const qmFreeModules = [
+  { key: 'zongping', name: '奇门总评', icon: '☯' },
+  { key: 'yongshen', name: '用神方位', icon: '🧭' },
+]
+const qmPaidModules = [
+  { key: 'career', name: '事业前程', icon: '💼' },
+  { key: 'wealth', name: '财富格局', icon: '💰' },
+  { key: 'marriage', name: '婚姻感情', icon: '💞' },
+]
+function qmInfoPayload() {
+  const q = data.value.qimen
+  return {
+    ju: q.ju, qiJu: q.qiJu, paiPan: q.paiPan, jieqi: q.jieqi,
+    sizhu: data.value.bazi.ganZhi.join(' '),
+    xunName: q.xunName, xunShouQi: q.xunShouQi, xunKong: q.xunKong,
+    zhiFu: q.zhiFu, zhiShi: q.zhiShi, maZhi: q.maZhi,
+    palaces: q.palaces.map((p) => ({ palace: p.palace, tian: p.tian, di: p.di, door: p.door, star: p.star, shen: p.shen })),
+  }
+}
+function loadAiQimen(key) {
+  if (qmAiLoading.value[key]) return
+  qmAiLoading.value[key] = true
+  aiJiepan({ module: key, qimen: qmInfoPayload() })
+    .then((res) => {
+      if (res && res.content && res.content.length) {
+        qmData.value[key] = res.content
+        qmAiDone.value[key] = true
+      }
+    })
+    .catch(() => {})
+    .finally(() => { qmAiLoading.value[key] = false })
+}
+function toggleQmJp(key) {
+  qmOpenJp.value[key] = !qmOpenJp.value[key]
+  if (qmOpenJp.value[key] && !qmAiDone.value[key] && !qmData.value[key].length) loadAiQimen(key)
+}
+function unlockQmJp(m) {
+  qmOpenJp.value[m.key] = !qmOpenJp.value[m.key]
+  if (qmOpenJp.value[m.key] && isQmUnlocked(m.key) && !qmAiDone.value[m.key]) loadAiQimen(m.key)
+}
+function isQmUnlocked(key) {
+  try {
+    const paid = uni.getStorageSync(QM_PAID_KEY) || []
+    return paid.includes(key)
+  } catch (e) {
+    return false
+  }
+}
+function payQmJiepan() {
+  uni.showModal({
+    title: '深入奇门解盘 · ¥9.9',
+    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
+    confirmText: '确认支付 ¥9.9',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      try {
+        const paid = uni.getStorageSync(QM_PAID_KEY) || []
+        qmPaidModules.forEach((m) => {
+          if (!paid.includes(m.key)) paid.push(m.key)
+        })
+        uni.setStorageSync(QM_PAID_KEY, paid)
+        uni.showToast({ title: '解锁成功', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: '解锁失败', icon: 'none' })
+      }
+    },
+  })
+}
+/* 保存奇门盘到历史 */
+function saveQimen() {
+  try {
+    let list = uni.getStorageSync(HISTORY_KEY) || []
+    if (!Array.isArray(list)) list = []
+    const now = new Date()
+    const p = (n) => String(n).padStart(2, '0')
+    const rec = {
+      ts: Date.now(),
+      time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+      label: `奇门 ${data.value.qimen.ju} · ${data.value.qimen.paiPan === 'feipan' ? '飞盘' : '转盘'}${qmContent.value ? ' · ' + qmContent.value : ''}`,
+      gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
+      data: data.value,
+    }
+    list.unshift(rec)
+    if (list.length > 20) list = list.slice(0, 20)
+    uni.setStorageSync(HISTORY_KEY, list)
+    uni.showToast({ title: '已保存到历史', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '保存失败', icon: 'none' })
+  }
+}
 
 /* 四柱表横向滑动位置 (下方 藏干/纳音/长生/空亡/神煞 表格同步) */
 const gridLeft = ref(0)
@@ -537,11 +749,12 @@ onLoad((options) => {
 /* 应用排盘数据 (新盘 / 历史盘通用): 重置联动状态 + 补十二长生 + 生成解盘 */
 function applyData(d) {
   data.value = d
-  // 四柱补充十二长生 (日干为基准, 各柱地支查状态)
+  // 四柱补充十二长生 (日干为基准, 各柱地支查状态) + ganZhi (四柱输入模式缺)
   const dayGan = d.bazi.pillars[2].g
   d.bazi.pillars.forEach((p) => {
     if (!p.changsheng) p.changsheng = changShengOf(dayGan, p.z)
   })
+  if (!d.bazi.ganZhi) d.bazi.ganZhi = d.bazi.pillars.map((p) => p.name)
   dyOpen.value = -1
   dyYears.value = []
   lnYear.value = null
@@ -1015,29 +1228,128 @@ function payJiepan() {
 .wx-水 { color: #1565c0; }
 
 /* 奇门 */
+/* 内容行 (可手动填写) */
+.qm-content-row {
+  display: flex;
+  align-items: center;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 10rpx 18rpx;
+  margin-bottom: 16rpx;
+}
+.qm-c-label { font-size: 22rpx; color: #857563; flex-shrink: 0; margin-right: 14rpx; }
+.qm-c-input { flex: 1; font-size: 24rpx; color: #42372c; height: 56rpx; }
+.qm-c-ph { color: #b3a595; }
+/* 头部: 农历+阳历 + 旬首/局数 */
+.qm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #4e3420, #6e4a26);
+  border-radius: 12rpx;
+  padding: 16rpx 22rpx;
+  margin-bottom: 16rpx;
+}
+.qm-head-l { display: flex; flex-direction: column; }
+.qm-lunar { font-size: 26rpx; font-weight: 600; color: #f0e6cd; }
+.qm-solar { margin-top: 4rpx; font-size: 18rpx; color: rgba(240, 230, 205, 0.7); }
+.qm-head-r { display: flex; flex-direction: column; align-items: flex-end; }
+.qm-xun { font-size: 24rpx; font-weight: 600; color: #c4a484; }
+.qm-ju { margin-top: 4rpx; font-size: 18rpx; color: rgba(240, 230, 205, 0.7); }
+/* 元信息 */
+.qm-meta {
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+.qm-meta-row { display: flex; padding: 6rpx 0; }
+.qm-mk { width: 110rpx; font-size: 22rpx; color: #857563; flex-shrink: 0; }
+.qm-mv { flex: 1; font-size: 24rpx; color: #42372c; font-weight: 500; }
+/* 开关按钮 (填充色) */
+.qm-toggles { display: flex; gap: 14rpx; margin-bottom: 16rpx; }
+.qm-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 68rpx;
+  border-radius: 999rpx;
+  background: #efe7d8;
+  border: 1rpx solid #d8ccb8;
+}
+.qm-toggle text { font-size: 24rpx; color: #857563; }
+.qm-toggle.on { background: linear-gradient(135deg, #8c5a2b, #6e4a26); border-color: #8c5a2b; }
+.qm-toggle.on text { color: #fefbf6; font-weight: 500; }
+/* 九宫盘 */
 .qm-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12rpx;
+  gap: 10rpx;
   background: #fefbf6;
   border: 1rpx solid #efe7d8;
   border-radius: 16rpx;
-  padding: 20rpx;
+  padding: 16rpx;
 }
 .qm-cell {
   background: #f8f3ea;
   border: 1rpx solid #e6dcca;
   border-radius: 10rpx;
-  padding: 16rpx 8rpx;
+  padding: 10rpx 6rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 150rpx;
+  min-height: 200rpx;
+  position: relative;
 }
-.qm-gong { font-size: 20rpx; color: #b3a595; }
-.qm-palace { font-size: 26rpx; font-weight: 600; color: #4e3420; margin-top: 6rpx; }
-.qm-door { font-size: 22rpx; color: #8c5a2b; margin-top: 6rpx; }
-.qm-star { font-size: 20rpx; color: #857563; margin-top: 4rpx; }
+.qm-gong { font-size: 18rpx; color: #b3a595; }
+.qm-palace { font-size: 24rpx; font-weight: 600; color: #4e3420; margin-top: 2rpx; }
+.qm-shen { margin-top: 2rpx; font-size: 20rpx; color: #6e7f5a; font-weight: 500; }
+.qm-tian-di { display: flex; gap: 10rpx; margin-top: 6rpx; }
+.qm-tian { font-size: 34rpx; font-weight: 700; }
+.qm-di { font-size: 26rpx; font-weight: 500; opacity: 0.75; }
+.qm-chs { margin-top: 2rpx; font-size: 17rpx; color: #8c5a2b; }
+.qm-door { margin-top: 4rpx; font-size: 22rpx; color: #b04a45; font-weight: 500; }
+.qm-star { font-size: 18rpx; color: #857563; margin-top: 2rpx; }
+/* 格局标注 (颜色) */
+.qm-ge { display: flex; flex-wrap: wrap; justify-content: center; gap: 4rpx; margin-top: 6rpx; }
+.qm-ge text { font-size: 17rpx; padding: 1rpx 8rpx; border-radius: 6rpx; color: #fefbf6; }
+.ge-red { background: #b04a45; }
+.ge-orange { background: #d98e32; }
+.ge-purple { background: #7a5c9e; }
+.ge-darkred { background: #8c1f18; }
+.ge-green { background: #2e7d32; }
+/* 图例 */
+.qm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin-top: 14rpx;
+}
+.qm-lg-item { display: flex; align-items: center; font-size: 20rpx; color: #857563; }
+.ge-dot { width: 22rpx; height: 22rpx; border-radius: 50%; margin-right: 8rpx; }
+.ge-dot.ge-red { background: #b04a45; }
+.ge-dot.ge-orange { background: #d98e32; }
+.ge-dot.ge-purple { background: #7a5c9e; }
+.ge-dot.ge-darkred { background: #8c1f18; }
+.ge-dot.ge-green { background: #2e7d32; }
+/* 保存按钮 (填充色) */
+.qm-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #b04a45, #8c3228);
+  margin-top: 20rpx;
+}
+.qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
 
 /* 紫微 */
 .zw-grid {

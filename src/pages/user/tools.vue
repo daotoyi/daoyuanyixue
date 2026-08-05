@@ -108,6 +108,34 @@
           <text class="tp-save-tip">开启后每次排盘自动存入历史</text>
         </view>
 
+        <!-- 奇门专用: 起局方式 + 排盘方式 -->
+        <template v-if="activeTool === 'qimen'">
+          <view class="tp-row">
+            <text class="tp-label">起局方式</text>
+            <view class="tp-seg">
+              <text
+                v-for="q in qiJuModes"
+                :key="q.key"
+                class="tsg"
+                :class="{ on: form.qimen.qiJu === q.key }"
+                @tap="form.qimen.qiJu = q.key"
+              >{{ q.label }}</text>
+            </view>
+          </view>
+          <view class="tp-row">
+            <text class="tp-label">排盘方式</text>
+            <view class="tp-seg">
+              <text
+                v-for="p in paiPanModes"
+                :key="p.key"
+                class="tsg"
+                :class="{ on: form.qimen.paiPan === p.key }"
+                @tap="form.qimen.paiPan = p.key"
+              >{{ p.label }}</text>
+            </view>
+          </view>
+        </template>
+
         <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
         <template v-if="form.bazi.mode === 'solar' || form.bazi.mode === 'lunar'">
           <view class="tp-row">
@@ -190,7 +218,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { fullBazi, liuyao, ziwei, qimen, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
+import { fullBazi, liuyao, ziwei, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
+import { fullQimen } from '../../utils/qimen'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../../utils/cities'
 
@@ -212,6 +241,15 @@ const baziModes = [
   { key: 'solar', label: '阳历' },
   { key: 'lunar', label: '农历' },
   { key: 'gz', label: '四柱' },
+]
+/* 奇门: 起局方式 / 排盘方式 */
+const qiJuModes = [
+  { key: 'chaibu', label: '拆补' },
+  { key: 'zhirun', label: '置闰' },
+]
+const paiPanModes = [
+  { key: 'zhuanpan', label: '转盘' },
+  { key: 'feipan', label: '飞盘' },
 ]
 const lunarYearLabels = Array.from({ length: 201 }, (_, i) => `${1900 + i}年`)
 const lunarMonthLabels = (() => {
@@ -278,6 +316,7 @@ const form = ref({
     district: 0,
   },
   liuren: { date: '2026-08-05', shichen: 6 },
+  qimen: { qiJu: 'chaibu', paiPan: 'zhuanpan' },
 })
 
 const lyResult = ref(null)
@@ -382,8 +421,8 @@ function runPaipan() {
   result.lunarText = `${lunarInfo.ganZhi}年 ${lunarInfo.monthName}${lunarInfo.dayName}`
   if (f.trueSolar) result.solarText += `（真太阳时 ${hour}时）`
 
-  // 奇门 + 紫微 (共用同一时间)
-  const qm = qimen(ly, lm, ld)
+  // 奇门 (完整排盘: 起局/排盘方式) + 紫微 (共用同一时间)
+  const qm = fullQimen(ly, lm, ld, hour, { qiJu: form.value.qimen.qiJu, paiPan: form.value.qimen.paiPan })
   const zw = ziwei(lunarInfo.day, hour)
 
   // 保存排盘历史
