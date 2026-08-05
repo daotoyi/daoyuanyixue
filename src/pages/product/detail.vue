@@ -282,35 +282,35 @@ function buyNow() {
 
 /* 饱满红心 (CSS 绘制) */
 .heart-wrap {
-  width: 56rpx;
-  height: 50rpx;
+  width: 44rpx;
+  height: 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .heart {
-  width: 44rpx;
-  height: 44rpx;
+  width: 34rpx;
+  height: 34rpx;
   background: #d8ccb8;
   transform: rotate(45deg);
   position: relative;
-  border-radius: 6rpx;
+  border-radius: 5rpx;
 }
 .heart::before,
 .heart::after {
   content: '';
   position: absolute;
-  width: 44rpx;
-  height: 44rpx;
+  width: 34rpx;
+  height: 34rpx;
   background: inherit;
   border-radius: 50%;
 }
 .heart::before {
-  left: -22rpx;
+  left: -17rpx;
   top: 0;
 }
 .heart::after {
-  top: -22rpx;
+  top: -17rpx;
   left: 0;
 }
 .heart.on {
