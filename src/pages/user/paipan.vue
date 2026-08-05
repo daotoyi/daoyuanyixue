@@ -531,83 +531,80 @@
           <text class="zw-tag mm" v-if="pos.mmOn">流月{{ pos.mmTag }}</text>
           <text class="zw-tag dd" v-if="pos.ddOn">流日{{ pos.ddTag }}</text>
           <text class="zw-pname" :class="{ on: pos.ming || pos.shen }">{{ pos.name }}</text>
-          <text class="zw-star" :class="{ sh4: s.sihua }" v-for="(s, si) in pos.stars" :key="si">
-            {{ s.name }}<text class="zw-sh" :class="'sh-' + s.sihua" v-if="s.sihua">{{ s.sihua }}</text>
-          </text>
-          <text class="zw-aux" :class="'aux-' + a.kind" v-for="(a, ai) in pos.aux" :key="ai">{{ a.name }}</text>
+          <view class="zw-stars">
+            <text class="zw-star" :class="'st-' + s.kind + (s.sihua ? ' sh4' : '')" v-for="(s, si) in pos.stars" :key="si">
+              {{ s.name }}<text class="zw-sh" :class="'sh-' + s.sihua" v-if="s.sihua">{{ s.sihua }}</text>
+              <text class="zw-lv" :class="'lv-' + s.light">{{ s.light }}</text>
+            </text>
+            <text class="zw-star" :class="'st-' + a.kind" v-for="(a, ai) in pos.aux" :key="'a' + ai">
+              {{ a.name }}<text class="zw-lv" :class="'lv-' + a.light">{{ a.light }}</text>
+            </text>
+          </view>
           <text class="zw-dayun">{{ pos.dayun }}</text>
         </view>
       </view>
       <view class="zw-tip">※ 点击宫位查看三方四正连线；大限按五行局起运，阳男阴女顺行</view>
 
-      <!-- 大限 → 流年 → 流月 → 流日 -->
+      <!-- 大限 → 流年 → 流月 → 流日 (窄格自动换行) -->
       <view class="pp-block">
         <view class="pp-block-head">大限（点击查看流年）</view>
-        <scroll-view scroll-x :show-scrollbar="false">
-          <view class="zw-dy-row">
-            <view
-              class="zw-dy-item"
-              :class="{ on: zwDyOpen === i }"
-              v-for="(dy, i) in data.ziwei.dayun"
-              :key="i"
-              @tap="zwToggleDayun(i)"
-            >
-              <text class="zw-dy-age">{{ dy.start }}-{{ dy.end }}岁</text>
-              <text class="zw-dy-gong">{{ zwGongName(dy.gong) }}</text>
-            </view>
+        <view class="zw-dy-row">
+          <view
+            class="zw-dy-item"
+            :class="{ on: zwDyOpen === i }"
+            v-for="(dy, i) in data.ziwei.dayun"
+            :key="i"
+            @tap="zwToggleDayun(i)"
+          >
+            <text class="zw-dy-age">{{ dy.start }}-{{ dy.end }}岁</text>
+            <text class="zw-dy-gong">{{ zwGongName(dy.gong) }}</text>
           </view>
-        </scroll-view>
+        </view>
 
         <view v-if="zwDyOpen >= 0 && zwYears.length" class="pp-expand">
           <view class="pp-expand-head">流年 · 大限{{ zwDyOpen + 1 }}（点击查看流月）</view>
-          <scroll-view scroll-x :show-scrollbar="false">
-            <view class="zw-dy-row">
-              <view
-                class="zw-dy-item"
-                :class="{ on: zwLnYear === y.year }"
-                v-for="y in zwYears"
-                :key="y.year"
-                @tap="zwToggleLiunian(y)"
-              >
-                <text class="zw-dy-age">{{ y.year }}</text>
-                <text class="zw-dy-gong">{{ y.name }} · {{ ZHI[y.gong] }}宫</text>
-              </view>
+          <view class="zw-dy-row">
+            <view
+              class="zw-dy-item"
+              :class="{ on: zwLnYear === y.year }"
+              v-for="y in zwYears"
+              :key="y.year"
+              @tap="zwToggleLiunian(y)"
+            >
+              <text class="zw-dy-age">{{ y.year }}</text>
+              <text class="zw-dy-gong">{{ y.name }}·{{ ZHI[y.gong] }}</text>
             </view>
-          </scroll-view>
+          </view>
 
           <view v-if="zwLnYear !== null && zwMonths.length" class="pp-expand">
             <view class="pp-expand-head">流月 · {{ zwLnYear }}年（点击查看流日）</view>
-            <scroll-view scroll-x :show-scrollbar="false">
-              <view class="zw-dy-row">
-                <view
-                  class="zw-dy-item"
-                  :class="{ on: zwSelMonth === mm.month }"
-                  v-for="(mm, mi) in zwMonths"
-                  :key="mi"
-                  @tap="zwToggleLiuyue(mm)"
-                >
-                  <text class="zw-dy-age">{{ mm.month }}</text>
-                  <text class="zw-dy-gong">{{ mm.name }} · {{ ZHI[mm.gong] }}宫</text>
-                </view>
+            <view class="zw-dy-row">
+              <view
+                class="zw-dy-item"
+                :class="{ on: zwSelMonth === mm.month }"
+                v-for="(mm, mi) in zwMonths"
+                :key="mi"
+                @tap="zwToggleLiuyue(mm)"
+              >
+                <text class="zw-dy-age">{{ mm.month }}</text>
+                <text class="zw-dy-gong">{{ mm.name }}·{{ ZHI[mm.gong] }}</text>
               </view>
-            </scroll-view>
+            </view>
 
             <view v-if="zwSelMonth && zwDays.length" class="pp-expand">
               <view class="pp-expand-head">流日 · {{ zwSelMonth }}（点击查看落宫）</view>
-              <scroll-view scroll-x :show-scrollbar="false">
-                <view class="zw-dy-row">
-                  <view
-                    class="zw-dy-item"
-                    :class="{ on: zwSelDay === dd.day }"
-                    v-for="(dd, di) in zwDays"
-                    :key="di"
-                    @tap="zwToggleLiuri(dd)"
-                  >
-                    <text class="zw-dy-age">{{ dd.day }}</text>
-                    <text class="zw-dy-gong">{{ dd.name }} · {{ ZHI[dd.gong] }}宫</text>
-                  </view>
+              <view class="zw-dy-row">
+                <view
+                  class="zw-dy-item"
+                  :class="{ on: zwSelDay === dd.day }"
+                  v-for="(dd, di) in zwDays"
+                  :key="di"
+                  @tap="zwToggleLiuri(dd)"
+                >
+                  <text class="zw-dy-age">{{ dd.day }}</text>
+                  <text class="zw-dy-gong">{{ dd.name }}·{{ ZHI[dd.gong] }}</text>
                 </view>
-              </scroll-view>
+              </view>
             </view>
           </view>
         </view>
@@ -677,7 +674,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../../utils/paipan'
-import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf } from '../../utils/ziwei'
+import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../../utils/ziwei'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
 import { aiJiepan, aiAsk } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -937,10 +934,18 @@ const zwGridCells = computed(() => {
     const gong = Number(z)
     const [row, col] = GRID_POS[gong]
     const p = data.value.ziwei.palaces.find((x) => x.gong === gong)
-    const aux = (p ? p.aux : []).map((a) => (typeof a === 'string' ? { name: a, kind: 'ji' } : a))
+    /* 兼容旧历史盘: 补星曜分类/亮度 */
+    const stars = (p ? p.stars : []).map((s) => {
+      const n = typeof s === 'string' ? { name: s } : s
+      return { name: n.name, sihua: n.sihua || '', kind: n.kind || starKind(n.name), light: n.light || lightOf(n.name, gong) }
+    })
+    const aux = (p ? p.aux : []).map((a) => {
+      const o = typeof a === 'string' ? { name: a, kind: 'ji' } : a
+      return { name: o.name, kind: o.kind || starKind(o.name), light: o.light || lightOf(o.name, gong) }
+    })
     return {
       zhi: gong, zhiName: ZHI[gong], row, col, gong,
-      name: p ? p.name : '', stars: p ? p.stars : [], aux,
+      name: p ? p.name : '', stars, aux,
       dayun: p ? p.dayun : '', ming: p ? p.isMing : false, shen: p ? p.isShen : false,
       dyOn: gong === zwDyGong.value, dyTag: zwDyTag.value,
       lnOn: gong === zwLnGong.value, lnTag: zwLnTag.value,
@@ -949,7 +954,8 @@ const zwGridCells = computed(() => {
     }
   })
 })
-/* 三方四正连线 (CSS 旋转线) */
+/* 三方四正连线 (CSS 旋转线, 从宫位边框起点连接) */
+const ZW_CELL = 160 // 宫格近似尺寸 rpx (盘内可用 638/4 ≈ 160)
 const zwLines = computed(() => {
   if (zwSelected.value < 0) return []
   const g = zwSelected.value
@@ -958,17 +964,31 @@ const zwLines = computed(() => {
   const all = [g, sanhe[0], sanhe[1], dui]
   all.forEach((gg) => {
     const [row, col] = GRID_POS[gg]
-    pts[gg] = { x: col * 170 + 85, y: row * 170 + 85 }
+    pts[gg] = { x: col * ZW_CELL + ZW_CELL / 2, y: row * ZW_CELL + ZW_CELL / 2 }
   })
+  /* 从中心点 (x,y) 沿单位方向 (dx,dy) 缩到所在宫格边缘 */
+  const toEdge = (x, y, dx, dy) => {
+    const tx = dx > 0 ? (ZW_CELL / 2) / dx : (dx < 0 ? (-ZW_CELL / 2) / dx : Infinity)
+    const ty = dy > 0 ? (ZW_CELL / 2) / dy : (dy < 0 ? (-ZW_CELL / 2) / dy : Infinity)
+    const t = Math.min(tx, ty)
+    return { x: x + dx * t, y: y + dy * t }
+  }
   const line = (a, b, cls, key) => {
-    const x1 = pts[a].x, y1 = pts[a].y, x2 = pts[b].x, y2 = pts[b].y
-    const dist = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
-    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI
+    const c1 = pts[a], c2 = pts[b]
+    const dx = c2.x - c1.x, dy = c2.y - c1.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (!dist) return null
+    const ux = dx / dist, uy = dy / dist
+    const p1 = toEdge(c1.x, c1.y, ux, uy)   // A 宫边框起点
+    const p2 = toEdge(c2.x, c2.y, -ux, -uy) // B 宫边框终点
+    const nx = p2.x - p1.x, ny = p2.y - p1.y
+    const ndist = Math.sqrt(nx * nx + ny * ny)
+    const angle = Math.atan2(ny, nx) * 180 / Math.PI
     return {
       key, cls,
       style: {
-        left: x1 + 'rpx', top: y1 + 'rpx',
-        width: dist + 'rpx',
+        left: p1.x + 'rpx', top: p1.y + 'rpx',
+        width: ndist + 'rpx',
         transform: 'rotate(' + angle + 'deg)',
       },
     }
@@ -978,7 +998,7 @@ const zwLines = computed(() => {
     line(g, sanhe[1], 'zw-line-sanh', 'b'),
     line(sanhe[0], sanhe[1], 'zw-line-sanh', 'c'),
     line(g, dui, 'zw-line-dui', 'd'),
-  ]
+  ].filter(Boolean)
 })
 function zwSelect(gong) {
   zwSelected.value = zwSelected.value === gong ? -1 : gong
@@ -2033,7 +2053,7 @@ function payJiepan() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6rpx 2rpx;
+  padding: 4rpx 2rpx;
   overflow: hidden;
 }
 .zw-cell.on {
@@ -2041,20 +2061,39 @@ function payJiepan() {
   box-shadow: 0 0 0 3rpx rgba(140, 90, 43, 0.25);
   background: #faf0e0;
 }
-.zw-zhi { font-size: 17rpx; color: #b3a595; }
-.zw-pname { font-size: 20rpx; font-weight: 600; color: #42372c; margin-top: 1rpx; }
+/* 地支: 右下角 */
+.zw-zhi {
+  position: absolute;
+  right: 6rpx;
+  bottom: 3rpx;
+  font-size: 16rpx;
+  color: #b3a595;
+  z-index: 2;
+}
+.zw-pname { font-size: 19rpx; font-weight: 600; color: #42372c; margin-top: 1rpx; }
 .zw-pname.on { color: #b04a45; }
-/* 主星(棕) / 四化星(紫) / 吉星(绿) / 煞星(红) / 四化角标四色 */
-.zw-star { font-size: 19rpx; color: #8c5a2b; font-weight: 500; line-height: 1.35; }
+/* 星曜: 顶部竖排, 主星(棕金)/吉星(绿)/煞星(红)/平星(灰蓝), 四化星(紫) */
+.zw-stars { display: flex; flex-direction: column; align-items: center; margin-top: 1rpx; width: 100%; }
+.zw-star { font-size: 17rpx; font-weight: 500; line-height: 1.4; }
+.zw-star.st-main { color: #8c5a2b; }
+.zw-star.st-ji { color: #2e7d32; }
+.zw-star.st-sha { color: #b04a45; }
+.zw-star.st-ping { color: #3f6f8c; }
 .zw-star.sh4 { color: #7a5c9e; }
-.zw-sh { font-size: 16rpx; font-weight: 600; margin-left: 1rpx; }
+.zw-sh { font-size: 15rpx; font-weight: 600; margin-left: 1rpx; }
 .zw-sh.sh-禄 { color: #2e7d32; }
 .zw-sh.sh-权 { color: #7a5c9e; }
 .zw-sh.sh-科 { color: #3f6f8c; }
 .zw-sh.sh-忌 { color: #b04a45; }
-.zw-aux { font-size: 15rpx; line-height: 1.3; margin-top: 1rpx; }
-.zw-aux.aux-ji { color: #2e7d32; }
-.zw-aux.aux-sha { color: #b04a45; }
+/* 亮度状态 (庙红/旺橙/得绿/利青/平灰/不深灰/陷蓝灰) */
+.zw-lv { font-size: 14rpx; margin-left: 2rpx; }
+.zw-lv.lv-庙 { color: #b04a45; }
+.zw-lv.lv-旺 { color: #d98e32; }
+.zw-lv.lv-得 { color: #2e7d32; }
+.zw-lv.lv-利 { color: #3f6f8c; }
+.zw-lv.lv-平 { color: #a99a85; }
+.zw-lv.lv-不 { color: #857563; }
+.zw-lv.lv-陷 { color: #7a8ba3; }
 /* 联动高亮标记 (大限金/流年红/流月绿/流日蓝) */
 .zw-tag {
   font-size: 14rpx;
@@ -2074,21 +2113,22 @@ function payJiepan() {
 .zw-cell.ddOn { border: 2rpx solid #3f6f8c; }
 .zw-dayun { font-size: 15rpx; color: #b3a595; margin-top: auto; }
 .zw-tip { font-size: 18rpx; color: #b3a595; margin-bottom: 14rpx; }
-/* 大限/流年/流月/流日 联动 */
-.zw-dy-row { display: inline-flex; gap: 6rpx; padding: 2rpx; }
+/* 大限/流年/流月/流日 联动 (窄格, 自动换行) */
+.zw-dy-row { display: flex; flex-wrap: wrap; gap: 6rpx; padding: 2rpx; }
 .zw-dy-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   background: #faf3e9;
   border: 1rpx solid #efe7d8;
-  border-radius: 10rpx;
-  padding: 6rpx 12rpx;
-  min-width: 120rpx;
+  border-radius: 8rpx;
+  padding: 3rpx 4rpx;
+  min-width: 62rpx;
+  box-sizing: border-box;
 }
 .zw-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
-.zw-dy-age { font-size: 14rpx; color: #b3a595; white-space: nowrap; }
-.zw-dy-gong { margin-top: 4rpx; font-size: 22rpx; font-weight: 500; color: #42372c; white-space: nowrap; }
+.zw-dy-age { font-size: 13rpx; color: #b3a595; white-space: nowrap; }
+.zw-dy-gong { margin-top: 2rpx; font-size: 16rpx; font-weight: 500; color: #42372c; white-space: nowrap; }
 
 /* ===== AI 解盘 ===== */
 .jp-section { margin-top: 10rpx; }

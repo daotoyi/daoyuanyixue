@@ -240,7 +240,21 @@
             </view>
           </view>
 
-          <!-- 保存此盘 -->
+          <!-- AI 智能问答 (¥1/次, 参考八字) -->
+          <view class="jp-section">
+            <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+            <view class="ai-q-row">
+              <input class="ai-q-input" v-model="lyAIQuestion" placeholder="向 AI 提问（如：此卦近期财运如何）" placeholder-class="qm-c-ph" />
+              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 ¥1</text></view>
+            </view>
+            <view class="jp-ai-loading" v-if="lyAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
+            <view v-if="lyAIAnswer && lyAIAnswer.length" class="ai-q-answer">
+              <text class="jp-para" v-for="(t, i) in lyAIAnswer" :key="i">{{ t }}</text>
+            </view>
+            <view class="ai-q-tip" v-if="lyAIErr">{{ lyAIErr }}</view>
+          </view>
+
+          <!-- 保存此卦 -->
           <view class="qm-save" @tap="saveLiuyao"><text>💾 保存此卦</text></view>
         </view>
       </view>
@@ -329,7 +343,21 @@
             </view>
           </view>
 
-          <!-- 保存此盘 -->
+          <!-- AI 智能问答 (¥1/次, 参考八字) -->
+          <view class="jp-section">
+            <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+            <view class="ai-q-row">
+              <input class="ai-q-input" v-model="lrAIQuestion" placeholder="向 AI 提问（如：此课出行宜忌）" placeholder-class="qm-c-ph" />
+              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 ¥1</text></view>
+            </view>
+            <view class="jp-ai-loading" v-if="lrAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
+            <view v-if="lrAIAnswer && lrAIAnswer.length" class="ai-q-answer">
+              <text class="jp-para" v-for="(t, i) in lrAIAnswer" :key="i">{{ t }}</text>
+            </view>
+            <view class="ai-q-tip" v-if="lrAIErr">{{ lrAIErr }}</view>
+          </view>
+
+          <!-- 保存此课 -->
           <view class="qm-save" @tap="saveLiuren"><text>💾 保存此课</text></view>
         </view>
       </view>
@@ -347,7 +375,10 @@ import { fullLiuyao } from '../../utils/liuyao'
 import { fullLiuren } from '../../utils/liuren'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../../utils/cities'
-import { aiJiepan } from '../../api/api'
+import { aiJiepan, aiAsk } from '../../api/api'
+import { useUserStore } from '../../store/index'
+
+const userStore = useUserStore()
 
 const tools = [
   { key: 'bazi', label: '四柱八字', icon: '☯' },
@@ -525,6 +556,50 @@ function saveLiuyao() {
   saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value)
 }
 
+/* ===== 六爻 AI 智能问答 (¥1/次, 参考八字) ===== */
+const lyAIQuestion = ref('')
+const lyAIAnswer = ref([])
+const lyAIAsking = ref(false)
+const lyAIErr = ref('')
+function askLyAI() {
+  const q = lyAIQuestion.value.trim()
+  if (!q) {
+    uni.showToast({ title: '请输入问题', icon: 'none' })
+    return
+  }
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: 'AI 智能问答',
+    content: '本次提问将从余额扣除 1 元，是否继续？',
+    confirmText: '确认提问',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      lyAIAsking.value = true
+      lyAIErr.value = ''
+      const ly = lyFull.value
+      const ctx = `六爻卦：${ly.name}（${ly.gong}宫${ly.gongWx}，世爻${ly.shi}应爻${ly.ying}${ly.hasChange ? '，变卦' + ly.cName : ''}），日辰${ly.dayGan}日。六爻：${ly.lines.map((l) => `${l.idx}爻${l.liuqin}${l.zhi}${l.wuxing}${l.shen}${l.isShi ? '(世)' : ''}${l.isYing ? '(应)' : ''}`).join('，')}`
+      aiAsk({ uid: userStore.userInfo.uid, question: q, context: ctx })
+        .then((res2) => {
+          if (res2 && res2.content && res2.content.length) {
+            lyAIAnswer.value = res2.content
+          } else if (res2 && res2.msg) {
+            lyAIErr.value = res2.msg
+          } else {
+            lyAIAnswer.value = ['AI 暂时没有回答，请稍后再试']
+          }
+        })
+        .catch((e) => {
+          lyAIErr.value = (e && e.message) || '提问失败，请稍后再试'
+        })
+        .finally(() => { lyAIAsking.value = false })
+    },
+  })
+}
+
 /* ===== 大六壬 AI 解盘 (仿八字) ===== */
 const LR_PAID_KEY = 'liuren_paid_v1'
 const lrData = ref({ zongping: [], career: [], wealth: [], marriage: [] })
@@ -598,6 +673,50 @@ function payLrJiepan() {
 }
 function saveLiuren() {
   saveHistory('liuren', `大六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
+}
+
+/* ===== 大六壬 AI 智能问答 (¥1/次, 参考八字) ===== */
+const lrAIQuestion = ref('')
+const lrAIAnswer = ref([])
+const lrAIAsking = ref(false)
+const lrAIErr = ref('')
+function askLrAI() {
+  const q = lrAIQuestion.value.trim()
+  if (!q) {
+    uni.showToast({ title: '请输入问题', icon: 'none' })
+    return
+  }
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: 'AI 智能问答',
+    content: '本次提问将从余额扣除 1 元，是否继续？',
+    confirmText: '确认提问',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      lrAIAsking.value = true
+      lrAIErr.value = ''
+      const lr = lrFull.value
+      const ctx = `大六壬：${lr.dayGanZhi}日，月将${lr.yueJiang}，占时${lr.shichen}时，旬首${lr.xunShou}，空亡${lr.kong}。四课：${lr.ke.map((k) => `${k.name}${k.di}上${k.shang}`).join('，')}。三传：${lr.chuan.map((c) => `${c.name}${c.zhi}`).join('→')}`
+      aiAsk({ uid: userStore.userInfo.uid, question: q, context: ctx })
+        .then((res2) => {
+          if (res2 && res2.content && res2.content.length) {
+            lrAIAnswer.value = res2.content
+          } else if (res2 && res2.msg) {
+            lrAIErr.value = res2.msg
+          } else {
+            lrAIAnswer.value = ['AI 暂时没有回答，请稍后再试']
+          }
+        })
+        .catch((e) => {
+          lrAIErr.value = (e && e.message) || '提问失败，请稍后再试'
+        })
+        .finally(() => { lrAIAsking.value = false })
+    },
+  })
 }
 /* 通用保存 (六爻/大六壬) */
 function saveHistory(type, label, gzText, data) {
@@ -1812,4 +1931,32 @@ function runLiuren() {
   margin-top: 20rpx;
 }
 .qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
+/* AI 智能问答 (六爻/大六壬, 参考八字) */
+.qm-c-ph { color: #b3a595; }
+.ai-q-row { display: flex; gap: 14rpx; align-items: center; }
+.ai-q-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #e6dcca;
+  border-radius: 12rpx;
+  padding: 0 18rpx;
+  font-size: 24rpx;
+  color: #42372c;
+}
+.btn-ask {
+  flex-shrink: 0;
+  height: 72rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  padding: 0 28rpx;
+}
+.btn-ask text { font-size: 24rpx; color: #fefbf6; font-weight: 500; }
+.ai-q-answer {
+  margin-top: 14rpx;
+  background: #faf3e9;
+  border-radius: 10rpx;
+  padding: 16rpx 18rpx;
+}
+.ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #b04a45; }
 </style>
