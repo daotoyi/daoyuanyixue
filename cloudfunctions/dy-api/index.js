@@ -677,14 +677,64 @@ async function myBookings(data) {
 
 /* ============ 后台管理 ============ */
 
+/* 权限体系:
+ * - admin (ZHSM001 超级管理员): 全部权限
+ * - staff (ZHSMXXX 内部员工): 仅订单发货 / 商品课程管理 / 直播管理 / 分类 / 概览 / 物流
+ *   无: 系统设置 / 用户管理 / 优惠券 / 动态审核 / 反馈处理
+ */
+
+// 员工允许的接口前缀 (精确匹配在 STAFF_ROUTES)
+const STAFF_ROUTES = [
+  'admin.orders.ship',
+  'admin.orders.refund',
+  'admin.categories.list',
+  'admin.categories.create',
+  'admin.categories.update',
+  'admin.categories.delete',
+  'admin.products.create',
+  'admin.products.update',
+  'admin.products.delete',
+  'admin.courses.create',
+  'admin.courses.update',
+  'admin.courses.delete',
+  'admin.lives.create',
+  'admin.lives.update',
+  'admin.recentOrders',
+  'admin.logistics.list',
+  'admin.dashboard',
+]
+
+// 员工允许查询的集合
+const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'categories', 'course_categories']
+
 async function requireAdmin(data) {
-  if (data.role !== 'admin') {
-    const user = data.uid ? await db.collection('users').where({ uid: data.uid }).limit(1).get() : null
-    if (!user || !user.data[0] || user.data[0].role !== 'admin') {
-      return false
-    }
+  const role = data.opRole || data.role
+  const uid = data.opUid || data.uid
+  if (role === 'admin' || role === 'staff') return true
+  const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
+  if (user && user.data[0]) {
+    const r = user.data[0].role
+    if (r === 'admin' || r === 'staff') return true
   }
-  return true
+  return false
+}
+
+/* 员工权限校验: 返回 true 表示放行 */
+async function requireStaffAllowed(action, data) {
+  const role = data.opRole || data.role
+  const uid = data.opUid || data.uid
+  const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
+  const realRole = role === 'admin' || role === 'staff'
+    ? role
+    : (user && user.data[0] ? user.data[0].role : '')
+  // 超管全部放行
+  if (realRole === 'admin') return true
+  if (realRole !== 'staff') return false
+  // 员工: 白名单接口
+  if (STAFF_ROUTES.includes(action)) return true
+  // admin.list: 仅允许指定集合
+  if (action === 'admin.list' && data.collection && STAFF_COLLECTIONS.includes(data.collection)) return true
+  return false
 }
 
 async function adminDashboard() {
@@ -843,9 +893,12 @@ async function adminOrderRefund(data) {
 
 async function adminUserUpdate(data) {
   const doc = {}
-  ;['nickname', 'vip_level', 'balance', 'role', 'status'].forEach((k) => {
+  ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
+  if (data.dao_code) {
+    doc.invite_code = data.dao_code
+  }
   await db.collection('users').where({ uid: Number(data.uid) }).update(doc)
   return ok({ updated: true })
 }
@@ -1058,6 +1111,9 @@ exports.main = async (event = {}) => {
   if (String(action).startsWith('admin.')) {
     const isAdmin = await requireAdmin(data)
     if (!isAdmin) return fail('无管理员权限', 403)
+    // 员工权限细分
+    const allowed = await requireStaffAllowed(action, data)
+    if (!allowed) return fail('该操作需要超级管理员权限', 403)
   }
   try {
     return await handler(data)

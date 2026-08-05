@@ -179,7 +179,7 @@ export const confirmOrder = (orderNo) =>
 
 /* ============ 后台管理 (需 role=admin) ============ */
 
-/** 读取本地登录用户信息, 附加到管理请求 */
+/** 读取本地登录用户信息, 附加到管理请求 (opUid/opRole=操作者, 业务 uid 保留原样) */
 function _adminAuth(data = {}) {
   let user = null
   try {
@@ -189,8 +189,8 @@ function _adminAuth(data = {}) {
   }
   return {
     ...data,
-    uid: user && user.uid !== undefined ? user.uid : data.uid,
-    role: (user && user.role) || data.role,
+    opUid: user && user.uid !== undefined ? user.uid : data.opUid,
+    opRole: (user && user.role) || data.opRole || '',
   }
 }
 

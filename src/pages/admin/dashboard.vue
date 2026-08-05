@@ -10,7 +10,7 @@
 
       <scroll-view scroll-y class="menu-scroll">
         <view
-          v-for="m in modules"
+          v-for="m in visibleModules"
           :key="m.key"
           class="menu-item"
           :class="{ active: activeModule === m.key }"
@@ -26,7 +26,7 @@
           <text class="au-avatar">{{ userStore.userInfo.nickname ? userStore.userInfo.nickname[0] : '管' }}</text>
           <view class="au-info">
             <text class="au-name">{{ userStore.userInfo.nickname }}</text>
-            <text class="au-role">管理员</text>
+            <text class="au-role">{{ userRole === 'admin' ? '超级管理员' : (userRole === 'staff' ? '内部员工' : '管理员') }}</text>
           </view>
         </view>
       </view>
@@ -37,6 +37,7 @@
       <view class="topbar">
         <text class="tb-title">{{ currentModule.label }}</text>
         <view class="tb-actions">
+          <text class="tb-link rotate-btn" @tap="rotateScreen">🔄 旋转屏幕</text>
           <text class="tb-link" @tap="goFront">返回前台 ›</text>
           <text class="tb-link danger" @tap="logout">退出登录</text>
         </view>
@@ -220,7 +221,7 @@
               <view class="td w-ops ops">
                 <text class="op" v-if="o.status === '待付款'" @tap="payForOrder(o)">代收款</text>
                 <text class="op" v-if="o.status === '待发货'" @tap="openShip(o)">发货</text>
-                <text class="op danger" v-if="o.status !== '已退款' && o.status !== '已完成'" @tap="refundOrder(o)">退款</text>
+                <text class="op danger" v-if="o.status !== '已退款' && o.status !== '已完成' && userRole !== 'staff'" @tap="refundOrder(o)">退款</text>
               </view>
             </view>
           </view>
@@ -235,7 +236,7 @@
             <view class="tr th">
               <text class="td w-name">昵称</text>
               <text class="td w-no">手机号</text>
-              <text class="td w-price">余额</text>
+              <text class="td w-price">道号</text>
               <text class="td w-price">VIP</text>
               <text class="td w-status">角色</text>
               <text class="td w-ops">操作</text>
@@ -243,10 +244,11 @@
             <view class="tr" v-for="u in users" :key="u._id || u.uid">
               <text class="td w-name">{{ u.nickname }}</text>
               <text class="td w-no">{{ u.phone }}</text>
-              <text class="td w-price">¥{{ u.balance }}</text>
+              <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
-              <text class="td w-status">{{ u.role === 'admin' ? '管理员' : '用户' }}</text>
-              <view class="td w-ops ops">
+              <text class="td w-status">{{ { admin: '管理员', staff: '员工', user: '用户' }[u.role] || '用户' }}</text>
+              <view class="td w-ops ops" v-if="userRole === 'admin'">
+                <text class="op" @tap="openAssignId(u)">分配道号</text>
                 <text class="op" @tap="toggleAdmin(u)">{{ u.role === 'admin' ? '取消管理' : '设为管理' }}</text>
               </view>
             </view>
@@ -497,6 +499,30 @@
       </view>
     </u-popup>
 
+    <!-- ===== 分配道号弹窗 ===== -->
+    <u-popup :show="showAssignId" mode="bottom" @close="showAssignId = false">
+      <view class="form-sheet">
+        <view class="sheet-title">分配道号 / 角色</view>
+        <view class="f-row"><text class="f-label">道号ID</text><input class="f-input" v-model="assignForm.dao_code" placeholder="如 ZHS00002 / ZHSM002" /></view>
+        <view class="f-row">
+          <text class="f-label">角色</text>
+          <view class="f-pills wrap">
+            <text
+              v-for="r in roleOptions"
+              :key="r.value"
+              class="pill"
+              :class="{ on: assignForm.role === r.value }"
+              @tap="assignForm.role = r.value"
+            >{{ r.label }}</text>
+          </view>
+        </view>
+        <view class="sheet-actions">
+          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showAssignId = false"></u-button>
+          <u-button type="primary" text="确认分配" shape="circle" size="small" @click="saveAssignId"></u-button>
+        </view>
+      </view>
+    </u-popup>
+
     <!-- ===== 反馈回复弹窗 ===== -->
     <u-popup :show="showFeedbackReply" mode="bottom" @close="showFeedbackReply = false">
       <view class="form-sheet">
@@ -558,6 +584,15 @@ const modules = [
   { key: 'feedbacks', label: '反馈管理', icon: '💬' },
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
+// 员工权限: 仅概览/商品/课程/订单/直播
+const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'lives']
+const userRole = computed(() => userStore.userInfo.role || 'user')
+const visibleModules = computed(() => {
+  if (userRole.value === 'staff') {
+    return modules.filter((m) => STAFF_MODULES.includes(m.key))
+  }
+  return modules
+})
 const activeModule = ref('overview')
 const currentModule = computed(() => modules.find((m) => m.key === activeModule.value) || modules[0])
 
@@ -708,8 +743,70 @@ function deleteFeedback(f) {
   })
 }
 
+/* 分配道号 / 角色弹窗 (超管) */
+const showAssignId = ref(false)
+const assignForm = ref({ uid: null, dao_code: '', role: 'user' })
+const roleOptions = [
+  { value: 'user', label: '普通用户' },
+  { value: 'staff', label: '内部员工' },
+  { value: 'admin', label: '管理员' },
+]
+
+function openAssignId(u) {
+  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user' }
+  showAssignId.value = true
+}
+
+async function saveAssignId() {
+  if (!assignForm.value.dao_code.trim()) {
+    uni.showToast({ title: '请输入道号ID', icon: 'none' })
+    return
+  }
+  try {
+    await adminUserUpdate({
+      uid: assignForm.value.uid,
+      dao_code: String(assignForm.value.dao_code).trim().toUpperCase(),
+      role: assignForm.value.role,
+    })
+    showAssignId.value = false
+    uni.showToast({ title: '已分配', icon: 'success' })
+    users.value = await adminList({ collection: 'users' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '分配失败', icon: 'none' })
+  }
+}
+
 function goFront() {
   uni.switchTab({ url: '/pages/index/index' })
+}
+
+/* 旋转屏幕: 管理后台横屏完整显示 (Capacitor App / H5) */
+let isLandscape = false
+function rotateScreen() {
+  const target = isLandscape ? 'portrait' : 'landscape'
+  // Capacitor App 环境
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenOrientation) {
+    window.Capacitor.Plugins.ScreenOrientation.lock({ orientation: target }).then(() => {
+      isLandscape = !isLandscape
+    }).catch(() => {
+      uni.showToast({ title: '旋转失败，请手动旋转手机', icon: 'none' })
+    })
+    return
+  }
+  // H5 原生 API
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock(target).then(() => {
+        isLandscape = !isLandscape
+      }).catch(() => {
+        uni.showToast({ title: '请手动旋转手机横屏', icon: 'none' })
+      })
+    } else {
+      uni.showToast({ title: '请手动旋转手机横屏', icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: '请手动旋转手机横屏', icon: 'none' })
+  }
 }
 
 function logout() {
@@ -1087,7 +1184,7 @@ function clearSettingsSecret(f) {
 }
 
 onMounted(async () => {
-  if (!userStore.isLoggedIn || userStore.userInfo.role !== 'admin') {
+  if (!userStore.isLoggedIn || (userStore.userInfo.role !== 'admin' && userStore.userInfo.role !== 'staff')) {
     uni.redirectTo({ url: '/pages/admin/login' })
     return
   }
