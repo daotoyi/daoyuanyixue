@@ -1342,6 +1342,14 @@ const ROUTES = {
   'admin.categories.create': adminCateCreate,
   'admin.categories.update': adminCateUpdate,
   'admin.categories.delete': adminCateDelete,
+  /* 微信第三方平台 · 小程序扫码接管 (仿扣子) */
+  'wxmp.getAuthUrl': wxmpGetAuthUrl,
+  'wxmp.authCallback': wxmpAuthCallback,
+  'wxmp.listBound': wxmpListBound,
+  'wxmp.getExperienceQr': wxmpGetExperienceQr,
+  'wxmp.uploadCode': wxmpUploadCode,
+  'wxmp.submitAudit': wxmpSubmitAudit,
+  'wxmp.release': wxmpRelease,
 }
 
 exports.main = async (event = {}) => {
@@ -1356,12 +1364,15 @@ exports.main = async (event = {}) => {
 
   if (!action && event.httpMethod) {
     if (event.httpMethod === 'POST' && event.body) {
+      const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body
       try {
-        const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body)
+        const body = JSON.parse(raw)
         action = body.action
         data = body.data || {}
       } catch (e) {
-        return fail('请求体格式错误', 400)
+        // 非 JSON (微信 XML 回调) → 走 wxmp.authCallback, 透传原文
+        action = (event.queryStringParameters && event.queryStringParameters.action) || 'wxmp.authCallback'
+        data = { rawBody: raw, query: event.queryStringParameters || {} }
       }
     }
     if (event.queryStringParameters) {
@@ -1372,6 +1383,10 @@ exports.main = async (event = {}) => {
         } catch (e) {
           /* 忽略 */
         }
+      }
+      // GET 验证/回调: 微信推送参数透传
+      if (!event.httpMethod || event.httpMethod === 'GET') {
+        if (!data.rawBody) data.query = event.queryStringParameters
       }
     }
   }
@@ -1395,3 +1410,287 @@ exports.main = async (event = {}) => {
     return fail(e.message || '服务内部错误', 500)
   }
 }
+
+
+/* ============ 微信第三方平台 · 小程序扫码接管 (仿扣子平台) ============
+   前置: 微信开放平台创建第三方平台(需企业认证), 在开放平台配置:
+   - 授权事件接收 URL: https://zhenhesheng-d6gkez7p221305432-1309518368.ap-shanghai.app.tcloudbase.com/dy-api?action=wxmp.authCallback
+   - 消息校验 Token / EncodingAESKey → 填入 config.local.js WXMP_TOKEN / WXMP_AES_KEY
+   数据: wxmp_authors 集合 (已接管小程序), wxmp_ticket 集合 (verify_ticket) */
+const crypto = require('crypto')
+
+function _wxmpCfg() {
+  let c = {}
+  try { c = require('./config.local') || {} } catch (e) {}
+  return {
+    appid: c.WXMP_COMPONENT_APPID || '',
+    secret: c.WXMP_COMPONENT_SECRET || '',
+    token: c.WXMP_TOKEN || '',
+    aesKey: c.WXMP_AES_KEY || '',
+  }
+}
+
+/* 微信 HTTPS POST (JSON) */
+function _wxHttpJson(url, body) {
+  const https = require('https')
+  return new Promise((resolve) => {
+    const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } }, (r) => {
+      let d = ''
+      r.on('data', (c) => (d += c))
+      r.on('end', () => { try { resolve(JSON.parse(d)) } catch (e) { resolve({ errmsg: d }) } })
+    })
+    req.on('error', (e) => resolve({ errmsg: e.message }))
+    req.write(JSON.stringify(body))
+    req.end()
+  })
+}
+
+/* AES 解密微信推送消息 */
+function _wxmpDecrypt(encryptedB64, aesKey) {
+  const keyBuf = Buffer.from(aesKey + '=', 'base64')
+  const key = keyBuf.slice(0, 32)
+  const iv = keyBuf.slice(0, 16)
+  const decipher = crypto.createDecipheriv('aes-128-cbc', key, iv)
+  decipher.setAutoPadding(false)
+  let buf = Buffer.concat([decipher.update(encryptedB64, 'base64'), decipher.final()])
+  const pad = buf[buf.length - 1]
+  if (pad > 0 && pad < 32) buf = buf.slice(0, buf.length - pad)
+  const msgLen = buf.readUInt32BE(16)
+  return buf.slice(20, 20 + msgLen).toString('utf8')
+}
+
+/* 签名校验 */
+function _wxmpSign(token, timestamp, nonce, encrypt) {
+  const arr = [token, timestamp, nonce, encrypt].sort()
+  return crypto.createHash('sha1').update(arr.join('')).digest('hex')
+}
+
+/* component_access_token (内存缓存) */
+let _compTokCache = { token: '', expire: 0 }
+async function _wxmpCompToken(cfg) {
+  if (_compTokCache.token && _compTokCache.expire > Date.now() + 120000) return _compTokCache.token
+  const tRes = await db.collection('wxmp_ticket').limit(1).get()
+  const ticket = tRes.data[0] && tRes.data[0].verify_ticket
+  if (!ticket) throw new Error('尚未收到 verify_ticket，请确认开放平台「授权事件接收 URL」已配置且可访问')
+  const res = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/component/api_component_token', {
+    component_appid: cfg.appid, component_appsecret: cfg.secret, component_verify_ticket: ticket,
+  })
+  if (!res.component_access_token) throw new Error('component_access_token 获取失败: ' + (res.errmsg || ''))
+  _compTokCache = { token: res.component_access_token, expire: Date.now() + (Number(res.expires_in) - 300) * 1000 }
+  return res.component_access_token
+}
+
+/* 保存 authorizer 数据 */
+async function _wxmpSaveAuthorizer(info) {
+  const { appid: authorizer_appid, access_token, expires_in, refresh_token, nickname, head_img } = info
+  const doc = {
+    authorizer_appid,
+    authorizer_refresh_token: refresh_token || '',
+    access_token: access_token || '',
+    access_token_expire: access_token ? Date.now() + (Number(expires_in) - 300) * 1000 : 0,
+    nickname: nickname || '',
+    head_img: head_img || '',
+    status: 'authorized',
+    bound_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+  }
+  const existed = (await db.collection('wxmp_authors').where({ authorizer_appid }).limit(1).get()).data[0]
+  if (existed) {
+    await db.collection('wxmp_authors').where({ authorizer_appid }).update(doc)
+  } else {
+    await db.collection('wxmp_authors').add(doc)
+  }
+  return doc
+}
+
+/* authorizer_access_token (集合刷新) */
+async function _wxmpAuthToken(cfg, authorizerAppid) {
+  const rec = (await db.collection('wxmp_authors').where({ authorizer_appid }).limit(1).get()).data[0]
+  if (!rec) throw new Error('该小程序尚未授权')
+  if (rec.access_token && rec.access_token_expire > Date.now() + 120000) return rec.access_token
+  const compToken = await _wxmpCompToken(cfg)
+  const res = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/component/api_authorizer_token?component_access_token=' + compToken, {
+    component_appid: cfg.appid, authorizer_appid, authorizer_refresh_token: rec.authorizer_refresh_token,
+  })
+  if (!res.authorizer_access_token) throw new Error('刷新 authorizer token 失败: ' + (res.errmsg || ''))
+  await db.collection('wxmp_authors').where({ authorizer_appid }).update({
+    access_token: res.authorizer_access_token,
+    access_token_expire: Date.now() + (Number(res.expires_in) - 300) * 1000,
+  })
+  return res.authorizer_access_token
+}
+
+/* ① 生成授权链接 (填 AppID → 管理员扫码) */
+async function wxmpGetAuthUrl(data) {
+  const cfg = _wxmpCfg()
+  if (!cfg.appid || !cfg.secret) return fail('未配置开放平台第三方平台参数（WXMP_COMPONENT_APPID/SECRET）')
+  const bizAppid = data && data.appid
+  if (!bizAppid) return fail('请填写小程序 AppID')
+  const compToken = await _wxmpCompToken(cfg)
+  const res = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/component/api_create_preauthcode?component_access_token=' + compToken, {
+    component_appid: cfg.appid,
+  })
+  if (!res.pre_auth_code) return fail('获取预授权码失败: ' + (res.errmsg || ''))
+  const redirect = (data && data.redirect_uri) || 'https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com/#/pages/admin/dashboard'
+  const url = 'https://open.weixin.qq.com/connect/oauth2/authorize?component_appid=' + cfg.appid +
+    '&pre_auth_code=' + res.pre_auth_code +
+    '&redirect_uri=' + encodeURIComponent(redirect) +
+    '&auth_type=3&biz_appid=' + bizAppid +
+    '&response_type=code'
+  return ok({ auth_url: url, expires_in: res.expires_in })
+}
+
+/* ② 授权事件回调 (GET 验证 + POST verify_ticket/authorized/unauthorized) */
+async function wxmpAuthCallback(data) {
+  const cfg = _wxmpCfg()
+  const q = data.query || {}
+  // GET: 首次配置回调 URL 的验证 (解密 echostr 返回)
+  if (q.echostr) {
+    try {
+      const sign = _wxmpSign(cfg.token, q.timestamp, q.nonce, q.echostr)
+      if (sign !== q.msg_signature) return fail('签名验证失败', 403)
+      return _wxmpDecrypt(q.echostr, cfg.aesKey)
+    } catch (e) {
+      return fail('验证失败: ' + e.message, 500)
+    }
+  }
+  // POST: 解密推送消息
+  try {
+    const xml = data.rawBody || ''
+    const encMatch = xml.match(/<Encrypt><!\[CDATA\[(.*?)\]\]><\/Encrypt>/)
+    if (!encMatch) return fail('推送格式错误', 400)
+    const sign = _wxmpSign(cfg.token, q.timestamp, q.nonce, encMatch[1])
+    if (sign !== q.msg_signature) return fail('签名验证失败', 403)
+    const msg = _wxmpDecrypt(encMatch[1], cfg.aesKey)
+    const infoType = (msg.match(/<InfoType><!\[CDATA\[(.*?)\]\]><\/InfoType>/) || [])[1]
+    // verify_ticket: 每 10 分钟推送, 保存
+    if (infoType === 'verify_ticket') {
+      const ticket = (msg.match(/<ComponentVerifyTicket><!\[CDATA\[(.*?)\]\]><\/ComponentVerifyTicket>/) || [])[1]
+      if (ticket) {
+        const existed = (await db.collection('wxmp_ticket').limit(1).get()).data[0]
+        if (existed) await db.collection('wxmp_ticket').where({ _id: existed._id }).update({ verify_ticket: ticket, updated_at: Date.now() })
+        else await db.collection('wxmp_ticket').add({ verify_ticket: ticket, updated_at: Date.now() })
+      }
+    }
+    // authorized: 授权成功, 用 AuthorizationCode 换 authorizer token
+    if (infoType === 'authorized') {
+      const authorizerAppid = (msg.match(/<AuthorizerAppid><!\[CDATA\[(.*?)\]\]><\/AuthorizerAppid>/) || [])[1]
+      const authCode = (msg.match(/<AuthorizationCode><!\[CDATA\[(.*?)\]\]><\/AuthorizationCode>/) || [])[1]
+      if (authorizerAppid && authCode) {
+        const compToken = await _wxmpCompToken(cfg)
+        const res = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/component/api_query_auth?component_access_token=' + compToken, {
+          component_appid: cfg.appid, authorization_code: authCode,
+        })
+        const auth = res.authorization_info
+        if (auth && auth.authorizer_refresh_token) {
+          await _wxmpSaveAuthorizer({
+            appid: authorizerAppid,
+            access_token: auth.authorizer_access_token,
+            expires_in: auth.expires_in,
+            refresh_token: auth.authorizer_refresh_token,
+          })
+        }
+      }
+    }
+    if (infoType === 'unauthorized') {
+      const authorizerAppid = (msg.match(/<AuthorizerAppid><!\[CDATA\[(.*?)\]\]><\/AuthorizerAppid>/) || [])[1]
+      if (authorizerAppid) {
+        await db.collection('wxmp_authors').where({ authorizer_appid }).update({ status: 'unauthorized' })
+      }
+    }
+    return 'success'
+  } catch (e) {
+    console.error('[wxmp] callback error:', e)
+    return 'success'
+  }
+}
+
+/* ③ 已接管小程序列表 */
+async function wxmpListBound() {
+  const res = await db.collection('wxmp_authors').orderBy('bound_at', 'desc').limit(50).get()
+  return ok(res.data.map((a) => ({
+    appid: a.authorizer_appid,
+    nickname: a.nickname || '',
+    head_img: a.head_img || '',
+    status: a.status || 'authorized',
+    bound_at: a.bound_at || '',
+  })))
+}
+
+/* ④ 获取体验版二维码 (返回 base64 图片) */
+async function wxmpGetExperienceQr(data) {
+  const cfg = _wxmpCfg()
+  const appid = data && data.appid
+  if (!appid) return fail('缺少小程序 AppID')
+  const token = await _wxmpAuthToken(cfg, appid)
+  const res = await _wxHttpJson('https://api.weixin.qq.com/wxa/get_qrcode?access_token=' + token, { path: 'pages/index/index', width: 430 })
+  if (res.errcode && res.errcode !== 0) return fail('获取体验码失败: ' + (res.errmsg || res.errcode))
+  if (res.buffer && res.buffer.type === 'Buffer') {
+    return ok({ qr_b64: Buffer.from(res.buffer.data || []).toString('base64'), appid })
+  }
+  return ok({ qr_url: res.url || '', appid })
+}
+
+/* ⑤ 上传开发版 (模板机制: 草稿→模板→commit; 需先有一次开发者工具上传产生草稿) */
+async function _wxmpEnsureTemplate(cfg) {
+  const compToken = await _wxmpCompToken(cfg)
+  const list = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/wxopen/gettemplatedraftlist?access_token=' + compToken, {})
+  if (list.draft_list && list.draft_list.length) {
+    const draft = list.draft_list[0]
+    const add = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/wxopen/addtotemplate?access_token=' + compToken, {
+      draft_id: draft.draft_id,
+    })
+    if (add.errcode && add.errcode !== 0) throw new Error('添加模板失败: ' + (add.errmsg || ''))
+    return add.template_id
+  }
+  const tpl = await _wxHttpJson('https://api.weixin.qq.com/cgi-bin/wxopen/gettemplatelist?access_token=' + compToken, {})
+  if (tpl.template_list && tpl.template_list.length) return tpl.template_list[0].template_id
+  throw new Error('草稿箱为空：请先在微信开发者工具导入项目并「上传」一次，生成草稿后重试')
+}
+
+async function wxmpUploadCode(data) {
+  const cfg = _wxmpCfg()
+  const { appid, user_version, user_desc } = data
+  if (!appid) return fail('缺少小程序 AppID')
+  const token = await _wxmpAuthToken(cfg, appid)
+  const templateId = await _wxmpEnsureTemplate(cfg)
+  const extJson = JSON.stringify({
+    extAppid: appid,
+    ext: { envId: 'zhenhesheng-d6gkez7p221305432' },
+    pages: ['pages/index/index', 'pages/shop/shop', 'pages/course/course', 'pages/user/user'],
+    cloud: true,
+  })
+  const res = await _wxHttpJson('https://api.weixin.qq.com/wxa/commit?access_token=' + token, {
+    template_id: Number(templateId),
+    ext_json: extJson,
+    user_version: user_version || '2.0.0',
+    user_desc: user_desc || '道元易学 v2.0.0',
+  })
+  if (res.errcode && res.errcode !== 0) return fail('上传开发版失败: ' + (res.errmsg || res.errcode))
+  return ok({ committed: true, appid })
+}
+
+/* ⑥ 提交审核 */
+async function wxmpSubmitAudit(data) {
+  const cfg = _wxmpCfg()
+  const { appid, version_desc } = data
+  if (!appid) return fail('缺少小程序 AppID')
+  const token = await _wxmpAuthToken(cfg, appid)
+  const res = await _wxHttpJson('https://api.weixin.qq.com/wxa/submit_audit?access_token=' + token, {
+    item_list: [{ address: 'pages/index/index', tag: '生活服务', first_class: '文娱', second_class: '其他', title: '道元易学' }],
+    feedback_info: version_desc || '道元易学传统文化学习平台 v2.0.0',
+  })
+  if (res.errcode && res.errcode !== 0) return fail('提交审核失败: ' + (res.errmsg || res.errcode))
+  return ok({ auditid: res.auditid, appid })
+}
+
+/* ⑦ 发布 */
+async function wxmpRelease(data) {
+  const cfg = _wxmpCfg()
+  const { appid } = data
+  if (!appid) return fail('缺少小程序 AppID')
+  const token = await _wxmpAuthToken(cfg, appid)
+  const res = await _wxHttpJson('https://api.weixin.qq.com/wxa/release?access_token=' + token, {})
+  if (res.errcode && res.errcode !== 0) return fail('发布失败: ' + (res.errmsg || res.errcode))
+  return ok({ released: true, appid })
+}
+

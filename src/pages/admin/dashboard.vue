@@ -359,6 +359,37 @@
           </view>
         </view>
 
+        <!-- ===== 小程序接管 (微信第三方平台扫码授权, 仿扣子) ===== -->
+        <view v-else-if="activeModule === 'wxmp'" class="module">
+          <view class="module-head">
+            <text class="module-title">小程序接管（{{ wxmpList.length }}）</text>
+            <view class="btn-fill btn-add" @tap="openWxmpBind"><text>＋ 绑定小程序</text></view>
+          </view>
+          <view class="wxmp-tip">填 AppID → 生成授权链接 → 小程序管理员扫码 → 自动接管（上传开发版 / 体验码 / 提审 / 发布）</view>
+          <view class="table" v-if="wxmpList.length">
+            <view class="tr th">
+              <text class="td w-no">小程序</text>
+              <text class="td w-name">AppID</text>
+              <text class="td w-time">绑定时间</text>
+              <text class="td w-status">状态</text>
+              <text class="td w-ops">操作</text>
+            </view>
+            <view class="tr" v-for="m in wxmpList" :key="m.appid">
+              <text class="td w-no ellipsis">{{ m.nickname || m.appid }}</text>
+              <text class="td w-name ellipsis">{{ m.appid }}</text>
+              <text class="td w-time">{{ m.bound_at }}</text>
+              <text class="td w-status" :class="m.status === 'authorized' ? 'st-done' : 'st-wait'">{{ m.status === 'authorized' ? '已接管' : '已取消' }}</text>
+              <view class="td w-ops ops">
+                <text class="op" @tap="wxmpQr(m)">体验码</text>
+                <text class="op" @tap="wxmpUp(m)">上传开发版</text>
+                <text class="op" @tap="wxmpAudit(m)">提审</text>
+                <text class="op danger" @tap="wxmpPub(m)">发布</text>
+              </view>
+            </view>
+          </view>
+          <view class="table-empty" v-else>暂无接管的小程序，点击右上角「绑定小程序」开始</view>
+        </view>
+
         <!-- ===== 系统设置 ===== -->
         <view v-else-if="activeModule === 'settings'" class="module">
           <view class="settings-tabs">
@@ -404,6 +435,37 @@
         </view>
       </scroll-view>
     </view>
+
+    <!-- ===== 小程序绑定弹窗 (填 AppID → 生成授权链接) ===== -->
+    <u-popup :show="showWxmpBind" mode="bottom" @close="showWxmpBind = false">
+      <view class="form-sheet">
+        <view class="sheet-title">绑定小程序（管理员扫码接管）</view>
+        <view class="f-row">
+          <text class="f-label">小程序AppID</text>
+          <input class="f-input" v-model="wxmpAppid" placeholder="wx 开头的 AppID" />
+        </view>
+        <view class="wxmp-bind-tip">生成授权链接后，用该小程序的<text class="wxmp-strong">管理员微信</text>扫码确认，即可自动接管</view>
+        <view class="sheet-actions">
+          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showWxmpBind = false"></u-button>
+          <u-button type="primary" text="生成授权链接" shape="circle" size="small" :loading="wxmpBinding" @click="doWxmpBind"></u-button>
+        </view>
+        <view class="wxmp-auth" v-if="wxmpAuthUrl">
+          <text class="wxmp-auth-tip">请用管理员微信打开以下链接完成授权：</text>
+          <text class="wxmp-auth-url" @tap="copyWxmpAuthUrl">{{ wxmpAuthUrl }}</text>
+          <view class="btn-fill btn-copy" @tap="copyWxmpAuthUrl"><text>复制授权链接</text></view>
+        </view>
+      </view>
+    </u-popup>
+
+    <!-- ===== 体验码弹窗 ===== -->
+    <u-popup :show="showWxmpQr" mode="center" @close="showWxmpQr = false">
+      <view class="form-sheet qr-sheet">
+        <view class="sheet-title">小程序体验码</view>
+        <image class="wxmp-qr-img" v-if="wxmpQrB64" :src="'data:image/png;base64,' + wxmpQrB64" mode="widthFix"></image>
+        <view class="wxmp-qr-tip" v-else>获取体验码失败或暂无体验版</view>
+        <u-button type="info" text="关闭" shape="circle" size="small" plain @click="showWxmpQr = false"></u-button>
+      </view>
+    </u-popup>
 
     <!-- ===== 商品编辑弹窗 ===== -->
     <u-popup :show="showProduct" mode="bottom" @close="showProduct = false">
@@ -576,6 +638,7 @@ import {
   adminSettingsGet, adminSettingsSave,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
+  wxmpGetAuthUrl, wxmpListBound, wxmpGetExperienceQr, wxmpUploadCode, wxmpSubmitAudit, wxmpRelease,
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { getStorage } from '../../api/cloudbase'
@@ -592,6 +655,7 @@ const modules = [
   { key: 'lives', label: '直播管理', icon: '📡' },
   { key: 'moments', label: '动态管理', icon: '📝' },
   { key: 'feedbacks', label: '反馈管理', icon: '💬' },
+  { key: 'wxmp', label: '小程序接管', icon: '🔗' },
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
 // 员工权限: 仅概览/商品/课程/订单/直播
@@ -704,6 +768,7 @@ async function loadModule(key) {
     else if (key === 'lives') lives.value = await adminList({ collection: 'live_streams' })
     else if (key === 'moments') moments.value = await adminList({ collection: 'moments' })
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })
+    else if (key === 'wxmp') await loadWxmp()
     else if (key === 'feedbacks') await loadFeedbacks()
     else if (key === 'settings') await loadSettings(activeSettingsTab.value)
   } catch (e) {
@@ -748,6 +813,113 @@ function deleteFeedback(f) {
         await loadFeedbacks()
       } catch (e) {
         uni.showToast({ title: '删除失败', icon: 'none' })
+      }
+    },
+  })
+}
+
+/* ===== 小程序接管 (微信第三方平台扫码授权) ===== */
+const wxmpList = ref([])
+const showWxmpBind = ref(false)
+const wxmpAppid = ref('')
+const wxmpBinding = ref(false)
+const wxmpAuthUrl = ref('')
+const showWxmpQr = ref(false)
+const wxmpQrB64 = ref('')
+
+async function loadWxmp() {
+  try {
+    wxmpList.value = await wxmpListBound()
+  } catch (e) {
+    wxmpList.value = []
+    uni.showToast({ title: e.message || '加载失败', icon: 'none' })
+  }
+}
+function openWxmpBind() {
+  wxmpAppid.value = ''
+  wxmpAuthUrl.value = ''
+  showWxmpBind.value = true
+}
+async function doWxmpBind() {
+  const appid = wxmpAppid.value.trim()
+  if (!/^wx[a-f0-9]{16}$/i.test(appid)) {
+    uni.showToast({ title: 'AppID 格式不正确', icon: 'none' })
+    return
+  }
+  wxmpBinding.value = true
+  try {
+    const res = await wxmpGetAuthUrl({ appid })
+    wxmpAuthUrl.value = res.auth_url
+  } catch (e) {
+    uni.showToast({ title: e.message || '生成授权链接失败', icon: 'none' })
+  } finally {
+    wxmpBinding.value = false
+  }
+}
+function copyWxmpAuthUrl() {
+  uni.setClipboardData({
+    data: wxmpAuthUrl.value,
+    success: () => uni.showToast({ title: '已复制，请用管理员微信打开', icon: 'none' }),
+  })
+}
+async function wxmpQr(m) {
+  try {
+    const res = await wxmpGetExperienceQr({ appid: m.appid })
+    if (res.qr_b64) {
+      wxmpQrB64.value = res.qr_b64
+      showWxmpQr.value = true
+    } else {
+      uni.showToast({ title: '获取失败：' + (res.msg || '请先上传开发版'), icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: e.message || '获取体验码失败', icon: 'none' })
+  }
+}
+async function wxmpUp(m) {
+  uni.showModal({
+    title: '上传开发版',
+    content: `确定将当前代码(v2.0.0)上传为 ${m.appid} 的开发版吗？（需开放平台已有代码模板）`,
+    confirmText: '上传',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await wxmpUploadCode({ appid: m.appid, user_version: '2.0.0', user_desc: '道元易学 v2.0.0' })
+        uni.showToast({ title: '已上传开发版', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+      }
+    },
+  })
+}
+async function wxmpAudit(m) {
+  uni.showModal({
+    title: '提交审核',
+    content: `确定将 ${m.appid} 的当前版本提交微信审核吗？`,
+    confirmText: '提审',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await wxmpSubmitAudit({ appid: m.appid })
+        uni.showToast({ title: '已提交审核', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '提审失败', icon: 'none' })
+      }
+    },
+  })
+}
+async function wxmpPub(m) {
+  uni.showModal({
+    title: '发布上线',
+    content: `确定将 ${m.appid} 的已审核版本发布上线吗？（正式生效）`,
+    confirmText: '发布',
+    confirmColor: '#b04a45',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await wxmpRelease({ appid: m.appid })
+        uni.showToast({ title: '已发布上线', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '发布失败', icon: 'none' })
       }
     },
   })
@@ -1921,6 +2093,44 @@ onMounted(async () => {
   font-size: 22rpx;
   background: #faf3e9;
 }
+/* 小程序接管 */
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 60rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  padding: 0 28rpx;
+  margin-left: auto;
+}
+.btn-add text { font-size: 24rpx; color: #fefbf6; }
+.wxmp-tip { font-size: 22rpx; color: #857563; margin-bottom: 16rpx; line-height: 1.6; }
+.wxmp-bind-tip { font-size: 22rpx; color: #b3a595; margin-top: 16rpx; line-height: 1.6; }
+.wxmp-strong { color: #b04a45; }
+.wxmp-auth { margin-top: 20rpx; background: #faf3e9; border-radius: 12rpx; padding: 18rpx; }
+.wxmp-auth-tip { display: block; font-size: 22rpx; color: #857563; margin-bottom: 8rpx; }
+.wxmp-auth-url {
+  display: block;
+  font-size: 20rpx;
+  color: #3f6f8c;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.btn-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 68rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  margin-top: 14rpx;
+}
+.btn-copy text { font-size: 24rpx; color: #fefbf6; }
+.qr-sheet { text-align: center; }
+.wxmp-qr-img { width: 400rpx; margin: 20rpx auto; display: block; }
+.wxmp-qr-tip { font-size: 22rpx; color: #b3a595; margin: 30rpx 0; }
 .f-pills {
   display: flex;
   flex: 1;

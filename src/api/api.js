@@ -194,6 +194,14 @@ export function wxRequestPayment(payment) {
   })
 }
 
+/* ============ 微信第三方平台 · 小程序扫码接管 ============ */
+export const wxmpGetAuthUrl = (data) => _callFunction('wxmp.getAuthUrl', data)
+export const wxmpListBound = () => _callFunction('wxmp.listBound', {})
+export const wxmpGetExperienceQr = (data) => _callFunction('wxmp.getExperienceQr', data)
+export const wxmpUploadCode = (data) => _callFunction('wxmp.uploadCode', data)
+export const wxmpSubmitAudit = (data) => _callFunction('wxmp.submitAudit', data)
+export const wxmpRelease = (data) => _callFunction('wxmp.release', data)
+
 export const confirmOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.confirm', { order_no: orderNo })
 
