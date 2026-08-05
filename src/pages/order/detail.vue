@@ -44,28 +44,15 @@
 
     <!-- 底部操作 -->
     <view class="action-bar" v-if="order.status !== '已完成' && order.status !== '已退款'">
-      <u-button
-        v-if="order.status === '待付款'"
-        type="error"
-        text="立即支付"
-        shape="circle"
-        @click="doPay"
-      ></u-button>
-      <u-button
-        v-else-if="order.status === '待收货'"
-        type="primary"
-        text="确认收货"
-        shape="circle"
-        @click="doConfirm"
-      ></u-button>
-      <u-button
-        v-else
-        type="primary"
-        text="去逛逛"
-        shape="circle"
-        plain
-        @click="goShop"
-      ></u-button>
+      <view v-if="order.status === '待付款'" class="btn-fill btn-pay" @tap="doPay">
+        <text>立即支付</text>
+      </view>
+      <view v-else-if="order.status === '待收货'" class="btn-fill btn-confirm" @tap="doConfirm">
+        <text>确认收货</text>
+      </view>
+      <view v-else class="btn-fill btn-shop" @tap="goShop">
+        <text>去逛逛</text>
+      </view>
     </view>
   </view>
 </template>
@@ -246,5 +233,29 @@ function goShop() {
   display: flex;
   justify-content: flex-end;
   z-index: 10;
+}
+/* 状态按钮: 实心填充 */
+.btn-fill {
+  flex-shrink: 0;
+  height: 84rpx;
+  padding: 0 56rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-fill text {
+  font-size: 28rpx;
+  color: #fefbf6;
+  letter-spacing: 2rpx;
+}
+.btn-pay {
+  background: linear-gradient(135deg, #b04a45, #8c3228);
+}
+.btn-confirm {
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
+.btn-shop {
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
 }
 </style>
