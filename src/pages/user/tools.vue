@@ -102,6 +102,12 @@
           </view>
         </view>
 
+        <view class="tp-row">
+          <text class="tp-label">保存排盘</text>
+          <switch :checked="form.bazi.saveHistory" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.saveHistory = e.detail.value)" />
+          <text class="tp-save-tip">开启后每次排盘自动存入历史</text>
+        </view>
+
         <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
         <template v-if="form.bazi.mode === 'solar' || form.bazi.mode === 'lunar'">
           <view class="tp-row">
@@ -267,6 +273,7 @@ const form = ref({
     shichen: 6,
     gender: '男',
     trueSolar: false,
+    saveHistory: false,
     province: 0,
     city: 0,
     district: 0,
@@ -313,6 +320,28 @@ function resolveShichenHour() {
   return hour
 }
 
+/* 排盘历史: 开启"保存排盘"后每次排盘存入 storage (上限 20 条) */
+const HISTORY_KEY = 'paipan_history'
+function fmtTime(d) {
+  const p = (n) => String(n).padStart(2, '0')
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+function saveHistoryRecord(result, qm, zw, label, gzText) {
+  try {
+    let list = uni.getStorageSync(HISTORY_KEY) || []
+    if (!Array.isArray(list)) list = []
+    list.unshift({
+      ts: Date.now(),
+      time: fmtTime(new Date()),
+      label,
+      gzText,
+      data: { bazi: result, qimen: qm, ziwei: zw },
+    })
+    if (list.length > 20) list = list.slice(0, 20)
+    uni.setStorageSync(HISTORY_KEY, list)
+  } catch (e) { /* 忽略 */ }
+}
+
 /* 共用排盘: 四柱/奇门/紫微 一次算完, 存 storage 跳结果页 */
 function runPaipan() {
   const f = form.value.bazi
@@ -357,6 +386,15 @@ function runPaipan() {
   // 奇门 + 紫微 (共用同一时间)
   const qm = qimen(ly, lm, ld)
   const zw = ziwei(lunarInfo.day, hour)
+
+  // 保存排盘历史
+  if (f.saveHistory) {
+    const gzText = result.pillars.map((p) => p.name).join(' ')
+    const label = f.mode === 'gz'
+      ? `四柱 ${gzText}`
+      : `${f.mode === 'solar' ? '阳历' : '农历'} ${solarDate} ${shichenLabels[f.shichen]}`
+    saveHistoryRecord(result, qm, zw, label, gzText)
+  }
 
   try {
     uni.setStorageSync('paipan_data', { bazi: result, qimen: qm, ziwei: zw })
@@ -440,6 +478,12 @@ function runLiuren() {
   font-size: 24rpx;
   color: #857563;
   flex-shrink: 0;
+}
+.tp-save-tip {
+  margin-left: 14rpx;
+  font-size: 20rpx;
+  color: #b3a595;
+  flex: 1;
 }
 .tp-picker {
   flex: 1;

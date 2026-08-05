@@ -6,9 +6,12 @@
         <text class="pp-lunar">农历 {{ data.bazi.lunarText }}</text>
         <text class="pp-solar">{{ data.bazi.solarText }}</text>
       </view>
-      <view class="pp-top-gender">
-        <text class="pp-yuan">{{ data.bazi.gender === '女' ? '元女' : '元男' }}</text>
-        <text class="pp-dm">日主：{{ data.bazi.dayGanName }}（{{ GAN_WX[data.bazi.pillars[2].g] }}）</text>
+      <view class="pp-top-actions">
+        <view class="pp-top-gender">
+          <text class="pp-yuan">{{ data.bazi.gender === '女' ? '元女' : '元男' }}</text>
+          <text class="pp-dm">日主：{{ data.bazi.dayGanName }}（{{ GAN_WX[data.bazi.pillars[2].g] }}）</text>
+        </view>
+        <view class="pp-history-btn" @tap="openHistory"><text>📜 历史</text></view>
       </view>
     </view>
 
@@ -28,33 +31,36 @@
 
     <!-- ===== 四柱八字 ===== -->
     <view v-if="tab === 'bazi'" class="pp-body">
-      <!-- 四柱表: 最左列 天干/地支 行标签 + 选中大运/流年/流月联动列 (从左到右: 流月/流年/大运/四柱) -->
-      <view class="pp-grid">
-        <view class="pp-row pp-head">
-          <view class="pp-cell pp-label"></view>
-          <view class="pp-cell pp-extra" :class="'ex-' + c.type" v-for="(c, i) in columns" :key="'h' + i">{{ colLabel(c, i) }}</view>
-        </view>
-        <view class="pp-row">
-          <view class="pp-cell pp-label">十神</view>
-          <view class="pp-cell pp-ss" v-for="(c, i) in columns" :key="'s' + i">{{ c.ss1 || c.ganShishen }}</view>
-        </view>
-        <view class="pp-row">
-          <view class="pp-cell pp-label">天干</view>
-          <view class="pp-cell pp-gan" v-for="(c, i) in columns" :key="'g' + i">
-            <text :class="'wx-' + GAN_WX[c.g]">{{ GAN[c.g] }}</text>
+      <!-- 四柱表: 最左列 天干/地支 行标签 + 选中大运/流年/流月联动列 (从左到右: 流时/流日/流月/流年/大运/四柱), 列多可左右滑动 -->
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+        <view class="pp-grid">
+          <view class="pp-row pp-head">
+            <view class="pp-cell pp-label"></view>
+            <view class="pp-cell pp-extra" :class="'ex-' + c.type" v-for="(c, i) in columns" :key="'h' + i">{{ colLabel(c, i) }}</view>
+          </view>
+          <view class="pp-row">
+            <view class="pp-cell pp-label">十神</view>
+            <view class="pp-cell pp-ss" v-for="(c, i) in columns" :key="'s' + i">{{ c.ss1 || c.ganShishen }}</view>
+          </view>
+          <view class="pp-row">
+            <view class="pp-cell pp-label">天干</view>
+            <view class="pp-cell pp-gan" v-for="(c, i) in columns" :key="'g' + i">
+              <text :class="'wx-' + GAN_WX[c.g]">{{ GAN[c.g] }}</text>
+            </view>
+          </view>
+          <view class="pp-row">
+            <view class="pp-cell pp-label">地支</view>
+            <view class="pp-cell pp-zhi" v-for="(c, i) in columns" :key="'z' + i">
+              <text :class="'wx-' + ZHI_WX[c.z]">{{ ZHI[c.z] }}</text>
+            </view>
           </view>
         </view>
-        <view class="pp-row">
-          <view class="pp-cell pp-label">地支</view>
-          <view class="pp-cell pp-zhi" v-for="(c, i) in columns" :key="'z' + i">
-            <text :class="'wx-' + ZHI_WX[c.z]">{{ ZHI[c.z] }}</text>
-          </view>
-        </view>
-      </view>
+      </scroll-view>
 
       <!-- 地支藏干 (四柱下方, 左侧标签, 含联动列) -->
-      <view class="pp-block pp-tbl">
-                <view class="pp-cg-grid">
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+        <view class="pp-block pp-tbl">
+          <view class="pp-cg-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">藏干</view>
             <view class="pp-cell" v-for="(c, i) in columns" :key="'cg' + i">
@@ -65,11 +71,13 @@
             </view>
           </view>
         </view>
-      </view>
+        </view>
+      </scroll-view>
 
       <!-- 星运/自坐/空亡 一个板块 (左侧分类标签, 含联动列) -->
-      <view class="pp-block pp-tbl">
-                <view class="pp-meta-grid">
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+        <view class="pp-block pp-tbl">
+          <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">星运</view>
             <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'ny' + i">{{ c.nayin }}</view>
@@ -85,11 +93,13 @@
             </view>
           </view>
         </view>
-      </view>
+        </view>
+      </scroll-view>
 
       <!-- 神煞 单独板块 (含联动列) -->
-      <view class="pp-block pp-tbl">
-                <view class="pp-meta-grid">
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+        <view class="pp-block pp-tbl">
+          <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">神煞</view>
             <view class="pp-cell pp-ss-list" v-for="(c, i) in columns" :key="'ss' + i">
@@ -97,7 +107,8 @@
             </view>
           </view>
         </view>
-      </view>
+        </view>
+      </scroll-view>
 
       <!-- 五行统计 -->
       <view class="pp-block">
@@ -165,7 +176,7 @@
 
           <!-- 选中流年的 12 流月 (一行, 可点击联动, 带节气) -->
           <view v-if="lnYear !== null && lnMonths.length" class="pp-expand">
-            <view class="pp-expand-head">流月 · {{ lnYear }}年（点击查看流时）</view>
+            <view class="pp-expand-head">流月 · {{ lnYear }}年（点击查看流日）</view>
             <scroll-view scroll-x :show-scrollbar="false">
               <view class="pp-dy-row">
                 <view
@@ -175,7 +186,7 @@
                   :key="mi"
                   @tap="toggleLiuyue(mm)"
                 >
-                  <text class="pp-dy-age">{{ mm.month }} · {{ JIEQI[mi].name }} {{ JIEQI[mi].md }}</text>
+                  <text class="pp-dy-age">{{ mm.month }}\n{{ JIEQI[mi].name }} {{ JIEQI[mi].md }}</text>
                   <view class="pp-gz-stack">
                     <view class="pp-gz-line">
                       <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(mm.gan)]">{{ mm.gan }}</text>
@@ -190,32 +201,60 @@
               </view>
             </scroll-view>
 
-            <!-- 选中流月的 12 流时 (一行, 可点击联动) -->
-            <view v-if="selectedLiuyue && liushiList.length" class="pp-expand">
-              <view class="pp-expand-head">流时 · {{ selectedLiuyue.label }}（点击查看对应四柱列）</view>
+            <!-- 选中流月的 30 流日 (一行, 可点击联动) -->
+            <view v-if="selectedLiuyue && liuriList.length" class="pp-expand">
+              <view class="pp-expand-head">流日 · {{ selectedLiuyue.label }}（点击查看流时）</view>
               <scroll-view scroll-x :show-scrollbar="false">
                 <view class="pp-dy-row">
                   <view
                     class="pp-dy-item"
-                    :class="{ on: selectedLiushi && selectedLiushi.label === ts.hour }"
-                    v-for="(ts, ti) in liushiList"
-                    :key="ti"
-                    @tap="toggleLiushi(ts)"
+                    :class="{ on: selectedLiuri && selectedLiuri.label === r.day }"
+                    v-for="(r, ri) in liuriList"
+                    :key="ri"
+                    @tap="toggleLiuri(r)"
                   >
-                    <text class="pp-dy-age">{{ ts.hour }}</text>
+                    <text class="pp-dy-age">{{ r.day }}</text>
                     <view class="pp-gz-stack">
                       <view class="pp-gz-line">
-                        <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(ts.gan)]">{{ ts.gan }}</text>
-                        <text class="pp-ss-right">{{ ss1(shishenName(GAN.indexOf(ts.gan))) }}</text>
+                        <text class="pp-dy-gan" :class="'wx-' + GAN_WX[r.ganIdx]">{{ r.gan }}</text>
+                        <text class="pp-ss-right">{{ ss1(shishenName(r.ganIdx)) }}</text>
                       </view>
                       <view class="pp-gz-line">
-                        <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(ts.zhi)]">{{ ts.zhi }}</text>
-                        <text class="pp-ss-right">{{ zhiSs1(ts.zhi) }}</text>
+                        <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[r.zhiIdx]">{{ r.zhi }}</text>
+                        <text class="pp-ss-right">{{ zhiSs1(r.zhi) }}</text>
                       </view>
                     </view>
                   </view>
                 </view>
               </scroll-view>
+
+              <!-- 选中流日的 12 流时 (一行, 可点击联动) -->
+              <view v-if="selectedLiuri && liushiList.length" class="pp-expand">
+                <view class="pp-expand-head">流时 · {{ selectedLiuri.label }}（点击查看对应四柱列）</view>
+                <scroll-view scroll-x :show-scrollbar="false">
+                  <view class="pp-dy-row">
+                    <view
+                      class="pp-dy-item"
+                      :class="{ on: selectedLiushi && selectedLiushi.label === ts.hour }"
+                      v-for="(ts, ti) in liushiList"
+                      :key="ti"
+                      @tap="toggleLiushi(ts)"
+                    >
+                      <text class="pp-dy-age">{{ ts.hour }}</text>
+                      <view class="pp-gz-stack">
+                        <view class="pp-gz-line">
+                          <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(ts.gan)]">{{ ts.gan }}</text>
+                          <text class="pp-ss-right">{{ ss1(shishenName(GAN.indexOf(ts.gan))) }}</text>
+                        </view>
+                        <view class="pp-gz-line">
+                          <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(ts.zhi)]">{{ ts.zhi }}</text>
+                          <text class="pp-ss-right">{{ zhiSs1(ts.zhi) }}</text>
+                        </view>
+                      </view>
+                    </view>
+                  </view>
+                </scroll-view>
+              </view>
             </view>
           </view>
         </view>
@@ -232,6 +271,26 @@
       </view>
 
       <view class="pp-tip">※ 以节气为界排盘，真太阳时按出生地经度修正，流月供学习参考</view>
+
+      <!-- 排盘历史弹窗 -->
+      <u-popup :show="showHistory" mode="bottom" @close="showHistory = false">
+        <view class="hist-sheet">
+          <view class="sheet-title">排盘历史</view>
+          <view class="hist-list" v-if="historyList.length">
+            <view class="hist-item" v-for="(rec, i) in historyList" :key="i">
+              <view class="hist-main" @tap="useHistory(rec)">
+                <view class="hist-top">
+                  <text class="hist-time">{{ rec.time }}</text>
+                  <text class="hist-gz">{{ rec.gzText }}</text>
+                </view>
+                <text class="hist-label">{{ rec.label }}</text>
+              </view>
+              <view class="hist-del" @tap="removeHistory(i)"><text>✕</text></view>
+            </view>
+          </view>
+          <view class="hist-empty" v-else><text>暂无保存的排盘\n在排盘页开启「保存排盘」后自动存档</text></view>
+        </view>
+      </u-popup>
 
       <!-- ===== AI 解盘 ===== -->
       <view class="pp-block jp-section">
@@ -313,7 +372,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf } from '../../utils/paipan'
+import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar } from '../../utils/paipan'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
 import { aiJiepan } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -335,13 +394,20 @@ const dyOpen = ref(-1)
 const dyYears = ref([])
 const lnYear = ref(null)
 const lnMonths = ref([])
-/* 选中联动: 大运/流年/流月/流时 -> 四柱左侧加列 (从左到右: 流时/流月/流年/大运/四柱) */
+/* 选中联动: 大运/流年/流月/流日/流时 -> 四柱左侧加列 (从左到右: 流时/流日/流月/流年/大运/四柱) */
 const selectedDayun = ref(null)
 const selectedLiunian = ref(null)
 const selectedLiuyue = ref(null)
+const selectedLiuri = ref(null)
 const selectedLiushi = ref(null)
-/* 流时列表 (当前流月 12 时辰) */
+/* 流日列表 (当前流月 30 天) + 流时列表 (当前流日 12 时辰) */
+const liuriList = ref([])
 const liushiList = ref([])
+
+/* 排盘历史 */
+const HISTORY_KEY = 'paipan_history'
+const showHistory = ref(false)
+const historyList = ref([])
 
 /* 节气 (流月 -> 节气名+近似日期, 参考问真) */
 const JIEQI = [
@@ -385,10 +451,10 @@ function zhiSs1(zhiStr) {
   return ss1(shishen(dayGan, GAN.indexOf(mainGan)))
 }
 
-/* 流时: 以流月干为日干近似, 五鼠遁起子时 */
-function buildLiushi(liuyueGanIdx) {
+/* 流时: 以流日干为日干, 五鼠遁起子时 */
+function buildLiushi(liuriGanIdx) {
   const wushu = { 0: 0, 1: 2, 2: 4, 3: 6, 4: 8, 5: 0, 6: 2, 7: 4, 8: 6, 9: 8 }
-  const firstGan = wushu[liuyueGanIdx]
+  const firstGan = wushu[liuriGanIdx]
   const hours = []
   for (let i = 0; i < 12; i++) {
     const g = (firstGan + i) % 10
@@ -398,11 +464,27 @@ function buildLiushi(liuyueGanIdx) {
   return hours
 }
 
-/* 联动列 + 四柱 (从左到右: 流时/流月/流年/大运/四柱) */
+/* 流日: 以流月所属节气日为锚点, 递推当月 30 天 (供学习参考) */
+function buildLiuri(liunianYear, monthIdx) {
+  // JIEQI[monthIdx].md 为该月令节气日: 0立春2/4 ... 10大雪12/7(当年), 11小寒1/6(次年)
+  const [sm, sd] = JIEQI[monthIdx].md.split('/').map(Number)
+  const solarYear = sm === 1 ? liunianYear + 1 : liunianYear
+  const anchor = dayPillar(solarYear, sm, sd)
+  const days = []
+  for (let i = 0; i < 30; i++) {
+    const g = (anchor.g + i) % 10
+    const z = (anchor.z + i) % 12
+    days.push({ day: `${i + 1}日`, ganIdx: g, zhiIdx: z, gan: GAN[g], zhi: ZHI[z] })
+  }
+  return days
+}
+
+/* 联动列 + 四柱 (从左到右: 流时/流日/流月/流年/大运/四柱) */
 const columns = computed(() => {
   if (!data.value) return []
   const extra = []
   if (selectedLiushi.value) extra.push(selectedLiushi.value)
+  if (selectedLiuri.value) extra.push(selectedLiuri.value)
   if (selectedLiuyue.value) extra.push(selectedLiuyue.value)
   if (selectedLiunian.value) extra.push(selectedLiunian.value)
   if (selectedDayun.value) extra.push(selectedDayun.value)
@@ -442,11 +524,53 @@ onLoad((options) => {
     return
   }
   if (options && options.tool && tabs.some((t) => t.key === options.tool)) tab.value = options.tool
-  // 生成解盘
-  const jp = generateJiepan(data.value.bazi)
-  jpData.value = jp
-  jpSummary.value = summaryJiepan(data.value.bazi)
+  applyData(data.value)
 })
+
+/* 应用排盘数据 (新盘 / 历史盘通用): 重置联动状态 + 生成解盘 */
+function applyData(d) {
+  data.value = d
+  dyOpen.value = -1
+  dyYears.value = []
+  lnYear.value = null
+  lnMonths.value = []
+  liuriList.value = []
+  liushiList.value = []
+  selectedDayun.value = null
+  selectedLiunian.value = null
+  selectedLiuyue.value = null
+  selectedLiuri.value = null
+  selectedLiushi.value = null
+  const jp = generateJiepan(d.bazi)
+  jpData.value = jp
+  jpSummary.value = summaryJiepan(d.bazi)
+}
+
+/* ===== 排盘历史 ===== */
+function loadHistory() {
+  try {
+    historyList.value = uni.getStorageSync(HISTORY_KEY) || []
+    if (!Array.isArray(historyList.value)) historyList.value = []
+  } catch (e) {
+    historyList.value = []
+  }
+}
+function openHistory() {
+  loadHistory()
+  showHistory.value = true
+}
+function useHistory(rec) {
+  if (!rec || !rec.data) return
+  applyData(rec.data)
+  showHistory.value = false
+  uni.showToast({ title: '已加载历史排盘', icon: 'none' })
+}
+function removeHistory(i) {
+  historyList.value.splice(i, 1)
+  try {
+    uni.setStorageSync(HISTORY_KEY, historyList.value)
+  } catch (e) { /* 忽略 */ }
+}
 
 function shishenName(ganIdx) {
   if (!data.value) return ''
@@ -459,19 +583,23 @@ function toggleDayun(i) {
     dyYears.value = []
     lnYear.value = null
     lnMonths.value = []
+    liuriList.value = []
     liushiList.value = []
     selectedDayun.value = null
     selectedLiunian.value = null
     selectedLiuyue.value = null
+    selectedLiuri.value = null
     selectedLiushi.value = null
     return
   }
   dyOpen.value = i
   lnYear.value = null
   lnMonths.value = []
+  liuriList.value = []
   liushiList.value = []
   selectedLiunian.value = null
   selectedLiuyue.value = null
+  selectedLiuri.value = null
   selectedLiushi.value = null
   const dayun = data.value.bazi.dayun[i]
   selectedDayun.value = buildExtraCol('dayun', dayun.startAge, GAN.indexOf(dayun.gan), ZHI.indexOf(dayun.zhi))
@@ -490,16 +618,20 @@ function toggleLiunian(y) {
   if (lnYear.value === y.year) {
     lnYear.value = null
     lnMonths.value = []
+    liuriList.value = []
     liushiList.value = []
     selectedLiunian.value = null
     selectedLiuyue.value = null
+    selectedLiuri.value = null
     selectedLiushi.value = null
     return
   }
   lnYear.value = y.year
   selectedLiunian.value = buildExtraCol('liunian', String(y.year), y.ganIdx, y.zhiIdx)
   selectedLiuyue.value = null
+  selectedLiuri.value = null
   selectedLiushi.value = null
+  liuriList.value = []
   liushiList.value = []
   const wuhu = { 0: 2, 5: 2, 1: 4, 6: 4, 2: 6, 7: 6, 3: 8, 8: 8, 4: 0, 9: 0 }
   const firstGan = wuhu[y.ganIdx]
@@ -520,14 +652,32 @@ function toggleLiunian(y) {
 function toggleLiuyue(mm) {
   if (selectedLiuyue.value && selectedLiuyue.value.label === mm.month) {
     selectedLiuyue.value = null
+    liuriList.value = []
     liushiList.value = []
+    selectedLiuri.value = null
     selectedLiushi.value = null
     return
   }
   selectedLiuyue.value = buildExtraCol('liuyue', mm.month, GAN.indexOf(mm.gan), ZHI.indexOf(mm.zhi))
+  selectedLiuri.value = null
   selectedLiushi.value = null
-  // 生成流时 (以流月干为日干近似, 五鼠遁)
-  liushiList.value = buildLiushi(GAN.indexOf(mm.gan))
+  liushiList.value = []
+  // 生成流日 (以流月节气日为锚点, 30 天)
+  const monthIdx = Number(mm.month.replace('月', '')) - 1
+  liuriList.value = buildLiuri(lnYear.value, monthIdx)
+}
+
+function toggleLiuri(r) {
+  if (selectedLiuri.value && selectedLiuri.value.label === r.day) {
+    selectedLiuri.value = null
+    liushiList.value = []
+    selectedLiushi.value = null
+    return
+  }
+  selectedLiuri.value = buildExtraCol('liuri', r.day, r.ganIdx, r.zhiIdx)
+  selectedLiushi.value = null
+  // 生成流时 (以流日干为日干, 五鼠遁)
+  liushiList.value = buildLiushi(r.ganIdx)
 }
 
 function toggleLiushi(ts) {
@@ -634,6 +784,16 @@ function payJiepan() {
 .pp-top-gender { display: flex; flex-direction: column; align-items: flex-end; }
 .pp-yuan { font-size: 36rpx; font-weight: 600; color: #c4a484; }
 .pp-dm { margin-top: 4rpx; font-size: 20rpx; color: rgba(240, 230, 205, 0.7); }
+.pp-top-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10rpx; }
+.pp-history-btn {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(254, 251, 246, 0.14);
+  border: 1rpx solid rgba(240, 230, 205, 0.35);
+}
+.pp-history-btn text { font-size: 20rpx; color: #f0e6cd; }
 
 /* 结果 tab */
 .pp-tabs {
@@ -677,19 +837,24 @@ function payJiepan() {
   border-bottom: 1rpx dashed #e6dcca;
 }
 
-/* 四柱表 (左侧标签列) */
+/* 四柱表 (左侧标签列, 列多可横向滑动) */
+.pp-grid-scroll {
+  width: 100%;
+  margin-bottom: 20rpx;
+}
 .pp-grid {
   border: 2rpx solid #d8ccb8;
   border-radius: 12rpx;
   overflow: hidden;
-  margin-bottom: 20rpx;
   background: #fefbf6;
+  min-width: 100%;
+  width: max-content;
 }
 .pp-row { display: flex; border-bottom: 1rpx solid #e6dcca; }
 .pp-row:last-child { border-bottom: none; }
 .pp-cell {
-  flex: 1;
-  padding: 14rpx 6rpx;
+  flex: 1 0 92rpx;
+  padding: 14rpx 4rpx;
   text-align: center;
   font-size: 26rpx;
   color: #42372c;
@@ -709,10 +874,11 @@ function payJiepan() {
   color: #4e3420;
   font-size: 24rpx;
 }
-/* 联动列 (大运/流年/流月) 高亮区分 */
+/* 联动列 (大运/流年/流月/流日/流时) 高亮区分 */
 .pp-head .pp-cell.ex-dayun { background: #f0e6cd; color: #8c5a2b; }
 .pp-head .pp-cell.ex-liunian { background: #efe5d3; color: #b04a45; }
 .pp-head .pp-cell.ex-liuyue { background: #e6dcca; color: #6e7f5a; }
+.pp-head .pp-cell.ex-liuri { background: #ece6f2; color: #7a5c9e; }
 .pp-head .pp-cell.ex-liushi { background: #f5efe3; color: #3f6f8c; }
 .pp-gan text, .pp-zhi text {
   font-size: 42rpx;
@@ -727,7 +893,8 @@ function payJiepan() {
   border-radius: 12rpx;
   overflow: hidden;
   background: #fefbf6;
-  margin-bottom: 20rpx;
+  min-width: 100%;
+  width: max-content;
 }
 .pp-block.pp-tbl .pp-cg-grid,
 .pp-block.pp-tbl .pp-meta-grid {
@@ -762,8 +929,8 @@ function payJiepan() {
 .pp-wx-fill.wx-水 { background: #1565c0; }
 .pp-wx-num { width: 60rpx; font-size: 22rpx; color: #857563; text-align: right; }
 
-/* 大运/流年/流月 (一行, 紧凑) */
-.pp-dy-row { display: inline-flex; gap: 6rpx; padding: 2rpx; }
+/* 大运/流年/流月/流日/流时 (一行, 超紧凑, 干支框约减半) */
+.pp-dy-row { display: inline-flex; gap: 3rpx; padding: 2rpx; }
 .pp-dy-item {
   display: flex;
   flex-direction: column;
@@ -771,16 +938,16 @@ function payJiepan() {
   background: #faf3e9;
   border: 1rpx solid #efe7d8;
   border-radius: 10rpx;
-  padding: 4rpx 8rpx;
-  min-width: 100rpx;
+  padding: 2rpx 4rpx;
+  min-width: 54rpx;
 }
 .pp-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
-.pp-dy-age { font-size: 13rpx; color: #b3a595; white-space: nowrap; }
+.pp-dy-age { font-size: 11rpx; color: #b3a595; line-height: 1.25; white-space: pre-line; text-align: center; }
 /* 干支上下排列 + 右侧一字十神 */
-.pp-gz-stack { display: flex; flex-direction: column; align-items: center; margin-top: 2rpx; }
+.pp-gz-stack { display: flex; flex-direction: column; align-items: center; margin-top: 1rpx; }
 .pp-gz-line { display: flex; align-items: center; }
-.pp-dy-gan, .pp-dy-zhi { font-size: 24rpx; font-weight: 500; line-height: 1.25; }
-.pp-ss-right { margin-left: 3rpx; font-size: 12rpx; color: #b3a595; white-space: nowrap; }
+.pp-dy-gan, .pp-dy-zhi { font-size: 22rpx; font-weight: 500; line-height: 1.25; }
+.pp-ss-right { margin-left: 2rpx; font-size: 11rpx; color: #b3a595; white-space: nowrap; }
 .pp-expand {
   margin-top: 8rpx;
   background: #f8f3ea;
@@ -795,6 +962,38 @@ function payJiepan() {
 .pp-ln-ss { margin-left: 20rpx; font-size: 22rpx; color: #c4a484; }
 .pp-ln-wx { margin-left: auto; font-size: 20rpx; color: rgba(240, 230, 205, 0.6); }
 .pp-tip { font-size: 20rpx; color: #b3a595; margin-top: 10rpx; }
+
+/* 排盘历史弹窗 */
+.hist-sheet { padding: 30rpx 30rpx 60rpx; max-height: 70vh; }
+.sheet-title { text-align: center; font-size: 30rpx; font-weight: 500; color: #42372c; margin-bottom: 24rpx; }
+.hist-list { display: flex; flex-direction: column; gap: 14rpx; }
+.hist-item {
+  display: flex;
+  align-items: center;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+}
+.hist-main { flex: 1; min-width: 0; }
+.hist-top { display: flex; align-items: baseline; gap: 14rpx; }
+.hist-time { font-size: 20rpx; color: #b3a595; flex-shrink: 0; }
+.hist-gz { font-size: 26rpx; font-weight: 600; color: #8c5a2b; }
+.hist-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
+.hist-del {
+  width: 56rpx;
+  height: 56rpx;
+  margin-left: 16rpx;
+  border-radius: 50%;
+  background: #fdf1f0;
+  border: 1rpx solid #efd8d4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hist-del text { font-size: 22rpx; color: #b04a45; }
+.hist-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
 
 /* 五行色 */
 .wx-木 { color: #2e7d32; }

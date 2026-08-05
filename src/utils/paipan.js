@@ -59,7 +59,7 @@ function monthPillar(yearP, m, d) {
   return { g, z, name: GAN[g] + ZHI[z] }
 }
 
-function dayPillar(y, m, d) {
+export function dayPillar(y, m, d) {
   // 锚点: 1900-01-31 = 甲辰 (序40)
   const anchor = Date.UTC(1900, 0, 31) / 86400000
   const target = Date.UTC(y, m - 1, d) / 86400000
