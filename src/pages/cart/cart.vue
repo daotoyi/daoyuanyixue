@@ -53,7 +53,9 @@
 
       <view class="settle-actions">
         <text class="del-btn" @tap="confirmDelete">删除</text>
-        <u-button type="error" :text="'结算(' + count + ')'" shape="circle" @click="goCheckout"></u-button>
+        <view class="btn-fill btn-settle" @tap="goCheckout">
+          <text>结算({{ count }})</text>
+        </view>
       </view>
     </view>
   </view>
@@ -245,12 +247,37 @@ function goShop() {
 
 /* 底部结算栏 */
 .settle-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   background: #fefbf6;
   border-top: 1rpx solid #efe7d8;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+}
+.cart-page {
+  padding-bottom: 120rpx;
+}
+/* 结算按钮: 实心填充 */
+.btn-fill {
+  height: 76rpx;
+  padding: 0 40rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-fill text {
+  font-size: 26rpx;
+  color: #fefbf6;
+  letter-spacing: 2rpx;
+}
+.btn-settle {
+  background: linear-gradient(135deg, #b04a45, #8c3228);
 }
 .check-all {
   display: flex;

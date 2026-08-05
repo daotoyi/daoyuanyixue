@@ -16,7 +16,7 @@
           v-for="tab in tabs"
           :key="tab.key"
           class="filter-pill"
-          :class="{ active: activeTab === tab.key }"
+          :class="['pill-' + tab.key, { active: activeTab === tab.key }]"
           @tap="activeTab = tab.key"
         >
           <text>{{ tab.label }}</text>
@@ -68,7 +68,7 @@ const userStore = useUserStore()
 const tabs = [
   { key: 'purchased', label: '已购课程' },
   { key: 'learning', label: '正在学习' },
-  { key: 'done', label: '已完成' },
+  { key: 'done', label: '完成课程' },
   { key: 'fav', label: '收藏课程' },
 ]
 const activeTab = ref('purchased')
@@ -185,12 +185,13 @@ function goCourse() {
   background: #f8f3ea;
   font-size: 26rpx;
   color: #857563;
+  border: 2rpx solid transparent;
 }
-.filter-pill.active {
-  background: #8c5a2b;
-  color: #fefbf6;
-  font-weight: 500;
-}
+/* 各分类不同颜色填充 (选中时) */
+.pill-purchased.active { background: #8c5a2b; border-color: #8c5a2b; color: #fefbf6; font-weight: 500; }
+.pill-learning.active { background: #b04a45; border-color: #b04a45; color: #fefbf6; font-weight: 500; }
+.pill-done.active { background: #6e7f5a; border-color: #6e7f5a; color: #fefbf6; font-weight: 500; }
+.pill-fav.active { background: #ba7517; border-color: #ba7517; color: #fefbf6; font-weight: 500; }
 .pill-badge {
   margin-left: 10rpx;
   min-width: 32rpx;

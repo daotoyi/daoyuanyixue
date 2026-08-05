@@ -331,6 +331,32 @@
           </view>
         </view>
 
+        <!-- ===== 反馈管理 ===== -->
+        <view v-else-if="activeModule === 'feedbacks'" class="module">
+          <view class="module-head">
+            <text class="module-title">反馈管理（{{ feedbacks.length }}）</text>
+          </view>
+          <view class="table">
+            <view class="tr th">
+              <text class="td w-no">用户</text>
+              <text class="td w-name">反馈内容</text>
+              <text class="td w-time">时间</text>
+              <text class="td w-status">状态</text>
+              <text class="td w-ops">操作</text>
+            </view>
+            <view class="tr" v-for="f in feedbacks" :key="f.id">
+              <text class="td w-no ellipsis">{{ f.nickname || ('UID ' + f.uid) }} {{ f.dao_code ? '(' + f.dao_code + ')' : '' }}</text>
+              <text class="td w-name ellipsis">{{ f.content }}</text>
+              <text class="td w-time">{{ f.created_at }}</text>
+              <text class="td w-status" :class="f.status === '待处理' ? 'st-wait' : 'st-done'">{{ f.status }}</text>
+              <view class="td w-ops ops">
+                <text class="op" @tap="openFeedbackReply(f)">回复</text>
+                <text class="op danger" @tap="deleteFeedback(f)">删除</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
         <!-- ===== 系统设置 ===== -->
         <view v-else-if="activeModule === 'settings'" class="module">
           <view class="settings-tabs">
@@ -471,27 +497,14 @@
       </view>
     </u-popup>
 
-    <!-- ===== 发货弹窗 ===== -->
-    <u-popup :show="showShip" mode="bottom" @close="showShip = false">
+    <!-- ===== 反馈回复弹窗 ===== -->
+    <u-popup :show="showFeedbackReply" mode="bottom" @close="showFeedbackReply = false">
       <view class="form-sheet">
-        <view class="sheet-title">订单发货</view>
-        <view class="f-row"><text class="f-label">订单号</text><text class="f-static">{{ shipForm.order_no }}</text></view>
-        <view class="f-row">
-          <text class="f-label">物流公司</text>
-          <view class="f-pills wrap">
-            <text
-              v-for="l in logisticsList"
-              :key="l.code"
-              class="pill"
-              :class="{ on: shipForm.company === l.code }"
-              @tap="shipForm.company = l.code"
-            >{{ l.name }}</text>
-          </view>
-        </view>
-        <view class="f-row"><text class="f-label">物流单号</text><input class="f-input" v-model="shipForm.tracking_no" placeholder="输入快递单号" /></view>
+        <view class="sheet-title">回复反馈</view>
+        <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="replyForm.reply" placeholder="填写回复内容，反馈将标记为已处理" /></view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showShip = false"></u-button>
-          <u-button type="primary" text="确认发货" shape="circle" size="small" @click="confirmShip"></u-button>
+          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showFeedbackReply = false"></u-button>
+          <u-button type="primary" text="确认回复" shape="circle" size="small" @click="saveFeedbackReply"></u-button>
         </view>
       </view>
     </u-popup>
@@ -527,6 +540,7 @@ import {
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
+  adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -541,6 +555,7 @@ const modules = [
   { key: 'users', label: '用户管理', icon: '👥' },
   { key: 'lives', label: '直播管理', icon: '📡' },
   { key: 'moments', label: '动态管理', icon: '📝' },
+  { key: 'feedbacks', label: '反馈管理', icon: '💬' },
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
 const activeModule = ref('overview')
@@ -644,6 +659,7 @@ async function loadModule(key) {
     else if (key === 'lives') lives.value = await adminList({ collection: 'live_streams' })
     else if (key === 'moments') moments.value = await adminList({ collection: 'moments' })
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })
+    else if (key === 'feedbacks') await loadFeedbacks()
     else if (key === 'settings') await loadSettings(activeSettingsTab.value)
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
@@ -652,6 +668,44 @@ async function loadModule(key) {
 
 async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value })
+}
+
+/* 反馈管理 */
+const feedbacks = ref([])
+const showFeedbackReply = ref(false)
+const replyForm = ref({ id: null, reply: '' })
+
+async function loadFeedbacks() {
+  feedbacks.value = await adminFeedbacksList()
+}
+
+function openFeedbackReply(f) {
+  replyForm.value = { id: f.id, reply: f.reply || '' }
+  showFeedbackReply.value = true
+}
+
+async function saveFeedbackReply() {
+  await adminFeedbackReply({ id: replyForm.value.id, reply: replyForm.value.reply })
+  showFeedbackReply.value = false
+  uni.showToast({ title: '已回复', icon: 'success' })
+  await loadFeedbacks()
+}
+
+function deleteFeedback(f) {
+  uni.showModal({
+    title: '删除反馈',
+    content: '确定删除该条反馈吗？',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await adminFeedbackDelete({ id: f.id })
+        uni.showToast({ title: '已删除', icon: 'none' })
+        await loadFeedbacks()
+      } catch (e) {
+        uni.showToast({ title: '删除失败', icon: 'none' })
+      }
+    },
+  })
 }
 
 function goFront() {
@@ -821,28 +875,9 @@ async function payForOrder(o) {
   await loadOrders()
 }
 
-/* 发货弹窗 */
-const showShip = ref(false)
-const shipForm = ref({ order_no: '', company: '', tracking_no: '' })
-const logisticsList = ref([])
-
-async function openShip(o) {
-  if (!logisticsList.value.length) {
-    logisticsList.value = await adminLogisticsList()
-  }
-  shipForm.value = { order_no: o.order_no, company: o.logistics_company || '', tracking_no: o.tracking_no || '' }
-  showShip.value = true
-}
-
-async function confirmShip() {
-  if (!shipForm.value.company || !shipForm.value.tracking_no) {
-    uni.showToast({ title: '请选择物流并填写单号', icon: 'none' })
-    return
-  }
-  await adminOrderShip({ order_no: shipForm.value.order_no, company: shipForm.value.company, tracking_no: shipForm.value.tracking_no })
-  showShip.value = false
-  uni.showToast({ title: '已发货', icon: 'success' })
-  await loadOrders()
+/* 发货: 跳转物流选择页 */
+function openShip(o) {
+  uni.navigateTo({ url: `/pages/admin/logistics?order_no=${o.order_no}` })
 }
 
 async function shipOrder(o) {
@@ -1643,6 +1678,8 @@ onMounted(async () => {
   color: #42372c;
 }
 .st-待付款 { color: #b04a45; font-weight: 500; }
+.st-wait { color: #ba7517; font-weight: 500; }
+.st-done { color: #6e7f5a; font-weight: 500; }
 .st-待发货 { color: #8c5a2b; font-weight: 500; }
 .st-待收货 { color: #ba7517; font-weight: 500; }
 .st-已完成 { color: #6e7f5a; font-weight: 500; }

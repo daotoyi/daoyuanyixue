@@ -324,6 +324,99 @@ async function myFootprints(data) {
   return ok(res.data)
 }
 
+/* ---- 意见反馈 ---- */
+
+async function submitFeedback(data) {
+  const { uid, content, contact } = data
+  if (!content || !String(content).trim()) return fail('请输入反馈内容')
+  const doc = {
+    id: Date.now() % 1000000,
+    uid: Number(uid || 0),
+    nickname: data.nickname || '',
+    dao_code: data.dao_code || '',
+    contact: contact || '',
+    content: String(content).trim().slice(0, 500),
+    status: '待处理',
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  }
+  await db.collection('feedbacks').add(doc)
+  return ok(doc)
+}
+
+async function myFeedbacks(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('feedbacks').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(50).get()
+  return ok(res.data)
+}
+
+async function adminFeedbacks(data) {
+  const res = await db.collection('feedbacks').orderBy('id', 'desc').limit(100).get()
+  return ok(res.data)
+}
+
+async function adminFeedbackReply(data) {
+  await db.collection('feedbacks').where({ id: Number(data.id) }).update({ status: data.status || '已处理', reply: data.reply || '', replied_at: new Date().toLocaleString('zh-CN', { hour12: false }) })
+  return ok({ updated: true })
+}
+
+async function adminFeedbackDelete(data) {
+  await db.collection('feedbacks').where({ id: Number(data.id) }).remove()
+  return ok({ deleted: true })
+}
+
+/* 管理工具: 创建集合 */
+async function adminCreateCollection(data) {
+  const name = String(data.name || '').trim()
+  if (!name || !/^[a-zA-Z_]{1,64}$/.test(name)) return fail('集合名不合法')
+  await db.createCollection(name)
+  return ok({ created: name })
+}
+
+/* ---- 消息中心 ---- */
+
+async function myMessages(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('messages').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(50).get()
+  return ok(res.data)
+}
+
+async function unreadCount(data) {
+  const { uid } = data
+  if (!uid) return ok({ count: 0 })
+  const res = await db.collection('messages').where({ uid: Number(uid), read: false }).limit(50).get()
+  return ok({ count: res.data.length })
+}
+
+async function markMessagesRead(data) {
+  const { uid } = data
+  if (!uid) return ok({ updated: false })
+  await db.collection('messages').where({ uid: Number(uid), read: false }).update({ read: true })
+  return ok({ updated: true })
+}
+
+/* ---- 会员等级 (按累计消费) ---- */
+
+async function vipLevel(data) {
+  const { uid } = data
+  if (!uid) return fail('请先登录')
+  const orderRes = await db.collection('orders').where({ uid: Number(uid) }).limit(100).get()
+  let total = 0
+  orderRes.data.forEach((o) => {
+    if (o.status !== '待付款' && o.status !== '已退款') {
+      total += Number(o.total_price) || 0
+    }
+  })
+  let level = 0
+  if (total >= 10000) level = 4
+  else if (total >= 5000) level = 3
+  else if (total >= 2000) level = 2
+  else if (total > 1000) level = 1
+  await db.collection('users').where({ uid: Number(uid) }).update({ vip_level: level, total_spent: Math.round(total * 100) / 100 })
+  return ok({ level, total_spent: Math.round(total * 100) / 100 })
+}
+
 async function wechatLogin(data) {
   // 微信一键登录 (小程序): 需在环境变量配置 WX_APPID / WX_SECRET
   const { code, nickname, avatar } = data
@@ -452,7 +545,22 @@ async function payOrder(data) {
   const cond = data.order_no
     ? { order_no: data.order_no }
     : { _id: data._id }
-  await db.collection('orders').where(cond).update({ status: '待发货' })
+  const res = await db.collection('orders').where(cond).update({ status: '待发货' })
+  // 推送订单消息
+  try {
+    const o = await db.collection('orders').where(cond).limit(1).get()
+    if (o.data[0] && o.data[0].uid) {
+      await db.collection('messages').add({
+        id: Date.now() % 1000000,
+        uid: o.data[0].uid,
+        type: 'order',
+        title: '订单支付成功',
+        content: `订单 ${o.data[0].order_no} 已支付成功，商家正在加紧备货`,
+        read: false,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+    }
+  } catch (e) {}
   return ok({ updated: true })
 }
 
@@ -460,7 +568,21 @@ async function confirmOrder(data) {
   const cond = data.order_no
     ? { order_no: data.order_no }
     : { _id: data._id }
-  await db.collection('orders').where(cond).update({ status: '已完成' })
+  const res = await db.collection('orders').where(cond).update({ status: '已完成' })
+  try {
+    const o = await db.collection('orders').where(cond).limit(1).get()
+    if (o.data[0] && o.data[0].uid) {
+      await db.collection('messages').add({
+        id: Date.now() % 1000000,
+        uid: o.data[0].uid,
+        type: 'order',
+        title: '订单已完成',
+        content: `订单 ${o.data[0].order_no} 已确认收货，感谢您的信任`,
+        read: false,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+    }
+  } catch (e) {}
   return ok({ updated: true })
 }
 
@@ -695,7 +817,22 @@ async function adminOrderShip(data) {
   }
   if (data.company) doc.logistics_company = data.company
   if (data.tracking_no) doc.tracking_no = data.tracking_no
-  await db.collection('orders').where({ order_no: data.order_no }).update(doc)
+  const res = await db.collection('orders').where({ order_no: data.order_no }).update(doc)
+  // 推送物流消息
+  try {
+    const o = await db.collection('orders').where({ order_no: data.order_no }).limit(1).get()
+    if (o.data[0] && o.data[0].uid) {
+      await db.collection('messages').add({
+        id: Date.now() % 1000000,
+        uid: o.data[0].uid,
+        type: 'order',
+        title: '订单已发货',
+        content: `订单 ${data.order_no} 已由${data.company || '快递'}发出${data.tracking_no ? '，运单号：' + data.tracking_no : ''}`,
+        read: false,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+    }
+  } catch (e) {}
   return ok({ updated: true })
 }
 
@@ -837,6 +974,16 @@ const ROUTES = {
   'user.favorite.toggle': toggleFavorite,
   'user.footprints': myFootprints,
   'user.footprint.add': addFootprint,
+  'user.feedback': submitFeedback,
+  'user.feedbacks': myFeedbacks,
+  'user.messages': myMessages,
+  'user.unread': unreadCount,
+  'user.messages.read': markMessagesRead,
+  'user.vip': vipLevel,
+  'admin.feedbacks.list': adminFeedbacks,
+  'admin.feedbacks.reply': adminFeedbackReply,
+  'admin.feedbacks.delete': adminFeedbackDelete,
+  'admin.db.createCollection': adminCreateCollection,
   'app.checkUpdate': checkUpdate,
   'admin.logistics.list': listLogistics,
   'order.create': createOrder,

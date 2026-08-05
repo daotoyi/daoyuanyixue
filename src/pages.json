@@ -176,6 +176,30 @@
         "navigationBarBackgroundColor": "#FFFCF5",
         "navigationBarTextStyle": "black"
       }
+    },
+    {
+      "path": "pages/user/feedback",
+      "style": {
+        "navigationBarTitleText": "意见反馈",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/user/messages",
+      "style": {
+        "navigationBarTitleText": "消息中心",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/admin/logistics",
+      "style": {
+        "navigationBarTitleText": "选择物流发货",
+        "navigationBarBackgroundColor": "#451A03",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {

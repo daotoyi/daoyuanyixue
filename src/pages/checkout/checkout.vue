@@ -77,7 +77,9 @@
         <text class="st-price">¥{{ finalPrice }}</text>
         <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
       </view>
-      <u-button type="error" :text="'提交订单 · 模拟支付'" shape="circle" :loading="submitting" @click="submitOrder"></u-button>
+      <view class="btn-fill btn-submit" @tap="submitOrder">
+        <text>{{ submitting ? '提交中...' : '提交订单 · 模拟支付' }}</text>
+      </view>
     </view>
 
     <!-- 优惠券选择弹窗 -->
@@ -427,6 +429,25 @@ async function submitOrder() {
   font-size: 20rpx;
   color: #6e7f5a;
   margin-left: 10rpx;
+}
+/* 提交按钮: 实心填充 */
+.btn-fill {
+  flex-shrink: 0;
+  margin-left: 20rpx;
+  height: 84rpx;
+  padding: 0 48rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-fill text {
+  font-size: 28rpx;
+  color: #fefbf6;
+  letter-spacing: 2rpx;
+}
+.btn-submit {
+  background: linear-gradient(135deg, #b04a45, #8c3228);
 }
 
 /* 优惠券弹窗 */

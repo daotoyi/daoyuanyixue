@@ -43,7 +43,9 @@
     <view class="buy-bar">
       <template v-if="isOwned">
         <text class="buy-price owned">已购买</text>
-        <u-button type="primary" text="开始学习" shape="circle" @click="startLearn"></u-button>
+        <view class="btn-fill btn-learn" @tap="startLearn">
+          <text>开始学习</text>
+        </view>
       </template>
       <template v-else>
         <view class="buy-left">
@@ -301,5 +303,8 @@ function startLearn() {
 }
 .btn-buy {
   background: linear-gradient(135deg, #b04a45, #8c3228);
+}
+.btn-learn {
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
 }
 </style>

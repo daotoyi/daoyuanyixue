@@ -38,23 +38,12 @@
             <text class="of-time">{{ o.created_at }}</text>
             <view class="of-right">
               <text class="of-total">合计 ¥{{ o.total_price }}</text>
-              <u-button
-                v-if="o.status === '待付款'"
-                type="error"
-                text="去支付"
-                shape="circle"
-                size="mini"
-                @tap.stop="doPay(o)"
-              ></u-button>
-              <u-button
-                v-else-if="o.status === '待收货'"
-                type="primary"
-                text="确认收货"
-                shape="circle"
-                size="mini"
-                plain
-                @tap.stop="doConfirm(o)"
-              ></u-button>
+              <view v-if="o.status === '待付款'" class="btn-fill btn-pay" @tap.stop="doPay(o)">
+                <text>去支付</text>
+              </view>
+              <view v-else-if="o.status === '待收货'" class="btn-fill btn-confirm" @tap.stop="doConfirm(o)">
+                <text>确认收货</text>
+              </view>
             </view>
           </view>
         </view>
@@ -181,6 +170,28 @@ async function doConfirm(o) {
 .st-待收货 { color: #ba7517; }
 .st-已完成 { color: #6e7f5a; }
 .st-已退款 { color: #857563; }
+/* 状态按钮: 实心彩色 */
+.btn-fill {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  height: 64rpx;
+  padding: 0 34rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-fill text {
+  font-size: 24rpx;
+  color: #fefbf6;
+  letter-spacing: 1rpx;
+}
+.btn-pay {
+  background: linear-gradient(135deg, #b04a45, #8c3228);
+}
+.btn-confirm {
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
 
 .order-items {
   padding: 12rpx 0;

@@ -8,6 +8,10 @@
       <view class="setting-entry" @tap="goSetting">
         <text class="setting-icon">⚙</text>
       </view>
+      <view class="msg-entry" @tap="goMessages">
+        <text class="msg-icon">🔔</text>
+        <text class="msg-dot" v-if="unreadCount > 0"></text>
+      </view>
       <view class="user-main">
         <view class="avatar-wrap" @tap="isLoggedIn ? openProfile() : goLogin()">
           <image v-if="userInfo.avatar" class="user-avatar" :src="userInfo.avatar" mode="aspectFill"></image>
@@ -20,9 +24,10 @@
           <template v-if="isLoggedIn">
             <view class="name-row">
               <text class="user-name">{{ userInfo.nickname }}</text>
-              <view class="vip-badge" v-if="userInfo.vip_level">
-                <text>VIP{{ userInfo.vip_level }}</text>
+              <view class="vip-badge" :class="'vip-' + vipLevel">
+                <text>VIP{{ vipLevel }}</text>
               </view>
+              <text class="vip-tip" @tap.stop="showVipTip">等级说明</text>
             </view>
             <text class="user-id" @tap.stop="copyDaoCode">道号 · {{ daoCode }}（点按复制）</text>
           </template>
@@ -107,20 +112,18 @@
       <view class="form-sheet">
         <view class="sheet-title">修改资料</view>
         <view class="pf-avatar-row">
-          <view
-            v-for="a in presetAvatars"
-            :key="a"
-            class="pf-avatar"
-            :class="{ on: profileForm.avatar === a }"
-            @tap="profileForm.avatar = a"
-          >
-            <text>{{ a }}</text>
+          <image v-if="profileForm.avatar" class="pf-avatar-img" :src="profileForm.avatar" mode="aspectFill"></image>
+          <view v-else class="pf-avatar-img pf-avatar-fallback"><text>+</text></view>
+          <view class="pf-pick" @tap="pickAvatar">
+            <text>从相册选择</text>
           </view>
         </view>
         <view class="f-row"><text class="f-label">昵称</text><input class="f-input" v-model="profileForm.nickname" maxlength="12" /></view>
         <view class="sheet-actions">
           <u-button type="info" text="取消" shape="circle" size="small" plain @click="showProfile = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveProfile"></u-button>
+          <view class="btn-fill btn-save" @tap="saveProfile">
+            <text>保存</text>
+          </view>
         </view>
       </view>
     </u-popup>
@@ -134,8 +137,8 @@
         <view class="invite-link" @tap="copyInviteLink">
           <text class="invite-link-text">{{ inviteLink }}</text>
         </view>
-        <view class="sheet-actions">
-          <u-button type="primary" text="复制邀请链接" shape="circle" size="small" @click="copyInviteLink"></u-button>
+        <view class="btn-fill btn-invite" @tap="copyInviteLink">
+          <text>复制邀请链接</text>
         </view>
       </view>
     </u-popup>
@@ -145,7 +148,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '../../store/index'
-import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile } from '../../api/api'
+import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip } from '../../api/api'
+import { getStorage } from '../../api/cloudbase'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -154,13 +158,23 @@ const userInfo = computed(() => userStore.userInfo)
 const daoCode = computed(() => userInfo.value.dao_code || userInfo.value.invite_code || '')
 const inviteLink = computed(() => `https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com/download/?invite=${daoCode.value}`)
 
+// 会员等级: 按累计消费 (储值/购买) 自动划分
+const vipLevel = computed(() => {
+  const total = Number(userInfo.value.total_spent || 0)
+  if (total >= 10000) return 4
+  if (total >= 5000) return 3
+  if (total >= 2000) return 2
+  if (total > 1000) return 1
+  return 0
+})
+
 const assets = ref({ coupon_count: 0, favorite_count: 0, footprint_count: 0 })
 const courseCounts = ref({ purchased: 0, learning: 0, done: 0, fav: 0 })
+const unreadCount = ref(0)
 const showProfile = ref(false)
 const showInvite = ref(false)
+const uploading = ref(false)
 const profileForm = ref({ nickname: '', avatar: '' })
-
-const presetAvatars = ['易', '道', '玄', '禅', '和', '真']
 
 const orderEntries = [
   { status: '待付款', label: '待付款', icon: '💰' },
@@ -226,6 +240,38 @@ function openProfile() {
   showProfile.value = true
 }
 
+function pickAvatar() {
+  if (uploading.value) return
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const filePath = res.tempFilePaths[0]
+      uploading.value = true
+      uni.showLoading({ title: '上传中...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = `avatars/u${userInfo.value.uid}_${Date.now()}.png`
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        // fileID → https URL
+        const url = fileID
+          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la/')
+        profileForm.value.avatar = url
+      } catch (e) {
+        // 上传失败则用本地临时路径 (App 内可显示)
+        profileForm.value.avatar = filePath
+        uni.showToast({ title: e.message || '上传失败，已使用本地图片', icon: 'none' })
+      } finally {
+        uni.hideLoading()
+        uploading.value = false
+      }
+    },
+  })
+}
+
 async function saveProfile() {
   if (!profileForm.value.nickname.trim()) {
     uni.showToast({ title: '昵称不能为空', icon: 'none' })
@@ -239,6 +285,19 @@ async function saveProfile() {
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
   }
+}
+
+function goMessages() {
+  if (!isLoggedIn.value) return goLogin()
+  uni.navigateTo({ url: '/pages/user/messages' })
+}
+
+function showVipTip() {
+  uni.showModal({
+    title: '会员等级说明',
+    content: '累计消费/储值：≤1000元 VIP0 · 1000-2000元 VIP1 · 2000-5000元 VIP2 · 5000-1万 VIP3 · 1万元以上 VIP4',
+    showCancel: false,
+  })
 }
 
 function copyInviteLink() {
@@ -256,6 +315,9 @@ function onMenu(m) {
       break
     case 'cart':
       uni.navigateTo({ url: '/pages/cart/cart' })
+      break
+    case 'feedback':
+      uni.navigateTo({ url: '/pages/user/feedback' })
       break
     case 'admin':
       uni.navigateTo({ url: '/pages/admin/dashboard' })
@@ -284,15 +346,20 @@ function onLogout() {
 onMounted(async () => {
   if (!isLoggedIn.value) return
   try {
-    const [a, coupons, favs, foots] = await Promise.all([
+    const [a, coupons, favs, foots, unread, vip] = await Promise.all([
       userAssets({ uid: userInfo.value.uid }),
       getMyCoupons({ uid: userInfo.value.uid }),
       getMyFavorites({ uid: userInfo.value.uid }),
       getMyFootprints({ uid: userInfo.value.uid }),
+      getUnreadCount({ uid: userInfo.value.uid }),
+      getMyVip({ uid: userInfo.value.uid }),
     ])
     assets.value = a || { coupon_count: 0, favorite_count: 0, footprint_count: 0 }
-    courseCounts.value = { purchased: 0, learning: 0, done: 0, fav: 0 }
-    courseEntries[0].count = 0
+    unreadCount.value = (unread && unread.count) || 0
+    // 会员等级回写
+    if (vip && vip.level !== undefined) {
+      userStore.setUserInfo({ vip_level: vip.level, total_spent: vip.total_spent })
+    }
   } catch (e) {
     /* 忽略 */
   }
@@ -335,6 +402,33 @@ onMounted(async () => {
 .setting-icon {
   font-size: 34rpx;
   color: #fefbf6;
+}
+.msg-entry {
+  position: absolute;
+  right: 116rpx;
+  top: 44rpx;
+  z-index: 5;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(254, 251, 246, 0.16);
+  border: 1rpx solid rgba(254, 251, 246, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.msg-icon {
+  font-size: 32rpx;
+}
+.msg-dot {
+  position: absolute;
+  right: 10rpx;
+  top: 10rpx;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #b04a45;
+  border: 2rpx solid #4e3420;
 }
 .bg-char {
   font-size: 320rpx;
@@ -395,9 +489,19 @@ onMounted(async () => {
   margin-left: 16rpx;
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #c4a484, #a8884c);
   font-size: 20rpx;
   color: #4e3420;
+}
+.vip-badge.vip-0 { background: #d8ccb8; }
+.vip-badge.vip-1 { background: linear-gradient(135deg, #c4a484, #a8884c); }
+.vip-badge.vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
+.vip-badge.vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
+.vip-badge.vip-4 { background: linear-gradient(135deg, #d8b84c, #a8822a); }
+.vip-tip {
+  margin-left: 14rpx;
+  font-size: 20rpx;
+  color: rgba(240, 230, 205, 0.55);
+  text-decoration: underline;
 }
 .user-id {
   display: block;
@@ -553,25 +657,56 @@ onMounted(async () => {
 }
 .pf-avatar-row {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 20rpx;
+  gap: 24rpx;
   margin-bottom: 30rpx;
 }
-.pf-avatar {
-  width: 88rpx;
-  height: 88rpx;
+.pf-avatar-img {
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 50%;
+  border: 3rpx solid #8c5a2b;
   background: #f8f3ea;
-  border: 3rpx solid transparent;
+}
+.pf-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40rpx;
-  color: #8c5a2b;
+  font-size: 60rpx;
+  color: #c2b5a2;
 }
-.pf-avatar.on {
-  border-color: #8c5a2b;
-  background: #faf3e9;
+.pf-pick {
+  padding: 16rpx 30rpx;
+  border-radius: 999rpx;
+  background: #8c5a2b;
+}
+.pf-pick text {
+  font-size: 24rpx;
+  color: #fefbf6;
+}
+/* 弹窗实心按钮 */
+.btn-fill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 76rpx;
+  padding: 0 44rpx;
+  border-radius: 999rpx;
+}
+.btn-fill text {
+  font-size: 26rpx;
+  color: #fefbf6;
+  letter-spacing: 2rpx;
+}
+.btn-save {
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
+.btn-invite {
+  margin-top: 24rpx;
+  width: 100%;
+  height: 88rpx;
+  background: linear-gradient(135deg, #b04a45, #8c3228);
 }
 .f-row {
   display: flex;
