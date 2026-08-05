@@ -218,8 +218,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { fullBazi, liuyao, ziwei, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
+import { fullBazi, liuyao, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
 import { fullQimen } from '../../utils/qimen'
+import { fullZiwei } from '../../utils/ziwei'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../../utils/cities'
 
@@ -421,9 +422,9 @@ function runPaipan() {
   result.lunarText = `${lunarInfo.ganZhi}年 ${lunarInfo.monthName}${lunarInfo.dayName}`
   if (f.trueSolar) result.solarText += `（真太阳时 ${hour}时）`
 
-  // 奇门 (完整排盘: 起局/排盘方式) + 紫微 (共用同一时间)
+  // 奇门 (完整排盘: 起局/排盘方式) + 紫微 (三合完整排盘, 共用同一时间)
   const qm = fullQimen(ly, lm, ld, hour, { qiJu: form.value.qimen.qiJu, paiPan: form.value.qimen.paiPan })
-  const zw = ziwei(lunarInfo.day, hour)
+  const zw = fullZiwei(lunarInfo, form.value.bazi.shichen, gender, birthYear)
 
   // 保存排盘历史
   if (f.saveHistory) {

@@ -491,20 +491,171 @@
       <view class="pp-tip">※ 起局/排盘为简化近似推算，仅供学习参考</view>
     </view>
 
-    <!-- ===== 紫微斗数 ===== -->
+    <!-- ===== 紫微斗数 (三合派) ===== -->
     <view v-else class="pp-body">
-      <view class="zw-grid">
-        <view
-          class="zw-cell"
-          :class="{ ming: p.gong === data.ziwei.mingGong }"
-          v-for="p in data.ziwei.palaces"
-          :key="p.gong"
-        >
-          <text class="zw-name">{{ p.name }}</text>
-          <text class="zw-star" v-for="(s, i) in p.stars" :key="i">{{ s }}</text>
+      <!-- 头部: 农历+阳历 + 命身宫/五行局 -->
+      <view class="zw-head">
+        <view class="zw-head-l">
+          <text class="zw-lunar">农历 {{ data.bazi.lunarText }}</text>
+          <text class="zw-solar">{{ data.bazi.solarText }}</text>
+        </view>
+        <view class="zw-head-r">
+          <text class="zw-ju">{{ data.ziwei.ju }}局 · {{ data.ziwei.qiYun }}岁起运 · {{ data.ziwei.dayunDir }}</text>
+          <text class="zw-info">命宫{{ zwGongName(data.ziwei.mingGong) }} · 身宫{{ zwGongName(data.ziwei.shenGong) }} · 紫微在{{ ZHI[data.ziwei.ziweiGong] }}</text>
         </view>
       </view>
-      <view class="pp-tip">※ 简化排盘，仅供参考</view>
+
+      <!-- 盘面 4x3 (地支固定宫位, 点击高亮 + 三方四正连线) -->
+      <view class="zw-pan">
+        <view v-for="line in zwLines" :key="line.key" class="zw-line" :class="line.cls" :style="line.style"></view>
+        <view
+          class="zw-cell"
+          v-for="pos in zwGridCells"
+          :key="pos.zhi"
+          :class="{ on: zwSelected === pos.gong, ming: pos.ming, shen: pos.shen }"
+          :style="{ gridRow: pos.row + 1, gridColumn: pos.col + 1 }"
+          @tap="zwSelect(pos.gong)"
+        >
+          <text class="zw-zhi">{{ pos.zhiName }}</text>
+          <text class="zw-pname" :class="{ on: pos.ming || pos.shen }">{{ pos.name }}</text>
+          <text class="zw-star" v-for="(s, si) in pos.stars" :key="si">
+            {{ s.name }}<text class="zw-sh" v-if="s.sihua">{{ s.sihua }}</text>
+          </text>
+          <text class="zw-aux" v-if="pos.aux.length">{{ pos.aux.join(' ') }}</text>
+          <text class="zw-dayun">{{ pos.dayun }}</text>
+        </view>
+      </view>
+      <view class="zw-tip">※ 点击宫位查看三方四正连线；大限按五行局起运，阳男阴女顺行</view>
+
+      <!-- 大限 → 流年 → 流月 → 流日 -->
+      <view class="pp-block">
+        <view class="pp-block-head">大限（点击查看流年）</view>
+        <scroll-view scroll-x :show-scrollbar="false">
+          <view class="zw-dy-row">
+            <view
+              class="zw-dy-item"
+              :class="{ on: zwDyOpen === i }"
+              v-for="(dy, i) in data.ziwei.dayun"
+              :key="i"
+              @tap="zwToggleDayun(i)"
+            >
+              <text class="zw-dy-age">{{ dy.start }}-{{ dy.end }}岁</text>
+              <text class="zw-dy-gong">{{ zwGongName(dy.gong) }}</text>
+            </view>
+          </view>
+        </scroll-view>
+
+        <view v-if="zwDyOpen >= 0 && zwYears.length" class="pp-expand">
+          <view class="pp-expand-head">流年 · 大限{{ zwDyOpen + 1 }}（点击查看流月）</view>
+          <scroll-view scroll-x :show-scrollbar="false">
+            <view class="zw-dy-row">
+              <view
+                class="zw-dy-item"
+                :class="{ on: zwLnYear === y.year }"
+                v-for="y in zwYears"
+                :key="y.year"
+                @tap="zwToggleLiunian(y)"
+              >
+                <text class="zw-dy-age">{{ y.year }}</text>
+                <text class="zw-dy-gong">{{ y.name }} · {{ ZHI[y.gong] }}宫</text>
+              </view>
+            </view>
+          </scroll-view>
+
+          <view v-if="zwLnYear !== null && zwMonths.length" class="pp-expand">
+            <view class="pp-expand-head">流月 · {{ zwLnYear }}年（点击查看流日）</view>
+            <scroll-view scroll-x :show-scrollbar="false">
+              <view class="zw-dy-row">
+                <view
+                  class="zw-dy-item"
+                  :class="{ on: zwSelMonth === mm.month }"
+                  v-for="(mm, mi) in zwMonths"
+                  :key="mi"
+                  @tap="zwToggleLiuyue(mm)"
+                >
+                  <text class="zw-dy-age">{{ mm.month }}</text>
+                  <text class="zw-dy-gong">{{ mm.name }} · {{ ZHI[mm.gong] }}宫</text>
+                </view>
+              </view>
+            </scroll-view>
+
+            <view v-if="zwSelMonth && zwDays.length" class="pp-expand">
+              <view class="pp-expand-head">流日 · {{ zwSelMonth }}（点击查看落宫）</view>
+              <scroll-view scroll-x :show-scrollbar="false">
+                <view class="zw-dy-row">
+                  <view
+                    class="zw-dy-item"
+                    :class="{ on: zwSelDay === dd.day }"
+                    v-for="(dd, di) in zwDays"
+                    :key="di"
+                    @tap="zwToggleLiuri(dd)"
+                  >
+                    <text class="zw-dy-age">{{ dd.day }}</text>
+                    <text class="zw-dy-gong">{{ dd.name }} · {{ ZHI[dd.gong] }}宫</text>
+                  </view>
+                </view>
+              </scroll-view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- AI 智能解盘 (仿八字) -->
+      <view class="pp-block jp-section">
+        <view class="pp-block-head">AI 智能解盘</view>
+        <view class="jp-block" v-for="m in zwFreeModules" :key="m.key">
+          <view class="jp-block-head" @tap="toggleZwJp(m.key)">
+            <text class="jp-block-icon">{{ m.icon }}</text>
+            <text class="jp-block-name">{{ m.name }}</text>
+            <text class="jp-free-tag">免费</text>
+            <text class="jp-arrow">{{ zwOpenJp[m.key] ? '▲' : '▼' }}</text>
+          </view>
+          <view class="jp-content" v-if="zwOpenJp[m.key]">
+            <view class="jp-ai-loading" v-if="zwAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+            <text class="jp-para" v-for="(t, i) in zwData[m.key]" :key="i">{{ t }}</text>
+            <text class="jp-ai-tag" v-if="zwAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+          </view>
+        </view>
+        <view class="jp-block paid" v-for="m in zwPaidModules" :key="m.key">
+          <view class="jp-block-head" @tap="unlockZwJp(m)">
+            <text class="jp-block-icon">{{ m.icon }}</text>
+            <text class="jp-block-name">{{ m.name }}</text>
+            <view class="jp-paid-tag">
+              <text v-if="!isZwUnlocked(m.key)">¥9.9 解锁</text>
+              <text v-else class="jp-unlocked">已解锁</text>
+            </view>
+            <text class="jp-arrow">{{ zwOpenJp[m.key] ? '▲' : '▼' }}</text>
+          </view>
+          <view class="jp-content" v-if="zwOpenJp[m.key] && isZwUnlocked(m.key)">
+            <view class="jp-ai-loading" v-if="zwAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+            <text class="jp-para" v-for="(t, i) in zwData[m.key]" :key="i">{{ t }}</text>
+            <text class="jp-ai-tag" v-if="zwAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+          </view>
+          <view class="jp-lock" v-if="!isZwUnlocked(m.key) && zwOpenJp[m.key]">
+            <text class="jp-lock-icon">🔒</text>
+            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+            <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>¥9.9 立即解锁</text></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- AI 智能问答 (¥1/次, 与八字/奇门共用) -->
+      <view class="pp-block jp-section">
+        <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+        <view class="ai-q-row">
+          <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个命盘什么时候适合换工作）" placeholder-class="qm-c-ph" />
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 ¥1</text></view>
+        </view>
+        <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
+        <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
+          <text class="jp-para" v-for="(t, i) in aiAnswer" :key="i">{{ t }}</text>
+        </view>
+        <view class="ai-q-tip" v-if="aiAskErr">{{ aiAskErr }}</view>
+      </view>
+
+      <!-- 保存此盘 (最后面) -->
+      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
+      <view class="pp-tip">※ 三合派排盘，流月/流日为简化推算，仅供参考</view>
     </view>
   </view>
 </template>
@@ -513,6 +664,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../../utils/paipan'
+import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf } from '../../utils/ziwei'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
 import { aiJiepan, aiAsk } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -648,10 +800,11 @@ function payQmJiepan() {
     },
   })
 }
-/* 保存当前盘到历史 (八字/奇门通用) */
+/* 保存当前盘到历史 (八字/奇门/紫微通用) */
 function saveDisk() {
   try {
     const isQm = tab.value === 'qimen'
+    const isZw = tab.value === 'ziwei'
     let list = uni.getStorageSync(HISTORY_KEY) || []
     if (!Array.isArray(list)) list = []
     const now = new Date()
@@ -664,13 +817,21 @@ function saveDisk() {
           gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
           data: data.value,
         }
-      : {
-          ts: Date.now(),
-          time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
-          label: `八字 ${data.value.bazi.ganZhi.join(' ')}`,
-          gzText: data.value.bazi.ganZhi.join(' '),
-          data: data.value,
-        }
+      : isZw
+        ? {
+            ts: Date.now(),
+            time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+            label: `紫微 命宫在${zwGongName(data.value.ziwei.mingGong)} · ${data.value.ziwei.ju}局`,
+            gzText: `紫微在${ZHI[data.value.ziwei.ziweiGong]} · ${data.value.ziwei.qiYun}岁起运`,
+            data: data.value,
+          }
+        : {
+            ts: Date.now(),
+            time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+            label: `八字 ${data.value.bazi.ganZhi.join(' ')}`,
+            gzText: data.value.bazi.ganZhi.join(' '),
+            data: data.value,
+          }
     list.unshift(rec)
     if (list.length > 20) list = list.slice(0, 20)
     uni.setStorageSync(HISTORY_KEY, list)
@@ -705,10 +866,13 @@ function askAI() {
       aiAsking.value = true
       aiAskErr.value = ''
       const isQm = tab.value === 'qimen'
+      const isZw = tab.value === 'ziwei'
       // 附带当前盘摘要作为上下文
       let context = ''
       if (isQm) {
         context = `奇门盘：${data.value.qimen.ju}，旬首${data.value.qimen.xunName}${data.value.qimen.xunShouQi}，空亡${data.value.qimen.xunKong}，值符${data.value.qimen.zhiFu}，值使${data.value.qimen.zhiShi}，马星${data.value.qimen.maZhi}，四柱${data.value.bazi.ganZhi.join(' ')}`
+      } else if (isZw) {
+        context = `紫微斗数盘：${data.value.ziwei.ju}局，命宫在${zwGongName(data.value.ziwei.mingGong)}，紫微在${ZHI[data.value.ziwei.ziweiGong]}，${data.value.ziwei.qiYun}岁起运${data.value.ziwei.dayunDir}，四柱${data.value.bazi.ganZhi.join(' ')}`
       } else {
         context = `八字：${data.value.bazi.ganZhi.join(' ')}，日主${data.value.bazi.dayGanName}，空亡${data.value.bazi.kongwang}`
       }
@@ -726,6 +890,177 @@ function askAI() {
           aiAskErr.value = (e && e.message) || '提问失败，请稍后再试'
         })
         .finally(() => { aiAsking.value = false })
+    },
+  })
+}
+
+/* ===== 紫微斗数 (三合派) ===== */
+const zwSelected = ref(-1)
+const zwDyOpen = ref(-1)
+const zwYears = ref([])
+const zwLnYear = ref(null)
+const zwMonths = ref([])
+const zwSelMonth = ref('')
+const zwDays = ref([])
+const zwSelDay = ref('')
+const PAN_SIZE = 680 // 盘面固定尺寸 rpx (4x3, 格 170)
+function zwGongName(gong) {
+  const p = data.value.ziwei.palaces.find((x) => x.gong === gong)
+  return p ? p.name : ''
+}
+/* 盘面网格单元 (按地支固定位置) */
+const zwGridCells = computed(() => {
+  if (!data.value || !data.value.ziwei) return []
+  return Object.keys(GRID_POS).map((z) => {
+    const gong = Number(z)
+    const [row, col] = GRID_POS[gong]
+    const p = data.value.ziwei.palaces.find((x) => x.gong === gong)
+    return {
+      zhi: gong, zhiName: ZHI[gong], row, col, gong,
+      name: p ? p.name : '', stars: p ? p.stars : [], aux: p ? p.aux : [],
+      dayun: p ? p.dayun : '', ming: p ? p.isMing : false, shen: p ? p.isShen : false,
+    }
+  })
+})
+/* 三方四正连线 (CSS 旋转线) */
+const zwLines = computed(() => {
+  if (zwSelected.value < 0) return []
+  const g = zwSelected.value
+  const { sanhe, dui } = sanFangSiZheng(g)
+  const pts = {}
+  const all = [g, sanhe[0], sanhe[1], dui]
+  all.forEach((gg) => {
+    const [row, col] = GRID_POS[gg]
+    pts[gg] = { x: col * 170 + 85, y: row * 170 + 85 }
+  })
+  const line = (a, b, cls, key) => {
+    const x1 = pts[a].x, y1 = pts[a].y, x2 = pts[b].x, y2 = pts[b].y
+    const dist = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
+    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI
+    return {
+      key, cls,
+      style: {
+        left: x1 + 'rpx', top: y1 + 'rpx',
+        width: dist + 'rpx',
+        transform: 'rotate(' + angle + 'deg)',
+      },
+    }
+  }
+  return [
+    line(g, sanhe[0], 'zw-line-sanh', 'a'),
+    line(g, sanhe[1], 'zw-line-sanh', 'b'),
+    line(sanhe[0], sanhe[1], 'zw-line-sanh', 'c'),
+    line(g, dui, 'zw-line-dui', 'd'),
+  ]
+})
+function zwSelect(gong) {
+  zwSelected.value = zwSelected.value === gong ? -1 : gong
+}
+/* 大限 → 流年 → 流月 → 流日 */
+function zwToggleDayun(i) {
+  if (zwDyOpen.value === i) {
+    zwDyOpen.value = -1; zwYears.value = []; zwLnYear.value = null
+    zwMonths.value = []; zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+    return
+  }
+  zwDyOpen.value = i
+  zwLnYear.value = null; zwMonths.value = []; zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+  zwYears.value = liunianOfDayun(data.value.ziwei, i)
+}
+function zwToggleLiunian(y) {
+  if (zwLnYear.value === y.year) {
+    zwLnYear.value = null; zwMonths.value = []; zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+    return
+  }
+  zwLnYear.value = y.year
+  zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+  zwMonths.value = liuyueOf(GAN.indexOf(y.gan), y.gong)
+}
+function zwToggleLiuyue(mm) {
+  if (zwSelMonth.value === mm.month) {
+    zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+    return
+  }
+  zwSelMonth.value = mm.month
+  zwSelDay.value = ''
+  // 流日锚: 简化从甲子起
+  zwDays.value = liuriOf(GAN.indexOf(mm.gan), mm.gong, 0)
+}
+function zwToggleLiuri(dd) {
+  zwSelDay.value = zwSelDay.value === dd.day ? '' : dd.day
+}
+/* 紫微 AI 解盘 (仿八字: 免费2 + 付费3) */
+const zwData = ref({ zongping: [], sizheng: [], career: [], wealth: [], marriage: [] })
+const zwAiLoading = ref({ zongping: false, sizheng: false, career: false, wealth: false, marriage: false })
+const zwAiDone = ref({})
+const zwOpenJp = ref({ zongping: true, sizheng: false, career: false, wealth: false, marriage: false })
+const ZW_PAID_KEY = 'ziwei_paid_v1'
+const zwFreeModules = [
+  { key: 'zongping', name: '命盘总评', icon: '🌟' },
+  { key: 'sizheng', name: '三方四正', icon: '🔺' },
+]
+const zwPaidModules = [
+  { key: 'career', name: '事业前程', icon: '💼' },
+  { key: 'wealth', name: '财富格局', icon: '💰' },
+  { key: 'marriage', name: '婚姻感情', icon: '💞' },
+]
+function zwInfoPayload() {
+  const z = data.value.ziwei
+  const palaceText = z.palaces.map((p) => `${p.name}(${ZHI[p.gong]}):${p.stars.map((s) => s.name + (s.sihua ? s.sihua : '')).join('/') || '无主星'}`).join('；')
+  return {
+    ju: `${z.ju}局`, qiYun: `${z.qiYun}岁起运`, dayunDir: z.dayunDir,
+    mingGong: zwGongName(z.mingGong), shenGong: zwGongName(z.shenGong),
+    ziwei: ZHI[z.ziweiGong], gender: z.gender,
+    palaces: palaceText,
+  }
+}
+function loadAiZiwei(key) {
+  if (zwAiLoading.value[key]) return
+  zwAiLoading.value[key] = true
+  aiJiepan({ module: key, ziwei: zwInfoPayload() })
+    .then((res) => {
+      if (res && res.content && res.content.length) {
+        zwData.value[key] = res.content
+        zwAiDone.value[key] = true
+      }
+    })
+    .catch(() => {})
+    .finally(() => { zwAiLoading.value[key] = false })
+}
+function toggleZwJp(key) {
+  zwOpenJp.value[key] = !zwOpenJp.value[key]
+  if (zwOpenJp.value[key] && !zwAiDone.value[key] && !zwData.value[key].length) loadAiZiwei(key)
+}
+function unlockZwJp(m) {
+  zwOpenJp.value[m.key] = !zwOpenJp.value[m.key]
+  if (zwOpenJp.value[m.key] && isZwUnlocked(m.key) && !zwAiDone.value[m.key]) loadAiZiwei(m.key)
+}
+function isZwUnlocked(key) {
+  try {
+    const paid = uni.getStorageSync(ZW_PAID_KEY) || []
+    return paid.includes(key)
+  } catch (e) {
+    return false
+  }
+}
+function payZwJiepan() {
+  uni.showModal({
+    title: '深入紫微解盘 · ¥9.9',
+    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
+    confirmText: '确认支付 ¥9.9',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      try {
+        const paid = uni.getStorageSync(ZW_PAID_KEY) || []
+        zwPaidModules.forEach((m) => {
+          if (!paid.includes(m.key)) paid.push(m.key)
+        })
+        uni.setStorageSync(ZW_PAID_KEY, paid)
+        uni.showToast({ title: '解锁成功', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: '解锁失败', icon: 'none' })
+      }
     },
   })
 }
@@ -1591,29 +1926,87 @@ function payJiepan() {
 }
 .ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #b04a45; }
 
-/* 紫微 */
-.zw-grid {
+/* 紫微 (三合派 4x3 盘面) */
+.zw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #4e3420, #6e4a26);
+  border-radius: 12rpx;
+  padding: 16rpx 22rpx;
+  margin-bottom: 16rpx;
+}
+.zw-head-l { display: flex; flex-direction: column; }
+.zw-lunar { font-size: 26rpx; font-weight: 600; color: #f0e6cd; }
+.zw-solar { margin-top: 4rpx; font-size: 18rpx; color: rgba(240, 230, 205, 0.7); }
+.zw-head-r { display: flex; flex-direction: column; align-items: flex-end; }
+.zw-ju { font-size: 22rpx; font-weight: 600; color: #c4a484; }
+.zw-info { margin-top: 4rpx; font-size: 17rpx; color: rgba(240, 230, 205, 0.7); }
+/* 盘面 */
+.zw-pan {
+  position: relative;
+  width: 680rpx;
+  height: 680rpx;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12rpx;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 6rpx;
   background: #fefbf6;
   border: 1rpx solid #efe7d8;
   border-radius: 16rpx;
-  padding: 20rpx;
+  padding: 12rpx;
+  margin-bottom: 10rpx;
 }
+/* 三方四正连线 (CSS 旋转线) */
+.zw-line {
+  position: absolute;
+  height: 3rpx;
+  transform-origin: 0 50%;
+  z-index: 1;
+  pointer-events: none;
+}
+.zw-line-sanh { background: rgba(140, 90, 43, 0.55); }
+.zw-line-dui { background: rgba(176, 74, 69, 0.55); height: 3rpx; border-top: 2rpx dashed rgba(176, 74, 69, 0.7); background: none; }
 .zw-cell {
+  position: relative;
+  z-index: 2;
   background: #f8f3ea;
   border: 1rpx solid #e6dcca;
   border-radius: 10rpx;
-  padding: 16rpx 8rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 130rpx;
+  padding: 6rpx 2rpx;
+  overflow: hidden;
 }
-.zw-cell.ming { border: 2rpx solid #8c5a2b; background: #faf3e9; }
-.zw-name { font-size: 22rpx; font-weight: 600; color: #4e3420; }
-.zw-star { font-size: 20rpx; color: #8c5a2b; margin-top: 4rpx; }
+.zw-cell.on {
+  border: 2rpx solid #8c5a2b;
+  box-shadow: 0 0 0 3rpx rgba(140, 90, 43, 0.25);
+  background: #faf0e0;
+}
+.zw-zhi { font-size: 17rpx; color: #b3a595; }
+.zw-pname { font-size: 20rpx; font-weight: 600; color: #42372c; margin-top: 1rpx; }
+.zw-pname.on { color: #b04a45; }
+.zw-star { font-size: 19rpx; color: #8c5a2b; font-weight: 500; line-height: 1.35; }
+.zw-sh { font-size: 16rpx; color: #b04a45; font-weight: 600; margin-left: 1rpx; }
+.zw-aux { font-size: 15rpx; color: #857563; line-height: 1.3; margin-top: 1rpx; }
+.zw-dayun { font-size: 15rpx; color: #b3a595; margin-top: auto; }
+.zw-tip { font-size: 18rpx; color: #b3a595; margin-bottom: 14rpx; }
+/* 大限/流年/流月/流日 联动 */
+.zw-dy-row { display: inline-flex; gap: 6rpx; padding: 2rpx; }
+.zw-dy-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #faf3e9;
+  border: 1rpx solid #efe7d8;
+  border-radius: 10rpx;
+  padding: 6rpx 12rpx;
+  min-width: 120rpx;
+}
+.zw-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
+.zw-dy-age { font-size: 14rpx; color: #b3a595; white-space: nowrap; }
+.zw-dy-gong { margin-top: 4rpx; font-size: 22rpx; font-weight: 500; color: #42372c; white-space: nowrap; }
 
 /* ===== AI 解盘 ===== */
 .jp-section { margin-top: 10rpx; }
