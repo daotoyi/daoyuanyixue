@@ -540,13 +540,13 @@ onMounted(async () => {
   font-size: 20rpx;
   color: #4e3420;
 }
-.vip-badge.vip-0 { background: #857563; }
-.vip-badge.vip-1 { background: linear-gradient(135deg, #c4a484, #a8884c); }
-.vip-badge.vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
-.vip-badge.vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
-.vip-badge.vip-4 { background: linear-gradient(135deg, #d8b84c, #a8822a); }
-.vip-badge.vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
-.vip-badge.vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
+.vip-0 { background: #857563; }
+.vip-1 { background: linear-gradient(135deg, #a8884c, #8c6d3f); }
+.vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
+.vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
+.vip-4 { background: linear-gradient(135deg, #d8b84c, #a8822a); }
+.vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
+.vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
 /* 等级说明弹窗 */
 .vip-tip { display: block; text-align: center; font-size: 20rpx; color: #b3a595; margin-bottom: 20rpx; }
 .vip-row {
