@@ -19,6 +19,17 @@
       <text class="p-name">{{ product.name }}</text>
       <text class="p-desc">{{ product.description }}</text>
 
+      <!-- 购买数量 -->
+      <view class="qty-row">
+        <text class="qty-label">购买数量</text>
+        <view class="qty-ctrl">
+          <view class="qty-btn" :class="{ off: qty <= 1 }" @tap="changeQty(-1)"><text>−</text></view>
+          <text class="qty-num">{{ qty }}</text>
+          <view class="qty-btn" :class="{ off: qty >= product.stock }" @tap="changeQty(1)"><text>＋</text></view>
+        </view>
+        <text class="qty-stock">库存 {{ product.stock }} 件</text>
+      </view>
+
       <!-- 自定义属性 -->
       <view class="attrs" v-if="attrList.length">
         <view class="attr-row" v-for="[key, val] in attrList" :key="key">
@@ -31,8 +42,10 @@
     <!-- 底部操作栏 -->
     <view class="action-bar">
       <view class="act-collect" @tap="toggleCollect">
-        <text class="collect-icon" :class="{ on: collected }">{{ collected ? '♥' : '♡' }}</text>
-        <text class="collect-label">收藏</text>
+        <view class="heart-wrap" :class="{ on: collected }">
+          <view class="heart" :class="{ on: collected }"></view>
+        </view>
+        <text class="collect-label" :class="{ on: collected }">收藏</text>
       </view>
       <view class="act-btns">
         <view class="btn-fill btn-cart" @tap="addCart">
@@ -57,6 +70,7 @@ const userStore = useUserStore()
 const product = ref(null)
 const current = ref(1)
 const collected = ref(false)
+const qty = ref(1)
 
 const attrList = computed(() => {
   if (!product.value || !product.value.attrs) return []
@@ -107,16 +121,21 @@ async function toggleCollect() {
   }
 }
 
+function changeQty(delta) {
+  const stock = product.value ? product.value.stock : 1
+  qty.value = Math.min(stock, Math.max(1, qty.value + delta))
+}
+
 function addCart() {
   if (!product.value) return
-  addToCart(product.value)
+  addToCart(product.value, qty.value)
   uni.showToast({ title: '已加入购物车', icon: 'success' })
   setTimeout(() => uni.switchTab({ url: '/pages/cart/cart' }), 600)
 }
 
 function buyNow() {
   if (!product.value) return
-  addToCart(product.value)
+  addToCart(product.value, qty.value)
   uni.navigateTo({ url: '/pages/checkout/checkout' })
 }
 </script>
@@ -211,6 +230,105 @@ function buyNow() {
   flex: 1;
   font-size: 24rpx;
   color: #42372c;
+}
+
+/* 购买数量 */
+.qty-row {
+  display: flex;
+  align-items: center;
+  margin-top: 22rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f8f3ea;
+}
+.qty-label {
+  font-size: 26rpx;
+  color: #42372c;
+}
+.qty-ctrl {
+  display: flex;
+  align-items: center;
+  margin-left: 30rpx;
+  border: 1rpx solid #e6dcca;
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+.qty-btn {
+  width: 64rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f3ea;
+}
+.qty-btn text {
+  font-size: 30rpx;
+  color: #8c5a2b;
+}
+.qty-btn.off {
+  opacity: 0.4;
+}
+.qty-num {
+  width: 80rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #42372c;
+}
+.qty-stock {
+  margin-left: 24rpx;
+  font-size: 22rpx;
+  color: #b3a595;
+}
+
+/* 饱满红心 (CSS 绘制) */
+.heart-wrap {
+  width: 56rpx;
+  height: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.heart {
+  width: 44rpx;
+  height: 44rpx;
+  background: #d8ccb8;
+  transform: rotate(45deg);
+  position: relative;
+  border-radius: 6rpx;
+}
+.heart::before,
+.heart::after {
+  content: '';
+  position: absolute;
+  width: 44rpx;
+  height: 44rpx;
+  background: inherit;
+  border-radius: 50%;
+}
+.heart::before {
+  left: -22rpx;
+  top: 0;
+}
+.heart::after {
+  top: -22rpx;
+  left: 0;
+}
+.heart.on {
+  background: linear-gradient(135deg, #e84545, #b02a2a);
+  animation: heartbeat 0.4s ease;
+}
+.heart.on::before,
+.heart.on::after {
+  background: inherit;
+  background: linear-gradient(135deg, #e84545, #b02a2a);
+}
+@keyframes heartbeat {
+  0% { transform: rotate(45deg) scale(0.8); }
+  60% { transform: rotate(45deg) scale(1.15); }
+  100% { transform: rotate(45deg) scale(1); }
+}
+.collect-label.on {
+  color: #b04a45;
 }
 
 /* 底部操作栏 */

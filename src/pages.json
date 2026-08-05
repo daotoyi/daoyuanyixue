@@ -200,6 +200,14 @@
         "navigationBarBackgroundColor": "#451A03",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/user/tools",
+      "style": {
+        "navigationBarTitleText": "玄学工具",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
     }
   ],
   "globalStyle": {

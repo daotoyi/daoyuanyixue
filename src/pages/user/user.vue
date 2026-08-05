@@ -62,6 +62,20 @@
       </view>
     </view>
 
+    <!-- 玄学工具 (仿订单入口) -->
+    <view class="panel">
+      <view class="panel-head" @tap="goTools('')">
+        <text class="panel-title">玄学工具</text>
+        <text class="panel-more">更多工具 ›</text>
+      </view>
+      <view class="order-entry tool-entry">
+        <view class="entry-item" v-for="t in toolEntries" :key="t.key" @tap="goTools(t.key)">
+          <text class="entry-icon">{{ t.icon }}</text>
+          <text class="entry-label">{{ t.label }}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 我的课程 (位于我的订单上方) -->
     <view class="panel">
       <view class="panel-head" @tap="goMyCourse">
@@ -190,6 +204,14 @@ const courseEntries = [
   { key: 'fav', label: '收藏课程', icon: '⭐', count: 0 },
 ]
 
+const toolEntries = [
+  { key: 'bazi', label: '四柱八字', icon: '☯' },
+  { key: 'liuyao', label: '六爻', icon: '🪙' },
+  { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
+  { key: 'qimen', label: '奇门遁甲', icon: '🧭' },
+  { key: 'liuren', label: '大六壬', icon: '🌀' },
+]
+
 const isAdmin = computed(() => userInfo.value.role === 'admin')
 
 const menuItems = [
@@ -220,6 +242,10 @@ function goOrders(status) {
 function goMyCourse(tab) {
   if (!isLoggedIn.value) return goLogin()
   uni.navigateTo({ url: `/pages/course/my?tab=${tab || ''}` })
+}
+
+function goTools(tool) {
+  uni.navigateTo({ url: `/pages/user/tools?tool=${tool || ''}` })
 }
 
 function goAssets(type) {
