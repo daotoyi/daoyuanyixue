@@ -337,9 +337,6 @@
         </view>
       </view>
 
-      <!-- 八字: 保存排盘 (与奇门同款填充按钮) -->
-      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
-
       <!-- AI 智能问答 (¥1/次) -->
       <view class="pp-block jp-section">
         <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
@@ -353,6 +350,9 @@
         </view>
         <view class="ai-q-tip" v-if="aiAskErr">{{ aiAskErr }}</view>
       </view>
+
+      <!-- 八字: 保存排盘 (最后面, 与奇门同款填充按钮) -->
+      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
     </view>
 
     <!-- ===== 奇门遁甲 ===== -->
@@ -375,7 +375,7 @@
         </view>
       </view>
 
-      <!-- 元信息: 排盘方式/起局方式 + 四柱(4列2行) + 空亡/旬首 + 局数/值符/值使/马星(2行4列) -->
+      <!-- 元信息: 方式 + 四柱(每柱干支上下+空亡) + 旬首/局数/值符/值使/马星(同一表) -->
       <view class="qm-meta">
         <view class="qm-meta-row"><text class="qm-mk">方式</text><text class="qm-mv">{{ qmPaiPanText }} · {{ qmQiJuText }}</text></view>
         <view class="qm-meta-row">
@@ -383,18 +383,18 @@
           <view class="qm-sz-grid">
             <view class="qm-sz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
               <text class="qm-sz-p">{{ pn }}</text>
-              <text class="qm-sz-gz">{{ data.bazi.ganZhi[pi] || '—' }}</text>
+              <text class="qm-sz-gan" :class="'wx-' + qmWxOf((data.bazi.ganZhi[pi] || '甲')[0])">{{ (data.bazi.ganZhi[pi] || '—')[0] }}</text>
+              <text class="qm-sz-zhi" :class="'wx-' + qmWxOfZhi((data.bazi.ganZhi[pi] || '子')[1])">{{ (data.bazi.ganZhi[pi] || '—')[1] }}</text>
+              <text class="qm-sz-kong">空{{ data.bazi.kongwang }}</text>
             </view>
           </view>
         </view>
-        <view class="qm-meta-row"><text class="qm-mk">空亡</text><text class="qm-mv">{{ data.bazi.kongwang }}</text></view>
-        <view class="qm-meta-row"><text class="qm-mk">旬首</text><text class="qm-mv">{{ data.qimen.xunName }}{{ data.qimen.xunShouQi }} · 落{{ data.qimen.xunShouGong }}宫</text></view>
         <view class="qm-key-grid">
           <view class="qm-key-row">
-            <text class="qm-key-label">局数</text><text class="qm-key-label">值符</text><text class="qm-key-label">值使</text><text class="qm-key-label">马星</text>
+            <text class="qm-key-label">旬首</text><text class="qm-key-label">局数</text><text class="qm-key-label">值符</text><text class="qm-key-label">值使</text><text class="qm-key-label">马星</text>
           </view>
           <view class="qm-key-row">
-            <text class="qm-key-val">{{ data.qimen.ju }}</text><text class="qm-key-val">{{ data.qimen.zhiFu }}</text><text class="qm-key-val">{{ data.qimen.zhiShi }}</text><text class="qm-key-val">驿马{{ data.qimen.maZhi }}</text>
+            <text class="qm-key-val">{{ data.qimen.xunName }}{{ data.qimen.xunShouQi }}</text><text class="qm-key-val">{{ data.qimen.ju }}</text><text class="qm-key-val">{{ data.qimen.zhiFu }}</text><text class="qm-key-val">{{ data.qimen.zhiShi }}</text><text class="qm-key-val">驿马{{ data.qimen.maZhi }}</text>
           </view>
         </view>
       </view>
@@ -409,7 +409,7 @@
       <view class="qm-grid">
         <view class="qm-cell" v-for="p in data.qimen.palaces" :key="p.gong">
           <view class="qm-gong">{{ p.name }}</view>
-          <view class="qm-shen" v-if="p.shen">{{ showDiShen ? (p.diShen || '') : p.shen }}</view>
+          <view class="qm-shen" v-if="showDiShen ? p.diShen : p.shen">{{ showDiShen ? p.diShen : p.shen }}</view>
           <view class="qm-chs" v-if="showChangSheng && p.changSheng">{{ p.changSheng }}</view>
           <view class="qm-palace">{{ p.palace }}{{ p.element }}</view>
           <view class="qm-tian-di">
@@ -472,9 +472,6 @@
         </view>
       </view>
 
-      <!-- 保存排盘 (填充色按钮) -->
-      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
-
       <!-- AI 智能问答 (¥1/次) -->
       <view class="pp-block jp-section">
         <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
@@ -488,6 +485,9 @@
         </view>
         <view class="ai-q-tip" v-if="aiAskErr">{{ aiAskErr }}</view>
       </view>
+
+      <!-- 保存排盘 (最后面, 填充色按钮) -->
+      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
       <view class="pp-tip">※ 起局/排盘为简化近似推算，仅供学习参考</view>
     </view>
 
@@ -559,6 +559,11 @@ function qmWxOf(g) {
   if (!g) return ''
   const idx = GAN.indexOf(g)
   return idx >= 0 ? GAN_WX[idx] : ''
+}
+function qmWxOfZhi(z) {
+  if (!z) return ''
+  const idx = ZHI.indexOf(z)
+  return idx >= 0 ? ZHI_WX[idx] : ''
 }
 function qmGeClass(g) {
   if (g === '入墓') return 'red'
@@ -1373,7 +1378,7 @@ function payJiepan() {
 .qm-meta-row { display: flex; padding: 6rpx 0; }
 .qm-mk { width: 110rpx; font-size: 22rpx; color: #857563; flex-shrink: 0; }
 .qm-mv { flex: 1; font-size: 24rpx; color: #42372c; font-weight: 500; }
-/* 四柱 4列2行 */
+/* 四柱 4列: 柱名 + 干/支上下排 + 空亡 */
 .qm-sz-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6rpx; }
 .qm-sz-col {
   display: flex;
@@ -1385,7 +1390,9 @@ function payJiepan() {
   border: 1rpx solid #efe7d8;
 }
 .qm-sz-p { font-size: 18rpx; color: #b3a595; }
-.qm-sz-gz { margin-top: 4rpx; font-size: 26rpx; font-weight: 600; color: #8c5a2b; }
+.qm-sz-gan { margin-top: 4rpx; font-size: 28rpx; font-weight: 700; line-height: 1.2; }
+.qm-sz-zhi { font-size: 28rpx; font-weight: 700; line-height: 1.2; }
+.qm-sz-kong { margin-top: 4rpx; font-size: 15rpx; color: #b04a45; white-space: nowrap; }
 /* 局数/值符/值使/马星 2行4列 */
 .qm-key-grid {
   margin-top: 8rpx;
