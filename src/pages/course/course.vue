@@ -267,11 +267,13 @@ onMounted(async () => {
   padding-top: 12rpx;
   padding-right: 6rpx;
 }
-/* 查看按钮: 实心 + 不贴边缘 */
+/* 查看按钮: 实心 + 不贴边缘 + 文字单行 */
 .btn-view {
+  flex-shrink: 0;
   margin-left: 14rpx;
+  min-width: 96rpx;
   height: 56rpx;
-  padding: 0 28rpx;
+  padding: 0 24rpx;
   border-radius: 999rpx;
   background: linear-gradient(135deg, #8c5a2b, #6e4a26);
   display: flex;
@@ -282,6 +284,8 @@ onMounted(async () => {
   font-size: 22rpx;
   color: #fefbf6;
   letter-spacing: 1rpx;
+  white-space: nowrap;
+  line-height: 1;
 }
 .course-price {
   font-size: 32rpx;
