@@ -765,6 +765,10 @@ onMounted(async () => {
 /* 邀请弹窗 */
 .invite-sheet {
   text-align: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 .invite-code {
   font-size: 56rpx;
@@ -785,17 +789,24 @@ onMounted(async () => {
   padding: 20rpx;
   font-size: 22rpx;
   color: #8c5a2b;
-  word-break: break-all;
-  overflow-wrap: break-word;
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   margin-bottom: 10rpx;
+  overflow: hidden;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
+  white-space: normal;
 }
 .invite-link-text {
   display: block;
-  word-break: break-all;
-  overflow-wrap: break-word;
   width: 100%;
+  max-width: 100%;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
+  white-space: normal;
+  line-height: 1.5;
 }
 </style>

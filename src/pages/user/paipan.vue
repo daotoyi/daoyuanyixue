@@ -53,7 +53,7 @@
       </view>
 
       <!-- 地支藏干 (四柱下方, 左侧标签, 含联动列) -->
-      <view class="pp-block">
+      <view class="pp-block pp-tbl">
                 <view class="pp-cg-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">藏干</view>
@@ -68,7 +68,7 @@
       </view>
 
       <!-- 星运/自坐/空亡 一个板块 (左侧分类标签, 含联动列) -->
-      <view class="pp-block">
+      <view class="pp-block pp-tbl">
                 <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">星运</view>
@@ -88,7 +88,7 @@
       </view>
 
       <!-- 神煞 单独板块 (含联动列) -->
-      <view class="pp-block">
+      <view class="pp-block pp-tbl">
                 <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">神煞</view>
@@ -720,6 +720,22 @@ function payJiepan() {
 }
 .pp-ss { font-size: 22rpx; color: #8c5a2b; }
 
+/* 表格化板块 (藏干/星运/自坐/空亡/神煞): 与四柱表同款框线, 去周边留白 */
+.pp-block.pp-tbl {
+  padding: 0;
+  border: 2rpx solid #d8ccb8;
+  border-radius: 12rpx;
+  overflow: hidden;
+  background: #fefbf6;
+  margin-bottom: 20rpx;
+}
+.pp-block.pp-tbl .pp-cg-grid,
+.pp-block.pp-tbl .pp-meta-grid {
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+}
+
 /* 藏干 */
 .pp-cg-item { display: flex; align-items: center; justify-content: center; font-size: 22rpx; margin-bottom: 2rpx; }
 .pp-cg-gan { font-weight: 500; font-size: 24rpx; }
@@ -727,8 +743,6 @@ function payJiepan() {
 
 /* 星运/自坐/空亡 与 神煞 板块 */
 .pp-meta-grid {
-  border: 1rpx solid #e6dcca;
-  border-radius: 10rpx;
   overflow: hidden;
 }
 .pp-mv { font-size: 22rpx; color: #42372c; }
@@ -748,8 +762,8 @@ function payJiepan() {
 .pp-wx-fill.wx-水 { background: #1565c0; }
 .pp-wx-num { width: 60rpx; font-size: 22rpx; color: #857563; text-align: right; }
 
-/* 大运/流年/流月 (一行) */
-.pp-dy-row { display: inline-flex; gap: 10rpx; padding: 4rpx; }
+/* 大运/流年/流月 (一行, 紧凑) */
+.pp-dy-row { display: inline-flex; gap: 6rpx; padding: 2rpx; }
 .pp-dy-item {
   display: flex;
   flex-direction: column;
@@ -757,23 +771,23 @@ function payJiepan() {
   background: #faf3e9;
   border: 1rpx solid #efe7d8;
   border-radius: 10rpx;
-  padding: 6rpx 12rpx;
-  min-width: 130rpx;
+  padding: 4rpx 8rpx;
+  min-width: 100rpx;
 }
 .pp-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
-.pp-dy-age { font-size: 15rpx; color: #b3a595; }
+.pp-dy-age { font-size: 13rpx; color: #b3a595; white-space: nowrap; }
 /* 干支上下排列 + 右侧一字十神 */
 .pp-gz-stack { display: flex; flex-direction: column; align-items: center; margin-top: 2rpx; }
 .pp-gz-line { display: flex; align-items: center; }
-.pp-dy-gan, .pp-dy-zhi { font-size: 26rpx; font-weight: 500; line-height: 1.25; }
-.pp-ss-right { margin-left: 6rpx; font-size: 15rpx; color: #b3a595; white-space: nowrap; }
+.pp-dy-gan, .pp-dy-zhi { font-size: 24rpx; font-weight: 500; line-height: 1.25; }
+.pp-ss-right { margin-left: 3rpx; font-size: 12rpx; color: #b3a595; white-space: nowrap; }
 .pp-expand {
-  margin-top: 14rpx;
+  margin-top: 8rpx;
   background: #f8f3ea;
   border-radius: 10rpx;
-  padding: 12rpx;
+  padding: 8rpx;
 }
-.pp-expand-head { font-size: 20rpx; color: #8c5a2b; font-weight: 500; margin-bottom: 8rpx; }
+.pp-expand-head { font-size: 20rpx; color: #8c5a2b; font-weight: 500; margin-bottom: 6rpx; }
 
 /* 当前流年 */
 .pp-ln-box { display: flex; align-items: center; background: #4e3420; border-radius: 12rpx; padding: 20rpx 24rpx; }
