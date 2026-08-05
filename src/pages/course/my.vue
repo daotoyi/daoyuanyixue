@@ -59,6 +59,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { getMyCourses, favoriteCourse } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -106,6 +107,12 @@ async function load() {
 }
 
 onMounted(load)
+
+// 支持 ?tab= 参数直达 (purchased/learning/done/fav)
+onLoad((options) => {
+  const t = options && options.tab
+  if (t && tabs.some((x) => x.key === t)) activeTab.value = t
+})
 
 function goDetail(id) {
   uni.navigateTo({ url: `/pages/course/detail?id=${id}` })

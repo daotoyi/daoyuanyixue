@@ -35,7 +35,7 @@
                 <view class="course-level" :class="'lv-' + cc.level">{{ cc.level }}</view>
               </view>
               <view class="course-body-inner">
-                <text class="course-title ellipsis-2">{{ cc.title }}</text>
+                <text class="course-title">{{ cc.title }}</text>
                 <view class="course-teacher">
                   <u-icon name="account" color="#857563" size="14"></u-icon>
                   <text class="teacher-name">{{ cc.teacher }}</text>
@@ -226,7 +226,7 @@ onMounted(async () => {
 
 .course-body-inner {
   flex: 1;
-  padding: 20rpx;
+  padding: 24rpx;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -235,7 +235,8 @@ onMounted(async () => {
   font-size: 28rpx;
   font-weight: 500;
   color: #42372c;
-  line-height: 1.5;
+  line-height: 1.6;
+  word-break: break-all;
 }
 .course-teacher {
   display: flex;

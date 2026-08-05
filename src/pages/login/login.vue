@@ -39,6 +39,17 @@
         @click="submit"
       ></u-button>
 
+      <!-- 微信一键登录 -->
+      <view class="wx-divider">
+        <view class="wx-line"></view>
+        <text class="wx-text">其他登录方式</text>
+        <view class="wx-line"></view>
+      </view>
+      <view class="wx-login" @tap="wxLogin">
+        <text class="wx-icon">💬</text>
+        <text class="wx-name">微信一键登录</text>
+      </view>
+
       <view class="demo-tip">
         <text class="demo-title">示例账号</text>
         <view class="demo-row" v-for="d in demoAccounts" :key="d.phone" @tap="fillDemo(d)">
@@ -52,7 +63,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { login, register } from '../../api/api'
+import { onLoad } from '@dcloudio/uni-app'
+import { login, register, wechatLogin } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -63,6 +75,14 @@ const inviteCode = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
+// 邀请链接自动填充: ?invite=道号
+onLoad((options) => {
+  if (options && options.invite) {
+    inviteCode.value = String(options.invite)
+    mode.value = 'register'
+  }
+})
+
 const demoAccounts = [
   { phone: '13800138001', password: '123456', label: '管理员' },
   { phone: '13800138002', password: '123456', label: '普通用户' },
@@ -72,6 +92,47 @@ function fillDemo(d) {
   phone.value = d.phone
   password.value = d.password
   errorMsg.value = ''
+}
+
+function saveUser(user) {
+  userStore.setToken('demo-token-' + user.uid)
+  userStore.setUserInfo({
+    uid: user.uid,
+    dao_code: user.dao_code || '',
+    nickname: user.nickname,
+    avatar: user.avatar || '',
+    vip_level: user.vip_level || 0,
+    balance: user.balance || '0.00',
+    invite_code: user.invite_code || '',
+    role: user.role || 'user',
+  })
+}
+
+async function wxLogin() {
+  errorMsg.value = ''
+  loading.value = true
+  try {
+    // #ifdef MP-WEIXIN
+    // 小程序: wx.login 换取 code → 云函数换 openid 自动登录
+    const codeRes = await new Promise((resolve) => wx.login({ success: resolve, fail: resolve }))
+    if (!codeRes || !codeRes.code) throw new Error('微信登录失败，请重试')
+    const user = await wechatLogin({ code: codeRes.code })
+    saveUser(user)
+    uni.showToast({ title: '微信登录成功', icon: 'success' })
+    setTimeout(() => uni.navigateBack(), 600)
+    // #endif
+    // #ifndef MP-WEIXIN
+    uni.showModal({
+      title: '提示',
+      content: '微信一键登录需配置微信开放平台/公众号（App 与 H5 端）。当前请使用手机号登录，或前往小程序体验微信登录。',
+      showCancel: false,
+    })
+    // #endif
+  } catch (e) {
+    errorMsg.value = e.message || '微信登录失败'
+  } finally {
+    loading.value = false
+  }
 }
 
 async function submit() {
@@ -99,6 +160,7 @@ async function submit() {
     userStore.setToken('demo-token-' + user.uid)
     userStore.setUserInfo({
       uid: user.uid,
+      dao_code: user.dao_code || '',
       nickname: user.nickname,
       avatar: user.avatar || '',
       vip_level: user.vip_level || 0,
@@ -238,5 +300,39 @@ async function submit() {
 .demo-role {
   font-size: 22rpx;
   color: #8c5a2b;
+}
+
+/* 微信登录 */
+.wx-divider {
+  display: flex;
+  align-items: center;
+  margin: 40rpx 0 24rpx;
+}
+.wx-line {
+  flex: 1;
+  height: 1rpx;
+  background: #efe7d8;
+}
+.wx-text {
+  margin: 0 20rpx;
+  font-size: 22rpx;
+  color: #b3a595;
+}
+.wx-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 999rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+}
+.wx-icon {
+  font-size: 34rpx;
+  margin-right: 14rpx;
+}
+.wx-name {
+  font-size: 28rpx;
+  color: #42372c;
 }
 </style>

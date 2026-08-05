@@ -213,10 +213,13 @@
               <text class="td w-no ellipsis">{{ o.order_no }}</text>
               <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
               <text class="td w-price">¥{{ o.total_price }}</text>
-              <text class="td w-status">{{ o.status }}</text>
+              <view class="td w-status">
+                <text :class="'st-' + o.status">{{ o.status }}</text>
+                <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
+              </view>
               <view class="td w-ops ops">
                 <text class="op" v-if="o.status === '待付款'" @tap="payForOrder(o)">代收款</text>
-                <text class="op" v-if="o.status === '待发货'" @tap="shipOrder(o)">发货</text>
+                <text class="op" v-if="o.status === '待发货'" @tap="openShip(o)">发货</text>
                 <text class="op danger" v-if="o.status !== '已退款' && o.status !== '已完成'" @tap="refundOrder(o)">退款</text>
               </view>
             </view>
@@ -260,14 +263,14 @@
             <view class="tr th">
               <text class="td w-name">标题</text>
               <text class="td w-name">主播</text>
-              <text class="td w-stock">开始时间</text>
+              <text class="td w-time">开始时间</text>
               <text class="td w-status">状态</text>
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr" v-for="l in lives" :key="l.id">
               <text class="td w-name ellipsis">{{ l.title }}</text>
               <text class="td w-name">{{ l.anchor }}</text>
-              <text class="td w-stock">{{ (l.start_time || '').slice(0, 10) }}</text>
+              <text class="td w-time">{{ l.start_time || '-' }}</text>
               <text class="td w-status" :class="'ls-' + l.status">{{ { live: '直播中', upcoming: '未开始', ended: '已结束' }[l.status] || l.status }}</text>
               <view class="td w-ops ops">
                 <text class="op" @tap="openLiveForm(l)">编辑</text>
@@ -285,14 +288,14 @@
             <view class="tr th">
               <text class="td w-name">作者</text>
               <text class="td w-name">内容</text>
-              <text class="td w-stock">时间</text>
+              <text class="td w-time">时间</text>
               <text class="td w-status">推荐</text>
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr" v-for="m in moments" :key="m._id || m.id">
               <text class="td w-name">{{ m.user_name }}</text>
               <text class="td w-name ellipsis">{{ m.content }}</text>
-              <text class="td w-stock">{{ (m.created_at || '').slice(0, 10) }}</text>
+              <text class="td w-time">{{ m.created_at || '-' }}</text>
               <text class="td w-status" :class="m.is_recommended ? 'on' : 'off'">{{ m.is_recommended ? '已推荐' : '未推荐' }}</text>
               <view class="td w-ops ops">
                 <text class="op" @tap="auditMoment(m)">{{ m.is_recommended ? '取消推荐' : '推荐' }}</text>
@@ -468,6 +471,31 @@
       </view>
     </u-popup>
 
+    <!-- ===== 发货弹窗 ===== -->
+    <u-popup :show="showShip" mode="bottom" @close="showShip = false">
+      <view class="form-sheet">
+        <view class="sheet-title">订单发货</view>
+        <view class="f-row"><text class="f-label">订单号</text><text class="f-static">{{ shipForm.order_no }}</text></view>
+        <view class="f-row">
+          <text class="f-label">物流公司</text>
+          <view class="f-pills wrap">
+            <text
+              v-for="l in logisticsList"
+              :key="l.code"
+              class="pill"
+              :class="{ on: shipForm.company === l.code }"
+              @tap="shipForm.company = l.code"
+            >{{ l.name }}</text>
+          </view>
+        </view>
+        <view class="f-row"><text class="f-label">物流单号</text><input class="f-input" v-model="shipForm.tracking_no" placeholder="输入快递单号" /></view>
+        <view class="sheet-actions">
+          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showShip = false"></u-button>
+          <u-button type="primary" text="确认发货" shape="circle" size="small" @click="confirmShip"></u-button>
+        </view>
+      </view>
+    </u-popup>
+
     <!-- ===== 分类编辑弹窗 ===== -->
     <u-popup :show="showCate" mode="bottom" @close="showCate = false">
       <view class="form-sheet">
@@ -498,7 +526,7 @@ import {
   adminUserUpdate, adminLiveCreate, adminLiveUpdate, adminMomentAudit,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave,
-  adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete,
+  adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -790,6 +818,30 @@ function deleteCate(c, type) {
 async function payForOrder(o) {
   await adminOrderShip({ order_no: o.order_no })
   uni.showToast({ title: '已收款', icon: 'success' })
+  await loadOrders()
+}
+
+/* 发货弹窗 */
+const showShip = ref(false)
+const shipForm = ref({ order_no: '', company: '', tracking_no: '' })
+const logisticsList = ref([])
+
+async function openShip(o) {
+  if (!logisticsList.value.length) {
+    logisticsList.value = await adminLogisticsList()
+  }
+  shipForm.value = { order_no: o.order_no, company: o.logistics_company || '', tracking_no: o.tracking_no || '' }
+  showShip.value = true
+}
+
+async function confirmShip() {
+  if (!shipForm.value.company || !shipForm.value.tracking_no) {
+    uni.showToast({ title: '请选择物流并填写单号', icon: 'none' })
+    return
+  }
+  await adminOrderShip({ order_no: shipForm.value.order_no, company: shipForm.value.company, tracking_no: shipForm.value.tracking_no })
+  showShip.value = false
+  uni.showToast({ title: '已发货', icon: 'success' })
   await loadOrders()
 }
 
@@ -1561,6 +1613,52 @@ onMounted(async () => {
   font-size: 22rpx;
   color: #b3a595;
   padding: 16rpx 0;
+}
+
+.f-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+.f-pills.wrap {
+  flex: 1;
+}
+.f-pills .pill {
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+  background: #f8f3ea;
+  font-size: 24rpx;
+  color: #857563;
+  border: 2rpx solid transparent;
+}
+.f-pills .pill.on {
+  color: #8c5a2b;
+  border-color: #8c5a2b;
+  background: #faf3e9;
+  font-weight: 500;
+}
+.f-static {
+  flex: 1;
+  font-size: 26rpx;
+  color: #42372c;
+}
+.st-待付款 { color: #b04a45; font-weight: 500; }
+.st-待发货 { color: #8c5a2b; font-weight: 500; }
+.st-待收货 { color: #ba7517; font-weight: 500; }
+.st-已完成 { color: #6e7f5a; font-weight: 500; }
+.st-已退款 { color: #857563; font-weight: 500; }
+.td-logis {
+  display: block;
+  font-size: 20rpx;
+  color: #b3a595;
+  margin-top: 4rpx;
+}
+/* 时间列: 单行显示 */
+.w-time {
+  width: 220rpx;
+  white-space: nowrap;
+  font-size: 22rpx;
+  color: #857563;
 }
 
 /* 弹窗表单 */

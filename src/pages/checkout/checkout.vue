@@ -102,7 +102,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getCart, getSelectedItems, clearSelected } from '../../utils/cart'
-import { getCoupons, createOrder, payOrder } from '../../api/api'
+import { getMyCoupons, createOrder, payOrder } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -130,7 +130,13 @@ const subTotal = computed(() =>
 
 const couponDiscount = computed(() => {
   if (!selectedCoupon.value) return 0
-  const m = (selectedCoupon.value.discount || '').match(/\d+/)
+  const c = selectedCoupon.value
+  if (c.type === 'percent') {
+    // 8 折券: value=80 → 减 20%
+    const percent = Number(c.value) || 100
+    return Math.round(subTotal.value * (1 - percent / 100) * 100) / 100
+  }
+  const m = (c.discount || '').match(/\d+/)
   return m ? Number(m[0]) : 0
 })
 
@@ -148,7 +154,10 @@ onMounted(() => {
 
 async function loadCoupons() {
   try {
-    coupons.value = await getCoupons()
+    if (!userStore.userInfo.uid) return
+    coupons.value = await getMyCoupons({ uid: userStore.userInfo.uid })
+    // 只看未使用且有效的
+    coupons.value = coupons.value.filter((c) => !c.used)
   } catch (e) {
     /* 忽略 */
   }
@@ -188,8 +197,12 @@ async function submitOrder() {
     const order = await createOrder({
       items: items.value.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image })),
       total_price: finalPrice.value,
+      coupon_discount: couponDiscount.value,
+      coupon_id: selectedCoupon.value ? selectedCoupon.value.id : null,
+      balance_used: balanceUsed.value ? discount.value - couponDiscount.value : 0,
       pay_method: payMethod.value,
       address: address.value,
+      uid: userStore.userInfo.uid || 0,
     })
     // 模拟支付成功
     await payOrder(order.order_no)

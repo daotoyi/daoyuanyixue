@@ -35,8 +35,12 @@
         <text class="collect-label">收藏</text>
       </view>
       <view class="act-btns">
-        <u-button type="warning" text="加入购物车" shape="circle" @click="addCart"></u-button>
-        <u-button type="error" text="立即购买" shape="circle" @click="buyNow"></u-button>
+        <view class="btn-fill btn-cart" @tap="addCart">
+          <text>加入购物车</text>
+        </view>
+        <view class="btn-fill btn-buy" @tap="buyNow">
+          <text>立即购买</text>
+        </view>
       </view>
     </view>
   </view>
@@ -45,9 +49,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getProduct } from '../../api/api'
+import { getProduct, toggleFavoriteProduct, addFootprint } from '../../api/api'
 import { addToCart } from '../../utils/cart'
+import { useUserStore } from '../../store/index'
 
+const userStore = useUserStore()
 const product = ref(null)
 const current = ref(1)
 const collected = ref(false)
@@ -61,6 +67,16 @@ onLoad(async (options) => {
   try {
     product.value = await getProduct(options.id)
     uni.setNavigationBarTitle({ title: product.value ? product.value.name : '商品详情' })
+    // 浏览足迹
+    if (userStore.isLoggedIn && product.value) {
+      addFootprint({
+        uid: userStore.userInfo.uid,
+        product_id: product.value.id,
+        name: product.value.name,
+        image: (product.value.images || [])[0] || '',
+        price: product.value.price,
+      }).catch(() => {})
+    }
   } catch (e) {
     uni.showToast({ title: '商品加载失败', icon: 'none' })
   }
@@ -70,9 +86,25 @@ function preview(i) {
   uni.previewImage({ urls: product.value.images, current: i })
 }
 
-function toggleCollect() {
-  collected.value = !collected.value
-  uni.showToast({ title: collected.value ? '已收藏' : '已取消收藏', icon: 'none' })
+async function toggleCollect() {
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600)
+    return
+  }
+  try {
+    const res = await toggleFavoriteProduct({
+      uid: userStore.userInfo.uid,
+      product_id: product.value.id,
+      name: product.value.name,
+      image: (product.value.images || [])[0] || '',
+      price: product.value.price,
+    })
+    collected.value = res.favorited
+    uni.showToast({ title: res.favorited ? '已收藏' : '已取消收藏', icon: 'none' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '操作失败', icon: 'none' })
+  }
 }
 
 function addCart() {
@@ -217,5 +249,25 @@ function buyNow() {
   display: flex;
   gap: 20rpx;
   margin-left: 16rpx;
+}
+/* 双色实心按钮 */
+.btn-fill {
+  flex: 1;
+  height: 84rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-fill text {
+  font-size: 28rpx;
+  color: #fefbf6;
+  letter-spacing: 2rpx;
+}
+.btn-cart {
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
+.btn-buy {
+  background: linear-gradient(135deg, #b04a45, #8c3228);
 }
 </style>

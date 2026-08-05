@@ -7,7 +7,7 @@
           v-for="s in statuses"
           :key="s"
           class="filter-pill"
-          :class="{ active: activeStatus === s }"
+          :class="['pill-' + s, { active: activeStatus === s }]"
           @tap="switchStatus(s)"
         >
           <text>{{ s }}</text>
@@ -134,12 +134,19 @@ async function doConfirm(o) {
   background: #f8f3ea;
   font-size: 26rpx;
   color: #857563;
+  border: 2rpx solid transparent;
 }
+/* 各状态分类用不同颜色标注 (选中时) */
 .filter-pill.active {
-  background: #8c5a2b;
-  color: #fefbf6;
-  font-weight: 500;
+  background: transparent;
+  font-weight: 600;
 }
+.pill-全部.active { color: #42372c; border-color: #857563; background: #fefbf6; }
+.pill-待付款.active { color: #b04a45; border-color: #b04a45; background: #fdf1f0; }
+.pill-待发货.active { color: #8c5a2b; border-color: #8c5a2b; background: #faf3e9; }
+.pill-待收货.active { color: #ba7517; border-color: #ba7517; background: #fdf6e8; }
+.pill-已完成.active { color: #6e7f5a; border-color: #6e7f5a; background: #f2f5ec; }
+.pill-已退款.active { color: #857563; border-color: #857563; background: #f4f1ec; }
 
 .order-scroll {
   flex: 1;

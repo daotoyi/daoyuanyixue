@@ -168,6 +168,14 @@
         "navigationBarBackgroundColor": "#FFFCF5",
         "navigationBarTextStyle": "black"
       }
+    },
+    {
+      "path": "pages/user/assets",
+      "style": {
+        "navigationBarTitleText": "我的资产",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
     }
   ],
   "globalStyle": {

@@ -48,10 +48,6 @@
         <text class="cell-label">{{ t('隐私协议', 'Privacy Policy') }}</text>
         <view class="cell-right"><text class="cell-arrow">›</text></view>
       </view>
-      <view class="cell" @tap="goPage('/pages/setting/about')">
-        <text class="cell-label">{{ t('关于我们', 'About Us') }}</text>
-        <view class="cell-right"><text class="cell-arrow">›</text></view>
-      </view>
       <view class="cell" @tap="checkUpdate">
         <text class="cell-label">{{ t('检查更新', 'Check Update') }}</text>
         <view class="cell-right">

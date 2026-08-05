@@ -1,5 +1,5 @@
 /**
- * 道源易学 · API 网关云函数 (dy-api)
+ * 道元易学 · API 网关云函数 (dy-api)
  *
  * 统一入口: callFunction({ name: 'dy-api', data: { action, data } })
  * 返回: { status, data, msg }
@@ -155,6 +155,17 @@ async function listCoupons() {
 
 /* ============ 用户 ============ */
 
+/* 生成道号: ZHSM001 = 管理员(昊辰), 普通用户 ZHS00001 起 */
+async function nextDaoCode() {
+  const res = await db.collection('users').orderBy('dao_code', 'desc').limit(50).get()
+  let max = 0
+  res.data.forEach((u) => {
+    const m = String(u.dao_code || '').match(/^ZHS(\d+)$/)
+    if (m) max = Math.max(max, Number(m[1]))
+  })
+  return `ZHS${String(max + 1).padStart(5, '0')}`
+}
+
 async function login(data) {
   const res = await db
     .collection('users')
@@ -164,25 +175,201 @@ async function login(data) {
   const user = res.data[0]
   if (!user) return fail('手机号或密码不正确')
   const { password, ...safe } = user
+  // 老用户补发道号
+  if (!safe.dao_code) {
+    let code = 'ZHS00001'
+    if (safe.role === 'admin' || data.phone === '18500353930') {
+      code = 'ZHSM001'
+    } else {
+      code = await nextDaoCode()
+    }
+    await db.collection('users').where({ uid: safe.uid }).update({ dao_code: code, invite_code: code })
+    safe.dao_code = code
+    safe.invite_code = code
+  }
   return ok(safe)
 }
 
 async function register(data) {
   const exists = await db.collection('users').where({ phone: data.phone }).limit(1).get()
   if (exists.data.length) return fail('该手机号已注册')
+  // 道号分配 (管理员预留 ZHSM001)
+  let daoCode
+  if (data.phone === '18500353930' || data.role === 'admin') {
+    daoCode = 'ZHSM001'
+  } else {
+    daoCode = await nextDaoCode()
+  }
+  // 邀请人 (按道号/invite_code 匹配)
+  let inviter = null
+  if (data.invite_code) {
+    const inv = String(data.invite_code).trim().toUpperCase()
+    const r = await db.collection('users').where({ dao_code: inv }).limit(1).get()
+    if (r.data.length) inviter = r.data[0]
+  }
   const user = {
     uid: Date.now() % 1000000,
+    dao_code: daoCode,
     nickname: `道友${String(data.phone).slice(-4)}`,
     avatar: '',
     phone: data.phone,
     password: data.password,
     vip_level: 0,
     balance: '0.00',
-    role: 'user',
-    invite_code: data.invite_code || 'DY8888',
+    role: data.role || 'user',
+    invite_code: daoCode,
+    inviter_uid: inviter ? inviter.uid : null,
     created_at: new Date().toISOString().slice(0, 10),
   }
   await db.collection('users').add(user)
+  // 邀请奖励: 被邀请人获得 8 折优惠券
+  if (inviter) {
+    const couponId = Date.now() % 1000000
+    await db.collection('coupons').add({
+      id: couponId,
+      uid: user.uid,
+      name: '邀请专享 · 全场 8 折',
+      type: 'percent',
+      value: 80,
+      discount: '全场 8 折',
+      used: false,
+      expire_at: '2026-12-31',
+      source: 'invite',
+      created_at: new Date().toISOString().slice(0, 10),
+    })
+  }
+  const { password, ...safe } = user
+  return ok(safe)
+}
+
+/* ---- 用户资料 / 资产 / 微信登录 ---- */
+
+async function updateProfile(data) {
+  const { uid } = data
+  if (!uid) return fail('请先登录')
+  const doc = {}
+  if (data.nickname !== undefined && String(data.nickname).trim()) doc.nickname = String(data.nickname).trim().slice(0, 20)
+  if (data.avatar !== undefined) doc.avatar = data.avatar
+  await db.collection('users').where({ uid: Number(uid) }).update(doc)
+  return ok({ updated: true })
+}
+
+async function userAssets(data) {
+  const { uid } = data
+  if (!uid) return fail('请先登录')
+  const couponRes = await db.collection('coupons').where({ uid: Number(uid), used: false }).limit(50).get()
+  const favRes = await db.collection('favorites').where({ uid: Number(uid) }).limit(50).get()
+  const footRes = await db.collection('footprints').where({ uid: Number(uid) }).limit(50).get()
+  return ok({
+    coupon_count: couponRes.data.length,
+    favorite_count: favRes.data.length,
+    footprint_count: footRes.data.length,
+  })
+}
+
+/* ---- 收藏 / 足迹 / 我的优惠券 ---- */
+
+async function myCoupons(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('coupons').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(50).get()
+  return ok(res.data)
+}
+
+async function toggleFavorite(data) {
+  const { uid, product_id, name, image, price } = data
+  if (!uid || !product_id) return fail('参数缺失')
+  const exists = await db.collection('favorites').where({ uid: Number(uid), product_id: Number(product_id) }).limit(1).get()
+  if (exists.data.length) {
+    await db.collection('favorites').where({ uid: Number(uid), product_id: Number(product_id) }).remove()
+    return ok({ favorited: false })
+  }
+  await db.collection('favorites').add({
+    uid: Number(uid),
+    product_id: Number(product_id),
+    name: name || '',
+    image: image || '',
+    price: price || '0.00',
+    created_at: new Date().toISOString().slice(0, 10),
+  })
+  return ok({ favorited: true })
+}
+
+async function myFavorites(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('favorites').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(100).get()
+  return ok(res.data)
+}
+
+async function addFootprint(data) {
+  const { uid, product_id, name, image, price } = data
+  if (!uid || !product_id) return ok({ added: false })
+  await db.collection('footprints').where({ uid: Number(uid), product_id: Number(product_id) }).remove()
+  await db.collection('footprints').add({
+    uid: Number(uid),
+    product_id: Number(product_id),
+    name: name || '',
+    image: image || '',
+    price: price || '0.00',
+    visited_at: new Date().toISOString().slice(0, 10),
+  })
+  return ok({ added: true })
+}
+
+async function myFootprints(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('footprints').where({ uid: Number(uid) }).orderBy('visited_at', 'desc').limit(100).get()
+  return ok(res.data)
+}
+
+async function wechatLogin(data) {
+  // 微信一键登录 (小程序): 需在环境变量配置 WX_APPID / WX_SECRET
+  const { code, nickname, avatar } = data
+  if (!code) return fail('缺少微信授权码')
+  const appid = process.env.WX_APPID
+  const secret = process.env.WX_SECRET
+  if (!appid || !secret) {
+    return fail('微信登录未配置，请联系管理员（需提供小程序 AppID 与 Secret）')
+  }
+  const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`
+  const httpRes = await new Promise((resolve) => {
+    const https = require('https')
+    https.get(url, (r) => {
+      let d = ''
+      r.on('data', (c) => (d += c))
+      r.on('end', () => resolve(d))
+    }).on('error', (e) => resolve(''))
+  })
+  let wx
+  try {
+    wx = JSON.parse(httpRes)
+  } catch (e) {
+    return fail('微信授权失败')
+  }
+  if (!wx.openid) return fail('微信授权失败: ' + (wx.errmsg || '未知错误'))
+  // 查 openid 关联用户
+  let user = (await db.collection('users').where({ openid: wx.openid }).limit(1).get()).data[0]
+  if (!user) {
+    // 自动注册
+    const daoCode = await nextDaoCode()
+    user = {
+      uid: Date.now() % 1000000,
+      dao_code: daoCode,
+      nickname: nickname || '微信道友',
+      avatar: avatar || '',
+      phone: '',
+      password: '',
+      openid: wx.openid,
+      vip_level: 0,
+      balance: '0.00',
+      role: 'user',
+      invite_code: daoCode,
+      created_at: new Date().toISOString().slice(0, 10),
+    }
+    await db.collection('users').add(user)
+  }
   const { password, ...safe } = user
   return ok(safe)
 }
@@ -219,6 +406,8 @@ async function createOrder(data) {
     order_no: `DY${Date.now()}${Math.floor(Math.random() * 1000)}`,
     status: '待付款',
     total_price: data.total_price,
+    coupon_discount: data.coupon_discount || 0,
+    balance_used: data.balance_used || 0,
     items: data.items || [],
     pay_method: data.pay_method || 'wechat',
     address: data.address || {},
@@ -226,6 +415,10 @@ async function createOrder(data) {
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   const res = await db.collection('orders').add(order)
+  // 核销优惠券
+  if (data.coupon_id) {
+    await db.collection('coupons').where({ id: Number(data.coupon_id) }).update({ used: true, used_at: new Date().toLocaleString('zh-CN', { hour12: false }) })
+  }
   return ok({ ...order, _id: res.id })
 }
 
@@ -481,8 +674,28 @@ async function adminCourseCreate(data) {
   return ok(doc)
 }
 
+const LOGISTICS_COMPANIES = [
+  { code: 'SF', name: '顺丰速运' },
+  { code: 'ZTO', name: '中通快递' },
+  { code: 'YTO', name: '圆通速递' },
+  { code: 'STO', name: '申通快递' },
+  { code: 'YUNDA', name: '韵达快递' },
+  { code: 'JD', name: '京东物流' },
+  { code: 'EMS', name: '中国邮政 EMS' },
+]
+
+async function listLogistics() {
+  return ok(LOGISTICS_COMPANIES)
+}
+
 async function adminOrderShip(data) {
-  await db.collection('orders').where({ order_no: data.order_no }).update({ status: '待收货' })
+  const doc = {
+    status: '待收货',
+    shipped_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  }
+  if (data.company) doc.logistics_company = data.company
+  if (data.tracking_no) doc.tracking_no = data.tracking_no
+  await db.collection('orders').where({ order_no: data.order_no }).update(doc)
   return ok({ updated: true })
 }
 
@@ -544,6 +757,9 @@ async function adminCouponCreate(data) {
     name: data.name,
     discount: data.discount || '满 99 减 20',
     type: data.type || 'cash',
+    value: data.value || (data.type === 'percent' ? 80 : 0),
+    uid: data.uid_holder || null, // 指定发放给某用户
+    used: false,
     status: 'valid',
     expire_at: data.expire_at || '2026-12-31',
   }
@@ -613,7 +829,16 @@ const ROUTES = {
   'user.login': login,
   'user.register': register,
   'user.setPassword': setPassword,
+  'user.updateProfile': updateProfile,
+  'user.assets': userAssets,
+  'user.wechatLogin': wechatLogin,
+  'user.coupons': myCoupons,
+  'user.favorites': myFavorites,
+  'user.favorite.toggle': toggleFavorite,
+  'user.footprints': myFootprints,
+  'user.footprint.add': addFootprint,
   'app.checkUpdate': checkUpdate,
+  'admin.logistics.list': listLogistics,
   'order.create': createOrder,
   'order.list': listOrders,
   'order.detail': getOrder,

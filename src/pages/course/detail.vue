@@ -46,8 +46,13 @@
         <u-button type="primary" text="开始学习" shape="circle" @click="startLearn"></u-button>
       </template>
       <template v-else>
-        <text class="buy-price">¥{{ course.price }}</text>
-        <u-button type="error" :text="buying ? '购买中...' : '立即购买'" shape="circle" @click="buyCourse"></u-button>
+        <view class="buy-left">
+          <text class="buy-price">¥{{ course.price }}</text>
+          <text class="buy-origin">¥{{ course.ot_price }}</text>
+        </view>
+        <view class="btn-fill btn-buy" @tap="buyCourse">
+          <text>{{ buying ? '购买中...' : '立即购买' }}</text>
+        </view>
       </template>
     </view>
   </view>
@@ -267,5 +272,34 @@ function startLearn() {
   font-size: 40rpx;
   font-weight: 500;
   color: #b04a45;
+}
+.buy-left {
+  display: flex;
+  align-items: baseline;
+}
+.buy-origin {
+  font-size: 22rpx;
+  color: #b3a595;
+  text-decoration: line-through;
+  margin-left: 12rpx;
+}
+/* 立即购买: 实心按钮 + 与文字留出间距 */
+.btn-fill {
+  flex-shrink: 0;
+  margin-left: 24rpx;
+  height: 84rpx;
+  padding: 0 56rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-fill text {
+  font-size: 28rpx;
+  color: #fefbf6;
+  letter-spacing: 2rpx;
+}
+.btn-buy {
+  background: linear-gradient(135deg, #b04a45, #8c3228);
 }
 </style>
