@@ -165,29 +165,90 @@
       </view>
 
 
-      <!-- ===== 六爻 ===== -->
+      <!-- ===== 六爻 (完整排盘) ===== -->
       <view v-else-if="activeTool === 'liuyao'" class="tool-panel">
         <view class="tp-title">三枚铜钱，心中默念所问之事，一键起卦</view>
         <view class="btn-fill btn-pp" @tap="runLiuyao"><text>摇卦</text></view>
-        <view class="ly-result" v-if="lyResult">
+        <view class="ly-result" v-if="lyFull">
+          <!-- 卦名 + 变卦 -->
           <view class="ly-head">
-            <text class="ly-name">{{ lyResult.name }}</text>
-            <text v-if="lyResult.hasChange" class="ly-cname">变卦：{{ lyResult.cName }}</text>
+            <text class="ly-name">{{ lyFull.name }}</text>
+            <text class="ly-gong" v-if="lyFull.gong">{{ lyFull.gong }}宫{{ lyFull.gongWx }}</text>
+            <text v-if="lyFull.hasChange" class="ly-cname">变卦：{{ lyFull.cName }}</text>
           </view>
-          <view class="ly-lines">
-            <view class="ly-line" v-for="(m, i) in lyResult.marks" :key="i">
-              <text class="ly-idx">{{ ['上九', '九五', '九四', '九三', '九二', '初爻'][i] }}</text>
-              <text class="ly-mark" :class="{ moving: m.includes('老') }">{{ m }}</text>
+          <!-- 卦象画图 (自下而上) -->
+          <view class="ly-xiang">
+            <view
+              class="ly-yao"
+              v-for="l in lyFull.lines"
+              :key="l.idx"
+              :class="{ shi: l.isShi, ying: l.isYing, moving: l.moving }"
+            >
+              <text class="ly-yao-idx">{{ ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'][l.idx - 1] }}</text>
+              <view class="ly-yao-line">
+                <view class="ly-bar" :class="l.yang ? 'yang' : 'yin'"></view>
+                <text class="ly-dong" v-if="l.moving">{{ l.mark.includes('老阳') ? '○' : '×' }}</text>
+              </view>
+              <text class="ly-yao-tag">{{ l.shen }} {{ l.liuqin }} {{ l.zhi }}{{ l.wuxing }}</text>
+              <text class="ly-yao-sw" v-if="l.isShi">世</text>
+              <text class="ly-yao-sw" v-else-if="l.isYing">应</text>
             </view>
           </view>
-          <view class="br-tip">※ 老阳○老阴×为动爻，动则成变卦</view>
+          <view class="br-tip">※ 老阳○老阴×为动爻，动则成变卦；世应定事主</view>
+          <!-- 六亲/六神 摘要 -->
+          <view class="ly-meta">
+            <view class="br-line"><text class="br-k">卦宫</text><text class="br-v">{{ lyFull.gong }}宫 · 五行{{ lyFull.gongWx }} · 世爻{{ lyFull.shi }} · 应爻{{ lyFull.ying }}</text></view>
+            <view class="br-line"><text class="br-k">日辰</text><text class="br-v">{{ lyFull.dayGan }}日 · 六神自{{ lyFull.lines[0].shen }}起</text></view>
+          </view>
+
+          <!-- AI 智能解盘 (仿八字) -->
+          <view class="jp-section">
+            <view class="pp-block-head">AI 智能解盘</view>
+            <view class="jp-block" v-for="m in lyFreeModules" :key="m.key">
+              <view class="jp-block-head" @tap="toggleLyJp(m.key)">
+                <text class="jp-block-icon">{{ m.icon }}</text>
+                <text class="jp-block-name">{{ m.name }}</text>
+                <text class="jp-free-tag">免费</text>
+                <text class="jp-arrow">{{ lyOpenJp[m.key] ? '▲' : '▼' }}</text>
+              </view>
+              <view class="jp-content" v-if="lyOpenJp[m.key]">
+                <view class="jp-ai-loading" v-if="lyAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+                <text class="jp-para" v-for="(t, i) in lyData[m.key]" :key="i">{{ t }}</text>
+                <text class="jp-ai-tag" v-if="lyAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+              </view>
+            </view>
+            <view class="jp-block paid" v-for="m in lyPaidModules" :key="m.key">
+              <view class="jp-block-head" @tap="unlockLyJp(m)">
+                <text class="jp-block-icon">{{ m.icon }}</text>
+                <text class="jp-block-name">{{ m.name }}</text>
+                <view class="jp-paid-tag">
+                  <text v-if="!isLyUnlocked(m.key)">¥9.9 解锁</text>
+                  <text v-else class="jp-unlocked">已解锁</text>
+                </view>
+                <text class="jp-arrow">{{ lyOpenJp[m.key] ? '▲' : '▼' }}</text>
+              </view>
+              <view class="jp-content" v-if="lyOpenJp[m.key] && isLyUnlocked(m.key)">
+                <view class="jp-ai-loading" v-if="lyAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+                <text class="jp-para" v-for="(t, i) in lyData[m.key]" :key="i">{{ t }}</text>
+                <text class="jp-ai-tag" v-if="lyAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+              </view>
+              <view class="jp-lock" v-if="!isLyUnlocked(m.key) && lyOpenJp[m.key]">
+                <text class="jp-lock-icon">🔒</text>
+                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+                <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>¥9.9 立即解锁</text></view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 保存此盘 -->
+          <view class="qm-save" @tap="saveLiuyao"><text>💾 保存此卦</text></view>
         </view>
       </view>
 
 
-      <!-- ===== 大六壬 ===== -->
+      <!-- ===== 大六壬 (完整排盘) ===== -->
       <view v-else-if="activeTool === 'liuren'" class="tool-panel">
-        <view class="tp-title">输入日期时辰，排出天地盘（简化）</view>
+        <view class="tp-title">输入日期时辰，排出四课三传天地盘</view>
         <view class="tp-row">
           <text class="tp-label">日期时辰</text>
           <view class="tp-pickers-inline">
@@ -200,15 +261,76 @@
           </view>
         </view>
         <view class="btn-fill btn-pp" @tap="runLiuren"><text>开始排盘</text></view>
-        <view class="lr-result" v-if="lrResult">
-          <view class="br-line"><text class="br-k">月将：</text><text class="br-v">{{ lrResult.moonJiang }} · {{ lrResult.shichenName }}</text></view>
+        <view class="lr-result" v-if="lrFull">
+          <!-- 元信息 -->
+          <view class="lr-meta">
+            <view class="br-line"><text class="br-k">日干支</text><text class="br-v">{{ lrFull.dayGanZhi }}</text></view>
+            <view class="br-line"><text class="br-k">月将</text><text class="br-v">{{ lrFull.yueJiang }} · 占时{{ lrFull.shichen }}时</text></view>
+            <view class="br-line"><text class="br-k">旬首</text><text class="br-v">{{ lrFull.xunShou }}</text></view>
+            <view class="br-line"><text class="br-k">空亡</text><text class="br-v">{{ lrFull.kong }}</text></view>
+          </view>
+          <!-- 四课 + 三传 -->
+          <view class="lr-ke">
+            <view class="lr-ke-item" v-for="k in lrFull.ke" :key="k.idx">
+              <text class="lr-ke-name">{{ k.name }}</text>
+              <text class="lr-ke-shang">{{ k.shang }}</text>
+              <text class="lr-ke-di">{{ k.di }}</text>
+            </view>
+            <view class="lr-chuan">
+              <text class="lr-chuan-t" v-for="c in lrFull.chuan" :key="c.name">{{ c.name }}<text class="lr-chuan-z">{{ c.zhi }}</text></text>
+            </view>
+          </view>
+          <!-- 天地盘 (12 宫带天将) -->
           <view class="lr-grid">
-            <view class="lr-col" v-for="p in lrResult.pan" :key="p.di">
+            <view class="lr-col" v-for="p in lrFull.pan" :key="p.di">
               <text class="lr-tian">{{ p.tian }}</text>
+              <text class="lr-jiang" v-if="p.jiang">{{ p.jiang }}</text>
               <text class="lr-di">{{ p.di }}</text>
             </view>
           </view>
-          <view class="br-tip">※ 简化天地盘，仅供参考</view>
+          <view class="br-tip">※ 三传为简化取法，仅供参考</view>
+
+          <!-- AI 智能解盘 (仿八字) -->
+          <view class="jp-section">
+            <view class="pp-block-head">AI 智能解盘</view>
+            <view class="jp-block" v-for="m in lrFreeModules" :key="m.key">
+              <view class="jp-block-head" @tap="toggleLrJp(m.key)">
+                <text class="jp-block-icon">{{ m.icon }}</text>
+                <text class="jp-block-name">{{ m.name }}</text>
+                <text class="jp-free-tag">免费</text>
+                <text class="jp-arrow">{{ lrOpenJp[m.key] ? '▲' : '▼' }}</text>
+              </view>
+              <view class="jp-content" v-if="lrOpenJp[m.key]">
+                <view class="jp-ai-loading" v-if="lrAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+                <text class="jp-para" v-for="(t, i) in lrData[m.key]" :key="i">{{ t }}</text>
+                <text class="jp-ai-tag" v-if="lrAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+              </view>
+            </view>
+            <view class="jp-block paid" v-for="m in lrPaidModules" :key="m.key">
+              <view class="jp-block-head" @tap="unlockLrJp(m)">
+                <text class="jp-block-icon">{{ m.icon }}</text>
+                <text class="jp-block-name">{{ m.name }}</text>
+                <view class="jp-paid-tag">
+                  <text v-if="!isLrUnlocked(m.key)">¥9.9 解锁</text>
+                  <text v-else class="jp-unlocked">已解锁</text>
+                </view>
+                <text class="jp-arrow">{{ lrOpenJp[m.key] ? '▲' : '▼' }}</text>
+              </view>
+              <view class="jp-content" v-if="lrOpenJp[m.key] && isLrUnlocked(m.key)">
+                <view class="jp-ai-loading" v-if="lrAiLoading[m.key]"><text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text></view>
+                <text class="jp-para" v-for="(t, i) in lrData[m.key]" :key="i">{{ t }}</text>
+                <text class="jp-ai-tag" v-if="lrAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
+              </view>
+              <view class="jp-lock" v-if="!isLrUnlocked(m.key) && lrOpenJp[m.key]">
+                <text class="jp-lock-icon">🔒</text>
+                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+                <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>¥9.9 立即解锁</text></view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 保存此盘 -->
+          <view class="qm-save" @tap="saveLiuren"><text>💾 保存此课</text></view>
         </view>
       </view>
     </view>
@@ -218,11 +340,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { fullBazi, liuyao, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
+import { fullBazi, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN, dayPillar } from '../../utils/paipan'
 import { fullQimen } from '../../utils/qimen'
 import { fullZiwei } from '../../utils/ziwei'
+import { fullLiuyao } from '../../utils/liuyao'
+import { fullLiuren } from '../../utils/liuren'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../../utils/cities'
+import { aiJiepan } from '../../api/api'
 
 const tools = [
   { key: 'bazi', label: '四柱八字', icon: '☯' },
@@ -320,8 +445,180 @@ const form = ref({
   qimen: { qiJu: 'chaibu', paiPan: 'zhuanpan' },
 })
 
-const lyResult = ref(null)
-const lrResult = ref(null)
+const lyFull = ref(null)
+const lrFull = ref(null)
+
+/* ===== 六爻 AI 解盘 (仿八字) ===== */
+const LY_PAID_KEY = 'liuyao_paid_v1'
+const lyData = ref({ zongping: [], career: [], wealth: [], marriage: [] })
+const lyAiLoading = ref({ zongping: false, career: false, wealth: false, marriage: false })
+const lyAiDone = ref({})
+const lyOpenJp = ref({ zongping: true, career: false, wealth: false, marriage: false })
+const lyFreeModules = [
+  { key: 'zongping', name: '卦象总评', icon: '☯' },
+]
+const lyPaidModules = [
+  { key: 'career', name: '事业前程', icon: '💼' },
+  { key: 'wealth', name: '财富格局', icon: '💰' },
+  { key: 'marriage', name: '婚姻感情', icon: '💞' },
+]
+function lyInfoPayload() {
+  return {
+    name: lyFull.value.name, cName: lyFull.value.cName,
+    gong: lyFull.value.gong, gongWx: lyFull.value.gongWx,
+    shi: lyFull.value.shi, ying: lyFull.value.ying,
+    dayGan: lyFull.value.dayGan,
+    lines: lyFull.value.lines,
+  }
+}
+function loadLyAi(key) {
+  if (lyAiLoading.value[key]) return
+  lyAiLoading.value[key] = true
+  aiJiepan({ module: key, liuyao: lyInfoPayload() })
+    .then((res) => {
+      if (res && res.content && res.content.length) {
+        lyData.value[key] = res.content
+        lyAiDone.value[key] = true
+      }
+    })
+    .catch(() => {})
+    .finally(() => { lyAiLoading.value[key] = false })
+}
+function toggleLyJp(key) {
+  lyOpenJp.value[key] = !lyOpenJp.value[key]
+  if (lyOpenJp.value[key] && !lyAiDone.value[key] && !lyData.value[key].length) loadLyAi(key)
+}
+function unlockLyJp(m) {
+  lyOpenJp.value[m.key] = !lyOpenJp.value[m.key]
+  if (lyOpenJp.value[m.key] && isLyUnlocked(m.key) && !lyAiDone.value[m.key]) loadLyAi(m.key)
+}
+function isLyUnlocked(key) {
+  try {
+    const paid = uni.getStorageSync(LY_PAID_KEY) || []
+    return paid.includes(key)
+  } catch (e) {
+    return false
+  }
+}
+function payLyJiepan() {
+  uni.showModal({
+    title: '深入六爻解盘 · ¥9.9',
+    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
+    confirmText: '确认支付 ¥9.9',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      try {
+        const paid = uni.getStorageSync(LY_PAID_KEY) || []
+        lyPaidModules.forEach((m) => {
+          if (!paid.includes(m.key)) paid.push(m.key)
+        })
+        uni.setStorageSync(LY_PAID_KEY, paid)
+        uni.showToast({ title: '解锁成功', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: '解锁失败', icon: 'none' })
+      }
+    },
+  })
+}
+function saveLiuyao() {
+  saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value)
+}
+
+/* ===== 大六壬 AI 解盘 (仿八字) ===== */
+const LR_PAID_KEY = 'liuren_paid_v1'
+const lrData = ref({ zongping: [], career: [], wealth: [], marriage: [] })
+const lrAiLoading = ref({ zongping: false, career: false, wealth: false, marriage: false })
+const lrAiDone = ref({})
+const lrOpenJp = ref({ zongping: true, career: false, wealth: false, marriage: false })
+const lrFreeModules = [
+  { key: 'zongping', name: '课象总评', icon: '🌀' },
+]
+const lrPaidModules = [
+  { key: 'career', name: '事业前程', icon: '💼' },
+  { key: 'wealth', name: '财富格局', icon: '💰' },
+  { key: 'marriage', name: '婚姻感情', icon: '💞' },
+]
+function lrInfoPayload() {
+  return {
+    dayGanZhi: lrFull.value.dayGanZhi, yueJiang: lrFull.value.yueJiang,
+    shichen: lrFull.value.shichen, xunShou: lrFull.value.xunShou, kong: lrFull.value.kong,
+    ke: lrFull.value.ke, chuan: lrFull.value.chuan,
+  }
+}
+function loadLrAi(key) {
+  if (lrAiLoading.value[key]) return
+  lrAiLoading.value[key] = true
+  aiJiepan({ module: key, liuren: lrInfoPayload() })
+    .then((res) => {
+      if (res && res.content && res.content.length) {
+        lrData.value[key] = res.content
+        lrAiDone.value[key] = true
+      }
+    })
+    .catch(() => {})
+    .finally(() => { lrAiLoading.value[key] = false })
+}
+function toggleLrJp(key) {
+  lrOpenJp.value[key] = !lrOpenJp.value[key]
+  if (lrOpenJp.value[key] && !lrAiDone.value[key] && !lrData.value[key].length) loadLrAi(key)
+}
+function unlockLrJp(m) {
+  lrOpenJp.value[m.key] = !lrOpenJp.value[m.key]
+  if (lrOpenJp.value[m.key] && isLrUnlocked(m.key) && !lrAiDone.value[m.key]) loadLrAi(m.key)
+}
+function isLrUnlocked(key) {
+  try {
+    const paid = uni.getStorageSync(LR_PAID_KEY) || []
+    return paid.includes(key)
+  } catch (e) {
+    return false
+  }
+}
+function payLrJiepan() {
+  uni.showModal({
+    title: '深入六壬解盘 · ¥9.9',
+    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
+    confirmText: '确认支付 ¥9.9',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      try {
+        const paid = uni.getStorageSync(LR_PAID_KEY) || []
+        lrPaidModules.forEach((m) => {
+          if (!paid.includes(m.key)) paid.push(m.key)
+        })
+        uni.setStorageSync(LR_PAID_KEY, paid)
+        uni.showToast({ title: '解锁成功', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: '解锁失败', icon: 'none' })
+      }
+    },
+  })
+}
+function saveLiuren() {
+  saveHistory('liuren', `大六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
+}
+/* 通用保存 (六爻/大六壬) */
+function saveHistory(type, label, gzText, data) {
+  try {
+    let list = uni.getStorageSync('paipan_history') || []
+    if (!Array.isArray(list)) list = []
+    const now = new Date()
+    const p = (n) => String(n).padStart(2, '0')
+    list.unshift({
+      ts: Date.now(),
+      time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+      label, gzText, type,
+      data: { [type]: data },
+    })
+    if (list.length > 20) list = list.slice(0, 20)
+    uni.setStorageSync('paipan_history', list)
+    uni.showToast({ title: '已保存到历史', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '保存失败', icon: 'none' })
+  }
+}
 
 /* 真太阳时修正说明 (省/市/县 经纬度) */
 const solarDiffText = computed(() => {
@@ -449,16 +746,32 @@ function runPaipan() {
 onLoad((options) => {
   const t = options && options.tool
   if (t && tools.some((x) => x.key === t)) activeTool.value = t
+  // 恢复保存的六爻/大六壬盘 (从结果页历史跳转)
+  try {
+    const lyRestore = uni.getStorageSync('liuyao_restore')
+    if (lyRestore && activeTool.value === 'liuyao') {
+      lyFull.value = lyRestore
+      uni.removeStorageSync('liuyao_restore')
+    }
+    const lrRestore = uni.getStorageSync('liuren_restore')
+    if (lrRestore && activeTool.value === 'liuren') {
+      lrFull.value = lrRestore
+      uni.removeStorageSync('liuren_restore')
+    }
+  } catch (e) { /* 忽略 */ }
 })
 
 function runLiuyao() {
-  lyResult.value = liuyao()
+  // 以当日日柱天干定六神
+  const now = new Date()
+  const dp = dayPillar(now.getFullYear(), now.getMonth() + 1, now.getDate())
+  lyFull.value = fullLiuyao(dp.g)
 }
 
 function runLiuren() {
   const [y, m, d] = form.value.liuren.date.split('-').map(Number)
-  const sc = SHICHEN[form.value.liuren.shichen]
-  lrResult.value = liuren(y, m, d, sc.from)
+  const lunar = solarToLunar(y, m, d)
+  lrFull.value = fullLiuren(y, m, d, form.value.liuren.shichen, lunar.month)
 }
 </script>
 
@@ -1371,4 +1684,132 @@ function runLiuren() {
 .btn-pay text {
   font-size: 26rpx;
 }
+
+/* ===== 六爻完整盘 (卦象画图) ===== */
+.pp-block-head {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #4e3420;
+  margin-bottom: 14rpx;
+  padding-bottom: 10rpx;
+  border-bottom: 1rpx dashed #e6dcca;
+}
+.ly-result { margin-top: 30rpx; }
+.ly-head { display: flex; align-items: baseline; flex-wrap: wrap; margin-bottom: 14rpx; }
+.ly-name { font-size: 44rpx; font-weight: 700; color: #8c5a2b; }
+.ly-gong { margin-left: 14rpx; font-size: 22rpx; color: #857563; }
+.ly-cname { margin-left: auto; font-size: 26rpx; color: #b04a45; font-weight: 500; }
+/* 卦象 (六爻自下而上) */
+.ly-xiang {
+  background: #f8f3ea;
+  border: 1rpx solid #e6dcca;
+  border-radius: 12rpx;
+  padding: 12rpx 20rpx;
+  margin-bottom: 14rpx;
+}
+.ly-yao {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #efe7d8;
+  position: relative;
+}
+.ly-yao:last-child { border-bottom: none; }
+.ly-yao-idx { width: 84rpx; font-size: 20rpx; color: #b3a595; flex-shrink: 0; }
+.ly-yao-line { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+.ly-bar { height: 10rpx; border-radius: 5rpx; background: #4e3420; width: 140rpx; }
+.ly-bar.yin {
+  background: transparent;
+  background-image: linear-gradient(to right, #4e3420 0 56rpx, transparent 56rpx 84rpx, #4e3420 84rpx 140rpx);
+  background-size: 140rpx 10rpx;
+  background-repeat: no-repeat;
+}
+.ly-dong { position: absolute; right: 20rpx; font-size: 24rpx; font-weight: 700; color: #b04a45; }
+.ly-yao-tag { width: 250rpx; font-size: 20rpx; color: #857563; text-align: right; flex-shrink: 0; }
+.ly-yao-sw {
+  position: absolute;
+  left: 2rpx;
+  font-size: 18rpx;
+  color: #b04a45;
+  font-weight: 600;
+}
+.ly-yao.shi .ly-yao-line { background: rgba(140, 90, 43, 0.06); border-radius: 6rpx; }
+.ly-meta {
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 10rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+
+/* ===== 大六壬完整盘 ===== */
+.lr-result { margin-top: 30rpx; }
+.lr-meta {
+  background: #f8f3ea;
+  border: 1rpx solid #e6dcca;
+  border-radius: 12rpx;
+  padding: 12rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+/* 四课 + 三传 */
+.lr-ke {
+  display: flex;
+  align-items: stretch;
+  gap: 10rpx;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  margin-bottom: 16rpx;
+}
+.lr-ke-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f3ea;
+  border-radius: 10rpx;
+  padding: 10rpx 4rpx;
+}
+.lr-ke-name { font-size: 18rpx; color: #b3a595; }
+.lr-ke-shang { margin-top: 6rpx; font-size: 32rpx; font-weight: 700; color: #8c5a2b; }
+.lr-ke-di { margin-top: 2rpx; font-size: 22rpx; color: #857563; }
+.lr-chuan { display: flex; flex-direction: column; justify-content: center; gap: 8rpx; flex-shrink: 0; }
+.lr-chuan-t { font-size: 20rpx; color: #b04a45; font-weight: 600; }
+.lr-chuan-z { margin-left: 6rpx; font-size: 28rpx; color: #4e3420; }
+/* 天地盘 (带天将) */
+.lr-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  margin-bottom: 14rpx;
+}
+.lr-col {
+  width: calc((100% - 44rpx) / 4);
+  background: #f8f3ea;
+  border-radius: 10rpx;
+  padding: 10rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lr-tian { font-size: 30rpx; color: #8c5a2b; font-weight: 700; }
+.lr-jiang { margin-top: 2rpx; font-size: 18rpx; color: #6e7f5a; }
+.lr-di { margin-top: 2rpx; font-size: 20rpx; color: #b3a595; }
+
+/* 保存按钮 (填充色, 六爻/大六壬共用) */
+.qm-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #b04a45, #8c3228);
+  margin-top: 20rpx;
+}
+.qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
 </style>

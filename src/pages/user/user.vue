@@ -774,7 +774,9 @@ onMounted(async () => {
 .btn-invite {
   margin-top: 24rpx;
   width: 100%;
-  height: 88rpx;
+  height: 80rpx;
+  box-sizing: border-box;
+  padding: 0 20rpx;
   background: linear-gradient(135deg, #b04a45, #8c3228);
 }
 .f-row {

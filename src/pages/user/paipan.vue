@@ -375,7 +375,7 @@
         </view>
       </view>
 
-      <!-- 元信息: 方式 + 四柱(每柱干支上下) + 空亡(独立板块) + 旬首/局数/值符/值使/马星(同一表) -->
+      <!-- 元信息: 方式 + 四柱(每柱干支上下) + 空亡(独立板块, 与四柱4列对应) + 旬首/局数/值符/值使/马星(同一表) -->
       <view class="qm-meta">
         <view class="qm-meta-row"><text class="qm-mk">方式</text><text class="qm-mv">{{ qmPaiPanText }} · {{ qmQiJuText }}</text></view>
         <view class="qm-meta-row">
@@ -388,7 +388,16 @@
             </view>
           </view>
         </view>
-        <view class="qm-meta-row qm-kong-row"><text class="qm-mk">空亡</text><text class="qm-mv">{{ data.bazi.kongwang }}</text></view>
+        <!-- 空亡: 独立板块, 与四柱 4 列对应 -->
+        <view class="qm-meta-row">
+          <text class="qm-mk">空亡</text>
+          <view class="qm-sz-grid">
+            <view class="qm-sz-col qm-sz-kong-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="'k' + pi">
+              <text class="qm-sz-p">{{ pn }}</text>
+              <text class="qm-sz-kong">{{ data.bazi.kongwang }}</text>
+            </view>
+          </view>
+        </view>
         <view class="qm-key-grid">
           <view class="qm-key-row">
             <text class="qm-key-label">旬首</text><text class="qm-key-label">局数</text><text class="qm-key-label">值符</text><text class="qm-key-label">值使</text><text class="qm-key-label">马星</text>
@@ -1268,6 +1277,15 @@ function openHistory() {
 }
 function useHistory(rec) {
   if (!rec || !rec.data) return
+  // 六爻/大六壬盘 → 跳回工具页恢复
+  if (rec.type === 'liuyao' || rec.type === 'liuren') {
+    try {
+      uni.setStorageSync(rec.type === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[rec.type])
+    } catch (e) { /* 忽略 */ }
+    showHistory.value = false
+    uni.navigateTo({ url: `/pages/user/tools?tool=${rec.type}` })
+    return
+  }
   applyData(rec.data)
   showHistory.value = false
   uni.showToast({ title: '已加载历史排盘', icon: 'none' })
@@ -1765,7 +1783,8 @@ function payJiepan() {
 .qm-sz-p { font-size: 18rpx; color: #b3a595; }
 .qm-sz-gan { margin-top: 4rpx; font-size: 28rpx; font-weight: 700; line-height: 1.2; }
 .qm-sz-zhi { font-size: 28rpx; font-weight: 700; line-height: 1.2; }
-.qm-sz-kong { margin-top: 4rpx; font-size: 15rpx; color: #b04a45; white-space: nowrap; }
+.qm-sz-kong { margin-top: 4rpx; font-size: 20rpx; font-weight: 600; color: #b04a45; white-space: nowrap; }
+.qm-sz-kong-col { background: #fdf1f0; border-color: #efd8d4; }
 /* 局数/值符/值使/马星 2行4列 */
 .qm-key-grid {
   margin-top: 8rpx;

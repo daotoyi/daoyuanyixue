@@ -474,6 +474,22 @@ const ZIWEI_PROMPTS = {
   marriage: '请以紫微斗数大师口吻，结合该命盘分析此人【婚姻感情】：夫妻宫星曜、感情特质、相处建议与注意事项。给出3-5条实用建议，语言专业亲切，不超过300字。',
 }
 
+/* 六爻 AI 解盘模块 */
+const LIUYAO_PROMPTS = {
+  zongping: '请以六爻占卜大师口吻，结合该卦象分析【卦象总评】：本卦变卦格局、世应位置、六亲六神组合提示当前所问之事的总体吉凶与关键点。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  career: '请以六爻占卜大师口吻，结合该卦象分析此人【事业前程】：事业相关爻位与用神状态、当前处境与发展建议。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  wealth: '请以六爻占卜大师口吻，结合该卦象分析此人【财富格局】：财爻状态、求财方式与时机、理财建议。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  marriage: '请以六爻占卜大师口吻，结合该卦象分析此人【婚姻感情】：感情爻位状态、相处建议与注意事项。给出3-5条实用建议，语言专业亲切，不超过300字。',
+}
+
+/* 大六壬 AI 解盘模块 */
+const LIUREN_PROMPTS = {
+  zongping: '请以大六壬占卜大师口吻，结合该课象分析【课象总评】：四课三传结构、天地盘天将组合、初传发用所主之事，提示当前所问之事的总体吉凶与关键点。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  career: '请以大六壬占卜大师口吻，结合该课象分析此人【事业前程】：三传与官鬼用神状态、当前处境与发展建议。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  wealth: '请以大六壬占卜大师口吻，结合该课象分析此人【财富格局】：财爻状态、求财方向与时机、理财建议。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  marriage: '请以大六壬占卜大师口吻，结合该课象分析此人【婚姻感情】：感情相关课传状态、相处建议与注意事项。给出3-5条实用建议，语言专业亲切，不超过300字。',
+}
+
 async function aiJiepan(data) {
   // 优先环境变量, 其次本地配置文件 (config.local.js 已被 gitignore)
   let key = process.env.DEEPSEEK_KEY
@@ -486,10 +502,16 @@ async function aiJiepan(data) {
   }
   if (!key) return fail('AI 服务未配置（需设置 DEEPSEEK_KEY）')
   const { module } = data
-  // 奇门解盘: data.qimen 存在时走奇门模板; 紫微: data.ziwei 存在时走紫微模板
-  const qimenInfo = data.qimen
+  // 按盘种选择模板: 紫微 > 奇门 > 六爻 > 大六壬 > 八字
   const ziweiInfo = data.ziwei
-  const prompts = ziweiInfo ? ZIWEI_PROMPTS : (qimenInfo ? QIMEN_PROMPTS : JIEPAN_PROMPTS)
+  const qimenInfo = data.qimen
+  const liuyaoInfo = data.liuyao
+  const liurenInfo = data.liuren
+  const prompts = ziweiInfo ? ZIWEI_PROMPTS
+    : qimenInfo ? QIMEN_PROMPTS
+      : liuyaoInfo ? LIUYAO_PROMPTS
+        : liurenInfo ? LIUREN_PROMPTS
+          : JIEPAN_PROMPTS
   if (!prompts[module]) return fail('未知解盘模块')
   let prompt, system
   if (ziweiInfo) {
@@ -499,6 +521,15 @@ async function aiJiepan(data) {
     const g = (list) => list.map((p) => `${p.palace}宫 ${p.tian || '-'}/${p.di || '-'} ${p.door || '无门'} ${p.star || ''} ${p.shen || ''}`).join('；')
     prompt = `【奇门盘信息】${qimenInfo.ju}，起局:${qimenInfo.qiJu === 'zhirun' ? '置闰' : '拆补'}，排盘:${qimenInfo.paiPan === 'feipan' ? '飞盘' : '转盘'}，节气:${qimenInfo.jieqi || ''}，四柱:${qimenInfo.sizhu || ''}，旬首:${qimenInfo.xunName || ''}${qimenInfo.xunShouQi || ''}，空亡:${qimenInfo.xunKong || ''}，值符:${qimenInfo.zhiFu || ''}，值使:${qimenInfo.zhiShi || ''}，马星:${qimenInfo.maZhi || ''}。九宫：${g(qimenInfo.palaces || [])}。\n${prompts[module]}`
     system = '你是一位精通奇门遁甲、传统术数文化的资深大师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。'
+  } else if (liuyaoInfo) {
+    const lines = (liuyaoInfo.lines || []).map((l) => `${l.idx}爻${l.mark} ${l.zhi || ''}${l.wuxing || ''}${l.liuqin || ''}${l.shen || ''}${l.isShi ? '世' : ''}${l.isYing ? '应' : ''}`).join('；')
+    prompt = `【六爻卦象】${liuyaoInfo.name}（${liuyaoInfo.gong || ''}宫${liuyaoInfo.gongWx || ''}，世${liuyaoInfo.shi}应${liuyaoInfo.ying}），变卦:${liuyaoInfo.cName || '无'}，日干:${liuyaoInfo.dayGan || ''}。六爻：${lines}。\n${prompts[module]}`
+    system = '你是一位精通六爻纳甲、传统术数文化的资深大师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。'
+  } else if (liurenInfo) {
+    const ke = (liurenInfo.ke || []).map((k) => `${k.name}${k.di}上${k.shang}`).join('、')
+    const chuan = (liurenInfo.chuan || []).map((c) => `${c.name}${c.zhi}`).join('→')
+    prompt = `【大六壬课象】日干支:${liurenInfo.dayGanZhi || ''}，月将:${liurenInfo.yueJiang || ''}，占时:${liurenInfo.shichen || ''}，旬首:${liurenInfo.xunShou || ''}，空亡:${liurenInfo.kong || ''}。四课：${ke}。三传：${chuan}。\n${prompts[module]}`
+    system = '你是一位精通大六壬、传统术数文化的资深大师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。'
   } else {
     const baziInfo = data.bazi || {}
     prompt = `【八字信息】性别:${baziInfo.gender || '男'}，四柱:${baziInfo.ganZhi ? baziInfo.ganZhi.join(' ') : ''}，五行分布:${baziInfo.wxText || ''}，日主:${baziInfo.dayGanName || ''}${baziInfo.strength ? '（' + baziInfo.strength + '）' : ''}，空亡:${baziInfo.kongwang || ''}。\n${prompts[module]}`
