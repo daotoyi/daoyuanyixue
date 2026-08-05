@@ -38,18 +38,16 @@ export function resolveDark(theme) {
   return dark
 }
 
-/** 应用主题到全局 (H5: data-theme 属性; App: storage) */
+/** 应用主题到全局 (H5/App: data-theme 属性驱动 CSS 变量) */
 export function applyTheme() {
   const dark = resolveDark(settingsState.theme)
   settingsState.dark = dark
-  // #ifdef H5
+  // #ifndef MP-WEIXIN
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
   }
   // #endif
-  // #ifdef APP-PLUS
   uni.setStorageSync('app_dark', dark)
-  // #endif
   return dark
 }
 

@@ -28,7 +28,7 @@
       <view class="feed" v-if="momentList.length">
         <view class="moment-card" v-for="m in momentList" :key="m.id">
           <view class="moment-head">
-            <u-avatar :text="m.user_name[0]" size="40" bg-color="#e6dcca" color="#8c5a2b" shape="circle"></u-avatar>
+            <u-avatar :text="m.user_name[0]" size="40" bg-color="var(--dy-line)" color="#8c5a2b" shape="circle"></u-avatar>
             <view class="moment-user">
               <text class="moment-name">{{ m.user_name }}</text>
               <text class="moment-time">{{ m.created_at }}</text>
@@ -223,7 +223,7 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .home-page {
   min-height: 100vh;
-  background-color: #f8f3ea;
+  background-color: var(--dy-page);
 }
 
 /* 品牌横幅 */
@@ -235,7 +235,7 @@ onMounted(async () => {
 .banner-title {
   font-size: 52rpx;
   font-weight: 500;
-  color: #f0e6cd;
+  color: var(--dy-sub);
   letter-spacing: 8rpx;
 }
 .banner-sub {
@@ -266,8 +266,8 @@ onMounted(async () => {
 /* 子频道 */
 .channel-tabs {
   display: flex;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .channel-tab {
   position: relative;
@@ -275,7 +275,7 @@ onMounted(async () => {
   text-align: center;
   padding: 24rpx 0 20rpx;
   font-size: 28rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .channel-tab.active {
   color: #8c5a2b;
@@ -300,11 +300,11 @@ onMounted(async () => {
   padding: 20rpx 24rpx;
 }
 .moment-card {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 20rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
 }
 .moment-head {
   display: flex;
@@ -318,18 +318,18 @@ onMounted(async () => {
 .moment-name {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .moment-time {
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
   margin-top: 4rpx;
 }
 .moment-content {
   margin: 20rpx 0;
   font-size: 28rpx;
   line-height: 1.7;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .moment-images {
   display: flex;
@@ -354,7 +354,7 @@ onMounted(async () => {
   align-items: center;
   margin-top: 16rpx;
   padding-top: 16rpx;
-  border-top: 1rpx solid #f8f3ea;
+  border-top: 1rpx solid var(--dy-page);
 }
 .act {
   display: flex;
@@ -368,7 +368,7 @@ onMounted(async () => {
 .act-icon.liked { color: #b04a45; }
 .act-num {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .act-share {
   margin-left: auto;
@@ -384,11 +384,11 @@ onMounted(async () => {
   padding: 20rpx 24rpx;
 }
 .live-card {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
   overflow: hidden;
   margin-bottom: 24rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
 }
 .live-cover {
   position: relative;
@@ -406,11 +406,11 @@ onMounted(async () => {
   padding: 6rpx 20rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 .st-live { background: #b04a45; }
 .st-upcoming { background: #8c5a2b; }
-.st-ended { background: #857563; }
+.st-ended { background: var(--dy-sub); }
 .live-viewers {
   position: absolute;
   right: 20rpx;
@@ -428,7 +428,7 @@ onMounted(async () => {
 .live-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.5;
 }
 .live-meta {
@@ -436,7 +436,7 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 12rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .live-actions {
   margin-top: 20rpx;

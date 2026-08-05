@@ -48,19 +48,64 @@ onHide(() => {
 
 <style lang="scss">
 /* ==================== 道元易学 · 全局样式 ==================== */
+/* ---- 主题 CSS 变量 (浅色默认 / 深色覆盖) ---- */
 page {
+  --dy-page: #f8f3ea;      /* 页面背景 */
+  --dy-card: #fefbf6;      /* 卡片/面板底 */
+  --dy-soft: #faf3e9;      /* 通用浅底(选中态/侧栏) */
+  --dy-text: #42372c;      /* 主文字 */
+  --dy-sub: #857563;       /* 次级文字 */
+  --dy-faint: #b3a595;     /* 浅文字/占位 */
+  --dy-line: #efe7d8;      /* 边框/分隔线 */
+  --dy-mask: rgba(254, 251, 246, 0.6); /* 遮罩(选中态) */
+
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
     'Hiragino Sans GB', 'STSong', 'SimSun', 'Noto Serif SC', serif;
   font-size: 28rpx;
-  color: #42372c;
-  background-color: #f8f3ea;
+  color: var(--dy-text);
+  background-color: var(--dy-page);
 }
 
-/* 深色主题 (跟随系统/手动切换, H5) */
-html[data-theme='dark'] uni-page-body,
+/* 深色主题 (跟随系统/手动切换, H5/App) */
 html[data-theme='dark'] page {
-  background-color: #221c16 !important;
-  color: #e8dfcf !important;
+  --dy-page: #1c1712;      /* 深墨底 */
+  --dy-card: #2a231c;      /* 深色卡片 */
+  --dy-soft: #342b21;      /* 深色浅底 */
+  --dy-text: #e9dfcd;      /* 米白主文字 */
+  --dy-sub: #b0a18d;       /* 次级文字 */
+  --dy-faint: #7d6f5e;     /* 浅文字 */
+  --dy-line: #3b332a;      /* 深边框 */
+  --dy-mask: rgba(42, 35, 28, 0.6);
+
+  background-color: #1c1712 !important;
+  color: #e9dfcd !important;
+}
+
+html[data-theme='dark'] uni-page-body,
+html[data-theme='dark'] uni-page-head {
+  background-color: #1c1712 !important;
+}
+
+/* 深色: uview 弹窗/动作面板 + tabbar 适配 */
+html[data-theme='dark'] .u-popup__content,
+html[data-theme='dark'] .u-popup__content--bottom,
+html[data-theme='dark'] .u-popup__content--top,
+html[data-theme='dark'] .u-action-sheet__body,
+html[data-theme='dark'] .u-picker__content {
+  background-color: #2a231c !important;
+  color: #e9dfcd !important;
+}
+html[data-theme='dark'] .uni-tabbar,
+html[data-theme='dark'] .uni-tabbar__border,
+html[data-theme='dark'] .uni-tabbar__item {
+  background-color: #2a231c !important;
+  border-color: #3b332a !important;
+}
+html[data-theme='dark'] .uni-tabbar__label {
+  color: #b0a18d !important;
+}
+html[data-theme='dark'] .uni-tabbar__label.uni-tabbar__label--active {
+  color: #e9dfcd !important;
 }
 
 /* 通用容器 */
@@ -90,23 +135,23 @@ html[data-theme='dark'] page {
 /* 主题色 */
 .text-primary { color: #8c5a2b; }
 .text-gold { color: #c4a484; }
-.text-ink { color: #42372c; }
-.text-grey { color: #857563; }
+.text-ink { color: var(--dy-text); }
+.text-grey { color: var(--dy-sub); }
 .text-cinnabar { color: #b04a45; }
-.bg-paper { background-color: #fefbf6; }
-.bg-cream { background-color: #f8f3ea; }
+.bg-paper { background-color: var(--dy-card); }
+.bg-cream { background-color: var(--dy-page); }
 
 /* 卡片 */
 .card {
-  background-color: #fefbf6;
+  background-color: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
 }
 
 /* 分隔线 */
 .divider {
   height: 1rpx;
-  background-color: #efe7d8;
+  background-color: var(--dy-line);
 }
 
 /* 安全区域 */

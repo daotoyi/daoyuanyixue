@@ -132,7 +132,7 @@ function goCourse() {
 <style lang="scss" scoped>
 .my-course-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
   display: flex;
   flex-direction: column;
 }
@@ -143,13 +143,13 @@ function goCourse() {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 30rpx;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .mc-head-title {
   font-size: 32rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .mc-head-right {
   display: flex;
@@ -167,8 +167,8 @@ function goCourse() {
 
 /* 分类 tab: 紧凑小按钮 + 固定彩色 + 右上角数字 */
 .filter-bar {
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border-bottom: 1rpx solid var(--dy-line);
   flex-shrink: 0;
 }
 .filter-inner {
@@ -203,37 +203,37 @@ function goCourse() {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #fefbf6;
+  border: 2rpx solid var(--dy-card);
 }
 .ct-badge text {
   font-size: 18rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
   font-weight: 500;
 }
 /* 每个按钮固定颜色 */
-.ct-purchased { border-color: #8c5a2b; background: #faf3e9; }
+.ct-purchased { border-color: #8c5a2b; background: var(--dy-soft); }
 .ct-purchased .ct-label { color: #8c5a2b; }
 .ct-purchased .ct-badge { background: #8c5a2b; }
 .ct-purchased.active { background: #8c5a2b; }
-.ct-purchased.active .ct-label { color: #fefbf6; }
+.ct-purchased.active .ct-label { color: var(--dy-card); }
 
-.ct-learning { border-color: #b04a45; background: #fdf1f0; }
+.ct-learning { border-color: #b04a45; background: var(--dy-soft); }
 .ct-learning .ct-label { color: #b04a45; }
 .ct-learning .ct-badge { background: #b04a45; }
 .ct-learning.active { background: #b04a45; }
-.ct-learning.active .ct-label { color: #fefbf6; }
+.ct-learning.active .ct-label { color: var(--dy-card); }
 
-.ct-done { border-color: #6e7f5a; background: #f2f5ec; }
+.ct-done { border-color: #6e7f5a; background: var(--dy-soft); }
 .ct-done .ct-label { color: #6e7f5a; }
 .ct-done .ct-badge { background: #6e7f5a; }
 .ct-done.active { background: #6e7f5a; }
-.ct-done.active .ct-label { color: #fefbf6; }
+.ct-done.active .ct-label { color: var(--dy-card); }
 
-.ct-fav { border-color: #ba7517; background: #fdf6e8; }
+.ct-fav { border-color: #ba7517; background: var(--dy-soft); }
 .ct-fav .ct-label { color: #ba7517; }
 .ct-fav .ct-badge { background: #ba7517; }
 .ct-fav.active { background: #ba7517; }
-.ct-fav.active .ct-label { color: #fefbf6; }
+.ct-fav.active .ct-label { color: var(--dy-card); }
 
 /* 列表 */
 .mc-scroll {
@@ -245,9 +245,9 @@ function goCourse() {
 }
 .mc-card {
   display: flex;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 20rpx;
   margin-bottom: 20rpx;
 }
@@ -255,7 +255,7 @@ function goCourse() {
   width: 180rpx;
   height: 180rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   flex-shrink: 0;
 }
 .mc-body {
@@ -272,13 +272,13 @@ function goCourse() {
 .mc-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.4;
   flex: 1;
 }
 .mc-fav {
   font-size: 34rpx;
-  color: #c2b5a2;
+  color: var(--dy-faint);
   padding-left: 12rpx;
 }
 .mc-fav.on {
@@ -287,7 +287,7 @@ function goCourse() {
 .mc-teacher {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .mc-progress-row {
   margin-top: auto;
@@ -297,7 +297,7 @@ function goCourse() {
 .mc-progress {
   flex: 1;
   height: 12rpx;
-  background: #efe7d8;
+  background: var(--dy-line);
   border-radius: 6rpx;
   overflow: hidden;
 }
@@ -316,7 +316,7 @@ function goCourse() {
   align-self: flex-start;
   font-size: 20rpx;
   color: #6e7f5a;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 2rpx 14rpx;
   border-radius: 999rpx;
 }

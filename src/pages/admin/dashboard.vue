@@ -1196,7 +1196,7 @@ onMounted(async () => {
 .admin-dash {
   height: 100vh;
   display: flex;
-  background: #f5f0e6;
+  background: var(--dy-soft);
 }
 /* u-popup 脱离 flex 占位 (H5 下 popup 根元素 static, 会挤占 main 宽度) */
 .admin-dash :deep(.u-popup) {
@@ -1238,7 +1238,7 @@ onMounted(async () => {
 }
 .logo-name {
   font-size: 28rpx;
-  color: #f0e6cd;
+  color: var(--dy-sub);
   letter-spacing: 4rpx;
 }
 .logo-sub {
@@ -1301,7 +1301,7 @@ onMounted(async () => {
 }
 .au-name {
   font-size: 22rpx;
-  color: #f0e6cd;
+  color: var(--dy-sub);
 }
 .au-role {
   font-size: 18rpx;
@@ -1321,8 +1321,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 40rpx;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe5d3;
+  background: var(--dy-card);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .tb-title {
   font-size: 32rpx;
@@ -1363,13 +1363,13 @@ onMounted(async () => {
   padding: 8rpx 24rpx;
   margin-left: 12rpx;
   border-radius: 999rpx;
-  background: #ece3d2;
+  background: var(--dy-line);
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .pill.on {
   background: #8c5a2b;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 
 /* 概览 */
@@ -1381,9 +1381,9 @@ onMounted(async () => {
 .stat-card {
   width: calc(25% - 16rpx);
   margin: 8rpx;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe5d3;
+  border: 1rpx solid var(--dy-line);
   padding: 34rpx 20rpx;
   display: flex;
   flex-direction: column;
@@ -1398,14 +1398,14 @@ onMounted(async () => {
 .stat-label {
   margin-top: 12rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 
 .recent-panel {
   margin-top: 30rpx;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe5d3;
+  border: 1rpx solid var(--dy-line);
   overflow: hidden;
 }
 .panel-head {
@@ -1413,12 +1413,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid #f5efe3;
+  border-bottom: 1rpx solid var(--dy-soft);
 }
 .panel-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .panel-more {
   font-size: 22rpx;
@@ -1428,7 +1428,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 20rpx 30rpx;
-  border-bottom: 1rpx solid #f7f2e8;
+  border-bottom: 1rpx solid var(--dy-soft);
   gap: 20rpx;
 }
 .recent-row:last-child {
@@ -1437,12 +1437,12 @@ onMounted(async () => {
 .rr-no {
   width: 300rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .rr-items {
   flex: 1;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .rr-price {
   width: 120rpx;
@@ -1458,29 +1458,29 @@ onMounted(async () => {
 }
 .recent-empty {
   text-align: center;
-  color: #c2b5a2;
+  color: var(--dy-faint);
   font-size: 24rpx;
   padding: 40rpx;
 }
 
 /* 表格 */
 .table {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe5d3;
+  border: 1rpx solid var(--dy-line);
   overflow: hidden;
 }
 .tr {
   display: flex;
   align-items: center;
   padding: 18rpx 24rpx;
-  border-bottom: 1rpx solid #f7f2e8;
+  border-bottom: 1rpx solid var(--dy-soft);
 }
 .tr:last-child {
   border-bottom: none;
 }
 .tr.th {
-  background: #f5efe3;
+  background: var(--dy-soft);
 }
 .th .td {
   font-weight: 500;
@@ -1489,7 +1489,7 @@ onMounted(async () => {
 }
 .td {
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .w-img { width: 76rpx; }
 .w-name { flex: 2; padding: 0 10rpx; min-width: 0; }
@@ -1502,7 +1502,7 @@ onMounted(async () => {
   width: 60rpx;
   height: 60rpx;
   border-radius: 8rpx;
-  background: #f5efe3;
+  background: var(--dy-soft);
 }
 .op {
   font-size: 22rpx;
@@ -1516,7 +1516,7 @@ onMounted(async () => {
 .off { color: #b04a45; }
 .ls-live { color: #b04a45; }
 .ls-upcoming { color: #8c5a2b; }
-.ls-ended { color: #857563; }
+.ls-ended { color: var(--dy-sub); }
 .ellipsis {
   overflow: hidden;
   white-space: nowrap;
@@ -1534,19 +1534,19 @@ onMounted(async () => {
   margin-right: 16rpx;
   margin-bottom: 12rpx;
   border-radius: 999rpx;
-  background: #ece3d2;
+  background: var(--dy-line);
   font-size: 26rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .settings-tab.on {
   background: #8c5a2b;
-  color: #fefbf6;
+  color: var(--dy-card);
   font-weight: 500;
 }
 .settings-card {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe5d3;
+  border: 1rpx solid var(--dy-line);
   padding: 30rpx;
 }
 .settings-desc {
@@ -1554,7 +1554,7 @@ onMounted(async () => {
   align-items: baseline;
   margin-bottom: 28rpx;
   padding-bottom: 20rpx;
-  border-bottom: 1rpx solid #f5efe3;
+  border-bottom: 1rpx solid var(--dy-soft);
 }
 .sd-title {
   font-size: 28rpx;
@@ -1564,7 +1564,7 @@ onMounted(async () => {
 }
 .sd-text {
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .f-input-wrap {
   flex: 1;
@@ -1588,11 +1588,11 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 30rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid #f5efe3;
+  border-top: 1rpx solid var(--dy-soft);
 }
 .settings-tip {
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
   flex: 1;
   margin-right: 20rpx;
 }
@@ -1607,9 +1607,9 @@ onMounted(async () => {
 }
 .cate-panel {
   width: 260rpx;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe5d3;
+  border: 1rpx solid var(--dy-line);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1620,7 +1620,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 24rpx;
-  border-bottom: 1rpx solid #f5efe3;
+  border-bottom: 1rpx solid var(--dy-soft);
 }
 .cate-panel-title {
   font-size: 26rpx;
@@ -1632,7 +1632,7 @@ onMounted(async () => {
   color: #8c5a2b;
   padding: 4rpx 12rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .cate-panel-list {
   flex: 1;
@@ -1642,17 +1642,17 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 18rpx 20rpx;
-  border-bottom: 1rpx solid #f7f2e8;
+  border-bottom: 1rpx solid var(--dy-soft);
   gap: 8rpx;
 }
 .cate-row.active {
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .cate-row-name {
   flex: 1;
   min-width: 0;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .cate-row.active .cate-row-name {
   color: #8c5a2b;
@@ -1661,13 +1661,13 @@ onMounted(async () => {
 .cate-row-badge {
   font-size: 18rpx;
   color: #6e7f5a;
-  background: #eaf3de;
+  background: var(--dy-soft);
   padding: 2rpx 10rpx;
   border-radius: 999rpx;
 }
 .cate-row-badge.off {
   color: #b04a45;
-  background: #fcebeb;
+  background: var(--dy-soft);
 }
 .cate-row-ops {
   display: none;
@@ -1679,7 +1679,7 @@ onMounted(async () => {
 .cate-op {
   font-size: 18rpx;
   color: #8c5a2b;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 2rpx 8rpx;
   border-radius: 6rpx;
 }
@@ -1692,7 +1692,7 @@ onMounted(async () => {
 }
 .table-empty {
   text-align: center;
-  color: #c2b5a2;
+  color: var(--dy-faint);
   font-size: 24rpx;
   padding: 60rpx 0;
 }
@@ -1701,7 +1701,7 @@ onMounted(async () => {
 .attr-editor {
   margin-bottom: 20rpx;
   padding: 20rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
 }
 .attr-head {
@@ -1713,7 +1713,7 @@ onMounted(async () => {
 .attr-title {
   font-size: 24rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .attr-add {
   font-size: 22rpx;
@@ -1728,12 +1728,12 @@ onMounted(async () => {
 .attr-input {
   flex: 1;
   height: 64rpx;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 10rpx;
   padding: 0 18rpx;
   font-size: 24rpx;
-  color: #42372c;
-  border: 1rpx solid #efe5d3;
+  color: var(--dy-text);
+  border: 1rpx solid var(--dy-line);
 }
 .attr-del {
   font-size: 24rpx;
@@ -1743,7 +1743,7 @@ onMounted(async () => {
 .attr-empty {
   text-align: center;
   font-size: 22rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
   padding: 16rpx 0;
 }
 
@@ -1758,21 +1758,21 @@ onMounted(async () => {
 .f-pills .pill {
   padding: 8rpx 22rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   border: 2rpx solid transparent;
 }
 .f-pills .pill.on {
   color: #8c5a2b;
   border-color: #8c5a2b;
-  background: #faf3e9;
+  background: var(--dy-soft);
   font-weight: 500;
 }
 .f-static {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .st-待付款 { color: #b04a45; font-weight: 500; }
 .st-wait { color: #ba7517; font-weight: 500; }
@@ -1780,11 +1780,11 @@ onMounted(async () => {
 .st-待发货 { color: #8c5a2b; font-weight: 500; }
 .st-待收货 { color: #ba7517; font-weight: 500; }
 .st-已完成 { color: #6e7f5a; font-weight: 500; }
-.st-已退款 { color: #857563; font-weight: 500; }
+.st-已退款 { color: var(--dy-sub); font-weight: 500; }
 .td-logis {
   display: block;
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
   margin-top: 4rpx;
 }
 /* 时间列: 单行显示 */
@@ -1792,7 +1792,7 @@ onMounted(async () => {
   width: 220rpx;
   white-space: nowrap;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 
 /* 弹窗表单 */
@@ -1806,7 +1806,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
   margin-bottom: 24rpx;
 }
 .f-row {
@@ -1817,26 +1817,26 @@ onMounted(async () => {
 .f-label {
   width: 150rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 72rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 10rpx;
   padding: 0 20rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .f-textarea {
   flex: 1;
   height: 120rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 10rpx;
   padding: 14rpx 20rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .f-pills {
   display: flex;

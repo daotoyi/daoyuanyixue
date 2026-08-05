@@ -84,7 +84,7 @@ function goShop() {
 <style lang="scss" scoped>
 .assets-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 24rpx;
 }
 
@@ -104,7 +104,7 @@ function goShop() {
 .bc-num {
   font-size: 72rpx;
   font-weight: 500;
-  color: #f0e6cd;
+  color: var(--dy-sub);
   margin: 16rpx 0;
 }
 .bc-tip {
@@ -117,9 +117,9 @@ function goShop() {
 .coupon-card {
   display: flex;
   align-items: center;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 26rpx;
   margin-bottom: 20rpx;
 }
@@ -136,7 +136,7 @@ function goShop() {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .coupon-right {
   text-align: right;
@@ -148,21 +148,21 @@ function goShop() {
   font-weight: 500;
 }
 .coupon-status.used {
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .coupon-expire {
   display: block;
   margin-top: 8rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 
 /* 收藏/足迹 */
 .fav-card {
   display: flex;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 20rpx;
   margin-bottom: 20rpx;
 }
@@ -170,7 +170,7 @@ function goShop() {
   width: 140rpx;
   height: 140rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   flex-shrink: 0;
 }
 .fav-info {
@@ -181,7 +181,7 @@ function goShop() {
 }
 .fav-name {
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.4;
 }
 .fav-price {

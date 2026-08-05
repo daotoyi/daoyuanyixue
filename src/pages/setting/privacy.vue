@@ -26,27 +26,27 @@ const sections = [
 <style lang="scss" scoped>
 .doc-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 30rpx;
 }
 .doc-block {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 26rpx;
   margin-bottom: 20rpx;
 }
 .doc-title {
   font-size: 34rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
   display: block;
 }
 .doc-update {
   display: block;
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #c2b5a2;
+  color: var(--dy-faint);
 }
 .doc-h {
   font-size: 28rpx;
@@ -57,7 +57,7 @@ const sections = [
 }
 .doc-p {
   font-size: 25rpx;
-  color: #857563;
+  color: var(--dy-sub);
   line-height: 1.9;
 }
 </style>

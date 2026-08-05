@@ -245,19 +245,19 @@ onMounted(() => {
 <style lang="scss" scoped>
 .setting-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 20rpx 0 60rpx;
 }
 .group {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   margin: 0 24rpx 24rpx;
   overflow: hidden;
 }
 .group-title {
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
   padding: 24rpx 30rpx 12rpx;
 }
 .cell {
@@ -265,14 +265,14 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 30rpx;
-  border-bottom: 1rpx solid #f8f3ea;
+  border-bottom: 1rpx solid var(--dy-page);
 }
 .cell:last-child {
   border-bottom: none;
 }
 .cell-label {
   font-size: 28rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .cell-right {
   display: flex;
@@ -280,17 +280,17 @@ onMounted(() => {
 }
 .cell-value {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   margin-right: 10rpx;
 }
 .cell-arrow {
   font-size: 32rpx;
-  color: #c2b5a2;
+  color: var(--dy-faint);
 }
 .version {
   text-align: center;
   font-size: 22rpx;
-  color: #c2b5a2;
+  color: var(--dy-faint);
   margin-top: 30rpx;
   letter-spacing: 2rpx;
 }
@@ -303,7 +303,7 @@ onMounted(() => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
   margin-bottom: 24rpx;
 }
 .picker-row {
@@ -311,9 +311,9 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 20rpx;
-  border-bottom: 1rpx solid #f8f3ea;
+  border-bottom: 1rpx solid var(--dy-page);
   font-size: 28rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .picker-row.on {
   color: #8c5a2b;
@@ -333,16 +333,16 @@ onMounted(() => {
 .pwd-label {
   width: 150rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .pwd-input {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .pwd-err {
   color: #b04a45;

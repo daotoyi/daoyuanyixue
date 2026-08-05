@@ -396,7 +396,7 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .user-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding-bottom: 60rpx;
 }
 
@@ -428,7 +428,7 @@ onMounted(async () => {
 }
 .setting-icon {
   font-size: 34rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 .msg-entry {
   position: absolute;
@@ -482,7 +482,7 @@ onMounted(async () => {
   justify-content: center;
   background: rgba(201, 169, 106, 0.35);
   font-size: 52rpx;
-  color: #f0e6cd;
+  color: var(--dy-sub);
 }
 .avatar-edit {
   position: absolute;
@@ -498,7 +498,7 @@ onMounted(async () => {
 }
 .avatar-edit text {
   font-size: 22rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 .user-meta {
   margin-left: 30rpx;
@@ -510,7 +510,7 @@ onMounted(async () => {
 .user-name {
   font-size: 38rpx;
   font-weight: 500;
-  color: #f0e6cd;
+  color: var(--dy-sub);
 }
 .vip-badge {
   margin-left: 16rpx;
@@ -519,7 +519,7 @@ onMounted(async () => {
   font-size: 20rpx;
   color: #4e3420;
 }
-.vip-badge.vip-0 { background: #d8ccb8; }
+.vip-badge.vip-0 { background: var(--dy-sub); }
 .vip-badge.vip-1 { background: linear-gradient(135deg, #c4a484, #a8884c); }
 .vip-badge.vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
 .vip-badge.vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
@@ -542,9 +542,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin: -30rpx 30rpx 0;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 30rpx 0;
   position: relative;
   z-index: 1;
@@ -563,20 +563,20 @@ onMounted(async () => {
 .asset-label {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .asset-divider {
   width: 1rpx;
   height: 48rpx;
-  background: #efe7d8;
+  background: var(--dy-line);
 }
 
 /* 面板 */
 .panel {
   margin: 24rpx 30rpx 0;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   overflow: hidden;
 }
 .panel-head {
@@ -584,16 +584,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid #f8f3ea;
+  border-bottom: 1rpx solid var(--dy-page);
 }
 .panel-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .panel-more {
   font-size: 22rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 
 .order-entry {
@@ -613,7 +613,7 @@ onMounted(async () => {
 .entry-label {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .entry-badge {
   position: absolute;
@@ -624,7 +624,7 @@ onMounted(async () => {
   padding: 0 8rpx;
   border-radius: 999rpx;
   background: #b04a45;
-  color: #fefbf6;
+  color: var(--dy-card);
   font-size: 18rpx;
   display: flex;
   align-items: center;
@@ -642,7 +642,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 30rpx 0;
-  border-bottom: 1rpx solid #f8f3ea;
+  border-bottom: 1rpx solid var(--dy-page);
 }
 .menu-item:last-child {
   border-bottom: none;
@@ -654,11 +654,11 @@ onMounted(async () => {
 .menu-label {
   flex: 1;
   font-size: 28rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .menu-arrow {
   font-size: 36rpx;
-  color: #d8ccb8;
+  color: var(--dy-sub);
 }
 
 .logout {
@@ -666,7 +666,7 @@ onMounted(async () => {
 }
 .version {
   text-align: center;
-  color: #c2b5a2;
+  color: var(--dy-faint);
   font-size: 22rpx;
   padding: 40rpx 0 0;
 }
@@ -679,7 +679,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
   margin-bottom: 24rpx;
 }
 .pf-avatar-row {
@@ -694,14 +694,14 @@ onMounted(async () => {
   height: 120rpx;
   border-radius: 50%;
   border: 3rpx solid #8c5a2b;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .pf-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 60rpx;
-  color: #c2b5a2;
+  color: var(--dy-faint);
 }
 .pf-pick {
   padding: 16rpx 30rpx;
@@ -710,7 +710,7 @@ onMounted(async () => {
 }
 .pf-pick text {
   font-size: 24rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 /* 弹窗实心按钮 */
 .btn-fill {
@@ -723,7 +723,7 @@ onMounted(async () => {
 }
 .btn-fill text {
   font-size: 26rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
   letter-spacing: 2rpx;
 }
 .btn-save {
@@ -743,17 +743,17 @@ onMounted(async () => {
 .f-label {
   width: 140rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .sheet-actions {
   display: flex;
@@ -776,11 +776,11 @@ onMounted(async () => {
 .invite-tip {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   margin-bottom: 20rpx;
 }
 .invite-link {
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 20rpx;
   font-size: 22rpx;

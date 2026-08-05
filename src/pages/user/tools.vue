@@ -430,12 +430,12 @@ function runLiuren() {
 <style lang="scss" scoped>
 .tools-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .tool-tabs {
-  background: #fefbf6;
+  background: var(--dy-card);
   white-space: nowrap;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .tool-tab-inner {
   display: inline-flex;
@@ -448,27 +448,27 @@ function runLiuren() {
   gap: 8rpx;
   padding: 12rpx 26rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .tool-tab.on {
   background: #8c5a2b;
-  color: #fefbf6;
+  color: var(--dy-card);
   font-weight: 500;
 }
 .tool-body {
   padding: 24rpx;
 }
 .tool-panel {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 30rpx;
 }
 .tp-title {
   font-size: 26rpx;
-  color: #857563;
+  color: var(--dy-sub);
   margin-bottom: 24rpx;
   line-height: 1.6;
 }
@@ -480,17 +480,17 @@ function runLiuren() {
 .tp-label {
   width: 170rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   flex-shrink: 0;
 }
 .tp-picker {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
   display: flex;
   align-items: center;
 }
@@ -504,7 +504,7 @@ function runLiuren() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
   letter-spacing: 3rpx;
 }
 .btn-pp {
@@ -515,7 +515,7 @@ function runLiuren() {
 .bazi-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #e6dcca;
+  border-top: 1rpx dashed var(--dy-line);
 }
 .br-grid {
   display: flex;
@@ -527,13 +527,13 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 18rpx 0;
 }
 .br-title {
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .br-gan {
   font-size: 44rpx;
@@ -543,13 +543,13 @@ function runLiuren() {
 }
 .br-zhi {
   font-size: 36rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .br-wx {
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #6e7f5a;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 0 14rpx;
   border-radius: 999rpx;
 }
@@ -559,25 +559,25 @@ function runLiuren() {
 }
 .br-k {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .br-v {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
   font-weight: 500;
 }
 .br-tip {
   margin-top: 16rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 
 /* 六爻 */
 .ly-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #e6dcca;
+  border-top: 1rpx dashed var(--dy-line);
 }
 .ly-head {
   display: flex;
@@ -595,7 +595,7 @@ function runLiuren() {
   color: #b04a45;
 }
 .ly-lines {
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 10rpx 20rpx;
 }
@@ -604,18 +604,18 @@ function runLiuren() {
   align-items: center;
   justify-content: space-between;
   padding: 12rpx 0;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .ly-line:last-child {
   border-bottom: none;
 }
 .ly-idx {
   font-size: 22rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .ly-mark {
   font-size: 28rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .ly-mark.moving {
   color: #b04a45;
@@ -630,7 +630,7 @@ function runLiuren() {
   gap: 12rpx;
 }
 .zw-cell {
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 10rpx;
   padding: 14rpx 8rpx;
   display: flex;
@@ -639,12 +639,12 @@ function runLiuren() {
   min-height: 130rpx;
 }
 .zw-cell.ming {
-  background: #faf3e9;
+  background: var(--dy-soft);
   border: 2rpx solid #8c5a2b;
 }
 .zw-name {
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .zw-star {
   margin-top: 6rpx;
@@ -660,7 +660,7 @@ function runLiuren() {
   gap: 12rpx;
 }
 .qm-cell {
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 10rpx;
   padding: 16rpx 8rpx;
   display: flex;
@@ -671,11 +671,11 @@ function runLiuren() {
   position: absolute;
   margin-left: -90rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .qm-palace {
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
   font-weight: 500;
 }
 .qm-door {
@@ -686,7 +686,7 @@ function runLiuren() {
 .qm-star {
   margin-top: 4rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 
 /* 大六壬 */
@@ -701,7 +701,7 @@ function runLiuren() {
 }
 .lr-col {
   width: calc((100% - 44rpx) / 4);
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 10rpx;
   padding: 12rpx 0;
   display: flex;
@@ -716,14 +716,14 @@ function runLiuren() {
 .lr-di {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 
 /* ===== 问真风格排盘 ===== */
 .wz-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #e6dcca;
+  border-top: 1rpx dashed var(--dy-line);
 }
 .wz-grid {
   display: flex;
@@ -735,20 +735,20 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 14rpx 4rpx;
   border-top: 6rpx solid #8c5a2b;
 }
 .wz-title {
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .wz-ss {
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #8c5a2b;
-  background: #faf3e9;
+  background: var(--dy-soft);
   padding: 0 10rpx;
   border-radius: 6rpx;
 }
@@ -777,12 +777,12 @@ function runLiuren() {
 .wz-cg-ss {
   margin-left: 6rpx;
   font-size: 18rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .wz-nayin {
   margin-top: 8rpx;
   font-size: 18rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 /* 五行颜色 */
 .wx-木 { color: #2e7d32; }
@@ -793,7 +793,7 @@ function runLiuren() {
 
 /* 五行统计 */
 .wz-wxbar {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 12rpx;
   padding: 20rpx;
   margin-bottom: 20rpx;
@@ -814,7 +814,7 @@ function runLiuren() {
 .wz-wx-bar {
   flex: 1;
   height: 14rpx;
-  background: #f0e8d8;
+  background: var(--dy-line);
   border-radius: 7rpx;
   margin: 0 14rpx;
   overflow: hidden;
@@ -831,13 +831,13 @@ function runLiuren() {
 .wz-wx-num {
   width: 60rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
   text-align: right;
 }
 
 /* 元信息 */
 .wz-meta {
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
   margin-bottom: 20rpx;
@@ -849,12 +849,12 @@ function runLiuren() {
 .wz-mk {
   width: 100rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .wz-mv {
   flex: 1;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
   font-weight: 500;
 }
 
@@ -878,20 +878,20 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #faf3e9;
-  border: 1rpx solid #e6dcca;
+  background: var(--dy-soft);
+  border: 1rpx solid var(--dy-line);
   border-radius: 10rpx;
   padding: 10rpx 16rpx;
 }
 .wz-dy-age {
   font-size: 18rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .wz-dy-name {
   margin-top: 6rpx;
   font-size: 26rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .wz-dy-ss {
   margin-top: 4rpx;
@@ -910,7 +910,7 @@ function runLiuren() {
 .wz-ln-name {
   font-size: 40rpx;
   font-weight: 600;
-  color: #f0e6cd;
+  color: var(--dy-sub);
 }
 .wz-ln-ss {
   margin-left: 20rpx;
@@ -931,14 +931,14 @@ function runLiuren() {
 .tg {
   padding: 12rpx 40rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   font-size: 26rpx;
-  color: #857563;
+  color: var(--dy-sub);
   border: 2rpx solid transparent;
 }
 .tg.on {
   background: #8c5a2b;
-  color: #fefbf6;
+  color: var(--dy-card);
   border-color: #8c5a2b;
 }
 
@@ -946,7 +946,7 @@ function runLiuren() {
 .jp-section {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #e6dcca;
+  border-top: 1rpx dashed var(--dy-line);
 }
 .jp-head {
   margin-bottom: 18rpx;
@@ -961,15 +961,15 @@ function runLiuren() {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.7;
-  background: #faf3e9;
+  background: var(--dy-soft);
   border-radius: 10rpx;
   padding: 16rpx 20rpx;
 }
 .jp-block {
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border: 1rpx solid var(--dy-line);
   border-radius: 12rpx;
   margin-bottom: 16rpx;
   overflow: hidden;
@@ -987,19 +987,19 @@ function runLiuren() {
   margin-left: 14rpx;
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .jp-free-tag {
   font-size: 20rpx;
   color: #6e7f5a;
-  background: #f2f5ec;
+  background: var(--dy-soft);
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
 }
 .jp-paid-tag {
   font-size: 20rpx;
   color: #b04a45;
-  background: #fdf1f0;
+  background: var(--dy-soft);
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
 }
@@ -1009,7 +1009,7 @@ function runLiuren() {
 .jp-arrow {
   margin-left: 12rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .jp-content {
   padding: 6rpx 24rpx 24rpx;
@@ -1017,7 +1017,7 @@ function runLiuren() {
 .jp-para {
   display: block;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.8;
   margin-bottom: 12rpx;
 }
@@ -1031,7 +1031,7 @@ function runLiuren() {
   display: block;
   text-align: right;
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .jp-lock {
   padding: 10rpx 24rpx 26rpx;
@@ -1044,7 +1044,7 @@ function runLiuren() {
   display: block;
   margin: 10rpx 0 20rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .btn-fill {
   display: flex;
@@ -1052,7 +1052,7 @@ function runLiuren() {
   justify-content: center;
 }
 .btn-fill text {
-  color: #fefbf6;
+  color: var(--dy-card);
   letter-spacing: 2rpx;
 }
 .btn-pay {

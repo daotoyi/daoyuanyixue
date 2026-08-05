@@ -224,14 +224,14 @@ async function submitOrder() {
 <style lang="scss" scoped>
 .checkout-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
   padding: 20rpx 24rpx 160rpx;
 }
 
 .card {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
@@ -244,11 +244,11 @@ async function submitOrder() {
 .card-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .card-count {
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 
 /* 地址 */
@@ -266,11 +266,11 @@ async function submitOrder() {
 .addr-name {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .addr-phone {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   margin-left: 16rpx;
 }
 .addr-default {
@@ -285,16 +285,16 @@ async function submitOrder() {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .addr-empty {
   flex: 1;
   font-size: 28rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .addr-arrow {
   font-size: 36rpx;
-  color: #d8ccb8;
+  color: var(--dy-sub);
 }
 
 /* 商品清单 */
@@ -306,7 +306,7 @@ async function submitOrder() {
   width: 120rpx;
   height: 120rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .co-info {
   flex: 1;
@@ -314,7 +314,7 @@ async function submitOrder() {
 }
 .co-name {
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.4;
 }
 .co-row {
@@ -330,7 +330,7 @@ async function submitOrder() {
 }
 .co-qty {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 
 /* 行 */
@@ -339,25 +339,25 @@ async function submitOrder() {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #f8f3ea;
+  border-bottom: 1rpx solid var(--dy-page);
 }
 .co-row-line:last-child {
   border-bottom: none;
 }
 .line-label {
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .line-value {
   font-size: 26rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .line-value.on {
   color: #b04a45;
 }
 .line-arrow {
   font-size: 32rpx;
-  color: #d8ccb8;
+  color: var(--dy-sub);
   margin-left: 10rpx;
 }
 .balance-right {
@@ -378,18 +378,18 @@ async function submitOrder() {
 .pay-name {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .pay-check {
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  border: 2rpx solid #d8ccb8;
+  border: 2rpx solid var(--dy-sub);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 .pay-check.on {
   background: #8c5a2b;
@@ -405,8 +405,8 @@ async function submitOrder() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fefbf6;
-  border-top: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border-top: 1rpx solid var(--dy-line);
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   z-index: 10;
@@ -417,7 +417,7 @@ async function submitOrder() {
 }
 .st-label {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .st-price {
   font-size: 40rpx;
@@ -443,7 +443,7 @@ async function submitOrder() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
   letter-spacing: 2rpx;
 }
 .btn-submit {
@@ -462,13 +462,13 @@ async function submitOrder() {
 .sheet-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .coupon-item {
   display: flex;
   align-items: center;
-  background: #fefbf6;
-  border: 1rpx solid #e6dcca;
+  background: var(--dy-card);
+  border: 1rpx solid var(--dy-line);
   border-radius: 12rpx;
   padding: 24rpx;
   margin-bottom: 16rpx;
@@ -485,18 +485,18 @@ async function submitOrder() {
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .coupon-check {
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  border: 2rpx solid #d8ccb8;
+  border: 2rpx solid var(--dy-sub);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 .coupon-check.on {
   background: #8c5a2b;

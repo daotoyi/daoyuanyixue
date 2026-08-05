@@ -64,19 +64,19 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .msg-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .msg-tabs {
   display: flex;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .msg-tab {
   flex: 1;
   text-align: center;
   padding: 24rpx 0 20rpx;
   font-size: 26rpx;
-  color: #857563;
+  color: var(--dy-sub);
   position: relative;
 }
 .msg-tab.on {
@@ -98,9 +98,9 @@ onMounted(async () => {
   padding: 20rpx 24rpx;
 }
 .msg-card {
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
@@ -118,20 +118,20 @@ onMounted(async () => {
 }
 .msg-time {
   font-size: 20rpx;
-  color: #b3a595;
+  color: var(--dy-faint);
 }
 .msg-title {
   display: block;
   margin-top: 14rpx;
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .msg-content {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
   line-height: 1.6;
 }
 .empty {

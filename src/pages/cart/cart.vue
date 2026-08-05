@@ -138,7 +138,7 @@ function goShop() {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 
 .cart-scroll {
@@ -150,9 +150,9 @@ function goShop() {
 .cart-item {
   display: flex;
   align-items: center;
-  background: #fefbf6;
+  background: var(--dy-card);
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
   padding: 20rpx;
   margin-bottom: 20rpx;
 }
@@ -163,12 +163,12 @@ function goShop() {
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  border: 2rpx solid #d8ccb8;
+  border: 2rpx solid var(--dy-sub);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
 }
 .check-box.on {
   background: #8c5a2b;
@@ -179,7 +179,7 @@ function goShop() {
   height: 160rpx;
   border-radius: 12rpx;
   margin-left: 12rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
 }
 .cart-info {
   flex: 1;
@@ -188,7 +188,7 @@ function goShop() {
 }
 .cart-name {
   font-size: 28rpx;
-  color: #42372c;
+  color: var(--dy-text);
   line-height: 1.4;
 }
 .cart-attrs {
@@ -198,8 +198,8 @@ function goShop() {
 }
 .attr-chip {
   font-size: 20rpx;
-  color: #857563;
-  background: #f8f3ea;
+  color: var(--dy-sub);
+  background: var(--dy-page);
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
   margin-right: 8rpx;
@@ -222,19 +222,19 @@ function goShop() {
 .step-btn {
   width: 48rpx;
   height: 48rpx;
-  background: #f8f3ea;
+  background: var(--dy-page);
   border-radius: 8rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 30rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .step-num {
   min-width: 56rpx;
   text-align: center;
   font-size: 26rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 
 .empty {
@@ -254,8 +254,8 @@ function goShop() {
   z-index: 10;
   display: flex;
   align-items: center;
-  background: #fefbf6;
-  border-top: 1rpx solid #efe7d8;
+  background: var(--dy-card);
+  border-top: 1rpx solid var(--dy-line);
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
 }
@@ -273,7 +273,7 @@ function goShop() {
 }
 .btn-fill text {
   font-size: 26rpx;
-  color: #fefbf6;
+  color: var(--dy-card);
   letter-spacing: 2rpx;
 }
 .btn-settle {
@@ -286,7 +286,7 @@ function goShop() {
 .all-label {
   margin-left: 10rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: var(--dy-text);
 }
 .total {
   flex: 1;
@@ -297,7 +297,7 @@ function goShop() {
 }
 .total-label {
   font-size: 24rpx;
-  color: #857563;
+  color: var(--dy-sub);
 }
 .total-price {
   font-size: 36rpx;
@@ -311,7 +311,7 @@ function goShop() {
 }
 .del-btn {
   font-size: 26rpx;
-  color: #857563;
+  color: var(--dy-sub);
   padding: 10rpx;
 }
 </style>
