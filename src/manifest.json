@@ -1,0 +1,201 @@
+{
+  "name": "道元易学",
+  "appid": "__UNI__UNICLOUD",
+  "description": "周易传统文化一站式平台：商城、课程、社区、直播",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+
+  "/* ==================== APP 图标与启动图 ==================== */": "",
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "icons": {
+      "iphone": {
+        "app@2x": "static/icons/iphone_app@2x.png",
+        "app@3x": "static/icons/iphone_app@3x.png",
+        "spotlight@2x": "static/icons/iphone_spotlight@2x.png",
+        "spotlight@3x": "static/icons/iphone_spotlight@3x.png",
+        "settings@2x": "static/icons/iphone_settings@2x.png",
+        "settings@3x": "static/icons/iphone_settings@3x.png",
+        "notification@2x": "static/icons/iphone_notification@2x.png",
+        "notification@3x": "static/icons/iphone_notification@3x.png"
+      },
+      "ipad": {
+        "app": "static/icons/ipad_app.png",
+        "app@2x": "static/icons/ipad_app@2x.png",
+        "proapp@2x": "static/icons/ipad_proapp@2x.png",
+        "spotlight": "static/icons/ipad_spotlight.png",
+        "spotlight@2x": "static/icons/ipad_spotlight@2x.png",
+        "settings": "static/icons/ipad_settings.png",
+        "settings@2x": "static/icons/ipad_settings@2x.png",
+        "notification": "static/icons/ipad_notification.png",
+        "notification@2x": "static/icons/ipad_notification@2x.png"
+      },
+      "android": {
+        "ldpi": "static/icons/android_ldpi.png",
+        "mdpi": "static/icons/android_mdpi.png",
+        "hdpi": "static/icons/android_hdpi.png",
+        "xhdpi": "static/icons/android_xhdpi.png",
+        "xxhdpi": "static/icons/android_xxhdpi.png",
+        "xxxhdpi": "static/icons/android_xxxhdpi.png"
+      }
+    },
+    "distribute": {
+      "android": {
+        "packagename": "cn.codebuddy.zhs.workbuddy",
+        "abiFilters": ["armeabi-v7a", "arm64-v8a", "x86"],
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.INTERNET\"/>",
+          "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+          "<uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>",
+          "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+          "<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"/>",
+          "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
+          "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>",
+          "<uses-permission android:name=\"android.permission.VIBRATE\"/>",
+          "<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>"
+        ]
+      },
+      "ios": {
+        "appid": "cn.codebuddy.zhs.workbuddy",
+        "UIBackgroundModes": [],
+        "dSYMs": false,
+        "privacyDescription": {
+          "NSPhotoLibraryUsageDescription": "用于上传图片到云端",
+          "NSCameraUsageDescription": "用于拍摄照片",
+          "NSMicrophoneUsageDescription": "用于语音输入"
+        }
+      },
+      "sdkConfigs": {}
+    }
+  },
+
+  "/* ==================== 微信小程序 ==================== */": "",
+  "mp-weixin": {
+    "appid": "wxe4eea58de8107961",
+    "setting": {
+      "urlCheck": true,
+      "es6": true,
+      "enhance": true,
+      "postcss": true,
+      "preloadBackgroundData": false,
+      "minified": true,
+      "newFeature": true,
+      "coverView": true,
+      "nodeModules": false,
+      "autoAudits": false,
+      "showShadowRootInWxmlPanel": true,
+      "scopeDataCheck": false,
+      "uglifyFileName": false,
+      "checkInvalidKey": true,
+      "checkSiteMap": true,
+      "uploadWithSourceMap": true,
+      "compileHotReLoad": false,
+      "lazyloadPlaceholderEnable": false,
+      "useMultiFrameRuntime": true,
+      "useApiHook": true,
+      "useApiHostProcess": true,
+      "babelSetting": {
+        "ignore": [],
+        "disablePlugins": [],
+        "outputPath": ""
+      },
+      "condition": false
+    },
+    "requiredPrivateInfos": ["getLocation", "chooseLocation", "chooseAddress"],
+    "permission": {
+      "scope.userLocation": {
+        "desc": "用于获取您的位置以提供本地化服务"
+      }
+    },
+    "usingComponents": true,
+    "lazyCodeLoading": "requiredComponents",
+    "cloud": true
+  },
+
+  "/* ==================== macOS 路径适配 ==================== */": "",
+  "_macos_compat": {
+    "_description": "macOS APFS 默认大小写不敏感，但 CI/部分 Linux 环境大小写敏感。以下规则确保跨平台一致性。",
+    "rules": {
+      "paths_lowercase_only": true,
+      "separator_forward_slash": true,
+      "no_trailing_slash_in_imports": true
+    },
+    "path_mapping": {
+      "cloudfunctions": "cloudfunctions",
+      "static": "static",
+      "pages": "pages",
+      "components": "components",
+      "utils": "utils"
+    },
+    "warn_on_mixed_case": true
+  },
+
+  "/* ==================== TCB 域名自动适配 ==================== */": "",
+  "_tcb_domains": {
+    "_description": "TCB 域名自动注入到小程序 request/uploadFile/downloadFile/socket 合法域名",
+    "envId": "zhenhesheng-d6gkez7p221305432",
+    "region": "ap-shanghai",
+    "domains": {
+      "request": [
+        "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+        "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+        "https://tcb-api.tencentcloudapi.com",
+        "https://ap-shanghai.tcb-api.tencentcloudapi.com",
+        "https://api.weixin.qq.com"
+      ],
+      "uploadFile": [
+        "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+        "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+        "https://tcb-api.tencentcloudapi.com"
+      ],
+      "downloadFile": [
+        "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+        "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+        "https://tcb-api.tencentcloudapi.com"
+      ],
+      "socket": [
+        "wss://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+        "wss://tcb-api.tencentcloudapi.com"
+      ]
+    }
+  },
+
+  "/* ==================== H5 (Web) ==================== */": "",
+  "h5": {
+    "title": "道元易学",
+    "domain": "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+    "router": {
+      "mode": "hash",
+      "base": "/"
+    },
+    "async": {
+      "timeout": 5000,
+      "loading": "加载中..."
+    },
+    "publicPath": "./",
+    "devServer": {
+      "port": 8080,
+      "https": false,
+      "disableHostCheck": true
+    },
+    "sdkConfigs": {
+      "useCORS": true,
+      "useCloudEnv": true
+    }
+  },
+
+  "/* ==================== 跨平台通用 ==================== */": "",
+  "uniStatistics": {
+    "enable": false
+  },
+  "vueVersion": "3"
+}

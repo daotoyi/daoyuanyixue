@@ -1,0 +1,225 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue",
+      "^up-(.*)": "uview-plus/components/u-$1/u-$1.vue",
+      "^u-([^-].*)": "uview-plus/components/u-$1/u-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "道元易学",
+        "enablePullDownRefresh": true,
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/shop/shop",
+      "style": {
+        "navigationBarTitleText": "商城",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/course/course",
+      "style": {
+        "navigationBarTitleText": "课程",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/user/user",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/product/detail",
+      "style": {
+        "navigationBarTitleText": "商品详情",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/cart/cart",
+      "style": {
+        "navigationBarTitleText": "购物车",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/checkout/checkout",
+      "style": {
+        "navigationBarTitleText": "确认订单",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/order/list",
+      "style": {
+        "navigationBarTitleText": "我的订单",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/order/detail",
+      "style": {
+        "navigationBarTitleText": "订单详情",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/course/detail",
+      "style": {
+        "navigationBarTitleText": "课程详情",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/course/my",
+      "style": {
+        "navigationBarTitleText": "我的课程",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/moment/publish",
+      "style": {
+        "navigationBarTitleText": "发布动态",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/admin/login",
+      "style": {
+        "navigationBarTitleText": "管理端登录",
+        "navigationBarBackgroundColor": "#451A03",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/admin/dashboard",
+      "style": {
+        "navigationBarTitleText": "道元易学 · 管理后台",
+        "navigationBarBackgroundColor": "#451A03",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/setting/setting",
+      "style": {
+        "navigationBarTitleText": "设置",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/setting/address",
+      "style": {
+        "navigationBarTitleText": "收货地址",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/setting/agreement",
+      "style": {
+        "navigationBarTitleText": "用户协议",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/setting/privacy",
+      "style": {
+        "navigationBarTitleText": "隐私协议",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    },
+    {
+      "path": "pages/setting/about",
+      "style": {
+        "navigationBarTitleText": "关于我们",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "道元易学",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "backgroundColor": "#F7F0E3",
+    "backgroundColorTop": "#FFFCF5",
+    "backgroundColorBottom": "#F7F0E3",
+    "app-plus": {
+      "background": "#FFFCF5"
+    }
+  },
+  "tabBar": {
+    "color": "#A89A85",
+    "selectedColor": "#854D0E",
+    "borderStyle": "white",
+    "backgroundColor": "#FFFCF5",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/shop/shop",
+        "text": "商城",
+        "iconPath": "static/tabbar/shop.png",
+        "selectedIconPath": "static/tabbar/shop-active.png"
+      },
+      {
+        "pagePath": "pages/course/course",
+        "text": "课程",
+        "iconPath": "static/tabbar/course.png",
+        "selectedIconPath": "static/tabbar/course-active.png"
+      },
+      {
+        "pagePath": "pages/user/user",
+        "text": "我的",
+        "iconPath": "static/tabbar/user.png",
+        "selectedIconPath": "static/tabbar/user-active.png"
+      }
+    ]
+  },
+  "condition": {
+    "current": 0,
+    "list": [
+      {
+        "name": "首页",
+        "path": "pages/index/index"
+      }
+    ]
+  }
+}

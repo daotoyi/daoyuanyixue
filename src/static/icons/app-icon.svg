@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <text x="512" y="400" font-family="Arial, sans-serif" font-size="240" font-weight="bold" fill="white" text-anchor="middle">W</text>
+  <text x="512" y="650" font-family="Arial, sans-serif" font-size="80" fill="rgba(255,255,255,0.9)" text-anchor="middle">工作伙伴</text>
+  <text x="512" y="850" font-family="Arial, sans-serif" font-size="48" fill="rgba(255,255,255,0.6)" text-anchor="middle">WorkBuddy</text>
+</svg>

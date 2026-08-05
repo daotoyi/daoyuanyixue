@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">道元易学</string>
+    <string name="title_activity_main">道元易学</string>
+    <string name="package_name">cn.codebuddy.zhs.workbuddy</string>
+    <string name="custom_url_scheme">cn.codebuddy.zhs.workbuddy</string>
+</resources>

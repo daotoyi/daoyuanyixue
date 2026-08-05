@@ -1,0 +1,9 @@
+{
+  "name": "dy-api",
+  "version": "1.0.0",
+  "description": "道源易学 API 网关",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.0"
+  }
+}

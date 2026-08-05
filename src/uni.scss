@@ -1,0 +1,89 @@
+/* ==================== 道元易学 · 新中式禅意主题 ====================
+ * 主色: 古铜金 #8c5a2b | 深檀褐 #4e3420 | 古书纸 #fefbf6
+ * 辅助: 米白 #f8f3ea | 淡金 #c4a484 | 朱砂 #b04a45
+ */
+
+/* ---- uview-plus 变量必须在 import 之前定义 (app 端编译顺序) ---- */
+$u-primary: #8c5a2b;
+$u-primary-dark: #6e4a26;
+$u-primary-disabled: #c4a484;
+$u-primary-light: #F7EEDD;
+$u-warning: #BA7517;
+$u-warning-dark: #854F0B;
+$u-warning-disabled: #EF9F27;
+$u-warning-light: #FAEEDA;
+$u-success: #6e7f5a;
+$u-success-dark: #3B6D11;
+$u-success-disabled: #97C459;
+$u-success-light: #EAF3DE;
+$u-error: #b04a45;
+$u-error-dark: #791F1F;
+$u-error-disabled: #F09595;
+$u-error-light: #FCEBEB;
+$u-info: #857563;
+$u-info-dark: #5F5E5A;
+$u-info-disabled: #B4B2A9;
+$u-info-light: #F1EFE8;
+$u-border-color: #e6dcca;
+$u-border-light: #efe7d8;
+$u-border-dark: #D8CCB8;
+$u-disabled-color: #c2b5a2;
+$u-body-color: #f8f3ea;
+$u-bg-color: #fefbf6;
+$u-main-color: #42372c;
+$u-content-color: #857563;
+$u-tips-color: #c2b5a2;
+$u-light-color: #b3a595;
+
+/* uview-plus 主题变量 */
+@import 'uview-plus/index.scss';
+
+/* ---- uni-app 官方变量 ---- */
+$uni-color-primary: #8c5a2b;
+$uni-color-success: #6e7f5a;
+$uni-color-warning: #BA7517;
+$uni-color-error: #b04a45;
+
+/* 文字色 */
+$uni-text-color: #42372c;
+$uni-text-color-inverse: #fefbf6;
+$uni-text-color-grey: #857563;
+$uni-text-color-placeholder: #c2b5a2;
+
+/* 背景色 */
+$uni-bg-color: #fefbf6;
+$uni-bg-color-grey: #f8f3ea;
+$uni-bg-color-hover: #f0e7d7;
+
+/* 边框色 */
+$uni-border-color: #e6dcca;
+$uni-border-color-light: #efe7d8;
+
+/* ---- 道源设计 token ---- */
+$dy-primary: #8c5a2b;
+$dy-primary-dark: #4e3420;
+$dy-primary-deep: #6e4a26;
+$dy-gold-light: #c4a484;
+$dy-paper: #fefbf6;
+$dy-cream: #f8f3ea;
+$dy-ink: #42372c;
+$dy-ink-grey: #857563;
+$dy-cinnabar: #b04a45;
+$dy-border: #e6dcca;
+
+/* 尺寸 */
+$uni-font-size-sm: 24rpx;
+$uni-font-size-base: 28rpx;
+$uni-font-size-lg: 32rpx;
+$uni-font-size-xl: 36rpx;
+
+/* 圆角 */
+$uni-border-radius-sm: 8rpx;
+$uni-border-radius-base: 12rpx;
+$uni-border-radius-lg: 16rpx;
+
+/* 间距 */
+$uni-spacing-row-sm: 10rpx;
+$uni-spacing-row-base: 20rpx;
+$uni-spacing-col-sm: 10rpx;
+$uni-spacing-col-base: 20rpx;

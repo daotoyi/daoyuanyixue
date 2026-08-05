@@ -1,0 +1,12 @@
+{
+  "appId": "cn.codebuddy.zhs.workbuddy",
+  "appName": "道元易学",
+  "webDir": "../dist/build/h5",
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#F7F0E3"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

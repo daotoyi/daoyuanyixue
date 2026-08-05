@@ -1,0 +1,44 @@
+{
+  "version": "2.0",
+  "envId": "zhenhesheng-d6gkez7p221305432",
+  "region": "ap-shanghai",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "functionRoot": "./cloudfunctions",
+  "functions": [],
+  "framework": {
+    "name": "workbuddy-zhs",
+    "plugins": {
+      "client": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "buildCommand": "npm run build",
+          "outputPath": "./dist",
+          "cloudPath": "/",
+          "ignore": [
+            ".git",
+            ".github",
+            ".workbuddy",
+            "node_modules",
+            "cloudbaserc.json",
+            "config"
+          ]
+        }
+      },
+      "server": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "functionRootPath": "./cloudfunctions",
+          "functions": []
+        }
+      }
+    }
+  },
+  "staticDomain": "zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+  "storageDomain": "7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+  "local": {
+    "platform": "darwin",
+    "nodePath": "/Users/wenhua/.workbuddy/binaries/node/versions/22.22.2/bin/node",
+    "npmPath": "/Users/wenhua/.workbuddy/binaries/node/versions/22.22.2/bin/npm",
+    "pythonPath": "/Users/wenhua/.workbuddy/binaries/python/versions/3.13.12/bin/python3"
+  }
+}

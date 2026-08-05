@@ -1,0 +1,70 @@
+{
+  "description": "WorkBuddy - 智能工作助手",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": ".gitignore" },
+      { "type": "folder", "value": ".workbuddy" },
+      { "type": "folder", "value": "config" },
+      { "type": "file", "value": "cloudbaserc.json" },
+      { "type": "glob", "value": "**/*.md" }
+    ],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "preloadBackgroundData": false,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "nodeModules": false,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "uglifyFileName": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": false,
+    "lazyloadPlaceholderEnable": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "condition": false,
+    "compileWorklet": false,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "swc": false,
+    "disableSWC": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.7.0",
+  "appid": "wxe4eea58de8107961",
+  "projectname": "zhs-workbuddy",
+  "condition": {},
+
+  "/* --- macOS 路径适配：全部使用小写 + 正斜杠 --- */": "",
+  "miniprogramRoot": "dist/build/mp-weixin/",
+  "srcMiniprogramRoot": "src/",
+  "qcloudRoot": "cloudfunctions/",
+  "pluginRoot": "",
+
+  "/* ==================== TCB 域名自动适配到小程序合法域名 ==================== */": "",
+  "_tcb_domain_note": "适配环境 zhenhesheng-d6gkez7p221305432 (ap-shanghai)",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "cloudbaseRoot": "cloudbaserc.json",
+  "cloud": true,
+
+  "scripts": {
+    "beforeCompile": "",
+    "beforePreview": "",
+    "beforeUpload": "node scripts/inject-tcb-domains.js"
+  }
+}

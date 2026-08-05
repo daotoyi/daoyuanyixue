@@ -1,0 +1,69 @@
+{
+  "name": "zhs-workbuddy",
+  "version": "1.0.0",
+  "description": "WorkBuddy 智能工作助手 - 多端统一应用",
+  "private": true,
+  "scripts": {
+    "dev:h5": "uni",
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:app": "uni -p app",
+    "build:h5": "uni build",
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "build:app": "uni build -p app",
+    "deploy:h5": "uni build && node scripts/deploy-cloudbase.js h5",
+    "deploy:mp-weixin": "uni build -p mp-weixin && node scripts/inject-tcb-domains.js",
+    "check:paths": "node scripts/check-macos-paths.js",
+    "gen:icons": "python3 scripts/generate-icons.py",
+    "gen:domains": "node scripts/inject-tcb-domains.js"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-4060620250520001",
+    "@dcloudio/uni-app-harmony": "3.0.0-4060620250520001",
+    "@dcloudio/uni-app-plus": "3.0.0-4060620250520001",
+    "@dcloudio/uni-components": "3.0.0-4060620250520001",
+    "@dcloudio/uni-h5": "3.0.0-4060620250520001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-4060620250520001",
+    "@cloudbase/js-sdk": "^2.7.0",
+    "pinia": "^2.1.7",
+    "uview-plus": "^3.3.0",
+    "vue": "^3.4.21",
+    "vue-i18n": "^9.13.1",
+    "dayjs": "^1.11.10"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.8",
+    "@dcloudio/uni-automator": "3.0.0-4060620250520001",
+    "@dcloudio/uni-cli-shared": "3.0.0-4060620250520001",
+    "@dcloudio/uni-stacktracey": "3.0.0-4060620250520001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-4060620250520001",
+    "@vue/runtime-core": "^3.4.21",
+    "sass": "^1.77.0",
+    "sass-loader": "^14.2.1",
+    "vite": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "uni-app": {
+    "scripts": {
+      "mp-weixin": {
+        "title": "微信小程序",
+        "env": {
+          "UNI_PLATFORM": "mp-weixin"
+        }
+      },
+      "h5": {
+        "title": "H5 网页",
+        "env": {
+          "UNI_PLATFORM": "h5"
+        }
+      },
+      "app": {
+        "title": "App (iOS/Android)",
+        "env": {
+          "UNI_PLATFORM": "app"
+        }
+      }
+    }
+  }
+}
