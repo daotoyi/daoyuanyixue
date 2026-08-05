@@ -44,7 +44,9 @@ export function applyTheme() {
   settingsState.dark = dark
   // #ifndef MP-WEIXIN
   if (typeof document !== 'undefined') {
+    // html + body 双挂载: App 端 WebView 环境差异时任一命中即可驱动深色
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+    if (document.body) document.body.setAttribute('data-theme', dark ? 'dark' : 'light')
   }
   // #endif
   uni.setStorageSync('app_dark', dark)

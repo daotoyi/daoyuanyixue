@@ -415,8 +415,17 @@
         <view class="f-row"><text class="f-label">库存</text><input class="f-input" type="number" v-model="productForm.stock" /></view>
         <view class="f-row"><text class="f-label">分类ID</text><input class="f-input" type="number" v-model="productForm.cate_id" /></view>
         <view class="f-row">
-          <text class="f-label">图片URL</text>
-          <textarea class="f-textarea" v-model="productForm.imagesText" placeholder="多个图片用逗号分隔"></textarea>
+          <text class="f-label">图片</text>
+          <view class="f-img-box">
+            <textarea class="f-textarea" v-model="productForm.imagesText" placeholder="多个图片用逗号分隔，或点下方上传"></textarea>
+            <view class="f-img-row">
+              <view class="f-img-item" v-for="(u, ui) in productImages" :key="ui">
+                <image class="f-img-thumb" :src="u" mode="aspectFill"></image>
+                <text class="f-img-del" @tap="removeProductImg(ui)">✕</text>
+              </view>
+              <view class="f-img-add" @tap="uploadProductImg">＋ 上传图片</view>
+            </view>
+          </view>
         </view>
         <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="productForm.description" /></view>
         <view class="attr-editor">
@@ -569,6 +578,7 @@ import {
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { getStorage } from '../../api/cloudbase'
 
 const userStore = useUserStore()
 
@@ -825,6 +835,43 @@ function logout() {
 /* 商品 */
 const showProduct = ref(false)
 const productForm = ref({})
+/* 商品图片: 预览 / 上传 / 删除 */
+const productImages = computed(() =>
+  (productForm.value.imagesText || '').split(',').map((s) => s.trim()).filter(Boolean)
+)
+function removeProductImg(i) {
+  const arr = (productForm.value.imagesText || '').split(',').map((s) => s.trim()).filter(Boolean)
+  arr.splice(i, 1)
+  productForm.value.imagesText = arr.join(',')
+}
+function uploadProductImg() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const filePath = res.tempFilePaths[0]
+      uni.showLoading({ title: '上传中...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = `goods/p${Date.now()}_${Math.floor(Math.random() * 1000)}.png`
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        const url = fileID
+          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la/')
+        const arr = (productForm.value.imagesText || '').split(',').map((s) => s.trim()).filter(Boolean)
+        arr.push(url)
+        productForm.value.imagesText = arr.join(',')
+        uni.showToast({ title: '已上传', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+  })
+}
 
 function openProductForm(p) {
   const attrsList = p && p.attrs
@@ -1843,6 +1890,37 @@ onMounted(async () => {
   font-size: 26rpx;
   color: #42372c;
 }
+/* 商品图片上传 */
+.f-img-box { flex: 1; }
+.f-img-row { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 12rpx; }
+.f-img-item { position: relative; width: 120rpx; height: 120rpx; }
+.f-img-thumb { width: 120rpx; height: 120rpx; border-radius: 10rpx; border: 1rpx solid #e6dcca; }
+.f-img-del {
+  position: absolute;
+  right: -8rpx;
+  top: -8rpx;
+  width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  text-align: center;
+  background: #b04a45;
+  color: #fefbf6;
+  font-size: 20rpx;
+  border-radius: 50%;
+  z-index: 3;
+}
+.f-img-add {
+  width: 120rpx;
+  height: 120rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx dashed #d8ccb8;
+  border-radius: 10rpx;
+  color: #8c5a2b;
+  font-size: 22rpx;
+  background: #faf3e9;
+}
 .f-pills {
   display: flex;
   flex: 1;
@@ -1868,8 +1946,10 @@ onMounted(async () => {
   }
 }
 
-/* ===== 横屏/宽屏: 信息平铺, 不随 rpx 等比放大 (px 固定) ===== */
-@media screen and (min-width: 800px) {
+/* ===== 横屏/宽屏: 信息平铺, 不随 rpx 等比放大 (px 固定) =====
+   注意: 手机横屏 CSS 宽度常 <800px (如 780px), 仅靠 min-width 判断会漏掉
+   → 用 (orientation: landscape) 保证 App 横屏必触发 */
+@media screen and (min-width: 800px), screen and (orientation: landscape) {
   .admin-dash {
     max-width: 1400px;
     margin: 0 auto;
@@ -1899,9 +1979,20 @@ onMounted(async () => {
   .menu-icon {
     font-size: 18px;
   }
+  .menu-item {
+    padding: 10px 14px;
+  }
+  .logo-name { font-size: 17px; }
+  .logo-sub { font-size: 12px; }
+  .logo-area { padding: 18px 12px 14px; }
+  .admin-user { padding: 12px 12px; }
+  .au-name { font-size: 14px; }
+  .au-role { font-size: 11px; }
   .stat-card {
     font-size: 13px;
+    padding: 16px;
   }
+  .stat-grid { gap: 14px; }
   .stat-num {
     font-size: 24px;
   }
@@ -1925,11 +2016,24 @@ onMounted(async () => {
   .f-input {
     font-size: 14px;
   }
+  .f-textarea { font-size: 14px; }
   .pill {
     font-size: 13px;
   }
   .sheet-title {
     font-size: 17px;
   }
+  .panel-title { font-size: 16px; }
+  .panel-more { font-size: 13px; }
+  .recent-row { font-size: 13px; padding: 10px 12px; }
+  .attr-title { font-size: 14px; }
+  .attr-input { font-size: 14px; }
+  .u-sheet .u-button, .u-sheet button { font-size: 14px; }
+  /* 商品分类栏 (左侧分类) 固定宽 */
+  .cate-panel { width: 180px; flex-shrink: 0; }
+  .cate-row { font-size: 13px; padding: 9px 12px; }
+  .cate-op { font-size: 12px; }
+  /* 表头字号 */
+  .th { font-size: 13px; padding: 10px 10px; }
 }
 </style>
