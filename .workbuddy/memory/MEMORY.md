@@ -34,4 +34,6 @@
 - Git 身份: daotoyi / wenhuas.shi@gmail.com
 - **惯例: 每次完成任务后必须 git commit 一个版本点** (git add -A && git commit -m "描述")
 - .gitignore 排除: node_modules / dist / mobile android build / keystore / local.properties
-- 云端备份: 待用户提供 Gitee/GitHub 仓库地址后推送 (GitHub SSH 不通, 建议 Gitee)
+- **远程仓库 (已推送)**: https://github.com/daotoyi/daoyuanyixue (HTTPS 推送, keychain 存有 PAT 凭证; SSH 不通)
+- 推送命令: git push origin main; 拉取: git pull origin main
+- 云端备份: ✅ GitHub 已同步 (2 提交)
