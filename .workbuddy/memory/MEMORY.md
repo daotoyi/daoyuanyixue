@@ -32,8 +32,9 @@
 
 - **2026-08-05 建立**: 基线提交 977fb9d (v1.0.0 完整源码, 171 文件)
 - Git 身份: daotoyi / wenhuas.shi@gmail.com
-- **惯例: 每次完成任务后必须 git commit 一个版本点** (git add -A && git commit -m "描述")
+- **铁律 (用户明确要求 08-05)**: **每一次修改 = 一次版本管理**。无论改动大小，完成一次修改立即: `git add -A && git commit -m "vX.Y.Z: 描述"` + `git push origin main`。用户可随时回退到任意版本点
+- 版本号惯例: v1.1.0(16项) / v1.2.0(9项) 等大版本递进; 小修改用 fix:/feat: 前缀
 - .gitignore 排除: node_modules / dist / mobile android build / keystore / local.properties
 - **远程仓库 (已推送)**: https://github.com/daotoyi/daoyuanyixue (HTTPS 推送, keychain 存有 PAT 凭证; SSH 不通)
 - 推送命令: git push origin main; 拉取: git pull origin main
-- 云端备份: ✅ GitHub 已同步 (2 提交)
+- 云端备份: ✅ GitHub 已同步
