@@ -383,8 +383,46 @@ const WANGSHEN = { 0: 11, 1: 5, 2: 8, 3: 2 }
 const GUSHEN = { 0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5, 6: 8, 7: 8, 8: 8, 9: 11, 10: 11, 11: 11 }
 const GUASU = { 0: 10, 1: 10, 2: 10, 3: 1, 4: 1, 5: 1, 6: 4, 7: 4, 8: 4, 9: 7, 10: 7, 11: 7 }
 
-/** 某柱(干g,支z)的全部神煞; yearZhi=年支 */
-export function shenshaOf(g, z, yearZhi) {
+/* ===== 补充神煞 (天德/月德/金舆/红鸾/天喜/学堂/词馆/天医/福星/国印/魁罡/十恶/阴差阳错/孤鸾/四废) ===== */
+/* 天德贵人: 月支查 */
+const TIANDES = { 2: 3, 3: 8, 4: 8, 5: 6, 6: 11, 7: 0, 8: 9, 9: 2, 10: 2, 11: 1, 0: 5, 1: 6 } // 月支 -> 天干(0-9) 或地支(10-11 表示申亥寅巳)
+const TIANDES_ZHI = { 3: 8, 6: 11, 9: 2, 0: 5 } // 月支卯午酉子 -> 天德为地支 申亥寅巳
+/* 月德贵人: 三合月查 */
+const YUEDES = { 0: 2, 4: 2, 8: 2, 2: 6, 6: 6, 10: 6, 3: 0, 7: 0, 11: 0, 1: 6, 5: 6, 9: 6 } // 月支 -> 天干(丙6壬8甲0庚6?) 修正见下
+/* 月德实际: 寅午戌->丙(2), 申子辰->壬(8), 亥卯未->甲(0), 巳酉丑->庚(6) */
+const YUEDE_GAN = { 2: 2, 6: 2, 10: 2, 8: 8, 0: 8, 4: 8, 11: 0, 3: 0, 7: 0, 5: 6, 9: 6, 1: 6 }
+/* 天德合: 干合 甲己/乙庚/丙辛/丁壬/戊癸 */
+const GAN_HE = { 0: 5, 5: 0, 1: 6, 6: 1, 2: 7, 7: 2, 3: 8, 8: 3, 4: 9, 9: 4 }
+const ZHI_HE = { 0: 6, 6: 0, 1: 7, 7: 1, 2: 8, 8: 2, 3: 9, 9: 3, 4: 10, 10: 4, 5: 11, 11: 5 }
+/* 金舆: 日干查 */
+const JINYU = { 0: 4, 1: 5, 2: 7, 4: 7, 3: 8, 5: 8, 6: 10, 7: 11, 8: 1, 9: 2 }
+/* 红鸾/天喜: 年支查 */
+const HONGLUAN = { 0: 3, 1: 2, 2: 1, 3: 0, 4: 11, 5: 10, 6: 9, 7: 8, 8: 7, 9: 6, 10: 5, 11: 4 }
+/* 学堂: 日干查 */
+const XUETANG = { 0: 11, 1: 6, 2: 2, 3: 9, 4: 2, 5: 9, 6: 5, 7: 0, 8: 8, 9: 3 }
+/* 词馆: 日干查 */
+const CIGUAN = { 0: 5, 1: 4, 2: 8, 3: 7, 4: 8, 5: 7, 6: 11, 7: 10, 8: 2, 9: 1 }
+/* 天医: 月支前一位 */
+/* 福星贵人: 日干查 */
+const FUXING = { 0: 0, 1: 1, 2: 2, 4: 2, 3: 11, 5: 11, 6: 6, 7: 5, 8: 8, 9: 9 }
+/* 国印: 日干查 */
+const GUOYIN = { 0: 10, 1: 11, 2: 1, 3: 2, 4: 1, 5: 2, 6: 4, 7: 5, 8: 7, 9: 8 }
+/* 日柱级: 魁罡/十恶大败/阴差阳错/孤鸾 */
+const KUI_GANG = ['庚辰', '庚戌', '壬辰', '戊戌']
+const SHI_E = ['甲辰', '乙巳', '丙申', '丁亥', '戊戌', '己丑', '庚辰', '辛巳', '壬申', '癸亥']
+const YINCHA = ['丙子', '丁丑', '戊寅', '辛卯', '壬辰', '癸巳', '丙午', '丁未', '戊申', '辛酉', '壬戌', '癸亥']
+const GULUAN = ['乙巳', '丁巳', '辛亥', '戊申', '甲寅', '戊午', '壬子']
+/* 四废: 季查 */
+const SIFEI = { 2: ['庚申', '辛酉'], 3: ['庚申', '辛酉'], 4: ['庚申', '辛酉'], 5: ['壬子', '癸亥'], 6: ['壬子', '癸亥'], 7: ['壬子', '癸亥'], 8: ['甲寅', '乙卯'], 9: ['甲寅', '乙卯'], 10: ['甲寅', '乙卯'], 11: ['丙午', '丁巳'], 0: ['丙午', '丁巳'], 1: ['丙午', '丁巳'] }
+
+/**
+ * 某柱(干g,支z)的全部神煞
+ * @param {number} yearZhi 年支
+ * @param {number} monthZhi 月支
+ * @param {number} dayGan 日干
+ * @param {number} dayZhi 日支
+ */
+export function shenshaOf(g, z, yearZhi, monthZhi, dayGan, dayZhi) {
   const list = []
   for (const key of ['tianyi', 'wenchang', 'lushen', 'yangren']) {
     if (SHEN_SHA_RULES[key].fn(g, z, yearZhi)) list.push(SHEN_SHA_RULES[key].label)
@@ -401,6 +439,48 @@ export function shenshaOf(g, z, yearZhi) {
   }
   if (GUSHEN[yearZhi] === z) list.push('孤辰')
   if (GUASU[yearZhi] === z) list.push('寡宿')
+
+  /* 天德贵人 (月支查) */
+  if (monthZhi !== undefined) {
+    const td = TIANDES[monthZhi]
+    if (td !== undefined) {
+      if (TIANDES_ZHI[monthZhi] !== undefined) {
+        if (z === TIANDES_ZHI[monthZhi]) list.push('天德')
+      } else if (g === td) list.push('天德')
+    }
+    /* 天德合 */
+    if (TIANDES_ZHI[monthZhi] !== undefined) {
+      if (z === ZHI_HE[TIANDES_ZHI[monthZhi]]) list.push('天德合')
+    } else if (td !== undefined && g === GAN_HE[td]) list.push('天德合')
+    /* 月德贵人 + 月德合 */
+    const yd = YUEDE_GAN[monthZhi]
+    if (yd !== undefined) {
+      if (g === yd) list.push('月德')
+      if (g === GAN_HE[yd]) list.push('月德合')
+    }
+    /* 天医 */
+    if (z === (monthZhi + 11) % 12) list.push('天医')
+  }
+  /* 金舆 (日干查) */
+  if (JINYU[dayGan] === z) list.push('金舆')
+  /* 红鸾/天喜 (年支查) */
+  if (HONGLUAN[yearZhi] === z) list.push('红鸾')
+  if (HONGLUAN[yearZhi] === (z + 6) % 12) list.push('天喜')
+  /* 学堂/词馆 (日干查) */
+  if (XUETANG[dayGan] === z) list.push('学堂')
+  if (CIGUAN[dayGan] === z) list.push('词馆')
+  /* 福星/国印 (日干查) */
+  if (FUXING[dayGan] === z) list.push('福星')
+  if (GUOYIN[dayGan] === z) list.push('国印')
+  /* 日柱级神煞 */
+  if (dayZhi !== undefined && g === dayGan && z === dayZhi) {
+    const name = GAN[g] + ZHI[z]
+    if (KUI_GANG.includes(name)) list.push('魁罡')
+    if (SHI_E.includes(name)) list.push('十恶大败')
+    if (YINCHA.includes(name)) list.push('阴差阳错')
+    if (GULUAN.includes(name)) list.push('孤鸾')
+    if (monthZhi !== undefined && SIFEI[monthZhi].includes(name)) list.push('四废')
+  }
   return list
 }
 
@@ -488,7 +568,7 @@ export function enrichFull(full, birthYear) {
     const mainCg = p.canggan[0]
     p.zisit = i === 2 ? (mainCg ? mainCg.shishen : '') : ''
     p.isKong = kongZhis.includes(p.zhi) ? '是' : ''
-    p.shensha = shenshaOf(p.g, p.z, yearZhi)
+    p.shensha = shenshaOf(p.g, p.z, yearZhi, full.pillars[1].z, dayGan, full.pillars[2].z)
   })
   // 四柱输入模式无 liunian, 补齐当前流年
   if (!full.liunian) {

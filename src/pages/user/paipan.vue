@@ -28,75 +28,75 @@
 
     <!-- ===== 四柱八字 ===== -->
     <view v-if="tab === 'bazi'" class="pp-body">
-      <!-- 四柱表: 最左列 天干/地支 行标签, 板块化 -->
+      <!-- 四柱表: 最左列 天干/地支 行标签 + 选中大运/流年/流月联动列 (从左到右: 流月/流年/大运/四柱) -->
       <view class="pp-grid">
         <view class="pp-row pp-head">
           <view class="pp-cell pp-label"></view>
-          <view class="pp-cell" v-for="(p, i) in data.bazi.pillars" :key="'h' + i">{{ ['年柱', '月柱', '日柱', '时柱'][i] }}</view>
+          <view class="pp-cell pp-extra" :class="'ex-' + c.type" v-for="(c, i) in columns" :key="'h' + i">{{ colLabel(c, i) }}</view>
         </view>
         <view class="pp-row">
           <view class="pp-cell pp-label">十神</view>
-          <view class="pp-cell pp-ss" v-for="(p, i) in data.bazi.pillars" :key="'s' + i">{{ p.ganShishen }}</view>
+          <view class="pp-cell pp-ss" v-for="(c, i) in columns" :key="'s' + i">{{ c.ss1 || c.ganShishen }}</view>
         </view>
         <view class="pp-row">
           <view class="pp-cell pp-label">天干</view>
-          <view class="pp-cell pp-gan" v-for="(p, i) in data.bazi.pillars" :key="'g' + i">
-            <text :class="'wx-' + GAN_WX[p.g]">{{ GAN[p.g] }}</text>
+          <view class="pp-cell pp-gan" v-for="(c, i) in columns" :key="'g' + i">
+            <text :class="'wx-' + GAN_WX[c.g]">{{ GAN[c.g] }}</text>
           </view>
         </view>
         <view class="pp-row">
           <view class="pp-cell pp-label">地支</view>
-          <view class="pp-cell pp-zhi" v-for="(p, i) in data.bazi.pillars" :key="'z' + i">
-            <text :class="'wx-' + ZHI_WX[p.z]">{{ ZHI[p.z] }}</text>
+          <view class="pp-cell pp-zhi" v-for="(c, i) in columns" :key="'z' + i">
+            <text :class="'wx-' + ZHI_WX[c.z]">{{ ZHI[c.z] }}</text>
           </view>
         </view>
       </view>
 
-      <!-- 地支藏干 (四柱下方, 左侧标签) -->
+      <!-- 地支藏干 (四柱下方, 左侧标签, 含联动列) -->
       <view class="pp-block">
         <view class="pp-block-head">地支藏干</view>
         <view class="pp-cg-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">藏干</view>
-            <view class="pp-cell" v-for="(p, i) in data.bazi.pillars" :key="'cg' + i">
-              <view class="pp-cg-item" v-for="(c, ci) in p.canggan" :key="ci">
-                <text class="pp-cg-gan" :class="'wx-' + c.wx">{{ c.gan }}</text>
-                <text class="pp-cg-ss">{{ c.shishen }}</text>
+            <view class="pp-cell" v-for="(c, i) in columns" :key="'cg' + i">
+              <view class="pp-cg-item" v-for="(cc, ci) in c.canggan" :key="ci">
+                <text class="pp-cg-gan" :class="'wx-' + cc.wx">{{ cc.gan }}</text>
+                <text class="pp-cg-ss">{{ cc.shishen }}</text>
               </view>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- 星运/自坐/空亡 一个板块 (左侧分类标签) -->
+      <!-- 星运/自坐/空亡 一个板块 (左侧分类标签, 含联动列) -->
       <view class="pp-block">
         <view class="pp-block-head">星运 · 自坐 · 空亡</view>
         <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">星运</view>
-            <view class="pp-cell pp-mv" v-for="(p, i) in data.bazi.pillars" :key="'ny' + i">{{ p.nayin }}</view>
+            <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'ny' + i">{{ c.nayin }}</view>
           </view>
           <view class="pp-row">
             <view class="pp-cell pp-label">自坐</view>
-            <view class="pp-cell pp-mv" v-for="(p, i) in data.bazi.pillars" :key="'zs' + i">{{ p.zisit || '—' }}</view>
+            <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'zs' + i">{{ c.zisit || '—' }}</view>
           </view>
           <view class="pp-row">
             <view class="pp-cell pp-label">空亡</view>
-            <view class="pp-cell pp-mv" v-for="(p, i) in data.bazi.pillars" :key="'kw' + i">
-              <text :class="{ 'pp-kw-on': p.isKong }">{{ p.isKong || '无' }}</text>
+            <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'kw' + i">
+              <text :class="{ 'pp-kw-on': c.isKong }">{{ c.isKong || '无' }}</text>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- 神煞 单独板块 -->
+      <!-- 神煞 单独板块 (含联动列) -->
       <view class="pp-block">
         <view class="pp-block-head">神煞</view>
         <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">神煞</view>
-            <view class="pp-cell pp-ss-list" v-for="(p, i) in data.bazi.pillars" :key="'ss' + i">
-              <text>{{ p.shensha && p.shensha.length ? p.shensha.join(' ') : '—' }}</text>
+            <view class="pp-cell pp-ss-list" v-for="(c, i) in columns" :key="'ss' + i">
+              <text>{{ c.shensha && c.shensha.length ? c.shensha.join(' ') : '—' }}</text>
             </view>
           </view>
         </view>
@@ -125,10 +125,14 @@
               @tap="toggleDayun(i)"
             >
               <text class="pp-dy-age">{{ dy.startAge }}</text>
-              <view class="pp-gz-line">
-                <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(dy.gan)]">{{ dy.gan }}</text>
-                <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(dy.zhi)]">{{ dy.zhi }}</text>
-                <text class="pp-ss-right">{{ dy.ganShishen }}</text>
+              <view class="pp-gz-stack">
+                <view class="pp-gz-line">
+                  <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(dy.gan)]">{{ dy.gan }}</text>
+                  <text class="pp-ss-right">{{ ss1(dy.ganShishen) }}</text>
+                </view>
+                <view class="pp-gz-line">
+                  <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(dy.zhi)]">{{ dy.zhi }}</text>
+                </view>
               </view>
             </view>
           </view>
@@ -147,26 +151,40 @@
                 @tap="toggleLiunian(y)"
               >
                 <text class="pp-dy-age">{{ y.year }}</text>
-                <view class="pp-gz-line">
-                  <text class="pp-dy-gan" :class="'wx-' + GAN_WX[y.ganIdx]">{{ y.gan }}</text>
-                  <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[y.zhiIdx]">{{ y.zhi }}</text>
-                  <text class="pp-ss-right">{{ shishenName(y.ganIdx) }}</text>
+                <view class="pp-gz-stack">
+                  <view class="pp-gz-line">
+                    <text class="pp-dy-gan" :class="'wx-' + GAN_WX[y.ganIdx]">{{ y.gan }}</text>
+                    <text class="pp-ss-right">{{ ss1(shishenName(y.ganIdx)) }}</text>
+                  </view>
+                  <view class="pp-gz-line">
+                    <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[y.zhiIdx]">{{ y.zhi }}</text>
+                  </view>
                 </view>
               </view>
             </view>
           </scroll-view>
 
-          <!-- 选中流年的 12 流月 (一行) -->
+          <!-- 选中流年的 12 流月 (一行, 可点击联动) -->
           <view v-if="lnYear !== null && lnMonths.length" class="pp-expand">
-            <view class="pp-expand-head">流月 · {{ lnYear }}年</view>
+            <view class="pp-expand-head">流月 · {{ lnYear }}年（点击查看对应四柱列）</view>
             <scroll-view scroll-x :show-scrollbar="false">
               <view class="pp-dy-row">
-                <view class="pp-dy-item" v-for="(mm, mi) in lnMonths" :key="mi">
+                <view
+                  class="pp-dy-item"
+                  :class="{ on: selectedLiuyue && selectedLiuyue.label === mm.month }"
+                  v-for="(mm, mi) in lnMonths"
+                  :key="mi"
+                  @tap="toggleLiuyue(mm)"
+                >
                   <text class="pp-dy-age">{{ mm.month }}</text>
-                  <view class="pp-gz-line">
-                    <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(mm.gan)]">{{ mm.gan }}</text>
-                    <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(mm.zhi)]">{{ mm.zhi }}</text>
-                    <text class="pp-ss-right">{{ mm.ganShishen }}</text>
+                  <view class="pp-gz-stack">
+                    <view class="pp-gz-line">
+                      <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(mm.gan)]">{{ mm.gan }}</text>
+                      <text class="pp-ss-right">{{ ss1(mm.ganShishen) }}</text>
+                    </view>
+                    <view class="pp-gz-line">
+                      <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(mm.zhi)]">{{ mm.zhi }}</text>
+                    </view>
                   </view>
                 </view>
               </view>
@@ -267,7 +285,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen } from '../../utils/paipan'
+import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf } from '../../utils/paipan'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
 import { aiJiepan } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -289,6 +307,50 @@ const dyOpen = ref(-1)
 const dyYears = ref([])
 const lnYear = ref(null)
 const lnMonths = ref([])
+/* 选中联动: 大运/流年/流月 -> 四柱左侧加列 (从左到右: 流月/流年/大运/四柱) */
+const selectedDayun = ref(null)
+const selectedLiunian = ref(null)
+const selectedLiuyue = ref(null)
+
+/* 一字十神 */
+const SS1 = { '正官': '官', '七杀': '杀', '正印': '印', '偏印': '枭', '比肩': '比', '劫财': '劫', '食神': '食', '伤官': '伤', '正财': '才', '偏财': '财', '日主': '主' }
+function ss1(ss) { return SS1[ss] || ss }
+
+/* 构建联动列 (大运/流年/流月 的干支+藏干+星运+自坐+空亡+神煞) */
+function buildExtraCol(type, label, ganIdx, zhiIdx) {
+  const bazi = data.value.bazi
+  const dayGan = bazi.pillars[2].g
+  const yearZhi = bazi.pillars[0].z
+  const monthZhi = bazi.pillars[1].z
+  const kongZhis = bazi.kongwang.split('、')
+  const canggan = ZHI_CANGGAN[zhiIdx].map((cg, ci) => ({
+    gan: cg, wx: GAN_WX[GAN.indexOf(cg)], shishen: shishen(dayGan, GAN.indexOf(cg)), main: ci === 0,
+  }))
+  const ss = shishen(dayGan, ganIdx)
+  return {
+    type, label, ganIdx, zhiIdx,
+    g: ganIdx, z: zhiIdx,
+    gan: GAN[ganIdx], zhi: ZHI[zhiIdx],
+    ganShishen: ss, ss1: ss1(ss),
+    canggan, nayin: NAYIN[(ganIdx * 12 + zhiIdx) % 60],
+    zisit: '', isKong: kongZhis.includes(ZHI[zhiIdx]) ? '是' : '',
+    shensha: shenshaOf(ganIdx, zhiIdx, yearZhi, monthZhi, dayGan, -1),
+  }
+}
+
+/* 联动列 + 四柱 (从左到右: 流月/流年/大运/四柱) */
+const columns = computed(() => {
+  if (!data.value) return []
+  const extra = []
+  if (selectedLiuyue.value) extra.push(selectedLiuyue.value)
+  if (selectedLiunian.value) extra.push(selectedLiunian.value)
+  if (selectedDayun.value) extra.push(selectedDayun.value)
+  return [...extra, ...data.value.bazi.pillars]
+})
+function colLabel(c, i) {
+  if (c.label) return c.label
+  return ['年柱', '月柱', '日柱', '时柱'][i - (columns.value.length - 4)] || ''
+}
 
 /* AI 解盘状态 */
 const jpData = ref({ liuqin: [], health: [], career: [], wealth: [], marriage: [] })
@@ -336,12 +398,18 @@ function toggleDayun(i) {
     dyYears.value = []
     lnYear.value = null
     lnMonths.value = []
+    selectedDayun.value = null
+    selectedLiunian.value = null
+    selectedLiuyue.value = null
     return
   }
   dyOpen.value = i
   lnYear.value = null
   lnMonths.value = []
+  selectedLiunian.value = null
+  selectedLiuyue.value = null
   const dayun = data.value.bazi.dayun[i]
+  selectedDayun.value = buildExtraCol('dayun', dayun.startAge, GAN.indexOf(dayun.gan), ZHI.indexOf(dayun.zhi))
   const startAge = parseInt(dayun.startAge) || 4
   const startYear = (data.value.bazi.birthYear || new Date().getFullYear()) + startAge
   const years = []
@@ -357,9 +425,13 @@ function toggleLiunian(y) {
   if (lnYear.value === y.year) {
     lnYear.value = null
     lnMonths.value = []
+    selectedLiunian.value = null
+    selectedLiuyue.value = null
     return
   }
   lnYear.value = y.year
+  selectedLiunian.value = buildExtraCol('liunian', String(y.year), y.ganIdx, y.zhiIdx)
+  selectedLiuyue.value = null
   const wuhu = { 0: 2, 5: 2, 1: 4, 6: 4, 2: 6, 7: 6, 3: 8, 8: 8, 4: 0, 9: 0 }
   const firstGan = wuhu[y.ganIdx]
   const dayGan = data.value.bazi.pillars[2].g
@@ -374,6 +446,14 @@ function toggleLiunian(y) {
     })
   }
   lnMonths.value = months
+}
+
+function toggleLiuyue(mm) {
+  if (selectedLiuyue.value && selectedLiuyue.value.label === mm.month) {
+    selectedLiuyue.value = null
+    return
+  }
+  selectedLiuyue.value = buildExtraCol('liuyue', mm.month, GAN.indexOf(mm.gan), ZHI.indexOf(mm.zhi))
 }
 
 function toggleJp(key) {
@@ -547,6 +627,10 @@ function payJiepan() {
   color: #4e3420;
   font-size: 24rpx;
 }
+/* 联动列 (大运/流年/流月) 高亮区分 */
+.pp-head .pp-cell.ex-dayun { background: #f0e6cd; color: #8c5a2b; }
+.pp-head .pp-cell.ex-liunian { background: #efe5d3; color: #b04a45; }
+.pp-head .pp-cell.ex-liuyue { background: #e6dcca; color: #6e7f5a; }
 .pp-gan text, .pp-zhi text {
   font-size: 42rpx;
   font-weight: 600;
@@ -590,14 +674,16 @@ function payJiepan() {
   background: #faf3e9;
   border: 1rpx solid #efe7d8;
   border-radius: 10rpx;
-  padding: 8rpx 14rpx;
-  min-width: 150rpx;
+  padding: 6rpx 12rpx;
+  min-width: 130rpx;
 }
 .pp-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
-.pp-dy-age { font-size: 16rpx; color: #b3a595; }
-.pp-gz-line { display: flex; align-items: center; margin-top: 4rpx; }
-.pp-dy-gan, .pp-dy-zhi { font-size: 26rpx; font-weight: 500; }
-.pp-ss-right { margin-left: 8rpx; font-size: 16rpx; color: #b3a595; white-space: nowrap; }
+.pp-dy-age { font-size: 15rpx; color: #b3a595; }
+/* 干支上下排列 + 右侧一字十神 */
+.pp-gz-stack { display: flex; flex-direction: column; align-items: center; margin-top: 2rpx; }
+.pp-gz-line { display: flex; align-items: center; }
+.pp-dy-gan, .pp-dy-zhi { font-size: 26rpx; font-weight: 500; line-height: 1.25; }
+.pp-ss-right { margin-left: 6rpx; font-size: 15rpx; color: #b3a595; white-space: nowrap; }
 .pp-expand {
   margin-top: 14rpx;
   background: #f8f3ea;

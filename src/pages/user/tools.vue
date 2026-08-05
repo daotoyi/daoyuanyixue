@@ -50,31 +50,24 @@
           </view>
         </template>
 
-        <!-- 农历输入: 年月日 + 时辰 转盘 -->
+        <!-- 农历输入: 年月日时 一行4转盘 -->
         <template v-else-if="form.bazi.mode === 'lunar'">
           <view class="tp-row">
-            <text class="tp-label">农历年</text>
-            <picker mode="selector" :range="lunarYearLabels" @change="(e) => (form.bazi.lunarYear = 1900 + Number(e.detail.value))">
-              <view class="tp-picker">{{ form.bazi.lunarYear }}年</view>
-            </picker>
-          </view>
-          <view class="tp-row">
-            <text class="tp-label">农历月</text>
-            <picker mode="selector" :range="lunarMonthLabels" @change="(e) => (form.bazi.lunarMonth = e.detail.value)">
-              <view class="tp-picker">{{ lunarMonthLabels[form.bazi.lunarMonth] }}</view>
-            </picker>
-          </view>
-          <view class="tp-row">
-            <text class="tp-label">农历日</text>
-            <picker mode="selector" :range="lunarDays" @change="(e) => (form.bazi.lunarDay = e.detail.value)">
-              <view class="tp-picker">{{ lunarDays[form.bazi.lunarDay] }}</view>
-            </picker>
-          </view>
-          <view class="tp-row">
-            <text class="tp-label">出生时辰</text>
-            <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
-              <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
-            </picker>
+            <text class="tp-label">农历时间</text>
+            <view class="tp-pickers-inline tp-4">
+              <picker mode="selector" :range="lunarYearLabels" @change="(e) => (form.bazi.lunarYear = 1900 + Number(e.detail.value))">
+                <view class="tp-picker">{{ form.bazi.lunarYear }}年</view>
+              </picker>
+              <picker mode="selector" :range="lunarMonthLabels" @change="(e) => (form.bazi.lunarMonth = e.detail.value)">
+                <view class="tp-picker">{{ lunarMonthLabels[form.bazi.lunarMonth] }}</view>
+              </picker>
+              <picker mode="selector" :range="lunarDays" @change="(e) => (form.bazi.lunarDay = e.detail.value)">
+                <view class="tp-picker">{{ lunarDays[form.bazi.lunarDay] }}</view>
+              </picker>
+              <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
+                <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
+              </picker>
+            </view>
           </view>
         </template>
 
@@ -99,8 +92,8 @@
           </view>
         </view>
 
-        <!-- 真太阳时 (仅阳历) : 省/市/县 三级转盘 -->
-        <template v-if="form.bazi.mode === 'solar'">
+        <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
+        <template v-if="form.bazi.mode === 'solar' || form.bazi.mode === 'lunar'">
           <view class="tp-row">
             <text class="tp-label">真太阳时</text>
             <switch :checked="form.bazi.trueSolar" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
@@ -663,6 +656,10 @@ function runLiuren() {
 .tp-pickers-inline .tp-picker {
   flex: 1;
   text-align: center;
+}
+.tp-pickers-inline.tp-4 .tp-picker {
+  font-size: 20rpx;
+  padding: 0 2rpx;
 }
 /* 四柱: 一排 4 个转盘 */
 .tp-gz-grid {
