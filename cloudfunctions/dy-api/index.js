@@ -417,6 +417,78 @@ async function vipLevel(data) {
   return ok({ level, total_spent: Math.round(total * 100) / 100 })
 }
 
+/* ---- DeepSeek AI 解盘 ---- */
+
+function httpGetJson(url, options, body) {
+  return new Promise((resolve, reject) => {
+    const https = require('https')
+    const urlObj = new URL(url)
+    const req = https.request({
+      hostname: urlObj.hostname,
+      path: urlObj.pathname,
+      method: options.method || 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (options.key || ''),
+      },
+      timeout: 30000,
+    }, (res) => {
+      let d = ''
+      res.on('data', (c) => (d += c))
+      res.on('end', () => {
+        try { resolve(JSON.parse(d)) } catch (e) { reject(new Error('响应解析失败')) }
+      })
+    })
+    req.on('error', (e) => reject(e))
+    req.on('timeout', () => { req.destroy(); reject(new Error('AI 请求超时')) })
+    if (body) req.write(JSON.stringify(body))
+    req.end()
+  })
+}
+
+const JIEPAN_PROMPTS = {
+  career: '请以资深命理师口吻，结合八字分析此人【事业前程】：适合的行业方向、职场发展建议、事业转折点与贵人提示。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  wealth: '请以资深命理师口吻，结合八字分析此人【财富格局】：财运特点、适合的求财方式、理财建议与忌讳。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  marriage: '请以资深命理师口吻，结合八字分析此人【婚姻感情】：感情特质、配偶类型、相处建议与注意事项。给出3-5条实用建议，语言专业亲切，不超过300字。',
+  liuqin: '请以资深命理师口吻，结合八字分析此人【六亲缘分】：与父母、兄弟姐妹、子女的关系特点与相处建议。语言专业亲切，不超过300字。',
+  health: '请以资深命理师口吻，结合八字分析此人【健康状况】：体质特点、易患方面的提示与养生建议。语言专业亲切，不超过300字。',
+}
+
+async function aiJiepan(data) {
+  // 优先环境变量, 其次本地配置文件 (config.local.js 已被 gitignore)
+  let key = process.env.DEEPSEEK_KEY
+  if (!key) {
+    try {
+      key = require('./config.local.js').DEEPSEEK_KEY
+    } catch (e) {
+      key = null
+    }
+  }
+  if (!key) return fail('AI 服务未配置（需设置 DEEPSEEK_KEY）')
+  const { module } = data
+  if (!JIEPAN_PROMPTS[module]) return fail('未知解盘模块')
+  const baziInfo = data.bazi || {}
+  const prompt = `【八字信息】性别:${baziInfo.gender || '男'}，四柱:${baziInfo.ganZhi ? baziInfo.ganZhi.join(' ') : ''}，五行分布:${baziInfo.wxText || ''}，日主:${baziInfo.dayGanName || ''}${baziInfo.strength ? '（' + baziInfo.strength + '）' : ''}，空亡:${baziInfo.kongwang || ''}。\n${JIEPAN_PROMPTS[module]}`
+  try {
+    const res = await httpGetJson('https://api.deepseek.com/chat/completions', { key }, {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是一位精通子平八字、传统命理文化的资深命理师，解盘专业、客观、积极，既尊重传统文化也提醒用户理性看待，不做迷信恐吓。' },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.8,
+      max_tokens: 600,
+    })
+    const text = res && res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content
+    if (!text) return fail('AI 解盘失败：' + ((res && res.error && res.error.message) || '未知错误'))
+    // 拆分为段落
+    const paras = text.split(/\n+/).map((s) => s.trim()).filter(Boolean)
+    return ok({ module, content: paras })
+  } catch (e) {
+    return fail('AI 解盘失败：' + (e.message || '网络错误'))
+  }
+}
+
 async function wechatLogin(data) {
   // 微信一键登录 (小程序): 需在环境变量配置 WX_APPID / WX_SECRET
   const { code, nickname, avatar } = data
@@ -1033,6 +1105,7 @@ const ROUTES = {
   'user.unread': unreadCount,
   'user.messages.read': markMessagesRead,
   'user.vip': vipLevel,
+  'ai.jiepan': aiJiepan,
   'admin.feedbacks.list': adminFeedbacks,
   'admin.feedbacks.reply': adminFeedbackReply,
   'admin.feedbacks.delete': adminFeedbackDelete,

@@ -132,7 +132,11 @@
                 <text class="jp-arrow">{{ openJp[m.key] ? '▲' : '▼' }}</text>
               </view>
               <view class="jp-content" v-if="openJp[m.key] && isJpUnlocked(m.key)">
+                <view class="jp-ai-loading" v-if="jpAiLoading[m.key]">
+                  <text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text>
+                </view>
                 <text class="jp-para" v-for="(t, i) in jpData[m.key]" :key="i">{{ t }}</text>
+                <text class="jp-ai-tag" v-if="jpAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
               </view>
               <view class="jp-lock" v-if="!isJpUnlocked(m.key) && openJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
@@ -253,6 +257,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { fullBazi, liuyao, ziwei, qimen, liuren, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN, NAYIN } from '../../utils/paipan'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
+import { aiJiepan } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -286,6 +291,8 @@ const lrResult = ref(null)
 /* ===== AI 解盘状态 ===== */
 const jpData = ref({ liuqin: [], health: [], career: [], wealth: [], marriage: [] })
 const jpSummary = ref('')
+const jpAiLoading = ref({ career: false, wealth: false, marriage: false })
+const jpAiDone = ref({}) // 已用真实 AI 生成过的模块
 const openJp = ref({ liuqin: true, health: false, career: false, wealth: false, marriage: false })
 const freeModules = [
   { key: 'liuqin', name: '六亲缘分', icon: '👨‍👩‍👧' },
@@ -313,6 +320,42 @@ function toggleJp(key) {
 
 function unlockJp(m) {
   openJp.value[m.key] = !openJp.value[m.key]
+  // 已解锁的付费模块 → 加载真实 AI 解盘
+  if (openJp.value[m.key] && isJpUnlocked(m.key) && !jpAiDone.value[m.key]) {
+    loadAiJiepan(m.key)
+  }
+}
+
+/* 调用 DeepSeek 生成真实 AI 解盘 */
+function loadAiJiepan(key) {
+  if (jpAiLoading.value[key]) return
+  jpAiLoading.value[key] = true
+  const f = baziResult.value
+  if (!f) {
+    jpAiLoading.value[key] = false
+    return
+  }
+  const wxText = Object.entries(f.wxCount).map(([w, n]) => `${w}${n}`).join(' ')
+  aiJiepan({
+    module: key,
+    bazi: {
+      gender: f.gender,
+      ganZhi: f.ganZhi,
+      dayGanName: f.dayGanName,
+      strength: f.dayunDir ? '' : '',
+      kongwang: f.kongwang,
+      wxText,
+    },
+  }).then((res) => {
+    if (res && res.content && res.content.length) {
+      jpData.value[key] = res.content
+      jpAiDone.value[key] = true
+    }
+  }).catch(() => {
+    // 失败保留规则解盘
+  }).finally(() => {
+    jpAiLoading.value[key] = false
+  })
 }
 
 function payJiepan() {
@@ -977,6 +1020,18 @@ function runLiuren() {
   color: #42372c;
   line-height: 1.8;
   margin-bottom: 12rpx;
+}
+.jp-ai-loading {
+  padding: 20rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #8c5a2b;
+}
+.jp-ai-tag {
+  display: block;
+  text-align: right;
+  font-size: 20rpx;
+  color: #b3a595;
 }
 .jp-lock {
   padding: 10rpx 24rpx 26rpx;

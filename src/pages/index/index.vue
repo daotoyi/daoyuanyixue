@@ -5,7 +5,7 @@
       <view class="banner-title">道元易学</view>
       <view class="banner-sub">观天道 · 明人事 · 致中和</view>
       <view class="banner-seal">
-        <text class="seal-text">易</text>
+        <text class="seal-text">道</text>
       </view>
     </view>
 

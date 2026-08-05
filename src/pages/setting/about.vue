@@ -1,7 +1,8 @@
 <template>
   <view class="about-page">
     <view class="about-head">
-      <view class="about-seal"><text>易</text></view>
+      <view class="about-seal"><text>道</text></view>
+      <text class="about-brand">真和盛</text>
       <text class="about-name">道元易学</text>
       <text class="about-slogan">观天道 · 明人事 · 致中和</text>
       <text class="about-version">{{ APP_FULL_VERSION }}</text>
@@ -49,6 +50,12 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
 .about-seal text {
   font-size: 76rpx;
   color: #c4a484;
+}
+.about-brand {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  letter-spacing: 6rpx;
+  color: rgba(254, 251, 246, 0.65);
 }
 .about-name {
   font-size: 40rpx;

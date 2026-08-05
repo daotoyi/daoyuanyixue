@@ -1862,4 +1862,69 @@ onMounted(async () => {
     width: calc(50% - 16rpx);
   }
 }
+
+/* ===== 横屏/宽屏: 信息平铺, 不随 rpx 等比放大 (px 固定) ===== */
+@media screen and (min-width: 800px) {
+  .admin-dash {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .sidebar {
+    width: 208px;
+    flex-shrink: 0;
+  }
+  .content {
+    padding: 18px 22px;
+  }
+  .topbar {
+    padding: 14px 22px;
+  }
+  .tb-title {
+    font-size: 20px;
+  }
+  .tb-link {
+    font-size: 14px;
+  }
+  .module-title {
+    font-size: 18px;
+  }
+  .menu-label {
+    font-size: 14px;
+  }
+  .menu-icon {
+    font-size: 18px;
+  }
+  .stat-card {
+    font-size: 13px;
+  }
+  .stat-num {
+    font-size: 24px;
+  }
+  .stat-label {
+    font-size: 13px;
+  }
+  .td {
+    font-size: 13px;
+    padding: 10px 10px;
+  }
+  .op {
+    font-size: 13px;
+    margin-left: 10px;
+  }
+  .w-time {
+    font-size: 12px;
+  }
+  .f-label {
+    font-size: 13px;
+  }
+  .f-input {
+    font-size: 14px;
+  }
+  .pill {
+    font-size: 13px;
+  }
+  .sheet-title {
+    font-size: 17px;
+  }
+}
 </style>
