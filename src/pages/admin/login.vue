@@ -1,7 +1,7 @@
 <template>
   <view class="admin-login">
     <view class="brand">
-      <view class="seal"><text class="seal-char">易</text></view>
+      <view class="seal"><text class="seal-char">道</text></view>
       <text class="brand-name">道元易学 · 管理后台</text>
       <text class="brand-sub">ADMIN CONSOLE</text>
     </view>

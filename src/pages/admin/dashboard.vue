@@ -3,7 +3,7 @@
     <!-- ===== 左侧侧边栏 ===== -->
     <view class="sidebar">
       <view class="logo-area">
-        <view class="logo-seal"><text>易</text></view>
+        <view class="logo-seal"><text>道</text></view>
         <text class="logo-name">道元易学</text>
         <text class="logo-sub">管理后台</text>
       </view>
@@ -1336,6 +1336,7 @@ onMounted(async () => {
 .tb-link {
   font-size: 24rpx;
   color: #8c5a2b;
+  white-space: nowrap;
 }
 .tb-link.danger {
   color: #b04a45;
@@ -1366,6 +1367,8 @@ onMounted(async () => {
   background: var(--dy-line);
   font-size: 22rpx;
   color: var(--dy-sub);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .pill.on {
   background: #8c5a2b;
@@ -1497,7 +1500,7 @@ onMounted(async () => {
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 280rpx; font-size: 20rpx; }
 .w-status { width: 110rpx; text-align: center; }
-.w-ops { width: 280rpx; display: flex; gap: 16rpx; }
+.w-ops { width: 340rpx; display: flex; align-items: center; flex-wrap: nowrap; gap: 8rpx; }
 .thumb {
   width: 60rpx;
   height: 60rpx;
@@ -1508,6 +1511,8 @@ onMounted(async () => {
   font-size: 22rpx;
   color: #8c5a2b;
   padding: 4rpx 10rpx;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .op.danger {
   color: #b04a45;
@@ -1909,7 +1914,7 @@ onMounted(async () => {
   }
   .op {
     font-size: 13px;
-    margin-left: 10px;
+    margin-left: 0;
   }
   .w-time {
     font-size: 12px;
