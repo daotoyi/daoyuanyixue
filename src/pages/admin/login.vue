@@ -78,7 +78,7 @@ async function doLogin() {
 <style lang="scss" scoped>
 .admin-login {
   min-height: 100vh;
-  background: linear-gradient(170deg, #4e3420 0%, #6e4a26 45%, var(--dy-page) 100%);
+  background: linear-gradient(170deg, #4e3420 0%, #6e4a26 45%, #f8f3ea 100%);
   padding: 80rpx 48rpx;
 }
 .brand {
@@ -106,7 +106,7 @@ async function doLogin() {
   font-size: 40rpx;
   font-weight: 500;
   letter-spacing: 6rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .brand-sub {
   margin-top: 14rpx;
@@ -116,7 +116,7 @@ async function doLogin() {
 }
 
 .form {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 24rpx;
   padding: 44rpx 36rpx;
   box-shadow: 0 10rpx 40rpx rgba(69, 26, 3, 0.2);
@@ -127,16 +127,16 @@ async function doLogin() {
 .label {
   display: block;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 12rpx;
 }
 .input {
   height: 88rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 14rpx;
   padding: 0 26rpx;
   font-size: 28rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .err {
   color: #b04a45;
@@ -147,6 +147,6 @@ async function doLogin() {
   margin-top: 32rpx;
   text-align: center;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 </style>

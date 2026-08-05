@@ -715,12 +715,12 @@ function runLiuren() {
 <style lang="scss" scoped>
 .tools-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .tool-tabs {
-  background: var(--dy-card);
+  background: #fefbf6;
   white-space: nowrap;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .tool-tab-inner {
   display: inline-flex;
@@ -733,27 +733,27 @@ function runLiuren() {
   gap: 8rpx;
   padding: 12rpx 26rpx;
   border-radius: 999rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .tool-tab.on {
   background: #8c5a2b;
-  color: var(--dy-card);
+  color: #fefbf6;
   font-weight: 500;
 }
 .tool-body {
   padding: 24rpx;
 }
 .tool-panel {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 30rpx;
 }
 .tp-title {
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 24rpx;
   line-height: 1.6;
 }
@@ -765,17 +765,17 @@ function runLiuren() {
 .tp-label {
   width: 170rpx;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   flex-shrink: 0;
 }
 .tp-picker {
   flex: 1;
   height: 76rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   display: flex;
   align-items: center;
 }
@@ -789,7 +789,7 @@ function runLiuren() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 3rpx;
 }
 .btn-pp {
@@ -800,7 +800,7 @@ function runLiuren() {
 .bazi-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
 }
 .br-grid {
   display: flex;
@@ -812,13 +812,13 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 18rpx 0;
 }
 .br-title {
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .br-gan {
   font-size: 44rpx;
@@ -828,13 +828,13 @@ function runLiuren() {
 }
 .br-zhi {
   font-size: 36rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .br-wx {
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #6e7f5a;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 0 14rpx;
   border-radius: 999rpx;
 }
@@ -844,25 +844,25 @@ function runLiuren() {
 }
 .br-k {
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .br-v {
   flex: 1;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   font-weight: 500;
 }
 .br-tip {
   margin-top: 16rpx;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 /* 六爻 */
 .ly-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
 }
 .ly-head {
   display: flex;
@@ -880,7 +880,7 @@ function runLiuren() {
   color: #b04a45;
 }
 .ly-lines {
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 10rpx 20rpx;
 }
@@ -889,18 +889,18 @@ function runLiuren() {
   align-items: center;
   justify-content: space-between;
   padding: 12rpx 0;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .ly-line:last-child {
   border-bottom: none;
 }
 .ly-idx {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .ly-mark {
   font-size: 28rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .ly-mark.moving {
   color: #b04a45;
@@ -915,7 +915,7 @@ function runLiuren() {
   gap: 12rpx;
 }
 .zw-cell {
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 10rpx;
   padding: 14rpx 8rpx;
   display: flex;
@@ -924,12 +924,12 @@ function runLiuren() {
   min-height: 130rpx;
 }
 .zw-cell.ming {
-  background: var(--dy-soft);
+  background: #faf3e9;
   border: 2rpx solid #8c5a2b;
 }
 .zw-name {
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .zw-star {
   margin-top: 6rpx;
@@ -945,7 +945,7 @@ function runLiuren() {
   gap: 12rpx;
 }
 .qm-cell {
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 10rpx;
   padding: 16rpx 8rpx;
   display: flex;
@@ -956,11 +956,11 @@ function runLiuren() {
   position: absolute;
   margin-left: -90rpx;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .qm-palace {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   font-weight: 500;
 }
 .qm-door {
@@ -971,7 +971,7 @@ function runLiuren() {
 .qm-star {
   margin-top: 4rpx;
   font-size: 20rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 /* 大六壬 */
@@ -986,7 +986,7 @@ function runLiuren() {
 }
 .lr-col {
   width: calc((100% - 44rpx) / 4);
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 10rpx;
   padding: 12rpx 0;
   display: flex;
@@ -1001,7 +1001,7 @@ function runLiuren() {
 .lr-di {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 /* ===== 八字输入 (问真) ===== */
@@ -1012,19 +1012,19 @@ function runLiuren() {
 .tsg {
   padding: 10rpx 26rpx;
   border-radius: 999rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   border: 2rpx solid transparent;
 }
 .tsg.on {
   background: #8c5a2b;
-  color: var(--dy-card);
+  color: #fefbf6;
   border-color: #8c5a2b;
 }
 .tp-tip {
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   margin: -4rpx 0 14rpx 0;
   padding-left: 190rpx;
 }
@@ -1033,7 +1033,7 @@ function runLiuren() {
 .wz-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
 }
 
 /* 顶部: 农历 + 阳历 + 元男/元女 */
@@ -1083,17 +1083,17 @@ function runLiuren() {
   flex-direction: column;
   align-items: center;
   gap: 2rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
   padding-top: 8rpx;
   width: 100%;
 }
 .wz-ny {
   font-size: 17rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .wz-zs {
   font-size: 17rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .wz-kw {
   font-size: 17rpx;
@@ -1111,7 +1111,7 @@ function runLiuren() {
 
 /* 地支藏干独立模块 */
 .wz-canggan {
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 16rpx;
   margin-bottom: 20rpx;
@@ -1125,7 +1125,7 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 10rpx;
   padding: 10rpx 2rpx;
 }
@@ -1151,7 +1151,7 @@ function runLiuren() {
 .wz-cg-ss {
   margin-left: 6rpx;
   font-size: 16rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .wz-grid {
   display: flex;
@@ -1163,20 +1163,20 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 14rpx 4rpx;
   border-top: 6rpx solid #8c5a2b;
 }
 .wz-title {
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .wz-ss {
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #8c5a2b;
-  background: var(--dy-soft);
+  background: #faf3e9;
   padding: 0 10rpx;
   border-radius: 6rpx;
 }
@@ -1196,7 +1196,7 @@ function runLiuren() {
 
 /* 五行统计 */
 .wz-wxbar {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 12rpx;
   padding: 20rpx;
   margin-bottom: 20rpx;
@@ -1217,7 +1217,7 @@ function runLiuren() {
 .wz-wx-bar {
   flex: 1;
   height: 14rpx;
-  background: var(--dy-line);
+  background: #efe7d8;
   border-radius: 7rpx;
   margin: 0 14rpx;
   overflow: hidden;
@@ -1234,13 +1234,13 @@ function runLiuren() {
 .wz-wx-num {
   width: 60rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
   text-align: right;
 }
 
 /* 元信息 */
 .wz-meta {
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
   margin-bottom: 20rpx;
@@ -1252,12 +1252,12 @@ function runLiuren() {
 .wz-mk {
   width: 100rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .wz-mv {
   flex: 1;
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
   font-weight: 500;
 }
 
@@ -1281,14 +1281,14 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--dy-soft);
-  border: 1rpx solid var(--dy-line);
+  background: #faf3e9;
+  border: 1rpx solid #efe7d8;
   border-radius: 10rpx;
   padding: 10rpx 16rpx;
 }
 .wz-dy-age {
   font-size: 18rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .wz-dy-gan,
 .wz-dy-zhi {
@@ -1304,14 +1304,14 @@ function runLiuren() {
 }
 .wz-dy-item.on {
   border-color: #8c5a2b;
-  background: var(--dy-soft);
+  background: #faf3e9;
   box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.35);
 }
 
 /* 大运展开: 流年 */
 .wz-dy-years {
   margin-top: 16rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 16rpx;
 }
@@ -1330,18 +1330,18 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--dy-card);
-  border: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
   border-radius: 10rpx;
   padding: 8rpx 2rpx;
 }
 .wz-ln-item.on {
   border-color: #b04a45;
-  background: var(--dy-soft);
+  background: #faf3e9;
 }
 .wz-ln-year {
   font-size: 16rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .wz-ln-gan,
 .wz-ln-zhi {
@@ -1357,7 +1357,7 @@ function runLiuren() {
 /* 流月 */
 .wz-ln-months {
   margin-top: 14rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
   padding-top: 12rpx;
 }
 .wz-ym-grid {
@@ -1369,14 +1369,14 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--dy-card);
-  border: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
   border-radius: 8rpx;
   padding: 6rpx 2rpx;
 }
 .wz-ym-name {
   font-size: 16rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .wz-ym-gan,
 .wz-ym-zhi {
@@ -1400,7 +1400,7 @@ function runLiuren() {
 .wz-ln-name {
   font-size: 40rpx;
   font-weight: 600;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .wz-ln-ss {
   margin-left: 20rpx;
@@ -1421,14 +1421,14 @@ function runLiuren() {
 .tg {
   padding: 12rpx 40rpx;
   border-radius: 999rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   border: 2rpx solid transparent;
 }
 .tg.on {
   background: #8c5a2b;
-  color: var(--dy-card);
+  color: #fefbf6;
   border-color: #8c5a2b;
 }
 
@@ -1436,7 +1436,7 @@ function runLiuren() {
 .jp-section {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
 }
 .jp-head {
   margin-bottom: 18rpx;
@@ -1451,15 +1451,15 @@ function runLiuren() {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
   line-height: 1.7;
-  background: var(--dy-soft);
+  background: #faf3e9;
   border-radius: 10rpx;
   padding: 16rpx 20rpx;
 }
 .jp-block {
-  background: var(--dy-card);
-  border: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
   overflow: hidden;
@@ -1477,19 +1477,19 @@ function runLiuren() {
   margin-left: 14rpx;
   font-size: 28rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .jp-free-tag {
   font-size: 20rpx;
   color: #6e7f5a;
-  background: var(--dy-soft);
+  background: #faf3e9;
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
 }
 .jp-paid-tag {
   font-size: 20rpx;
   color: #b04a45;
-  background: var(--dy-soft);
+  background: #faf3e9;
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
 }
@@ -1499,7 +1499,7 @@ function runLiuren() {
 .jp-arrow {
   margin-left: 12rpx;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .jp-content {
   padding: 6rpx 24rpx 24rpx;
@@ -1507,7 +1507,7 @@ function runLiuren() {
 .jp-para {
   display: block;
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
   line-height: 1.8;
   margin-bottom: 12rpx;
 }
@@ -1521,7 +1521,7 @@ function runLiuren() {
   display: block;
   text-align: right;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .jp-lock {
   padding: 10rpx 24rpx 26rpx;
@@ -1534,7 +1534,7 @@ function runLiuren() {
   display: block;
   margin: 10rpx 0 20rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .btn-fill {
   display: flex;
@@ -1542,7 +1542,7 @@ function runLiuren() {
   justify-content: center;
 }
 .btn-fill text {
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 2rpx;
 }
 .btn-pay {

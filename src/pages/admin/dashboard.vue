@@ -1196,7 +1196,7 @@ onMounted(async () => {
 .admin-dash {
   height: 100vh;
   display: flex;
-  background: var(--dy-soft);
+  background: #faf3e9;
 }
 /* u-popup 脱离 flex 占位 (H5 下 popup 根元素 static, 会挤占 main 宽度) */
 .admin-dash :deep(.u-popup) {
@@ -1238,7 +1238,7 @@ onMounted(async () => {
 }
 .logo-name {
   font-size: 28rpx;
-  color: var(--dy-sub);
+  color: #857563;
   letter-spacing: 4rpx;
 }
 .logo-sub {
@@ -1301,7 +1301,7 @@ onMounted(async () => {
 }
 .au-name {
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .au-role {
   font-size: 18rpx;
@@ -1321,8 +1321,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 40rpx;
-  background: var(--dy-card);
-  border-bottom: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border-bottom: 1rpx solid #efe7d8;
 }
 .tb-title {
   font-size: 32rpx;
@@ -1364,15 +1364,15 @@ onMounted(async () => {
   padding: 8rpx 24rpx;
   margin-left: 12rpx;
   border-radius: 999rpx;
-  background: var(--dy-line);
+  background: #efe7d8;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .pill.on {
   background: #8c5a2b;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 
 /* 概览 */
@@ -1384,9 +1384,9 @@ onMounted(async () => {
 .stat-card {
   width: calc(25% - 16rpx);
   margin: 8rpx;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 34rpx 20rpx;
   display: flex;
   flex-direction: column;
@@ -1401,14 +1401,14 @@ onMounted(async () => {
 .stat-label {
   margin-top: 12rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 .recent-panel {
   margin-top: 30rpx;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   overflow: hidden;
 }
 .panel-head {
@@ -1416,12 +1416,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .panel-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .panel-more {
   font-size: 22rpx;
@@ -1431,7 +1431,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 20rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
   gap: 20rpx;
 }
 .recent-row:last-child {
@@ -1440,12 +1440,12 @@ onMounted(async () => {
 .rr-no {
   width: 300rpx;
   font-size: 20rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .rr-items {
   flex: 1;
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .rr-price {
   width: 120rpx;
@@ -1461,29 +1461,29 @@ onMounted(async () => {
 }
 .recent-empty {
   text-align: center;
-  color: var(--dy-faint);
+  color: #b3a595;
   font-size: 24rpx;
   padding: 40rpx;
 }
 
 /* 表格 */
 .table {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   overflow: hidden;
 }
 .tr {
   display: flex;
   align-items: center;
   padding: 18rpx 24rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .tr:last-child {
   border-bottom: none;
 }
 .tr.th {
-  background: var(--dy-soft);
+  background: #faf3e9;
 }
 .th .td {
   font-weight: 500;
@@ -1492,7 +1492,7 @@ onMounted(async () => {
 }
 .td {
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .w-img { width: 76rpx; }
 .w-name { flex: 2; padding: 0 10rpx; min-width: 0; }
@@ -1505,7 +1505,7 @@ onMounted(async () => {
   width: 60rpx;
   height: 60rpx;
   border-radius: 8rpx;
-  background: var(--dy-soft);
+  background: #faf3e9;
 }
 .op {
   font-size: 22rpx;
@@ -1521,7 +1521,7 @@ onMounted(async () => {
 .off { color: #b04a45; }
 .ls-live { color: #b04a45; }
 .ls-upcoming { color: #8c5a2b; }
-.ls-ended { color: var(--dy-sub); }
+.ls-ended { color: #857563; }
 .ellipsis {
   overflow: hidden;
   white-space: nowrap;
@@ -1539,19 +1539,19 @@ onMounted(async () => {
   margin-right: 16rpx;
   margin-bottom: 12rpx;
   border-radius: 999rpx;
-  background: var(--dy-line);
+  background: #efe7d8;
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .settings-tab.on {
   background: #8c5a2b;
-  color: var(--dy-card);
+  color: #fefbf6;
   font-weight: 500;
 }
 .settings-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 30rpx;
 }
 .settings-desc {
@@ -1559,7 +1559,7 @@ onMounted(async () => {
   align-items: baseline;
   margin-bottom: 28rpx;
   padding-bottom: 20rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .sd-title {
   font-size: 28rpx;
@@ -1569,7 +1569,7 @@ onMounted(async () => {
 }
 .sd-text {
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .f-input-wrap {
   flex: 1;
@@ -1593,11 +1593,11 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 30rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid var(--dy-line);
+  border-top: 1rpx solid #efe7d8;
 }
 .settings-tip {
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   flex: 1;
   margin-right: 20rpx;
 }
@@ -1612,9 +1612,9 @@ onMounted(async () => {
 }
 .cate-panel {
   width: 260rpx;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1625,7 +1625,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 24rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .cate-panel-title {
   font-size: 26rpx;
@@ -1637,7 +1637,7 @@ onMounted(async () => {
   color: #8c5a2b;
   padding: 4rpx 12rpx;
   border-radius: 999rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .cate-panel-list {
   flex: 1;
@@ -1647,17 +1647,17 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 18rpx 20rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
   gap: 8rpx;
 }
 .cate-row.active {
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .cate-row-name {
   flex: 1;
   min-width: 0;
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .cate-row.active .cate-row-name {
   color: #8c5a2b;
@@ -1666,13 +1666,13 @@ onMounted(async () => {
 .cate-row-badge {
   font-size: 18rpx;
   color: #6e7f5a;
-  background: var(--dy-soft);
+  background: #faf3e9;
   padding: 2rpx 10rpx;
   border-radius: 999rpx;
 }
 .cate-row-badge.off {
   color: #b04a45;
-  background: var(--dy-soft);
+  background: #faf3e9;
 }
 .cate-row-ops {
   display: none;
@@ -1684,7 +1684,7 @@ onMounted(async () => {
 .cate-op {
   font-size: 18rpx;
   color: #8c5a2b;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 2rpx 8rpx;
   border-radius: 6rpx;
 }
@@ -1697,7 +1697,7 @@ onMounted(async () => {
 }
 .table-empty {
   text-align: center;
-  color: var(--dy-faint);
+  color: #b3a595;
   font-size: 24rpx;
   padding: 60rpx 0;
 }
@@ -1706,7 +1706,7 @@ onMounted(async () => {
 .attr-editor {
   margin-bottom: 20rpx;
   padding: 20rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
 }
 .attr-head {
@@ -1718,7 +1718,7 @@ onMounted(async () => {
 .attr-title {
   font-size: 24rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .attr-add {
   font-size: 22rpx;
@@ -1733,12 +1733,12 @@ onMounted(async () => {
 .attr-input {
   flex: 1;
   height: 64rpx;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 10rpx;
   padding: 0 18rpx;
   font-size: 24rpx;
-  color: var(--dy-text);
-  border: 1rpx solid var(--dy-line);
+  color: #42372c;
+  border: 1rpx solid #efe7d8;
 }
 .attr-del {
   font-size: 24rpx;
@@ -1748,7 +1748,7 @@ onMounted(async () => {
 .attr-empty {
   text-align: center;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   padding: 16rpx 0;
 }
 
@@ -1763,21 +1763,21 @@ onMounted(async () => {
 .f-pills .pill {
   padding: 8rpx 22rpx;
   border-radius: 999rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   border: 2rpx solid transparent;
 }
 .f-pills .pill.on {
   color: #8c5a2b;
   border-color: #8c5a2b;
-  background: var(--dy-soft);
+  background: #faf3e9;
   font-weight: 500;
 }
 .f-static {
   flex: 1;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .st-待付款 { color: #b04a45; font-weight: 500; }
 .st-wait { color: #ba7517; font-weight: 500; }
@@ -1785,11 +1785,11 @@ onMounted(async () => {
 .st-待发货 { color: #8c5a2b; font-weight: 500; }
 .st-待收货 { color: #ba7517; font-weight: 500; }
 .st-已完成 { color: #6e7f5a; font-weight: 500; }
-.st-已退款 { color: var(--dy-sub); font-weight: 500; }
+.st-已退款 { color: #857563; font-weight: 500; }
 .td-logis {
   display: block;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   margin-top: 4rpx;
 }
 /* 时间列: 单行显示 */
@@ -1797,7 +1797,7 @@ onMounted(async () => {
   width: 220rpx;
   white-space: nowrap;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 /* 弹窗表单 */
@@ -1811,7 +1811,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
   margin-bottom: 24rpx;
 }
 .f-row {
@@ -1822,26 +1822,26 @@ onMounted(async () => {
 .f-label {
   width: 150rpx;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 72rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 10rpx;
   padding: 0 20rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .f-textarea {
   flex: 1;
   height: 120rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 10rpx;
   padding: 14rpx 20rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .f-pills {
   display: flex;

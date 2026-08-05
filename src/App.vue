@@ -73,8 +73,8 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
     'Hiragino Sans GB', 'STSong', 'SimSun', 'Noto Serif SC', serif;
   font-size: 28rpx;
-  color: var(--dy-text);
-  background-color: var(--dy-page);
+  color: #42372c;
+  background-color: #f8f3ea;
 }
 
 /* 深色主题 (跟随系统/手动切换, H5/App) */
@@ -156,23 +156,23 @@ html[data-theme='dark'] .uni-tabbar__label.uni-tabbar__label--active {
 /* 主题色 */
 .text-primary { color: #8c5a2b; }
 .text-gold { color: #c4a484; }
-.text-ink { color: var(--dy-text); }
-.text-grey { color: var(--dy-sub); }
+.text-ink { color: #42372c; }
+.text-grey { color: #857563; }
 .text-cinnabar { color: #b04a45; }
-.bg-paper { background-color: var(--dy-card); }
-.bg-cream { background-color: var(--dy-page); }
+.bg-paper { background-color: #fefbf6; }
+.bg-cream { background-color: #f8f3ea; }
 
 /* 卡片 */
 .card {
-  background-color: var(--dy-card);
+  background-color: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
 }
 
 /* 分隔线 */
 .divider {
   height: 1rpx;
-  background-color: var(--dy-line);
+  background-color: #efe7d8;
 }
 
 /* 安全区域 */

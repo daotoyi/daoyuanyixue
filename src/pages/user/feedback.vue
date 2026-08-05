@@ -52,39 +52,39 @@ async function submit() {
 <style lang="scss" scoped>
 .fb-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 24rpx;
 }
 .fb-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
 .fb-label {
   display: block;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 14rpx;
 }
 .fb-textarea {
   width: 100%;
   height: 240rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   line-height: 1.6;
 }
 .fb-count {
   display: block;
   text-align: right;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .fb-input {
   height: 80rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .btn-fill {
   height: 88rpx;
@@ -95,7 +95,7 @@ async function submit() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 2rpx;
 }
 .btn-submit {

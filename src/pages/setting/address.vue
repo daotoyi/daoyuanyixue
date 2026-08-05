@@ -119,13 +119,13 @@ onMounted(load)
 <style lang="scss" scoped>
 .address-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 24rpx 24rpx 160rpx;
 }
 .addr-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 26rpx;
   margin-bottom: 20rpx;
 }
@@ -137,24 +137,24 @@ onMounted(load)
 .addr-name {
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .addr-phone {
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-left: 20rpx;
 }
 .addr-tag {
   margin-left: auto;
   font-size: 20rpx;
   color: #8c5a2b;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 2rpx 14rpx;
   border-radius: 999rpx;
 }
 .addr-detail {
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   line-height: 1.6;
 }
 .addr-ops {
@@ -188,7 +188,7 @@ onMounted(load)
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
   margin-bottom: 24rpx;
 }
 .f-row {
@@ -199,26 +199,26 @@ onMounted(load)
 .f-label {
   width: 150rpx;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 76rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .f-textarea {
   flex: 1;
   height: 120rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 16rpx 22rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .sheet-actions {
   display: flex;

@@ -124,7 +124,7 @@ async function confirmShip() {
 <style lang="scss" scoped>
 .lg-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 24rpx;
   padding-bottom: 160rpx;
 }
@@ -143,29 +143,29 @@ async function confirmShip() {
   display: block;
   margin-top: 8rpx;
   font-size: 26rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .lg-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
 .lg-label {
   display: block;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 14rpx;
 }
 .lg-input {
   height: 88rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 30rpx;
   letter-spacing: 2rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .lg-detect {
   display: block;
@@ -186,13 +186,13 @@ async function confirmShip() {
   flex-direction: column;
   align-items: center;
   padding: 24rpx 0;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   border: 2rpx solid transparent;
 }
 .lg-item.on {
   border-color: #8c5a2b;
-  background: var(--dy-soft);
+  background: #faf3e9;
 }
 .lg-icon {
   font-size: 40rpx;
@@ -200,7 +200,7 @@ async function confirmShip() {
 .lg-name {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .lg-check {
   position: absolute;
@@ -210,7 +210,7 @@ async function confirmShip() {
   height: 30rpx;
   border-radius: 50%;
   background: #8c5a2b;
-  color: var(--dy-card);
+  color: #fefbf6;
   font-size: 20rpx;
   display: flex;
   align-items: center;
@@ -218,7 +218,7 @@ async function confirmShip() {
 }
 .lg-tip {
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
   line-height: 1.7;
 }
 .lg-footer {
@@ -226,8 +226,8 @@ async function confirmShip() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--dy-card);
-  border-top: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border-top: 1rpx solid #efe7d8;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
 }
@@ -240,7 +240,7 @@ async function confirmShip() {
 }
 .btn-fill text {
   font-size: 30rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 3rpx;
 }
 .btn-ship {

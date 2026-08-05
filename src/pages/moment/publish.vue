@@ -80,14 +80,14 @@ async function doPublish() {
 <style lang="scss" scoped>
 .publish-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding: 20rpx 24rpx;
 }
 
 .input-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 24rpx;
 }
 .content-input {
@@ -95,28 +95,28 @@ async function doPublish() {
   height: 280rpx;
   font-size: 28rpx;
   line-height: 1.7;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .ph {
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .char-count {
   text-align: right;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   margin-top: 8rpx;
 }
 
 .img-section {
   margin-top: 24rpx;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 24rpx;
 }
 .section-label {
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 20rpx;
   display: block;
 }
@@ -152,7 +152,7 @@ async function doPublish() {
 .img-add {
   width: 200rpx;
   height: 200rpx;
-  border: 2rpx dashed var(--dy-sub);
+  border: 2rpx dashed #857563;
   border-radius: 12rpx;
   display: flex;
   flex-direction: column;
@@ -161,11 +161,11 @@ async function doPublish() {
 }
 .add-plus {
   font-size: 56rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .add-text {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 .publish-btn {

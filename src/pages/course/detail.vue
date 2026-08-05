@@ -15,7 +15,7 @@
         <text class="students">{{ course.students_count }} 人学过</text>
       </view>
       <view class="teacher-row">
-        <u-avatar :text="course.teacher[0]" size="56" bg-color="var(--dy-line)" color="#8c5a2b" shape="circle"></u-avatar>
+        <u-avatar :text="course.teacher[0]" size="56" bg-color="#efe7d8" color="#8c5a2b" shape="circle"></u-avatar>
         <view class="teacher-info">
           <text class="teacher-name">{{ course.teacher }}</text>
           <text class="teacher-sub">课程讲师</text>
@@ -128,7 +128,7 @@ function startLearn() {
 <style lang="scss" scoped>
 .cd-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding-bottom: 140rpx;
 }
 
@@ -147,7 +147,7 @@ function startLearn() {
   padding: 6rpx 22rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .lv-入门 { background: #6e7f5a; }
 .lv-进阶 { background: #8c5a2b; }
@@ -159,14 +159,14 @@ function startLearn() {
   bottom: 24rpx;
   font-size: 36rpx;
   font-weight: 500;
-  color: var(--dy-card);
+  color: #fefbf6;
   text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.5);
 }
 
 .card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 26rpx;
   margin: 20rpx 24rpx 0;
 }
@@ -181,21 +181,21 @@ function startLearn() {
 }
 .otprice {
   font-size: 24rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   text-decoration: line-through;
   margin-left: 14rpx;
 }
 .students {
   margin-left: auto;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .teacher-row {
   display: flex;
   align-items: center;
   margin-top: 24rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid var(--dy-line);
+  border-top: 1rpx solid #efe7d8;
 }
 .teacher-info {
   margin-left: 20rpx;
@@ -203,42 +203,42 @@ function startLearn() {
 .teacher-name {
   font-size: 28rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .teacher-sub {
   display: block;
   font-size: 20rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-top: 4rpx;
 }
 
 .card-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
   margin-bottom: 16rpx;
 }
 .desc {
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   line-height: 1.7;
 }
 .outline {
   margin-top: 24rpx;
-  border-top: 1rpx solid var(--dy-line);
+  border-top: 1rpx solid #efe7d8;
   padding-top: 10rpx;
 }
 .lesson {
   display: flex;
   align-items: center;
   padding: 18rpx 0;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .lesson-idx {
   width: 48rpx;
   height: 48rpx;
   border-radius: 10rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,7 +249,7 @@ function startLearn() {
   flex: 1;
   margin-left: 16rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .lesson-lock {
   font-size: 26rpx;
@@ -258,7 +258,7 @@ function startLearn() {
   text-align: center;
   padding: 20rpx;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 /* 底部购买栏 (框效果) */
@@ -270,8 +270,8 @@ function startLearn() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--dy-card);
-  border-top: 2rpx solid var(--dy-line);
+  background: #fefbf6;
+  border-top: 2rpx solid #efe7d8;
   box-shadow: 0 -6rpx 20rpx rgba(78, 52, 32, 0.08);
   padding: 20rpx 24rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
@@ -288,7 +288,7 @@ function startLearn() {
 }
 .buy-origin {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   text-decoration: line-through;
   margin-left: 12rpx;
 }
@@ -305,7 +305,7 @@ function startLearn() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 2rpx;
 }
 .btn-buy {

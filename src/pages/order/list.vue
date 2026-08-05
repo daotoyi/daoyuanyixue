@@ -119,13 +119,13 @@ async function doConfirm(o) {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 
 /* 状态筛选: 紧凑彩色按钮 + 右上角数量 */
 .filter-bar {
-  background: var(--dy-card);
-  border-bottom: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border-bottom: 1rpx solid #efe7d8;
 }
 .filter-inner {
   display: flex;
@@ -159,49 +159,49 @@ async function doConfirm(o) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid var(--dy-line);
+  border: 2rpx solid #efe7d8;
 }
 .ot-badge text {
   font-size: 18rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   font-weight: 500;
 }
 /* 每个状态固定颜色 */
-.ot-全部 { border-color: var(--dy-sub); background: var(--dy-soft); }
-.ot-全部 .ot-label { color: var(--dy-sub); }
-.ot-全部 .ot-badge { background: var(--dy-sub); }
-.ot-全部.active { background: var(--dy-sub); }
-.ot-全部.active .ot-label { color: var(--dy-card); }
+.ot-全部 { border-color: #857563; background: #faf3e9; }
+.ot-全部 .ot-label { color: #857563; }
+.ot-全部 .ot-badge { background: #857563; }
+.ot-全部.active { background: #857563; }
+.ot-全部.active .ot-label { color: #fefbf6; }
 
-.ot-待付款 { border-color: #b04a45; background: var(--dy-soft); }
+.ot-待付款 { border-color: #b04a45; background: #faf3e9; }
 .ot-待付款 .ot-label { color: #b04a45; }
 .ot-待付款 .ot-badge { background: #b04a45; }
 .ot-待付款.active { background: #b04a45; }
-.ot-待付款.active .ot-label { color: var(--dy-card); }
+.ot-待付款.active .ot-label { color: #fefbf6; }
 
-.ot-待发货 { border-color: #8c5a2b; background: var(--dy-soft); }
+.ot-待发货 { border-color: #8c5a2b; background: #faf3e9; }
 .ot-待发货 .ot-label { color: #8c5a2b; }
 .ot-待发货 .ot-badge { background: #8c5a2b; }
 .ot-待发货.active { background: #8c5a2b; }
-.ot-待发货.active .ot-label { color: var(--dy-card); }
+.ot-待发货.active .ot-label { color: #fefbf6; }
 
-.ot-待收货 { border-color: #ba7517; background: var(--dy-soft); }
+.ot-待收货 { border-color: #ba7517; background: #faf3e9; }
 .ot-待收货 .ot-label { color: #ba7517; }
 .ot-待收货 .ot-badge { background: #ba7517; }
 .ot-待收货.active { background: #ba7517; }
-.ot-待收货.active .ot-label { color: var(--dy-card); }
+.ot-待收货.active .ot-label { color: #fefbf6; }
 
-.ot-已完成 { border-color: #6e7f5a; background: var(--dy-soft); }
+.ot-已完成 { border-color: #6e7f5a; background: #faf3e9; }
 .ot-已完成 .ot-label { color: #6e7f5a; }
 .ot-已完成 .ot-badge { background: #6e7f5a; }
 .ot-已完成.active { background: #6e7f5a; }
-.ot-已完成.active .ot-label { color: var(--dy-card); }
+.ot-已完成.active .ot-label { color: #fefbf6; }
 
-.ot-已退款 { border-color: var(--dy-sub); background: var(--dy-soft); }
-.ot-已退款 .ot-label { color: var(--dy-sub); }
-.ot-已退款 .ot-badge { background: var(--dy-sub); }
-.ot-已退款.active { background: var(--dy-sub); }
-.ot-已退款.active .ot-label { color: var(--dy-card); }
+.ot-已退款 { border-color: #857563; background: #faf3e9; }
+.ot-已退款 .ot-label { color: #857563; }
+.ot-已退款 .ot-badge { background: #857563; }
+.ot-已退款.active { background: #857563; }
+.ot-已退款.active .ot-label { color: #fefbf6; }
 
 .order-scroll {
   flex: 1;
@@ -210,9 +210,9 @@ async function doConfirm(o) {
   padding: 20rpx 24rpx;
 }
 .order-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
@@ -221,11 +221,11 @@ async function doConfirm(o) {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 16rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .order-no {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .order-status {
   font-size: 24rpx;
@@ -235,7 +235,7 @@ async function doConfirm(o) {
 .st-待发货 { color: #8c5a2b; }
 .st-待收货 { color: #ba7517; }
 .st-已完成 { color: #6e7f5a; }
-.st-已退款 { color: var(--dy-sub); }
+.st-已退款 { color: #857563; }
 /* 状态按钮: 实心彩色 */
 .btn-fill {
   flex-shrink: 0;
@@ -249,7 +249,7 @@ async function doConfirm(o) {
 }
 .btn-fill text {
   font-size: 24rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 1rpx;
 }
 .btn-pay {
@@ -270,7 +270,7 @@ async function doConfirm(o) {
   width: 100rpx;
   height: 100rpx;
   border-radius: 10rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .oi-info {
   flex: 1;
@@ -281,13 +281,13 @@ async function doConfirm(o) {
 }
 .oi-name {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   line-height: 1.4;
 }
 .oi-price {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 .order-foot {
@@ -295,11 +295,11 @@ async function doConfirm(o) {
   align-items: center;
   justify-content: space-between;
   padding-top: 16rpx;
-  border-top: 1rpx solid var(--dy-line);
+  border-top: 1rpx solid #efe7d8;
 }
 .of-time {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .of-right {
   display: flex;
@@ -308,7 +308,7 @@ async function doConfirm(o) {
 }
 .of-total {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 
 .empty {

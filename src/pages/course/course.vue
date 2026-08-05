@@ -37,7 +37,7 @@
               <view class="course-body-inner">
                 <text class="course-title">{{ cc.title }}</text>
                 <view class="course-teacher">
-                  <u-icon name="account" color="var(--dy-sub)" size="14"></u-icon>
+                  <u-icon name="account" color="#857563" size="14"></u-icon>
                   <text class="teacher-name">{{ cc.teacher }}</text>
                 </view>
                 <view class="course-stats">
@@ -124,7 +124,7 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .course-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 
 .course-body {
@@ -136,7 +136,7 @@ onMounted(async () => {
 /* 左侧分类 */
 .cate-side {
   width: 168rpx;
-  background: var(--dy-soft);
+  background: #faf3e9;
   border-right: 2rpx solid rgba(140, 90, 43, 0.35);
   box-shadow: 1rpx 0 0 rgba(140, 90, 43, 0.12) inset;
   flex-shrink: 0;
@@ -149,7 +149,7 @@ onMounted(async () => {
   justify-content: center;
 }
 .cate-item.active {
-  background: var(--dy-card);
+  background: #fefbf6;
 }
 .cate-indicator {
   position: absolute;
@@ -163,7 +163,7 @@ onMounted(async () => {
 }
 .cate-name {
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .cate-item.active .cate-name {
   color: #8c5a2b;
@@ -173,7 +173,7 @@ onMounted(async () => {
 /* 右侧课程 */
 .course-side {
   flex: 1;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .course-section {
   padding: 24rpx;
@@ -191,14 +191,14 @@ onMounted(async () => {
 .section-sub {
   margin-left: auto;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 .course-card {
   display: flex;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   overflow: hidden;
   margin-bottom: 20rpx;
 }
@@ -219,7 +219,7 @@ onMounted(async () => {
   padding: 4rpx 16rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .lv-入门 { background: #6e7f5a; }
 .lv-进阶 { background: #8c5a2b; }
@@ -235,7 +235,7 @@ onMounted(async () => {
 .course-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
   line-height: 1.6;
   word-break: break-all;
 }
@@ -247,14 +247,14 @@ onMounted(async () => {
 .teacher-name {
   margin-left: 8rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .course-stats {
   display: flex;
   align-items: center;
   margin-top: 8rpx;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .stat-dot {
   margin: 0 8rpx;
@@ -273,7 +273,7 @@ onMounted(async () => {
 }
 .course-otprice {
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   text-decoration: line-through;
   margin-left: 10rpx;
   margin-right: auto;
@@ -284,7 +284,7 @@ onMounted(async () => {
 }
 .course-bottom {
   text-align: center;
-  color: var(--dy-faint);
+  color: #b3a595;
   font-size: 22rpx;
   padding: 30rpx 0 40rpx;
   letter-spacing: 2rpx;

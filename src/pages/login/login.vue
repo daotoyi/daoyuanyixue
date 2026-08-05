@@ -181,7 +181,7 @@ async function submit() {
 <style lang="scss" scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #4e3420 0%, #6e4a26 40%, var(--dy-page) 100%);
+  background: linear-gradient(180deg, #4e3420 0%, #6e4a26 40%, #f8f3ea 100%);
   padding: 60rpx 40rpx 80rpx;
 }
 
@@ -209,7 +209,7 @@ async function submit() {
 .brand-name {
   font-size: 44rpx;
   letter-spacing: 10rpx;
-  color: var(--dy-sub);
+  color: #857563;
   font-weight: 500;
 }
 .brand-slogan {
@@ -220,7 +220,7 @@ async function submit() {
 }
 
 .form-card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 24rpx;
   padding: 40rpx 36rpx;
   box-shadow: 0 8rpx 40rpx rgba(69, 26, 3, 0.15);
@@ -228,14 +228,14 @@ async function submit() {
 .form-tabs {
   display: flex;
   margin-bottom: 40rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .ft {
   flex: 1;
   text-align: center;
   padding-bottom: 20rpx;
   font-size: 30rpx;
-  color: var(--dy-sub);
+  color: #857563;
   position: relative;
 }
 .ft.on {
@@ -260,16 +260,16 @@ async function submit() {
 .field-label {
   display: block;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 12rpx;
 }
 .field-input {
   height: 88rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 14rpx;
   padding: 0 26rpx;
   font-size: 28rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 
 .err-text {
@@ -281,21 +281,21 @@ async function submit() {
 .demo-tip {
   margin-top: 40rpx;
   padding-top: 30rpx;
-  border-top: 1rpx dashed var(--dy-line);
+  border-top: 1rpx dashed #efe7d8;
 }
 .demo-title {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .demo-row {
   display: flex;
   justify-content: space-between;
   padding: 16rpx 8rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .demo-phone {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .demo-role {
   font-size: 22rpx;
@@ -311,12 +311,12 @@ async function submit() {
 .wx-line {
   flex: 1;
   height: 1rpx;
-  background: var(--dy-line);
+  background: #efe7d8;
 }
 .wx-text {
   margin: 0 20rpx;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .wx-login {
   display: flex;
@@ -324,8 +324,8 @@ async function submit() {
   justify-content: center;
   height: 88rpx;
   border-radius: 999rpx;
-  background: var(--dy-page);
-  border: 1rpx solid var(--dy-line);
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
 }
 .wx-icon {
   font-size: 34rpx;
@@ -333,6 +333,6 @@ async function submit() {
 }
 .wx-name {
   font-size: 28rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 </style>

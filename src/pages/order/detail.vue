@@ -108,7 +108,7 @@ function goShop() {
 <style lang="scss" scoped>
 .od-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding-bottom: 140rpx;
 }
 
@@ -121,11 +121,11 @@ function goShop() {
 .sb-待发货 { background: linear-gradient(135deg, #6e4a26, #8c5a2b); }
 .sb-待收货 { background: linear-gradient(135deg, #7a5610, #ba7517); }
 .sb-已完成 { background: linear-gradient(135deg, #3d4a26, #6e7f5a); }
-.sb-已退款 { background: linear-gradient(135deg, #5a5144, var(--dy-sub)); }
+.sb-已退款 { background: linear-gradient(135deg, #5a5144, #857563); }
 .sb-status {
   font-size: 44rpx;
   font-weight: 500;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .sb-tip {
   margin-top: 12rpx;
@@ -134,34 +134,34 @@ function goShop() {
 }
 
 .card {
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 24rpx;
   margin: 0 24rpx 20rpx;
 }
 .card-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
   margin-bottom: 16rpx;
 }
 
 .addr-name {
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .addr-phone {
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-left: 16rpx;
 }
 .addr-detail {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 .oi {
@@ -172,7 +172,7 @@ function goShop() {
   width: 120rpx;
   height: 120rpx;
   border-radius: 12rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .oi-info {
   flex: 1;
@@ -180,7 +180,7 @@ function goShop() {
 }
 .oi-name {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   line-height: 1.4;
 }
 .oi-row {
@@ -195,7 +195,7 @@ function goShop() {
 }
 .oi-qty {
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 .row {
@@ -205,14 +205,14 @@ function goShop() {
 }
 .rk {
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .rv {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .row.total .rk {
-  color: var(--dy-text);
+  color: #42372c;
   font-weight: 500;
 }
 .rv.red {
@@ -226,8 +226,8 @@ function goShop() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--dy-card);
-  border-top: 1rpx solid var(--dy-line);
+  background: #fefbf6;
+  border-top: 1rpx solid #efe7d8;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   display: flex;
@@ -246,7 +246,7 @@ function goShop() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 2rpx;
 }
 .btn-pay {

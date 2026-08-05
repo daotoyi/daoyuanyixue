@@ -28,7 +28,7 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
 <style lang="scss" scoped>
 .about-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #4e3420 0%, #4e3420 380rpx, var(--dy-page) 380rpx);
+  background: linear-gradient(180deg, #4e3420 0%, #4e3420 380rpx, #f8f3ea 380rpx);
 }
 .about-head {
   display: flex;
@@ -61,7 +61,7 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
   font-size: 40rpx;
   font-weight: 500;
   letter-spacing: 8rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .about-slogan {
   margin-top: 14rpx;
@@ -80,15 +80,15 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
 
 .about-info {
   margin: 0 24rpx;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   overflow: hidden;
 }
 .info-row {
   display: flex;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .info-row:last-child {
   border-bottom: none;
@@ -96,13 +96,13 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
 .info-label {
   width: 170rpx;
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   flex-shrink: 0;
 }
 .info-value {
   flex: 1;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 
 .about-foot {
@@ -111,11 +111,11 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
   align-items: center;
   margin-top: 60rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .foot-sub {
   margin-top: 10rpx;
   font-size: 20rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 </style>

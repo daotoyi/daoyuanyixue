@@ -396,7 +396,7 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .user-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding-bottom: 60rpx;
 }
 
@@ -428,7 +428,7 @@ onMounted(async () => {
 }
 .setting-icon {
   font-size: 34rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .msg-entry {
   position: absolute;
@@ -482,7 +482,7 @@ onMounted(async () => {
   justify-content: center;
   background: rgba(201, 169, 106, 0.35);
   font-size: 52rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .avatar-edit {
   position: absolute;
@@ -498,7 +498,7 @@ onMounted(async () => {
 }
 .avatar-edit text {
   font-size: 22rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 .user-meta {
   margin-left: 30rpx;
@@ -510,7 +510,7 @@ onMounted(async () => {
 .user-name {
   font-size: 38rpx;
   font-weight: 500;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .vip-badge {
   margin-left: 16rpx;
@@ -519,7 +519,7 @@ onMounted(async () => {
   font-size: 20rpx;
   color: #4e3420;
 }
-.vip-badge.vip-0 { background: var(--dy-sub); }
+.vip-badge.vip-0 { background: #857563; }
 .vip-badge.vip-1 { background: linear-gradient(135deg, #c4a484, #a8884c); }
 .vip-badge.vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
 .vip-badge.vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
@@ -542,9 +542,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin: -30rpx 30rpx 0;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 30rpx 0;
   position: relative;
   z-index: 1;
@@ -563,20 +563,20 @@ onMounted(async () => {
 .asset-label {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .asset-divider {
   width: 1rpx;
   height: 48rpx;
-  background: var(--dy-line);
+  background: #efe7d8;
 }
 
 /* 面板 */
 .panel {
   margin: 24rpx 30rpx 0;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 16rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   overflow: hidden;
 }
 .panel-head {
@@ -584,16 +584,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .panel-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .panel-more {
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 .order-entry {
@@ -613,7 +613,7 @@ onMounted(async () => {
 .entry-label {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .entry-badge {
   position: absolute;
@@ -624,7 +624,7 @@ onMounted(async () => {
   padding: 0 8rpx;
   border-radius: 999rpx;
   background: #b04a45;
-  color: var(--dy-card);
+  color: #fefbf6;
   font-size: 18rpx;
   display: flex;
   align-items: center;
@@ -642,7 +642,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 30rpx 0;
-  border-bottom: 1rpx solid var(--dy-line);
+  border-bottom: 1rpx solid #efe7d8;
 }
 .menu-item:last-child {
   border-bottom: none;
@@ -654,11 +654,11 @@ onMounted(async () => {
 .menu-label {
   flex: 1;
   font-size: 28rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .menu-arrow {
   font-size: 36rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 
 .logout {
@@ -666,7 +666,7 @@ onMounted(async () => {
 }
 .version {
   text-align: center;
-  color: var(--dy-faint);
+  color: #b3a595;
   font-size: 22rpx;
   padding: 40rpx 0 0;
 }
@@ -679,7 +679,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
   margin-bottom: 24rpx;
 }
 .pf-avatar-row {
@@ -694,14 +694,14 @@ onMounted(async () => {
   height: 120rpx;
   border-radius: 50%;
   border: 3rpx solid #8c5a2b;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .pf-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 60rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 .pf-pick {
   padding: 16rpx 30rpx;
@@ -710,7 +710,7 @@ onMounted(async () => {
 }
 .pf-pick text {
   font-size: 24rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
 }
 /* 弹窗实心按钮 */
 .btn-fill {
@@ -723,7 +723,7 @@ onMounted(async () => {
 }
 .btn-fill text {
   font-size: 26rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 2rpx;
 }
 .btn-save {
@@ -743,17 +743,17 @@ onMounted(async () => {
 .f-label {
   width: 140rpx;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 76rpx;
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .sheet-actions {
   display: flex;
@@ -776,11 +776,11 @@ onMounted(async () => {
 .invite-tip {
   display: block;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
   margin-bottom: 20rpx;
 }
 .invite-link {
-  background: var(--dy-page);
+  background: #f8f3ea;
   border-radius: 12rpx;
   padding: 20rpx;
   font-size: 22rpx;

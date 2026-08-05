@@ -143,7 +143,7 @@ function buyNow() {
 <style lang="scss" scoped>
 .detail-page {
   min-height: 100vh;
-  background: var(--dy-page);
+  background: #f8f3ea;
   padding-bottom: 140rpx;
 }
 
@@ -171,9 +171,9 @@ function buyNow() {
 
 .info-card {
   margin: -24rpx 24rpx 0;
-  background: var(--dy-card);
+  background: #fefbf6;
   border-radius: 20rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   padding: 30rpx;
   position: relative;
 }
@@ -188,34 +188,34 @@ function buyNow() {
 }
 .otprice {
   font-size: 24rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
   text-decoration: line-through;
   margin-left: 14rpx;
 }
 .sales {
   margin-left: auto;
   font-size: 22rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .p-name {
   display: block;
   margin-top: 16rpx;
   font-size: 34rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .p-desc {
   display: block;
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: var(--dy-sub);
+  color: #857563;
   line-height: 1.6;
 }
 
 .attrs {
   margin-top: 24rpx;
-  background: var(--dy-page);
-  border: 1rpx solid var(--dy-line);
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
   border-radius: 16rpx;
   padding: 20rpx 24rpx;
 }
@@ -226,12 +226,12 @@ function buyNow() {
 .attr-key {
   width: 140rpx;
   font-size: 24rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .attr-val {
   flex: 1;
   font-size: 24rpx;
-  color: var(--dy-text);
+  color: #42372c;
 }
 
 /* 购买数量 (板块化) */
@@ -240,20 +240,20 @@ function buyNow() {
   align-items: center;
   margin-top: 24rpx;
   padding: 24rpx;
-  background: var(--dy-page);
-  border: 1rpx solid var(--dy-line);
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
   border-radius: 16rpx;
 }
 .qty-label {
   font-size: 26rpx;
-  color: var(--dy-text);
+  color: #42372c;
   font-weight: 500;
 }
 .qty-ctrl {
   display: flex;
   align-items: center;
   margin-left: 30rpx;
-  border: 1rpx solid var(--dy-line);
+  border: 1rpx solid #efe7d8;
   border-radius: 999rpx;
   overflow: hidden;
 }
@@ -263,7 +263,7 @@ function buyNow() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--dy-page);
+  background: #f8f3ea;
 }
 .qty-btn text {
   font-size: 30rpx;
@@ -277,12 +277,12 @@ function buyNow() {
   text-align: center;
   font-size: 28rpx;
   font-weight: 500;
-  color: var(--dy-text);
+  color: #42372c;
 }
 .qty-stock {
   margin-left: 24rpx;
   font-size: 22rpx;
-  color: var(--dy-faint);
+  color: #b3a595;
 }
 
 /* 饱满红心 (CSS 绘制) */
@@ -296,7 +296,7 @@ function buyNow() {
 .heart {
   width: 34rpx;
   height: 34rpx;
-  background: var(--dy-sub);
+  background: #857563;
   transform: rotate(45deg);
   position: relative;
   border-radius: 5rpx;
@@ -344,8 +344,8 @@ function buyNow() {
   bottom: 0;
   display: flex;
   align-items: center;
-  background: var(--dy-card);
-  border-top: 2rpx solid var(--dy-line);
+  background: #fefbf6;
+  border-top: 2rpx solid #efe7d8;
   box-shadow: 0 -6rpx 20rpx rgba(78, 52, 32, 0.08);
   padding: 20rpx 24rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
@@ -359,14 +359,14 @@ function buyNow() {
 }
 .collect-icon {
   font-size: 40rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .collect-icon.on {
   color: #b04a45;
 }
 .collect-label {
   font-size: 20rpx;
-  color: var(--dy-sub);
+  color: #857563;
 }
 .act-btns {
   flex: 1;
@@ -385,7 +385,7 @@ function buyNow() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: var(--dy-card);
+  color: #fefbf6;
   letter-spacing: 2rpx;
 }
 .btn-cart {
