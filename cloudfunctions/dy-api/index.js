@@ -509,6 +509,55 @@ async function aiJiepan(data) {
   }
 }
 
+/* AI 智能问答: 每次提问从余额扣 1 元, 调 DeepSeek 回答 */
+async function aiAsk(data) {
+  const { uid, question, context } = data
+  if (!uid) return fail('请先登录')
+  const q = String(question || '').trim()
+  if (!q) return fail('请输入问题')
+  // 余额校验 + 扣款 (1 元/次)
+  try {
+    const u = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
+    const user = u.data[0]
+    const bal = Number(user && user.balance) || 0
+    if (bal < 1) return fail('余额不足，AI 提问每次需 1 元，请先充值')
+    const newBal = Math.round((bal - 1) * 100) / 100
+    await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
+    // 记录提问流水
+    try {
+      await db.collection('ai_asks').add({
+        uid: Number(uid), question: q, cost: 1, created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+    } catch (e) { /* 集合不存在则忽略 */ }
+  } catch (e) {
+    return fail('扣款失败：' + (e.message || '网络错误'))
+  }
+  // DeepSeek 回答
+  let key = process.env.DEEPSEEK_KEY
+  if (!key) {
+    try { key = require('./config.local.js').DEEPSEEK_KEY } catch (e) { key = null }
+  }
+  if (!key) return fail('AI 服务未配置（需设置 DEEPSEEK_KEY）')
+  const ctx = context ? `（当前排盘上下文：${context}）` : ''
+  try {
+    const res = await httpGetJson('https://api.deepseek.com/chat/completions', { key }, {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是"道元易学"平台的资深玄学命理顾问，精通八字、奇门遁甲等传统文化，回答专业、客观、亲切，尊重传统文化同时提醒用户理性看待，不做迷信恐吓。回答控制在400字内，可分段。' },
+        { role: 'user', content: `问题：${q}${ctx}` },
+      ],
+      temperature: 0.8,
+      max_tokens: 800,
+    })
+    const text = res && res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content
+    if (!text) return fail('AI 回答失败：' + ((res && res.error && res.error.message) || '未知错误'))
+    const paras = text.split(/\n+/).map((s) => s.trim()).filter(Boolean)
+    return ok({ content: paras })
+  } catch (e) {
+    return fail('AI 回答失败：' + (e.message || '网络错误'))
+  }
+}
+
 async function wechatLogin(data) {
   // 微信一键登录 (小程序): 需在环境变量配置 WX_APPID / WX_SECRET
   const { code, nickname, avatar } = data
@@ -1126,6 +1175,7 @@ const ROUTES = {
   'user.messages.read': markMessagesRead,
   'user.vip': vipLevel,
   'ai.jiepan': aiJiepan,
+  'ai.ask': aiAsk,
   'admin.feedbacks.list': adminFeedbacks,
   'admin.feedbacks.reply': adminFeedbackReply,
   'admin.feedbacks.delete': adminFeedbackDelete,

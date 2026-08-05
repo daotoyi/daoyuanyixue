@@ -96,14 +96,15 @@
         </view>
       </scroll-view>
 
-      <!-- 神煞 单独板块 (含联动列, 与四柱表同步滚动) -->
+      <!-- 神煞 单独板块 (含联动列, 与四柱表同步滚动, 每煞一行) -->
       <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll" :scroll-left="gridLeft">
         <view class="pp-block pp-tbl">
           <view class="pp-meta-grid">
           <view class="pp-row">
             <view class="pp-cell pp-label">神煞</view>
             <view class="pp-cell pp-ss-list" v-for="(c, i) in columns" :key="'ss' + i">
-              <text>{{ c.shensha && c.shensha.length ? c.shensha.join(' ') : '—' }}</text>
+              <text class="pp-ss-item" v-for="(s, si) in (c.shensha || [])" :key="si">{{ s }}</text>
+              <text v-if="!c.shensha || !c.shensha.length">—</text>
             </view>
           </view>
         </view>
@@ -335,6 +336,23 @@
           </view>
         </view>
       </view>
+
+      <!-- 八字: 保存排盘 (与奇门同款填充按钮) -->
+      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
+
+      <!-- AI 智能问答 (¥1/次) -->
+      <view class="pp-block jp-section">
+        <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+        <view class="ai-q-row">
+          <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个盘什么时候事业运好转）" placeholder-class="qm-c-ph" />
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 ¥1</text></view>
+        </view>
+        <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
+        <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
+          <text class="jp-para" v-for="(t, i) in aiAnswer" :key="i">{{ t }}</text>
+        </view>
+        <view class="ai-q-tip" v-if="aiAskErr">{{ aiAskErr }}</view>
+      </view>
     </view>
 
     <!-- ===== 奇门遁甲 ===== -->
@@ -357,15 +375,28 @@
         </view>
       </view>
 
-      <!-- 元信息: 排盘方式/起局方式/四柱空亡/旬首/局数/值符/值使/马星 -->
+      <!-- 元信息: 排盘方式/起局方式 + 四柱(4列2行) + 空亡/旬首 + 局数/值符/值使/马星(2行4列) -->
       <view class="qm-meta">
         <view class="qm-meta-row"><text class="qm-mk">方式</text><text class="qm-mv">{{ qmPaiPanText }} · {{ qmQiJuText }}</text></view>
-        <view class="qm-meta-row"><text class="qm-mk">四柱</text><text class="qm-mv">{{ data.bazi.ganZhi.join(' ') }}　空亡 {{ data.bazi.kongwang }}</text></view>
+        <view class="qm-meta-row">
+          <text class="qm-mk">四柱</text>
+          <view class="qm-sz-grid">
+            <view class="qm-sz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
+              <text class="qm-sz-p">{{ pn }}</text>
+              <text class="qm-sz-gz">{{ data.bazi.ganZhi[pi] || '—' }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="qm-meta-row"><text class="qm-mk">空亡</text><text class="qm-mv">{{ data.bazi.kongwang }}</text></view>
         <view class="qm-meta-row"><text class="qm-mk">旬首</text><text class="qm-mv">{{ data.qimen.xunName }}{{ data.qimen.xunShouQi }} · 落{{ data.qimen.xunShouGong }}宫</text></view>
-        <view class="qm-meta-row"><text class="qm-mk">局数</text><text class="qm-mv">{{ data.qimen.ju }}</text></view>
-        <view class="qm-meta-row"><text class="qm-mk">值符</text><text class="qm-mv">{{ data.qimen.zhiFu }}</text></view>
-        <view class="qm-meta-row"><text class="qm-mk">值使</text><text class="qm-mv">{{ data.qimen.zhiShi }}</text></view>
-        <view class="qm-meta-row"><text class="qm-mk">马星</text><text class="qm-mv">驿马在{{ data.qimen.maZhi }}</text></view>
+        <view class="qm-key-grid">
+          <view class="qm-key-row">
+            <text class="qm-key-label">局数</text><text class="qm-key-label">值符</text><text class="qm-key-label">值使</text><text class="qm-key-label">马星</text>
+          </view>
+          <view class="qm-key-row">
+            <text class="qm-key-val">{{ data.qimen.ju }}</text><text class="qm-key-val">{{ data.qimen.zhiFu }}</text><text class="qm-key-val">{{ data.qimen.zhiShi }}</text><text class="qm-key-val">驿马{{ data.qimen.maZhi }}</text>
+          </view>
+        </view>
       </view>
 
       <!-- 开关按钮: 地盘八神 / 长生状态 (填充色) -->
@@ -374,17 +405,17 @@
         <view class="qm-toggle" :class="{ on: showChangSheng }" @tap="showChangSheng = !showChangSheng"><text>长生状态</text></view>
       </view>
 
-      <!-- 九宫盘 -->
+      <!-- 九宫盘 (八神左上/长生右上/天盘地支居中/门左下/星右下/格局底部) -->
       <view class="qm-grid">
         <view class="qm-cell" v-for="p in data.qimen.palaces" :key="p.gong">
           <view class="qm-gong">{{ p.name }}</view>
-          <view class="qm-palace">{{ p.palace }}{{ p.element }}</view>
           <view class="qm-shen" v-if="p.shen">{{ showDiShen ? (p.diShen || '') : p.shen }}</view>
+          <view class="qm-chs" v-if="showChangSheng && p.changSheng">{{ p.changSheng }}</view>
+          <view class="qm-palace">{{ p.palace }}{{ p.element }}</view>
           <view class="qm-tian-di">
             <text class="qm-tian" :class="'wx-' + qmWxOf(p.tian)">{{ p.tian || '—' }}</text>
             <text class="qm-di" :class="'wx-' + qmWxOf(p.di)">{{ p.di || '—' }}</text>
           </view>
-          <view class="qm-chs" v-if="showChangSheng && p.changSheng">{{ p.changSheng }}</view>
           <view class="qm-door">{{ p.door || (p.gong === 5 ? '寄坤' : '—') }}</view>
           <view class="qm-star">{{ p.star || '' }}</view>
           <view class="qm-ge" v-if="p.ge && p.ge.length">
@@ -442,7 +473,21 @@
       </view>
 
       <!-- 保存排盘 (填充色按钮) -->
-      <view class="qm-save" @tap="saveQimen"><text>💾 保存此盘</text></view>
+      <view class="qm-save" @tap="saveDisk"><text>💾 保存此盘</text></view>
+
+      <!-- AI 智能问答 (¥1/次) -->
+      <view class="pp-block jp-section">
+        <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+        <view class="ai-q-row">
+          <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个盘最近适合出行吗）" placeholder-class="qm-c-ph" />
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 ¥1</text></view>
+        </view>
+        <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
+        <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
+          <text class="jp-para" v-for="(t, i) in aiAnswer" :key="i">{{ t }}</text>
+        </view>
+        <view class="ai-q-tip" v-if="aiAskErr">{{ aiAskErr }}</view>
+      </view>
       <view class="pp-tip">※ 起局/排盘为简化近似推算，仅供学习参考</view>
     </view>
 
@@ -469,7 +514,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../../utils/paipan'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
-import { aiJiepan } from '../../api/api'
+import { aiJiepan, aiAsk } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -598,20 +643,29 @@ function payQmJiepan() {
     },
   })
 }
-/* 保存奇门盘到历史 */
-function saveQimen() {
+/* 保存当前盘到历史 (八字/奇门通用) */
+function saveDisk() {
   try {
+    const isQm = tab.value === 'qimen'
     let list = uni.getStorageSync(HISTORY_KEY) || []
     if (!Array.isArray(list)) list = []
     const now = new Date()
     const p = (n) => String(n).padStart(2, '0')
-    const rec = {
-      ts: Date.now(),
-      time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
-      label: `奇门 ${data.value.qimen.ju} · ${data.value.qimen.paiPan === 'feipan' ? '飞盘' : '转盘'}${qmContent.value ? ' · ' + qmContent.value : ''}`,
-      gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
-      data: data.value,
-    }
+    const rec = isQm
+      ? {
+          ts: Date.now(),
+          time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+          label: `奇门 ${data.value.qimen.ju} · ${data.value.qimen.paiPan === 'feipan' ? '飞盘' : '转盘'}${qmContent.value ? ' · ' + qmContent.value : ''}`,
+          gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
+          data: data.value,
+        }
+      : {
+          ts: Date.now(),
+          time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+          label: `八字 ${data.value.bazi.ganZhi.join(' ')}`,
+          gzText: data.value.bazi.ganZhi.join(' '),
+          data: data.value,
+        }
     list.unshift(rec)
     if (list.length > 20) list = list.slice(0, 20)
     uni.setStorageSync(HISTORY_KEY, list)
@@ -619,6 +673,56 @@ function saveQimen() {
   } catch (e) {
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
+}
+
+/* AI 智能问答 (¥1/次, 从余额扣款) */
+const aiQuestion = ref('')
+const aiAnswer = ref([])
+const aiAsking = ref(false)
+const aiAskErr = ref('')
+function askAI() {
+  const q = aiQuestion.value.trim()
+  if (!q) {
+    uni.showToast({ title: '请输入问题', icon: 'none' })
+    return
+  }
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: 'AI 智能问答',
+    content: '本次提问将从余额扣除 1 元，是否继续？',
+    confirmText: '确认提问',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      aiAsking.value = true
+      aiAskErr.value = ''
+      const isQm = tab.value === 'qimen'
+      // 附带当前盘摘要作为上下文
+      let context = ''
+      if (isQm) {
+        context = `奇门盘：${data.value.qimen.ju}，旬首${data.value.qimen.xunName}${data.value.qimen.xunShouQi}，空亡${data.value.qimen.xunKong}，值符${data.value.qimen.zhiFu}，值使${data.value.qimen.zhiShi}，马星${data.value.qimen.maZhi}，四柱${data.value.bazi.ganZhi.join(' ')}`
+      } else {
+        context = `八字：${data.value.bazi.ganZhi.join(' ')}，日主${data.value.bazi.dayGanName}，空亡${data.value.bazi.kongwang}`
+      }
+      aiAsk({ uid: userStore.userInfo.uid, question: q, context })
+        .then((res2) => {
+          if (res2 && res2.content && res2.content.length) {
+            aiAnswer.value = res2.content
+          } else if (res2 && res2.msg) {
+            aiAskErr.value = res2.msg
+          } else {
+            aiAnswer.value = ['AI 暂时没有回答，请稍后再试']
+          }
+        })
+        .catch((e) => {
+          aiAskErr.value = (e && e.message) || '提问失败，请稍后再试'
+        })
+        .finally(() => { aiAsking.value = false })
+    },
+  })
 }
 
 /* 四柱表横向滑动位置 (下方 藏干/纳音/长生/空亡/神煞 表格同步) */
@@ -1140,6 +1244,7 @@ function payJiepan() {
 .pp-mv { font-size: 22rpx; color: #42372c; }
 .pp-kw-on { color: #b04a45; font-weight: 600; }
 .pp-ss-list { font-size: 20rpx; color: #8c5a2b; line-height: 1.6; }
+.pp-ss-item { display: block; white-space: nowrap; }
 
 /* 五行 */
 .pp-wx { display: flex; align-items: center; margin-bottom: 10rpx; }
@@ -1268,6 +1373,46 @@ function payJiepan() {
 .qm-meta-row { display: flex; padding: 6rpx 0; }
 .qm-mk { width: 110rpx; font-size: 22rpx; color: #857563; flex-shrink: 0; }
 .qm-mv { flex: 1; font-size: 24rpx; color: #42372c; font-weight: 500; }
+/* 四柱 4列2行 */
+.qm-sz-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6rpx; }
+.qm-sz-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f3ea;
+  border-radius: 8rpx;
+  padding: 8rpx 4rpx;
+  border: 1rpx solid #efe7d8;
+}
+.qm-sz-p { font-size: 18rpx; color: #b3a595; }
+.qm-sz-gz { margin-top: 4rpx; font-size: 26rpx; font-weight: 600; color: #8c5a2b; }
+/* 局数/值符/值使/马星 2行4列 */
+.qm-key-grid {
+  margin-top: 8rpx;
+  border: 1rpx solid #e6dcca;
+  border-radius: 10rpx;
+  overflow: hidden;
+}
+.qm-key-row { display: flex; }
+.qm-key-row + .qm-key-row { border-top: 1rpx solid #e6dcca; }
+.qm-key-label {
+  flex: 1;
+  text-align: center;
+  font-size: 20rpx;
+  color: #857563;
+  background: #faf3e9;
+  padding: 8rpx 0;
+}
+.qm-key-val {
+  flex: 1;
+  text-align: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #42372c;
+  padding: 8rpx 0;
+}
+.qm-key-label + .qm-key-label { border-left: 1rpx solid #e6dcca; }
+.qm-key-val + .qm-key-val { border-left: 1rpx solid #e6dcca; }
 /* 开关按钮 (填充色) */
 .qm-toggles { display: flex; gap: 14rpx; margin-bottom: 16rpx; }
 .qm-toggle {
@@ -1283,7 +1428,7 @@ function payJiepan() {
 .qm-toggle text { font-size: 24rpx; color: #857563; }
 .qm-toggle.on { background: linear-gradient(135deg, #8c5a2b, #6e4a26); border-color: #8c5a2b; }
 .qm-toggle.on text { color: #fefbf6; font-weight: 500; }
-/* 九宫盘 */
+/* 九宫盘 (元素分布: 宫名顶中/八神左上/长生右上/宫位中上/天盘地支居中/门左下/星右下/格局底部) */
 .qm-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1297,25 +1442,86 @@ function payJiepan() {
   background: #f8f3ea;
   border: 1rpx solid #e6dcca;
   border-radius: 10rpx;
-  padding: 10rpx 6rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 200rpx;
+  min-height: 210rpx;
   position: relative;
+  padding: 6rpx;
 }
-.qm-gong { font-size: 18rpx; color: #b3a595; }
-.qm-palace { font-size: 24rpx; font-weight: 600; color: #4e3420; margin-top: 2rpx; }
-.qm-shen { margin-top: 2rpx; font-size: 20rpx; color: #6e7f5a; font-weight: 500; }
-.qm-tian-di { display: flex; gap: 10rpx; margin-top: 6rpx; }
-.qm-tian { font-size: 34rpx; font-weight: 700; }
+.qm-gong {
+  position: absolute;
+  top: 6rpx;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 18rpx;
+  color: #b3a595;
+}
+.qm-shen {
+  position: absolute;
+  top: 6rpx;
+  left: 8rpx;
+  font-size: 19rpx;
+  color: #6e7f5a;
+  font-weight: 500;
+  z-index: 2;
+}
+.qm-chs {
+  position: absolute;
+  top: 6rpx;
+  right: 8rpx;
+  font-size: 17rpx;
+  color: #8c5a2b;
+  z-index: 2;
+}
+.qm-palace {
+  position: absolute;
+  top: 44rpx;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #4e3420;
+}
+.qm-tian-di {
+  position: absolute;
+  top: 74rpx;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10rpx;
+  z-index: 1;
+}
+.qm-tian { font-size: 36rpx; font-weight: 700; }
 .qm-di { font-size: 26rpx; font-weight: 500; opacity: 0.75; }
-.qm-chs { margin-top: 2rpx; font-size: 17rpx; color: #8c5a2b; }
-.qm-door { margin-top: 4rpx; font-size: 22rpx; color: #b04a45; font-weight: 500; }
-.qm-star { font-size: 18rpx; color: #857563; margin-top: 2rpx; }
+.qm-door {
+  position: absolute;
+  bottom: 36rpx;
+  left: 8rpx;
+  font-size: 22rpx;
+  color: #b04a45;
+  font-weight: 500;
+}
+.qm-star {
+  position: absolute;
+  bottom: 36rpx;
+  right: 8rpx;
+  font-size: 18rpx;
+  color: #857563;
+}
 /* 格局标注 (颜色) */
-.qm-ge { display: flex; flex-wrap: wrap; justify-content: center; gap: 4rpx; margin-top: 6rpx; }
-.qm-ge text { font-size: 17rpx; padding: 1rpx 8rpx; border-radius: 6rpx; color: #fefbf6; }
+.qm-ge {
+  position: absolute;
+  bottom: 6rpx;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4rpx;
+  z-index: 2;
+}
+.qm-ge text { font-size: 16rpx; padding: 1rpx 8rpx; border-radius: 6rpx; color: #fefbf6; }
 .ge-red { background: #b04a45; }
 .ge-orange { background: #d98e32; }
 .ge-purple { background: #7a5c9e; }
@@ -1350,6 +1556,33 @@ function payJiepan() {
   margin-top: 20rpx;
 }
 .qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
+/* AI 智能问答 */
+.ai-q-row { display: flex; gap: 14rpx; align-items: center; }
+.ai-q-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #e6dcca;
+  border-radius: 12rpx;
+  padding: 0 18rpx;
+  font-size: 24rpx;
+  color: #42372c;
+}
+.btn-ask {
+  flex-shrink: 0;
+  height: 72rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  padding: 0 28rpx;
+}
+.btn-ask text { font-size: 24rpx; color: #fefbf6; font-weight: 500; }
+.ai-q-answer {
+  margin-top: 14rpx;
+  background: #faf3e9;
+  border-radius: 10rpx;
+  padding: 16rpx 18rpx;
+}
+.ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #b04a45; }
 
 /* 紫微 */
 .zw-grid {
