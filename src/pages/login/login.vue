@@ -3,6 +3,7 @@
     <!-- 品牌区 -->
     <view class="brand">
       <view class="brand-seal"><text class="seal-char">道</text></view>
+      <text class="brand-sub">眞和盛</text>
       <text class="brand-name">道元易学</text>
       <text class="brand-slogan">观天道 · 明人事 · 致中和</text>
     </view>
@@ -205,6 +206,13 @@ async function submit() {
 .seal-char {
   font-size: 68rpx;
   color: #c4a484;
+}
+.brand-sub {
+  font-size: 30rpx;
+  letter-spacing: 8rpx;
+  color: #8c5a2b;
+  font-weight: 500;
+  margin-bottom: 8rpx;
 }
 .brand-name {
   font-size: 44rpx;

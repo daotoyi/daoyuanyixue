@@ -551,7 +551,7 @@ export function baziFromGanZhi(yg, yz, mg, mz, dg, dz, hg, hz, gender) {
     })
   }
   return {
-    pillars, dayGanName: GAN[dayGan], wxCount, kongwang: kongNames,
+    pillars: full, dayGanName: GAN[dayGan], wxCount, kongwang: kongNames,
     dayun, gender: gender || '男',
     dayunDir: forward ? '顺排' : '逆排',
     qiYun: `${qiYun}岁起运`,

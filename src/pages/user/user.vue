@@ -786,6 +786,16 @@ onMounted(async () => {
   font-size: 22rpx;
   color: #8c5a2b;
   word-break: break-all;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   margin-bottom: 10rpx;
+}
+.invite-link-text {
+  display: block;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  width: 100%;
 }
 </style>

@@ -71,17 +71,27 @@
           </view>
         </template>
 
-        <!-- 四柱输入: 四柱一排 + 60甲子转盘 -->
+        <!-- 四柱输入: 四柱一排 + 手动输入 + 右侧下拉轮盘 -->
         <template v-else>
           <view class="tp-gz-grid">
             <view class="tp-gz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
               <text class="tp-gz-label">{{ pn }}</text>
-              <picker mode="selector" :range="jiaziLabels" @change="(e) => (form.bazi.gz[pi] = Number(e.detail.value))">
-                <view class="tp-picker tp-gz-picker" :class="'wx-' + GAN_WX[(form.bazi.gz[pi]) % 10]">{{ jiaziLabels[form.bazi.gz[pi]] }}</view>
-              </picker>
+              <view class="tp-gz-input-row">
+                <input
+                  class="tp-gz-input"
+                  :value="gzText[pi]"
+                  maxlength="2"
+                  placeholder="甲子"
+                  placeholder-class="tp-gz-ph"
+                  @input="onGzInput(pi, $event)"
+                />
+                <picker mode="selector" :range="jiaziLabels" @change="(e) => onGzPick(pi, e)">
+                  <view class="tp-gz-drop"><text>▾</text></view>
+                </picker>
+              </view>
             </view>
           </view>
-          <view class="tp-tip">四柱输入模式下，大运起运岁数为近似估算</view>
+          <view class="tp-tip">可点击文字手动输入干支，或点右侧下拉滚动选择</view>
         </template>
 
         <view class="tp-row">
@@ -206,6 +216,27 @@ const lunarMonthLabels = (() => {
   return arr
 })()
 const jiaziLabels = Array.from({ length: 60 }, (_, i) => GAN[i % 10] + ZHI[i % 12])
+/* 四柱手动输入文本 (与 form.bazi.gz 同步) */
+const gzText = ref(['甲子', '甲子', '甲子', '甲子'])
+function syncGzText() {
+  gzText.value = form.value.bazi.gz.map((idx) => jiaziLabels[idx] || '甲子')
+}
+function onGzPick(pi, e) {
+  const idx = Number(e.detail.value)
+  form.value.bazi.gz[pi] = idx
+  gzText.value[pi] = jiaziLabels[idx]
+}
+function onGzInput(pi, e) {
+  const txt = (e && e.detail ? e.detail.value : '') || ''
+  const t = String(txt).trim()
+  if (t.length >= 2) {
+    const idx = jiaziLabels.findIndex((l) => l === t)
+    if (idx >= 0) {
+      form.value.bazi.gz[pi] = idx
+      gzText.value[pi] = jiaziLabels[idx]
+    }
+  }
+}
 const provinceNames = PROVINCE_NAMES
 /* 当前选中省的城市列表 */
 const cityNames = computed(() => {
@@ -658,8 +689,9 @@ function runLiuren() {
   text-align: center;
 }
 .tp-pickers-inline.tp-4 .tp-picker {
-  font-size: 20rpx;
-  padding: 0 2rpx;
+  font-size: 22rpx;
+  padding: 10rpx 4rpx;
+  min-width: 0;
 }
 /* 四柱: 一排 4 个转盘 */
 .tp-gz-grid {
@@ -678,9 +710,34 @@ function runLiuren() {
   color: #857563;
   margin-bottom: 8rpx;
 }
-.tp-gz-picker {
+/* 四柱: 手动输入 + 右侧下拉轮盘 */
+.tp-gz-input-row {
+  display: flex;
+  align-items: center;
   width: 100%;
+  border: 1rpx solid #d8ccb8;
+  border-radius: 10rpx;
+  background: #f8f3ea;
+  overflow: hidden;
+}
+.tp-gz-input {
+  flex: 1;
+  height: 60rpx;
+  padding: 0 12rpx;
+  font-size: 28rpx;
   text-align: center;
+  color: #42372c;
+}
+.tp-gz-ph { color: #b3a595; font-size: 26rpx; }
+.tp-gz-drop {
+  width: 52rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5efe3;
+  border-left: 1rpx solid #e6dcca;
+  color: #8c5a2b;
   font-size: 26rpx;
 }
 .tp-seg {
