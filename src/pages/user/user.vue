@@ -119,7 +119,7 @@
       <u-button type="error" text="退出登录" shape="circle" plain @click="onLogout"></u-button>
     </view>
 
-    <view class="version">道元易学 v1.0.0</view>
+    <view class="version">道元易学 {{ APP_FULL_VERSION }}</view>
 
     <!-- 修改资料弹窗 -->
     <u-popup :show="showProfile" mode="bottom" @close="showProfile = false">
@@ -164,6 +164,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '../../store/index'
 import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
+import { APP_FULL_VERSION } from '../../version'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => userStore.isLoggedIn)

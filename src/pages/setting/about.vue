@@ -4,12 +4,12 @@
       <view class="about-seal"><text>易</text></view>
       <text class="about-name">道元易学</text>
       <text class="about-slogan">观天道 · 明人道 · 致中和</text>
-      <text class="about-version">v1.0.0</text>
+      <text class="about-version">{{ APP_FULL_VERSION }}</text>
     </view>
 
     <view class="about-info">
       <view class="info-row"><text class="info-label">关于我们</text><text class="info-value">真和盛文化</text></view>
-      <view class="info-row"><text class="info-label">版本</text><text class="info-value">道元易学 v1.0.0</text></view>
+      <view class="info-row"><text class="info-label">版本</text><text class="info-value">道元易学 {{ APP_FULL_VERSION }}（{{ APP_BUILD_DATE }}）</text></view>
       <view class="info-row"><text class="info-label">理念</text><text class="info-value">融合传统智慧与现代科技</text></view>
     </view>
 
@@ -21,6 +21,7 @@
 </template>
 
 <script setup>
+import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
 </script>
 
 <style lang="scss" scoped>

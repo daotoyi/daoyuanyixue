@@ -9,21 +9,21 @@
       </view>
     </view>
 
-    <!-- 分类 tab (带数量徽标) -->
-    <scroll-view scroll-x class="filter-bar" :show-scrollbar="false">
+    <!-- 分类 tab (紧凑彩色 + 右上角数量) -->
+    <view class="filter-bar">
       <view class="filter-inner">
         <view
           v-for="tab in tabs"
           :key="tab.key"
-          class="filter-pill"
-          :class="['pill-' + tab.key, { active: activeTab === tab.key }]"
+          class="c-tab"
+          :class="['ct-' + tab.key, { active: activeTab === tab.key }]"
           @tap="activeTab = tab.key"
         >
-          <text>{{ tab.label }}</text>
-          <text class="pill-badge" :class="{ on: activeTab === tab.key }">{{ counts[tab.key] || 0 }}</text>
+          <text class="ct-label">{{ tab.label }}</text>
+          <view class="ct-badge"><text>{{ counts[tab.key] || 0 }}</text></view>
         </view>
       </view>
-    </scroll-view>
+    </view>
 
     <!-- 课程列表 -->
     <scroll-view scroll-y class="mc-scroll">
@@ -165,50 +165,75 @@ function goCourse() {
   margin-left: 4rpx;
 }
 
-/* 分类 tab (订单风格) */
+/* 分类 tab: 紧凑小按钮 + 固定彩色 + 右上角数字 */
 .filter-bar {
   background: #fefbf6;
-  white-space: nowrap;
   border-bottom: 1rpx solid #efe7d8;
   flex-shrink: 0;
 }
 .filter-inner {
-  display: inline-flex;
-  padding: 18rpx 24rpx;
-  gap: 16rpx;
+  display: flex;
+  padding: 16rpx 20rpx;
+  gap: 14rpx;
 }
-.filter-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 10rpx 26rpx;
-  border-radius: 999rpx;
-  background: #f8f3ea;
-  font-size: 26rpx;
-  color: #857563;
-  border: 2rpx solid transparent;
-}
-/* 各分类不同颜色填充 (选中时) */
-.pill-purchased.active { background: #8c5a2b; border-color: #8c5a2b; color: #fefbf6; font-weight: 500; }
-.pill-learning.active { background: #b04a45; border-color: #b04a45; color: #fefbf6; font-weight: 500; }
-.pill-done.active { background: #6e7f5a; border-color: #6e7f5a; color: #fefbf6; font-weight: 500; }
-.pill-fav.active { background: #ba7517; border-color: #ba7517; color: #fefbf6; font-weight: 500; }
-.pill-badge {
-  margin-left: 10rpx;
-  min-width: 32rpx;
-  height: 32rpx;
-  padding: 0 8rpx;
-  border-radius: 999rpx;
-  background: #efe7d8;
-  color: #857563;
-  font-size: 20rpx;
-  display: inline-flex;
+.c-tab {
+  position: relative;
+  flex: 1;
+  height: 64rpx;
+  border-radius: 14rpx;
+  display: flex;
   align-items: center;
   justify-content: center;
+  border: 2rpx solid;
 }
-.pill-badge.on {
-  background: rgba(254, 251, 246, 0.25);
+.ct-label {
+  font-size: 20rpx;
+  line-height: 1.3;
+  text-align: center;
+  max-width: 110rpx;
+}
+.ct-badge {
+  position: absolute;
+  right: -6rpx;
+  top: -10rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 6rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid #fefbf6;
+}
+.ct-badge text {
+  font-size: 18rpx;
   color: #fefbf6;
+  font-weight: 500;
 }
+/* 每个按钮固定颜色 */
+.ct-purchased { border-color: #8c5a2b; background: #faf3e9; }
+.ct-purchased .ct-label { color: #8c5a2b; }
+.ct-purchased .ct-badge { background: #8c5a2b; }
+.ct-purchased.active { background: #8c5a2b; }
+.ct-purchased.active .ct-label { color: #fefbf6; }
+
+.ct-learning { border-color: #b04a45; background: #fdf1f0; }
+.ct-learning .ct-label { color: #b04a45; }
+.ct-learning .ct-badge { background: #b04a45; }
+.ct-learning.active { background: #b04a45; }
+.ct-learning.active .ct-label { color: #fefbf6; }
+
+.ct-done { border-color: #6e7f5a; background: #f2f5ec; }
+.ct-done .ct-label { color: #6e7f5a; }
+.ct-done .ct-badge { background: #6e7f5a; }
+.ct-done.active { background: #6e7f5a; }
+.ct-done.active .ct-label { color: #fefbf6; }
+
+.ct-fav { border-color: #ba7517; background: #fdf6e8; }
+.ct-fav .ct-label { color: #ba7517; }
+.ct-fav .ct-badge { background: #ba7517; }
+.ct-fav.active { background: #ba7517; }
+.ct-fav.active .ct-label { color: #fefbf6; }
 
 /* 列表 */
 .mc-scroll {
