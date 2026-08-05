@@ -48,8 +48,9 @@ onHide(() => {
 
 <style lang="scss">
 /* ==================== 道元易学 · 全局样式 ==================== */
-/* ---- 主题 CSS 变量 (浅色默认 / 深色覆盖) ---- */
-page {
+/* ---- 主题 CSS 变量 (浅色默认 / 深色覆盖) ----
+   同时挂 :root 与 page: App 端 WebView 无 page 元素, 必须 :root 兜底 */
+:root {
   --dy-page: #f8f3ea;      /* 页面背景 */
   --dy-card: #fefbf6;      /* 卡片/面板底 */
   --dy-soft: #faf3e9;      /* 通用浅底(选中态/侧栏) */
@@ -58,6 +59,16 @@ page {
   --dy-faint: #b3a595;     /* 浅文字/占位 */
   --dy-line: #efe7d8;      /* 边框/分隔线 */
   --dy-mask: rgba(254, 251, 246, 0.6); /* 遮罩(选中态) */
+}
+page {
+  --dy-page: #f8f3ea;
+  --dy-card: #fefbf6;
+  --dy-soft: #faf3e9;
+  --dy-text: #42372c;
+  --dy-sub: #857563;
+  --dy-faint: #b3a595;
+  --dy-line: #efe7d8;
+  --dy-mask: rgba(254, 251, 246, 0.6);
 
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
     'Hiragino Sans GB', 'STSong', 'SimSun', 'Noto Serif SC', serif;
@@ -67,7 +78,7 @@ page {
 }
 
 /* 深色主题 (跟随系统/手动切换, H5/App) */
-html[data-theme='dark'] page {
+html[data-theme='dark'] {
   --dy-page: #1c1712;      /* 深墨底 */
   --dy-card: #2a231c;      /* 深色卡片 */
   --dy-soft: #342b21;      /* 深色浅底 */
@@ -75,6 +86,16 @@ html[data-theme='dark'] page {
   --dy-sub: #b0a18d;       /* 次级文字 */
   --dy-faint: #7d6f5e;     /* 浅文字 */
   --dy-line: #3b332a;      /* 深边框 */
+  --dy-mask: rgba(42, 35, 28, 0.6);
+}
+html[data-theme='dark'] page {
+  --dy-page: #1c1712;
+  --dy-card: #2a231c;
+  --dy-soft: #342b21;
+  --dy-text: #e9dfcd;
+  --dy-sub: #b0a18d;
+  --dy-faint: #7d6f5e;
+  --dy-line: #3b332a;
   --dy-mask: rgba(42, 35, 28, 0.6);
 
   background-color: #1c1712 !important;
