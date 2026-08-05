@@ -4,7 +4,7 @@
     <view class="brand">
       <view class="brand-seal"><text class="seal-char">道</text></view>
       <text class="brand-name">道元易学</text>
-      <text class="brand-slogan">观天道 · 明人道 · 致中和</text>
+      <text class="brand-slogan">观天道 · 明人事 · 致中和</text>
     </view>
 
     <!-- 表单区 -->

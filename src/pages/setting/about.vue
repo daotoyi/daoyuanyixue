@@ -3,7 +3,7 @@
     <view class="about-head">
       <view class="about-seal"><text>易</text></view>
       <text class="about-name">道元易学</text>
-      <text class="about-slogan">观天道 · 明人道 · 致中和</text>
+      <text class="about-slogan">观天道 · 明人事 · 致中和</text>
       <text class="about-version">{{ APP_FULL_VERSION }}</text>
     </view>
 
