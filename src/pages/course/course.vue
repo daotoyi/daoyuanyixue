@@ -140,6 +140,8 @@ onMounted(async () => {
 .cate-side {
   width: 168rpx;
   background: var(--dy-soft);
+  border-right: 2rpx solid rgba(140, 90, 43, 0.35);
+  box-shadow: 1rpx 0 0 rgba(140, 90, 43, 0.12) inset;
   flex-shrink: 0;
 }
 .cate-item {
