@@ -27,3 +27,11 @@
 
 - CloudBase MCP 通过 mcporter 调用: `npx -y mcporter call cloudbase.<tool> ...`
 - 配置文件: `config/mcporter.json`
+
+## 版本管理 (Git)
+
+- **2026-08-05 建立**: 基线提交 977fb9d (v1.0.0 完整源码, 171 文件)
+- Git 身份: daotoyi / wenhuas.shi@gmail.com
+- **惯例: 每次完成任务后必须 git commit 一个版本点** (git add -A && git commit -m "描述")
+- .gitignore 排除: node_modules / dist / mobile android build / keystore / local.properties
+- 云端备份: 待用户提供 Gitee/GitHub 仓库地址后推送 (GitHub SSH 不通, 建议 Gitee)
