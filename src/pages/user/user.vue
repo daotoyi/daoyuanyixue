@@ -156,6 +156,18 @@
         </view>
       </view>
     </u-popup>
+
+    <!-- 会员等级说明弹窗 (每行一个等级) -->
+    <u-popup :show="showVipSheet" mode="bottom" @close="showVipSheet = false">
+      <view class="form-sheet">
+        <view class="sheet-title">会员等级说明</view>
+        <text class="vip-tip">等级按累计消费/储值金额自动划分</text>
+        <view class="vip-row" v-for="v in vipLevels" :key="v.level">
+          <view class="vip-badge-lg" :class="'vip-' + v.level"><text>{{ v.label }}</text></view>
+          <text class="vip-range">{{ v.range }}</text>
+        </view>
+      </view>
+    </u-popup>
   </view>
 </template>
 
@@ -176,18 +188,31 @@ const inviteLink = computed(() => `https://zhenhesheng-d6gkez7p221305432-1309518
 // 会员等级: 按累计消费 (储值/购买) 自动划分
 const vipLevel = computed(() => {
   const total = Number(userInfo.value.total_spent || 0)
+  if (total >= 50000) return 6
+  if (total >= 20000) return 5
   if (total >= 10000) return 4
   if (total >= 5000) return 3
   if (total >= 2000) return 2
   if (total > 1000) return 1
   return 0
 })
+/* 等级说明 (每行一个等级) */
+const vipLevels = [
+  { level: 0, label: 'VIP0', range: '累计消费/储值 1000元以下' },
+  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-2000元' },
+  { level: 2, label: 'VIP2', range: '累计消费/储值 2000-5000元' },
+  { level: 3, label: 'VIP3', range: '累计消费/储值 5000-1万元' },
+  { level: 4, label: 'VIP4', range: '累计消费/储值 1万-2万元' },
+  { level: 5, label: 'VIP5', range: '累计消费/储值 2万-5万元' },
+  { level: 6, label: 'VIP6', range: '累计消费/储值 5万元以上' },
+]
 
 const assets = ref({ coupon_count: 0, favorite_count: 0, footprint_count: 0 })
 const courseCounts = ref({ purchased: 0, learning: 0, done: 0, fav: 0 })
 const unreadCount = ref(0)
 const showProfile = ref(false)
 const showInvite = ref(false)
+const showVipSheet = ref(false)
 const uploading = ref(false)
 const profileForm = ref({ nickname: '', avatar: '' })
 
@@ -320,11 +345,7 @@ function goMessages() {
 }
 
 function showVipTip() {
-  uni.showModal({
-    title: '会员等级说明',
-    content: '累计消费/储值：≤1000元 VIP0 · 1000-2000元 VIP1 · 2000-5000元 VIP2 · 5000-1万 VIP3 · 1万元以上 VIP4',
-    showCancel: false,
-  })
+  showVipSheet.value = true
 }
 
 function copyInviteLink() {
@@ -524,6 +545,27 @@ onMounted(async () => {
 .vip-badge.vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
 .vip-badge.vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
 .vip-badge.vip-4 { background: linear-gradient(135deg, #d8b84c, #a8822a); }
+.vip-badge.vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
+.vip-badge.vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
+/* 等级说明弹窗 */
+.vip-tip { display: block; text-align: center; font-size: 20rpx; color: #b3a595; margin-bottom: 20rpx; }
+.vip-row {
+  display: flex;
+  align-items: center;
+  background: #f8f3ea;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 12rpx;
+}
+.vip-badge-lg {
+  width: 110rpx;
+  padding: 6rpx 0;
+  border-radius: 999rpx;
+  text-align: center;
+  flex-shrink: 0;
+}
+.vip-badge-lg text { font-size: 24rpx; font-weight: 600; color: #fefbf6; }
+.vip-range { flex: 1; margin-left: 20rpx; font-size: 24rpx; color: #42372c; }
 .vip-tip {
   margin-left: 14rpx;
   font-size: 20rpx;

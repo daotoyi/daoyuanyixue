@@ -409,7 +409,9 @@ async function vipLevel(data) {
     }
   })
   let level = 0
-  if (total >= 10000) level = 4
+  if (total >= 50000) level = 6
+  else if (total >= 20000) level = 5
+  else if (total >= 10000) level = 4
   else if (total >= 5000) level = 3
   else if (total >= 2000) level = 2
   else if (total > 1000) level = 1
