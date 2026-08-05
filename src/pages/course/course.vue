@@ -265,12 +265,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding-top: 12rpx;
-  padding-right: 6rpx;
+  padding-right: 16rpx;
 }
-/* 查看按钮: 实心 + 不贴边缘 + 文字单行 */
+/* 查看按钮: 实心 + 靠左不贴右边 + 文字单行 */
 .btn-view {
   flex-shrink: 0;
-  margin-left: 14rpx;
+  margin-left: auto;
+  margin-right: 4rpx;
   min-width: 96rpx;
   height: 56rpx;
   padding: 0 24rpx;

@@ -291,7 +291,7 @@ async function submit() {
   display: flex;
   justify-content: space-between;
   padding: 16rpx 8rpx;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .demo-phone {
   font-size: 26rpx;

@@ -1413,7 +1413,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-soft);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .panel-title {
   font-size: 28rpx;
@@ -1428,7 +1428,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 20rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-soft);
+  border-bottom: 1rpx solid var(--dy-line);
   gap: 20rpx;
 }
 .recent-row:last-child {
@@ -1474,7 +1474,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 18rpx 24rpx;
-  border-bottom: 1rpx solid var(--dy-soft);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .tr:last-child {
   border-bottom: none;
@@ -1554,7 +1554,7 @@ onMounted(async () => {
   align-items: baseline;
   margin-bottom: 28rpx;
   padding-bottom: 20rpx;
-  border-bottom: 1rpx solid var(--dy-soft);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .sd-title {
   font-size: 28rpx;
@@ -1588,7 +1588,7 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 30rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid var(--dy-soft);
+  border-top: 1rpx solid var(--dy-line);
 }
 .settings-tip {
   font-size: 20rpx;
@@ -1620,7 +1620,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 24rpx;
-  border-bottom: 1rpx solid var(--dy-soft);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .cate-panel-title {
   font-size: 26rpx;
@@ -1642,7 +1642,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 18rpx 20rpx;
-  border-bottom: 1rpx solid var(--dy-soft);
+  border-bottom: 1rpx solid var(--dy-line);
   gap: 8rpx;
 }
 .cate-row.active {

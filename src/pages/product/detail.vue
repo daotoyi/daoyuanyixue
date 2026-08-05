@@ -214,8 +214,10 @@ function buyNow() {
 
 .attrs {
   margin-top: 24rpx;
-  border-top: 1rpx solid var(--dy-page);
-  padding-top: 20rpx;
+  background: var(--dy-page);
+  border: 1rpx solid var(--dy-line);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
 }
 .attr-row {
   display: flex;
@@ -232,17 +234,20 @@ function buyNow() {
   color: var(--dy-text);
 }
 
-/* 购买数量 */
+/* 购买数量 (板块化) */
 .qty-row {
   display: flex;
   align-items: center;
-  margin-top: 22rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid var(--dy-page);
+  margin-top: 24rpx;
+  padding: 24rpx;
+  background: var(--dy-page);
+  border: 1rpx solid var(--dy-line);
+  border-radius: 16rpx;
 }
 .qty-label {
   font-size: 26rpx;
   color: var(--dy-text);
+  font-weight: 500;
 }
 .qty-ctrl {
   display: flex;
@@ -331,7 +336,7 @@ function buyNow() {
   color: #b04a45;
 }
 
-/* 底部操作栏 */
+/* 底部操作栏 (框效果) */
 .action-bar {
   position: fixed;
   left: 0;
@@ -340,9 +345,10 @@ function buyNow() {
   display: flex;
   align-items: center;
   background: var(--dy-card);
-  border-top: 1rpx solid var(--dy-line);
-  padding: 16rpx 24rpx;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  border-top: 2rpx solid var(--dy-line);
+  box-shadow: 0 -6rpx 20rpx rgba(78, 52, 32, 0.08);
+  padding: 20rpx 24rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   z-index: 10;
 }
 .act-collect {

@@ -203,7 +203,7 @@ function goCourse() {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid var(--dy-card);
+  border: 2rpx solid var(--dy-line);
 }
 .ct-badge text {
   font-size: 18rpx;

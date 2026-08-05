@@ -70,8 +70,10 @@
         <u-empty text="暂无动态" mode="list"></u-empty>
       </view>
 
-      <view class="feed-bottom">
-        <u-button type="primary" text="发布动态" shape="circle" size="small" @click="goPublish"></u-button>
+      <!-- 发布动态: 悬浮右下角 -->
+      <view class="fab-publish" @tap="goPublish">
+        <text class="fab-icon">✎</text>
+        <text class="fab-text">发布动态</text>
       </view>
     </scroll-view>
 
@@ -354,7 +356,7 @@ onMounted(async () => {
   align-items: center;
   margin-top: 16rpx;
   padding-top: 16rpx;
-  border-top: 1rpx solid var(--dy-page);
+  border-top: 1rpx solid var(--dy-line);
 }
 .act {
   display: flex;
@@ -374,9 +376,28 @@ onMounted(async () => {
   margin-left: auto;
   margin-right: 0;
 }
-.feed-bottom {
-  padding: 10rpx 24rpx 40rpx;
-  text-align: center;
+/* 发布动态悬浮按钮 (右下角) */
+.fab-publish {
+  position: fixed;
+  right: 28rpx;
+  bottom: calc(140rpx + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 20rpx 30rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  box-shadow: 0 8rpx 24rpx rgba(78, 52, 32, 0.35);
+}
+.fab-icon {
+  font-size: 30rpx;
+  color: #f0e6cd;
+}
+.fab-text {
+  font-size: 26rpx;
+  color: #fefbf6;
+  font-weight: 500;
 }
 
 /* 直播 */

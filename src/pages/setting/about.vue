@@ -88,7 +88,7 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
 .info-row {
   display: flex;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .info-row:last-child {
   border-bottom: none;

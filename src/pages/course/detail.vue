@@ -23,10 +23,15 @@
       </view>
     </view>
 
-    <!-- 课程大纲 -->
+    <!-- 课程介绍 -->
     <view class="card">
       <view class="card-title">课程介绍</view>
       <text class="desc">{{ course.description }}</text>
+    </view>
+
+    <!-- 课程大纲 (课时) -->
+    <view class="card">
+      <view class="card-title">课程大纲 · 共 {{ course.lessons_count }} 课时</view>
       <view class="outline">
         <view class="lesson" v-for="n in Math.min(course.lessons_count, 12)" :key="n">
           <view class="lesson-idx">{{ n < 10 ? '0' + n : n }}</view>
@@ -190,7 +195,7 @@ function startLearn() {
   align-items: center;
   margin-top: 24rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid var(--dy-page);
+  border-top: 1rpx solid var(--dy-line);
 }
 .teacher-info {
   margin-left: 20rpx;
@@ -220,14 +225,14 @@ function startLearn() {
 }
 .outline {
   margin-top: 24rpx;
-  border-top: 1rpx solid var(--dy-page);
+  border-top: 1rpx solid var(--dy-line);
   padding-top: 10rpx;
 }
 .lesson {
   display: flex;
   align-items: center;
   padding: 18rpx 0;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .lesson-idx {
   width: 48rpx;
@@ -256,6 +261,7 @@ function startLearn() {
   color: var(--dy-faint);
 }
 
+/* 底部购买栏 (框效果) */
 .buy-bar {
   position: fixed;
   left: 0;
@@ -265,9 +271,10 @@ function startLearn() {
   align-items: center;
   justify-content: space-between;
   background: var(--dy-card);
-  border-top: 1rpx solid var(--dy-line);
-  padding: 16rpx 24rpx;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  border-top: 2rpx solid var(--dy-line);
+  box-shadow: 0 -6rpx 20rpx rgba(78, 52, 32, 0.08);
+  padding: 20rpx 24rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   z-index: 10;
 }
 .buy-price {

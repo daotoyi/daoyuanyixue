@@ -159,7 +159,7 @@ async function doConfirm(o) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid var(--dy-card);
+  border: 2rpx solid var(--dy-line);
 }
 .ot-badge text {
   font-size: 18rpx;
@@ -221,7 +221,7 @@ async function doConfirm(o) {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 16rpx;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .order-no {
   font-size: 22rpx;
@@ -295,7 +295,7 @@ async function doConfirm(o) {
   align-items: center;
   justify-content: space-between;
   padding-top: 16rpx;
-  border-top: 1rpx solid var(--dy-page);
+  border-top: 1rpx solid var(--dy-line);
 }
 .of-time {
   font-size: 22rpx;

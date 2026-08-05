@@ -265,7 +265,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 30rpx;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .cell:last-child {
   border-bottom: none;
@@ -311,7 +311,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 20rpx;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
   font-size: 28rpx;
   color: var(--dy-text);
 }

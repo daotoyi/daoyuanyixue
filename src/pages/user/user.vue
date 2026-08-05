@@ -584,7 +584,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .panel-title {
   font-size: 30rpx;
@@ -642,7 +642,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 30rpx 0;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .menu-item:last-child {
   border-bottom: none;

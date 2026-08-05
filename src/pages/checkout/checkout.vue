@@ -339,7 +339,7 @@ async function submitOrder() {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid var(--dy-page);
+  border-bottom: 1rpx solid var(--dy-line);
 }
 .co-row-line:last-child {
   border-bottom: none;
