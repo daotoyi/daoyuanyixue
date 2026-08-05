@@ -248,7 +248,7 @@ export const NAYIN = [
 const WX_ORDER = ['木', '火', '土', '金', '水']
 // 五行相生: 木→火→土→金→水
 // 十神: 以日干论
-function shishen(dayGan, otherGan) {
+export function shishen(dayGan, otherGan) {
   const dg = GAN_WX[dayGan]
   const og = GAN_WX[otherGan]
   const sameYang = GAN_YANG[dayGan] === GAN_YANG[otherGan]
@@ -355,4 +355,173 @@ export function dayMasterStrength(full) {
   if (total >= 4) return '旺'
   if (total >= 2.5) return '中和'
   return '弱'
+}
+
+/* ============ 问真级扩展: 神煞 / 自坐 / 流月 / 四柱输入 ============ */
+
+/* 神煞: 以日干 + 年支查 */
+const SHEN_SHA_RULES = {
+  tianyi: { label: '天乙贵人', fn: (g, z, yz) => {
+    const map = { 0: [1, 7], 4: [1, 7], 6: [1, 7], 1: [0, 8], 5: [0, 8], 2: [11, 9], 3: [11, 9], 8: [3, 5], 9: [3, 5], 7: [2, 6] }
+    return map[g] && map[g].includes(z)
+  }},
+  wenchang: { label: '文昌', fn: (g, z) => ({ 0: 5, 1: 6, 2: 8, 4: 8, 3: 9, 5: 9, 6: 11, 7: 0, 8: 2, 9: 3 }[g] === z) },
+  lushen: { label: '禄神', fn: (g, z) => ({ 0: 2, 1: 3, 2: 5, 4: 5, 3: 6, 5: 6, 6: 8, 7: 9, 8: 11, 9: 0 }[g] === z) },
+  yangren: { label: '羊刃', fn: (g, z) => ({ 0: 3, 2: 6, 4: 6, 6: 9, 8: 0 }[g] === z) },
+}
+/* 三合局: 以年支/日支查桃花驿马华盖将星劫煞灾煞亡神 */
+const SANHE = { 0: [3, 7], 3: [6, 10], 6: [9, 1], 9: [0, 4], 4: [7, 11], 7: [10, 2], 10: [1, 5], 1: [4, 8], 8: [11, 3], 11: [2, 6], 2: [5, 9], 5: [8, 0] }
+const SANHE_MAP = { 0: 0, 4: 0, 8: 0, 2: 1, 6: 1, 10: 1, 3: 2, 7: 2, 11: 2, 1: 3, 5: 3, 9: 3 } // 地支->三合组
+const TAOHUA = { 0: 9, 1: 3, 2: 6, 3: 0 } // 组->桃花支
+const YIMA = { 0: 2, 1: 8, 2: 11, 3: 5 }
+const HUAGAI = { 0: 4, 1: 10, 2: 1, 3: 7 }
+const JIANGXING = { 0: 0, 1: 6, 2: 9, 3: 3 }
+const JIESHA = { 0: 5, 1: 11, 2: 2, 3: 8 }
+const ZAISHA = { 0: 6, 1: 0, 2: 3, 3: 9 }
+const WANGSHEN = { 0: 11, 1: 5, 2: 8, 3: 2 }
+/* 孤辰寡宿: 年支三会 */
+const GUSHEN = { 0: 2, 1: 2, 2: 2, 3: 5, 4: 5, 5: 5, 6: 8, 7: 8, 8: 8, 9: 11, 10: 11, 11: 11 }
+const GUASU = { 0: 10, 1: 10, 2: 10, 3: 1, 4: 1, 5: 1, 6: 4, 7: 4, 8: 4, 9: 7, 10: 7, 11: 7 }
+
+/** 某柱(干g,支z)的全部神煞; yearZhi=年支 */
+export function shenshaOf(g, z, yearZhi) {
+  const list = []
+  for (const key of ['tianyi', 'wenchang', 'lushen', 'yangren']) {
+    if (SHEN_SHA_RULES[key].fn(g, z, yearZhi)) list.push(SHEN_SHA_RULES[key].label)
+  }
+  const group = SANHE_MAP[z]
+  if (group !== undefined) {
+    if (TAOHUA[group] === z) list.push('桃花')
+    if (YIMA[group] === z) list.push('驿马')
+    if (HUAGAI[group] === z) list.push('华盖')
+    if (JIANGXING[group] === z) list.push('将星')
+    if (JIESHA[group] === z) list.push('劫煞')
+    if (ZAISHA[group] === z) list.push('灾煞')
+    if (WANGSHEN[group] === z) list.push('亡神')
+  }
+  if (GUSHEN[yearZhi] === z) list.push('孤辰')
+  if (GUASU[yearZhi] === z) list.push('寡宿')
+  return list
+}
+
+/** 流月: 流年干五虎遁, 从寅月起 12 个月 */
+export function liuyueOf(liunianGan, dayGan) {
+  const wuhu = { 0: 2, 5: 2, 1: 4, 6: 4, 2: 6, 7: 6, 3: 8, 8: 8, 4: 0, 9: 0 } // 年干->正月天干(丙2戊4庚6壬8甲0)
+  const firstGan = wuhu[liunianGan]
+  const months = []
+  for (let i = 0; i < 12; i++) {
+    const g = (firstGan + i) % 10
+    const z = (2 + i) % 12 // 寅月起
+    months.push({
+      gan: GAN[g], zhi: ZHI[z], name: GAN[g] + ZHI[z],
+      ganShishen: shishen(dayGan, g),
+      month: `${i + 1}月`,
+    })
+  }
+  return months
+}
+
+/** 四柱直接输入排盘 (问真四柱模式) */
+export function baziFromGanZhi(yg, yz, mg, mz, dg, dz, hg, hz, gender) {
+  const pillars = [
+    { g: yg, z: yz, name: GAN[yg] + ZHI[yz] },
+    { g: mg, z: mz, name: GAN[mg] + ZHI[mz] },
+    { g: dg, z: dz, name: GAN[dg] + ZHI[dz] },
+    { g: hg, z: hz, name: GAN[hg] + ZHI[hz] },
+  ]
+  const dayGan = dg
+  const full = pillars.map((p, i) => {
+    const canggan = ZHI_CANGGAN[p.z]
+    return {
+      ...p,
+      ganShishen: i === 2 ? '日主' : shishen(dayGan, p.g),
+      canggan: canggan.map((cg, ci) => {
+        const cgIdx = GAN.indexOf(cg)
+        return { gan: cg, wx: GAN_WX[cgIdx], shishen: shishen(dayGan, cgIdx), main: ci === 0 }
+      }),
+      nayin: NAYIN[((p.g * 12) + p.z) % 60] || '',
+    }
+  })
+  const wxCount = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 }
+  pillars.forEach((p) => {
+    wxCount[GAN_WX[p.g]] += 1
+    ZHI_CANGGAN[p.z].forEach((cg, i) => {
+      wxCount[GAN_WX[GAN.indexOf(cg)]] += i === 0 ? 1 : 0.5
+    })
+  })
+  const xunStart = (dz - (dg % 10) + 12) % 12
+  const kong = [((xunStart + 10) % 12), ((xunStart + 11) % 12)]
+  const kongNames = kong.map((z) => ZHI[z]).join('、')
+  const yearYang = GAN_YANG[yg]
+  const male = gender !== '女'
+  const forward = (yearYang && male) || (!yearYang && !male)
+  const step = forward ? 1 : -1
+  const qiYun = 1 + ((dg + dz) % 8)
+  const dayun = []
+  let g = mg, z = mz
+  for (let i = 0; i < 8; i++) {
+    g = (g + step + 10) % 10
+    z = (z + step + 12) % 12
+    const startAge = qiYun + i * 10
+    dayun.push({
+      gan: GAN[g], zhi: ZHI[z], name: GAN[g] + ZHI[z],
+      ganShishen: shishen(dayGan, g),
+      startAge: `${startAge}岁`,
+      yearRange: `${startAge}-${startAge + 9}`,
+    })
+  }
+  return {
+    pillars, dayGanName: GAN[dayGan], wxCount, kongwang: kongNames,
+    dayun, gender: gender || '男',
+    dayunDir: forward ? '顺排' : '逆排',
+    qiYun: `${qiYun}岁起运`,
+    zisit: ZHI_CANGGAN[dz][0], // 日支本气
+  }
+}
+
+/** 给 fullBazi 结果补充问真级信息: 神煞/自坐/空亡标记/流月 */
+export function enrichFull(full, birthYear) {
+  const dayGan = full.pillars[2].g
+  const yearZhi = full.pillars[0].z
+  const kongZhis = full.kongwang.split('、')
+  full.pillars.forEach((p, i) => {
+    const mainCg = p.canggan[0]
+    p.zisit = i === 2 ? (mainCg ? mainCg.shishen : '') : ''
+    p.isKong = kongZhis.includes(p.zhi) ? '是' : ''
+    p.shensha = shenshaOf(p.g, p.z, yearZhi)
+  })
+  // 四柱输入模式无 liunian, 补齐当前流年
+  if (!full.liunian) {
+    const curYear = new Date().getFullYear()
+    const yg = ((curYear - 4) % 10 + 10) % 10
+    const yz = ((curYear - 4) % 12 + 12) % 12
+    full.liunian = { gan: GAN[yg], zhi: ZHI[yz], name: GAN[yg] + ZHI[yz], ganShishen: shishen(dayGan, yg) }
+  }
+  full.liuyue = liuyueOf((((new Date().getFullYear() - 4) % 10) + 10) % 10, dayGan)
+  full.birthYear = birthYear
+  return full
+}
+
+/** 五行 -> 颜色 (前端渲染干支配色) */
+export const WX_COLOR = {
+  '木': '#4a7c59',
+  '火': '#b04a45',
+  '土': '#8c6d3f',
+  '金': '#9a8f6f',
+  '水': '#3f6f8c',
+}
+
+/** 某大运 10 年流年 (起运岁数 -> 起始年份) */
+export function liunianOfDayun(dayun, birthYear) {
+  const startAge = parseInt(dayun.startAge) || 4
+  const startYear = birthYear + startAge
+  const years = []
+  for (let i = 0; i < 10; i++) {
+    const yr = startYear + i
+    const idx = ((yr - 4) % 60 + 60) % 60
+    const g = idx % 10
+    const z = idx % 12
+    years.push({ year: yr, ganIdx: g, zhiIdx: z, gan: GAN[g], zhi: ZHI[z], name: GAN[g] + ZHI[z] })
+  }
+  return years
 }
