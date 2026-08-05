@@ -170,11 +170,14 @@ export function fullZiwei(lunar, shichenIdx, gender, birthYear) {
   }
 
   /* 组装 12 宫 */
+  const JI_STARS = ['左辅', '右弼', '文昌', '文曲', '天魁', '天钺', '禄存']
+  const SHA_STARS = ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫']
   const palaces = []
   for (let g = 0; g < 12; g++) {
     const palaceIdx = mod(ming - g, 12)
-    const stars = (starMap[g] || []).filter((s) => !['左辅', '右弼', '文昌', '文曲', '天魁', '天钺', '禄存', '擎羊', '陀罗', '火星', '铃星', '地空', '地劫'].includes(s))
-    const aux = (starMap[g] || []).filter((s) => ['左辅', '右弼', '文昌', '文曲', '天魁', '天钺', '禄存', '擎羊', '陀罗', '火星', '铃星', '地空', '地劫'].includes(s))
+    const stars = (starMap[g] || []).filter((s) => !JI_STARS.includes(s) && !SHA_STARS.includes(s))
+    const aux = (starMap[g] || []).filter((s) => JI_STARS.includes(s) || SHA_STARS.includes(s))
+      .map((s) => ({ name: s, kind: JI_STARS.includes(s) ? 'ji' : 'sha' }))
     const du = dayun.find((d) => d.gong === g)
     palaces.push({
       gong: g, zhi: ZHI[g],

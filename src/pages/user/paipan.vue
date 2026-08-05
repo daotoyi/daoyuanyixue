@@ -375,7 +375,7 @@
         </view>
       </view>
 
-      <!-- 元信息: 方式 + 四柱(每柱干支上下+空亡) + 旬首/局数/值符/值使/马星(同一表) -->
+      <!-- 元信息: 方式 + 四柱(每柱干支上下) + 空亡(独立板块) + 旬首/局数/值符/值使/马星(同一表) -->
       <view class="qm-meta">
         <view class="qm-meta-row"><text class="qm-mk">方式</text><text class="qm-mv">{{ qmPaiPanText }} · {{ qmQiJuText }}</text></view>
         <view class="qm-meta-row">
@@ -385,10 +385,10 @@
               <text class="qm-sz-p">{{ pn }}</text>
               <text class="qm-sz-gan" :class="'wx-' + qmWxOf((data.bazi.ganZhi[pi] || '甲')[0])">{{ (data.bazi.ganZhi[pi] || '—')[0] }}</text>
               <text class="qm-sz-zhi" :class="'wx-' + qmWxOfZhi((data.bazi.ganZhi[pi] || '子')[1])">{{ (data.bazi.ganZhi[pi] || '—')[1] }}</text>
-              <text class="qm-sz-kong">空{{ data.bazi.kongwang }}</text>
             </view>
           </view>
         </view>
+        <view class="qm-meta-row qm-kong-row"><text class="qm-mk">空亡</text><text class="qm-mv">{{ data.bazi.kongwang }}</text></view>
         <view class="qm-key-grid">
           <view class="qm-key-row">
             <text class="qm-key-label">旬首</text><text class="qm-key-label">局数</text><text class="qm-key-label">值符</text><text class="qm-key-label">值使</text><text class="qm-key-label">马星</text>
@@ -505,23 +505,27 @@
         </view>
       </view>
 
-      <!-- 盘面 4x3 (地支固定宫位, 点击高亮 + 三方四正连线) -->
+      <!-- 盘面 4x3 (地支固定宫位, 点击高亮 + 三方四正连线; 大限/流年/流月/流日联动高亮落宫) -->
       <view class="zw-pan">
         <view v-for="line in zwLines" :key="line.key" class="zw-line" :class="line.cls" :style="line.style"></view>
         <view
           class="zw-cell"
           v-for="pos in zwGridCells"
           :key="pos.zhi"
-          :class="{ on: zwSelected === pos.gong, ming: pos.ming, shen: pos.shen }"
+          :class="{ on: zwSelected === pos.gong, ming: pos.ming, shen: pos.shen, dyOn: pos.dyOn, lnOn: pos.lnOn, mmOn: pos.mmOn, ddOn: pos.ddOn }"
           :style="{ gridRow: pos.row + 1, gridColumn: pos.col + 1 }"
           @tap="zwSelect(pos.gong)"
         >
           <text class="zw-zhi">{{ pos.zhiName }}</text>
+          <text class="zw-tag dy" v-if="pos.dyOn">{{ pos.dyTag }}</text>
+          <text class="zw-tag ln" v-if="pos.lnOn">流年{{ pos.lnTag }}</text>
+          <text class="zw-tag mm" v-if="pos.mmOn">流月{{ pos.mmTag }}</text>
+          <text class="zw-tag dd" v-if="pos.ddOn">流日{{ pos.ddTag }}</text>
           <text class="zw-pname" :class="{ on: pos.ming || pos.shen }">{{ pos.name }}</text>
-          <text class="zw-star" v-for="(s, si) in pos.stars" :key="si">
-            {{ s.name }}<text class="zw-sh" v-if="s.sihua">{{ s.sihua }}</text>
+          <text class="zw-star" :class="{ sh4: s.sihua }" v-for="(s, si) in pos.stars" :key="si">
+            {{ s.name }}<text class="zw-sh" :class="'sh-' + s.sihua" v-if="s.sihua">{{ s.sihua }}</text>
           </text>
-          <text class="zw-aux" v-if="pos.aux.length">{{ pos.aux.join(' ') }}</text>
+          <text class="zw-aux" :class="'aux-' + a.kind" v-for="(a, ai) in pos.aux" :key="ai">{{ a.name }}</text>
           <text class="zw-dayun">{{ pos.dayun }}</text>
         </view>
       </view>
@@ -903,22 +907,36 @@ const zwMonths = ref([])
 const zwSelMonth = ref('')
 const zwDays = ref([])
 const zwSelDay = ref('')
+/* 联动高亮落宫 */
+const zwDyGong = ref(-1)
+const zwDyTag = ref('')
+const zwLnGong = ref(-1)
+const zwLnTag = ref('')
+const zwMmGong = ref(-1)
+const zwMmTag = ref('')
+const zwDdGong = ref(-1)
+const zwDdTag = ref('')
 const PAN_SIZE = 680 // 盘面固定尺寸 rpx (4x3, 格 170)
 function zwGongName(gong) {
   const p = data.value.ziwei.palaces.find((x) => x.gong === gong)
   return p ? p.name : ''
 }
-/* 盘面网格单元 (按地支固定位置) */
+/* 盘面网格单元 (按地支固定位置, 含联动高亮标记) */
 const zwGridCells = computed(() => {
   if (!data.value || !data.value.ziwei) return []
   return Object.keys(GRID_POS).map((z) => {
     const gong = Number(z)
     const [row, col] = GRID_POS[gong]
     const p = data.value.ziwei.palaces.find((x) => x.gong === gong)
+    const aux = (p ? p.aux : []).map((a) => (typeof a === 'string' ? { name: a, kind: 'ji' } : a))
     return {
       zhi: gong, zhiName: ZHI[gong], row, col, gong,
-      name: p ? p.name : '', stars: p ? p.stars : [], aux: p ? p.aux : [],
+      name: p ? p.name : '', stars: p ? p.stars : [], aux,
       dayun: p ? p.dayun : '', ming: p ? p.isMing : false, shen: p ? p.isShen : false,
+      dyOn: gong === zwDyGong.value, dyTag: zwDyTag.value,
+      lnOn: gong === zwLnGong.value, lnTag: zwLnTag.value,
+      mmOn: gong === zwMmGong.value, mmTag: zwMmTag.value,
+      ddOn: gong === zwDdGong.value, ddTag: zwDdTag.value,
     }
   })
 })
@@ -956,38 +974,58 @@ const zwLines = computed(() => {
 function zwSelect(gong) {
   zwSelected.value = zwSelected.value === gong ? -1 : gong
 }
-/* 大限 → 流年 → 流月 → 流日 */
+/* 大限 → 流年 → 流月 → 流日 (联动高亮落宫) */
 function zwToggleDayun(i) {
   if (zwDyOpen.value === i) {
     zwDyOpen.value = -1; zwYears.value = []; zwLnYear.value = null
     zwMonths.value = []; zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+    zwDyGong.value = -1; zwLnGong.value = -1; zwMmGong.value = -1; zwDdGong.value = -1
     return
   }
   zwDyOpen.value = i
   zwLnYear.value = null; zwMonths.value = []; zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+  zwLnGong.value = -1; zwMmGong.value = -1; zwDdGong.value = -1
+  const du = data.value.ziwei.dayun[i]
+  zwDyGong.value = du.gong
+  zwDyTag.value = `${du.start}-${du.end}岁`
   zwYears.value = liunianOfDayun(data.value.ziwei, i)
 }
 function zwToggleLiunian(y) {
   if (zwLnYear.value === y.year) {
     zwLnYear.value = null; zwMonths.value = []; zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+    zwLnGong.value = -1; zwMmGong.value = -1; zwDdGong.value = -1
     return
   }
   zwLnYear.value = y.year
   zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+  zwMmGong.value = -1; zwDdGong.value = -1
+  zwLnGong.value = y.gong
+  zwLnTag.value = String(y.year)
   zwMonths.value = liuyueOf(GAN.indexOf(y.gan), y.gong)
 }
 function zwToggleLiuyue(mm) {
   if (zwSelMonth.value === mm.month) {
     zwSelMonth.value = ''; zwDays.value = []; zwSelDay.value = ''
+    zwMmGong.value = -1; zwDdGong.value = -1
     return
   }
   zwSelMonth.value = mm.month
   zwSelDay.value = ''
+  zwDdGong.value = -1
+  zwMmGong.value = mm.gong
+  zwMmTag.value = mm.month
   // 流日锚: 简化从甲子起
   zwDays.value = liuriOf(GAN.indexOf(mm.gan), mm.gong, 0)
 }
 function zwToggleLiuri(dd) {
-  zwSelDay.value = zwSelDay.value === dd.day ? '' : dd.day
+  if (zwSelDay.value === dd.day) {
+    zwSelDay.value = ''
+    zwDdGong.value = -1
+    return
+  }
+  zwSelDay.value = dd.day
+  zwDdGong.value = dd.gong
+  zwDdTag.value = dd.day
 }
 /* 紫微 AI 解盘 (仿八字: 免费2 + 付费3) */
 const zwData = ref({ zongping: [], sizheng: [], career: [], wealth: [], marriage: [] })
@@ -1987,9 +2025,34 @@ function payJiepan() {
 .zw-zhi { font-size: 17rpx; color: #b3a595; }
 .zw-pname { font-size: 20rpx; font-weight: 600; color: #42372c; margin-top: 1rpx; }
 .zw-pname.on { color: #b04a45; }
+/* 主星(棕) / 四化星(紫) / 吉星(绿) / 煞星(红) / 四化角标四色 */
 .zw-star { font-size: 19rpx; color: #8c5a2b; font-weight: 500; line-height: 1.35; }
-.zw-sh { font-size: 16rpx; color: #b04a45; font-weight: 600; margin-left: 1rpx; }
-.zw-aux { font-size: 15rpx; color: #857563; line-height: 1.3; margin-top: 1rpx; }
+.zw-star.sh4 { color: #7a5c9e; }
+.zw-sh { font-size: 16rpx; font-weight: 600; margin-left: 1rpx; }
+.zw-sh.sh-禄 { color: #2e7d32; }
+.zw-sh.sh-权 { color: #7a5c9e; }
+.zw-sh.sh-科 { color: #3f6f8c; }
+.zw-sh.sh-忌 { color: #b04a45; }
+.zw-aux { font-size: 15rpx; line-height: 1.3; margin-top: 1rpx; }
+.zw-aux.aux-ji { color: #2e7d32; }
+.zw-aux.aux-sha { color: #b04a45; }
+/* 联动高亮标记 (大限金/流年红/流月绿/流日蓝) */
+.zw-tag {
+  font-size: 14rpx;
+  color: #fefbf6;
+  border-radius: 6rpx;
+  padding: 0 8rpx;
+  margin-top: 1rpx;
+  line-height: 1.6;
+}
+.zw-tag.dy { background: #8c5a2b; }
+.zw-tag.ln { background: #b04a45; }
+.zw-tag.mm { background: #2e7d32; }
+.zw-tag.dd { background: #3f6f8c; }
+.zw-cell.dyOn { border: 2rpx solid #8c5a2b; }
+.zw-cell.lnOn { border: 2rpx solid #b04a45; }
+.zw-cell.mmOn { border: 2rpx solid #2e7d32; }
+.zw-cell.ddOn { border: 2rpx solid #3f6f8c; }
 .zw-dayun { font-size: 15rpx; color: #b3a595; margin-top: auto; }
 .zw-tip { font-size: 18rpx; color: #b3a595; margin-bottom: 14rpx; }
 /* 大限/流年/流月/流日 联动 */
