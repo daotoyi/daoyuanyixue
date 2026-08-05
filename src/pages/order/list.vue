@@ -60,7 +60,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOrders, payOrder, confirmOrder } from '../../api/api'
+import { getOrders, payOrder, confirmOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
 const activeStatus = ref('全部')
@@ -102,9 +102,27 @@ function goDetail(orderNo) {
 }
 
 async function doPay(o) {
+  // 微信小程序: 真实微信支付; 其他端: 演示支付
+  // #ifdef MP-WEIXIN
+  try {
+    const prepay = await wxpayPrepay(o.order_no)
+    if (prepay && prepay.payment) {
+      await wxRequestPayment(prepay.payment)
+      uni.showToast({ title: '支付成功', icon: 'success' })
+    } else {
+      uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+  }
+  await loadOrders()
+  return
+  // #endif
+  // #ifndef MP-WEIXIN
   await payOrder(o.order_no)
   uni.showToast({ title: '支付成功', icon: 'success' })
   await loadOrders()
+  // #endif
 }
 
 async function doConfirm(o) {

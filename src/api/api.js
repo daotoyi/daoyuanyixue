@@ -174,6 +174,26 @@ export const getOrder = (orderNo) =>
 export const payOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.pay', { order_no: orderNo })
 
+/* 微信支付统一下单 (小程序云开发支付, 返回 wx.requestPayment 参数) */
+export const wxpayPrepay = (orderNo) =>
+  __USE_MOCK__ ? _fromMock(() => ({ payment: null }))() : _callFunction('order.wxpay', { order_no: orderNo })
+
+/* 拉起微信支付 (仅小程序端, 由调用方判断平台) */
+export function wxRequestPayment(payment) {
+  return new Promise((resolve, reject) => {
+    uni.requestPayment({
+      provider: 'wxpay',
+      timeStamp: payment.timeStamp,
+      nonceStr: payment.nonceStr,
+      package: payment.package,
+      signType: payment.signType,
+      paySign: payment.paySign,
+      success: (res) => resolve(res),
+      fail: (err) => reject(new Error((err && err.errMsg) || '支付取消')),
+    })
+  })
+}
+
 export const confirmOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.confirm', { order_no: orderNo })
 

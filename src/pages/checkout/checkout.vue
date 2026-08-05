@@ -104,7 +104,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getCart, getSelectedItems, clearSelected } from '../../utils/cart'
-import { getMyCoupons, createOrder, payOrder } from '../../api/api'
+import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -206,6 +206,32 @@ async function submitOrder() {
       address: address.value,
       uid: userStore.userInfo.uid || 0,
     })
+    // 微信小程序: 真实微信支付; 其他端: 演示支付
+    // #ifdef MP-WEIXIN
+    try {
+      const prepay = await wxpayPrepay(order.order_no)
+      if (prepay && prepay.payment) {
+        await wxRequestPayment(prepay.payment)
+        uni.showToast({ title: '支付成功', icon: 'success' })
+        clearSelected()
+        setTimeout(() => {
+          uni.redirectTo({ url: `/pages/order/detail?order_no=${order.order_no}` })
+        }, 800)
+        submitting.value = false
+        return
+      }
+      throw new Error(prepay && prepay.msg ? prepay.msg : '支付未配置')
+    } catch (payErr) {
+      submitting.value = false
+      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      // 支付失败仍留在订单页可重新支付
+      setTimeout(() => {
+        uni.redirectTo({ url: `/pages/order/detail?order_no=${order.order_no}` })
+      }, 800)
+      return
+    }
+    // #endif
+    // #ifndef MP-WEIXIN
     // 模拟支付成功
     await payOrder(order.order_no)
     clearSelected()
@@ -213,6 +239,7 @@ async function submitOrder() {
     setTimeout(() => {
       uni.redirectTo({ url: `/pages/order/detail?order_no=${order.order_no}` })
     }, 800)
+    // #endif
   } catch (e) {
     uni.showToast({ title: '下单失败：' + (e.message || ''), icon: 'none' })
   } finally {

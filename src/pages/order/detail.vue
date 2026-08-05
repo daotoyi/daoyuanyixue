@@ -60,7 +60,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, payOrder, confirmOrder } from '../../api/api'
+import { getOrder, payOrder, confirmOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
 
 const order = ref(null)
 const orderNo = ref(null)
@@ -89,9 +89,27 @@ async function load() {
 }
 
 async function doPay() {
+  // 微信小程序: 真实微信支付; 其他端: 演示支付
+  // #ifdef MP-WEIXIN
+  try {
+    const prepay = await wxpayPrepay(orderNo.value)
+    if (prepay && prepay.payment) {
+      await wxRequestPayment(prepay.payment)
+      uni.showToast({ title: '支付成功', icon: 'success' })
+    } else {
+      uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+  }
+  await load()
+  return
+  // #endif
+  // #ifndef MP-WEIXIN
   await payOrder(orderNo.value)
   uni.showToast({ title: '支付成功', icon: 'success' })
   await load()
+  // #endif
 }
 
 async function doConfirm() {

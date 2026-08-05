@@ -605,32 +605,45 @@ async function aiAsk(data) {
 }
 
 async function wechatLogin(data) {
-  // 微信一键登录 (小程序): 需在环境变量配置 WX_APPID / WX_SECRET
+  // 微信一键登录 (小程序)
+  // 接管模式: 云开发直接提供 OPENID (cloud.getWXContext), 无需 code/secret
+  // 非接管模式兜底: jscode2session (需环境变量 WX_APPID / WX_SECRET)
   const { code, nickname, avatar } = data
-  if (!code) return fail('缺少微信授权码')
-  const appid = process.env.WX_APPID
-  const secret = process.env.WX_SECRET
-  if (!appid || !secret) {
-    return fail('微信登录未配置，请联系管理员（需提供小程序 AppID 与 Secret）')
-  }
-  const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`
-  const httpRes = await new Promise((resolve) => {
-    const https = require('https')
-    https.get(url, (r) => {
-      let d = ''
-      r.on('data', (c) => (d += c))
-      r.on('end', () => resolve(d))
-    }).on('error', (e) => resolve(''))
-  })
-  let wx
+  let openid = ''
   try {
-    wx = JSON.parse(httpRes)
+    const ctx = app.getWXContext()
+    openid = ctx.OPENID || ''
   } catch (e) {
-    return fail('微信授权失败')
+    openid = ''
   }
-  if (!wx.openid) return fail('微信授权失败: ' + (wx.errmsg || '未知错误'))
+  if (!openid) {
+    // 兜底: 用 code 换 openid
+    if (!code) return fail('缺少微信授权码')
+    const appid = process.env.WX_APPID
+    const secret = process.env.WX_SECRET
+    if (!appid || !secret) {
+      return fail('微信登录未配置，请联系管理员（需提供小程序 AppID 与 Secret）')
+    }
+    const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`
+    const httpRes = await new Promise((resolve) => {
+      const https = require('https')
+      https.get(url, (r) => {
+        let d = ''
+        r.on('data', (c) => (d += c))
+        r.on('end', () => resolve(d))
+      }).on('error', (e) => resolve(''))
+    })
+    let wx
+    try {
+      wx = JSON.parse(httpRes)
+    } catch (e) {
+      return fail('微信授权失败')
+    }
+    if (!wx.openid) return fail('微信授权失败: ' + (wx.errmsg || '未知错误'))
+    openid = wx.openid
+  }
   // 查 openid 关联用户
-  let user = (await db.collection('users').where({ openid: wx.openid }).limit(1).get()).data[0]
+  let user = (await db.collection('users').where({ openid }).limit(1).get()).data[0]
   if (!user) {
     // 自动注册
     const daoCode = await nextDaoCode()
@@ -641,7 +654,7 @@ async function wechatLogin(data) {
       avatar: avatar || '',
       phone: '',
       password: '',
-      openid: wx.openid,
+      openid,
       vip_level: 0,
       balance: '0.00',
       role: 'user',
@@ -771,6 +784,72 @@ async function confirmOrder(data) {
     }
   } catch (e) {}
   return ok({ updated: true })
+}
+
+/* ============ 微信支付 (小程序云开发支付 cloudPay) ============
+   需先在云开发控制台「微信支付」开通并绑定商户号;
+   商户号(非服务商模式可不填)写入 config.local.js WXPAY_MCHID */
+async function wxpayPrepay(data) {
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  if (order.status !== '待支付') return fail('订单状态不可支付')
+  const price = Number(order.total_price)
+  if (!price || price <= 0) return fail('订单金额异常')
+  let mchid = ''
+  try {
+    mchid = (require('./config.local') || {}).WXPAY_MCHID || ''
+  } catch (e) {}
+  // 组装统一下单参数 (云开发微信支付, 免证书)
+  const params = {
+    body: (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 100),
+    outTradeNo: order_no,
+    spbillCreateIp: '127.0.0.1',
+    totalFee: Math.round(price * 100),
+    envId: cloudbase.SYMBOL_CURRENT_ENV,
+    functionName: 'dy-api', // 支付成功后回调本函数
+  }
+  if (mchid) params.subMchId = mchid
+  let res
+  try {
+    res = await app.cloudPay.unifiedOrder(params)
+  } catch (e) {
+    return fail('微信支付下单失败: ' + (e.message || e.errMsg || '请确认已开通云开发微信支付'))
+  }
+  if (!res || res.returnCode !== 'SUCCESS') {
+    return fail((res && (res.returnMsg || res.errMsg)) || '微信支付下单失败')
+  }
+  return ok({ payment: res.payment, order_no })
+}
+
+/* 微信支付结果回调 (云开发支付成功后调用本云函数) */
+async function wxpayCallback(event) {
+  if (event && (event.returnCode === 'SUCCESS' || event.resultCode === 'SUCCESS') && event.outTradeNo) {
+    const order_no = event.outTradeNo
+    await db.collection('orders').where({ order_no }).update({
+      status: '待发货',
+      pay_method: '微信支付',
+      pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+      trade_no: event.transactionId || '',
+    })
+    try {
+      const o = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+      if (o && o.uid) {
+        await db.collection('messages').add({
+          id: Date.now() % 1000000,
+          uid: o.uid,
+          type: 'order',
+          title: '订单支付成功',
+          content: `订单 ${order_no} 已支付成功，商家正在加紧备货`,
+          read: false,
+          created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        })
+      }
+    } catch (e) {}
+  }
+  // 微信支付回调要求返回 { errcode: 0, errmsg: 'OK' }
+  return { errcode: 0, errmsg: 'OK' }
 }
 
 /* ============ 我的课程 ============ */
@@ -1232,6 +1311,7 @@ const ROUTES = {
   'order.list': listOrders,
   'order.detail': getOrder,
   'order.pay': payOrder,
+  'order.wxpay': wxpayPrepay,
   'order.confirm': confirmOrder,
   'course.buy': buyCourse,
   'course.mine': myCourses,
@@ -1265,6 +1345,10 @@ const ROUTES = {
 }
 
 exports.main = async (event = {}) => {
+  // 云开发微信支付回调: event 含 outTradeNo / returnCode
+  if (event && event.outTradeNo && event.returnCode) {
+    return await wxpayCallback(event)
+  }
   // 兼容 HTTP 网关触发: { path, httpMethod, body, queryStringParameters }
   // 与 callFunction 触发: { action, data }
   let action = event.action
