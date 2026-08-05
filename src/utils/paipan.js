@@ -224,3 +224,135 @@ export function wxRelation(a, b) {
   if ((bi + 2) % 5 === ai) return `${b}克${a}`
   return `${a}同${b}`
 }
+
+/* ============ 问真级完整排盘 (十神/藏干/纳音/五行/大运/空亡) ============ */
+
+// 天干阴阳: 甲丙戊庚壬 阳; 乙丁己辛癸 阴
+const GAN_YANG = [true, false, true, false, true, false, true, false, true, false]
+// 地支藏干: 本气 + 中气 + 余气
+export const ZHI_CANGGAN = [
+  ['癸'], ['己', '癸', '辛'], ['甲', '丙', '戊'], ['乙'], ['戊', '乙', '癸'], ['丙', '戊', '庚'],
+  ['丁', '己'], ['己', '丁', '乙'], ['庚', '壬', '戊'], ['辛'], ['戊', '辛', '丁'], ['壬', '甲'],
+]
+// 六十甲子纳音
+export const NAYIN = [
+  '海中金', '海中金', '炉中火', '炉中火', '大林木', '大林木', '路旁土', '路旁土', '剑锋金', '剑锋金',
+  '山头火', '山头火', '涧下水', '涧下水', '城头土', '城头土', '白蜡金', '白蜡金', '杨柳木', '杨柳木',
+  '泉中水', '泉中水', '屋上土', '屋上土', '霹雳火', '霹雳火', '松柏木', '松柏木', '长流水', '长流水',
+  '沙中金', '沙中金', '山下火', '山下火', '平地木', '平地木', '壁上土', '壁上土', '金箔金', '金箔金',
+  '覆灯火', '覆灯火', '天河水', '天河水', '大驿土', '大驿土', '钗钏金', '钗钏金', '桑柘木', '桑柘木',
+  '大溪水', '大溪水', '沙中土', '沙中土', '天上火', '天上火', '石榴木', '石榴木', '大海水', '大海水',
+]
+
+// 五行顺序
+const WX_ORDER = ['木', '火', '土', '金', '水']
+// 五行相生: 木→火→土→金→水
+// 十神: 以日干论
+function shishen(dayGan, otherGan) {
+  const dg = GAN_WX[dayGan]
+  const og = GAN_WX[otherGan]
+  const sameYang = GAN_YANG[dayGan] === GAN_YANG[otherGan]
+  const dIdx = WX_ORDER.indexOf(dg)
+  const oIdx = WX_ORDER.indexOf(og)
+  // 生我
+  if (WX_ORDER[(dIdx + 4) % 5] === og) return sameYang ? '偏印' : '正印'
+  // 我生
+  if (WX_ORDER[(dIdx + 1) % 5] === og) return sameYang ? '食神' : '伤官'
+  // 克我
+  if (WX_ORDER[(dIdx + 2) % 5] === og) return sameYang ? '七杀' : '正官'
+  // 我克
+  if (WX_ORDER[(dIdx + 3) % 5] === og) return sameYang ? '偏财' : '正财'
+  // 同我
+  return sameYang ? '比肩' : '劫财'
+}
+
+export function fullBazi(y, m, d, hour, gender) {
+  const base = bazi(y, m, d, hour)
+  const [yp, mp, dp, hp] = base.pillars
+  const dayGan = dp.g
+
+  // 各柱十神 (日柱自身为日主)
+  const pillars = [yp, mp, dp, hp].map((p, i) => {
+    const canggan = ZHI_CANGGAN[p.z]
+    return {
+      ...p,
+      ganShishen: i === 2 ? '日主' : shishen(dayGan, p.g),
+      canggan: canggan.map((cg, ci) => {
+        const cgIdx = GAN.indexOf(cg)
+        return { gan: cg, wx: GAN_WX[cgIdx], shishen: shishen(dayGan, cgIdx), main: ci === 0 }
+      }),
+      nayin: NAYIN[((p.g * 12) + p.z) % 60] || '',
+      kongwang: '',
+    }
+  })
+
+  // 五行统计: 天干 + 地支藏干(本气计1, 中余气计0.5)
+  const wxCount = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 }
+  base.pillars.forEach((p) => {
+    wxCount[GAN_WX[p.g]] += 1
+    ZHI_CANGGAN[p.z].forEach((cg, i) => {
+      wxCount[GAN_WX[GAN.indexOf(cg)]] += i === 0 ? 1 : 0.5
+    })
+  })
+
+  // 空亡: 日柱所在旬后两位地支
+  const xunStart = (dp.z - (dp.g % 10) + 12) % 12 // 旬首地支
+  const kong = [((xunStart + 10) % 12), ((xunStart + 11) % 12)]
+  const kongNames = kong.map((z) => ZHI[z]).join('、')
+
+  // 大运: 阳年男 / 阴年女 顺排; 阴年男 / 阳年女 逆排
+  const yearYang = GAN_YANG[yp.g]
+  const male = gender !== '女'
+  const forward = (yearYang && male) || (!yearYang && !male)
+  const step = forward ? 1 : -1
+  // 起运: 简化 (按节气天数/3 取 1-8)
+  const qiYun = 1 + ((dp.g + dp.z) % 8)
+  const dayun = []
+  let g = mp.g
+  let z = mp.z
+  for (let i = 0; i < 8; i++) {
+    g = (g + step + 10) % 10
+    z = (z + step + 12) % 12
+    const startAge = qiYun + i * 10
+    dayun.push({
+      gan: GAN[g], zhi: ZHI[z], name: GAN[g] + ZHI[z],
+      ganShishen: shishen(dayGan, g),
+      startAge: `${startAge}岁`,
+      yearRange: `${startAge}-${startAge + 9}`,
+    })
+  }
+
+  // 当前流年
+  const curYear = new Date().getFullYear()
+  const yg = ((curYear - 4) % 10 + 10) % 10
+  const yz = ((curYear - 4) % 12 + 12) % 12
+  const liunian = { gan: GAN[yg], zhi: ZHI[yz], name: GAN[yg] + ZHI[yz], ganShishen: shishen(dayGan, yg) }
+
+  return {
+    ...base,
+    dayGanName: GAN[dayGan],
+    pillars,
+    wxCount,
+    kongwang: kongNames,
+    dayun,
+    liunian,
+    gender: gender || '男',
+    dayunDir: forward ? '顺排' : '逆排',
+    qiYun: `${qiYun}岁起运`,
+  }
+}
+
+/* 日主强弱简化判断: 得令(月支藏干生扶)+得地+数量 */
+export function dayMasterStrength(full) {
+  const dayGan = full.pillars[2].g
+  const dayWx = GAN_WX[dayGan]
+  const wx = full.wxCount
+  const self = wx[dayWx] || 0
+  // 生我的五行
+  const shengIdx = (WX_ORDER.indexOf(dayWx) + 4) % 5
+  const sheng = wx[WX_ORDER[shengIdx]] || 0
+  const total = self + sheng
+  if (total >= 4) return '旺'
+  if (total >= 2.5) return '中和'
+  return '弱'
+}
