@@ -48,9 +48,6 @@
                 <view class="course-price-row">
                   <text class="course-price">¥{{ cc.price }}</text>
                   <text class="course-otprice">¥{{ cc.ot_price }}</text>
-                  <view class="btn-view" @tap.stop="goDetail(cc.id)">
-                    <text>查看</text>
-                  </view>
                 </view>
               </view>
             </view>
@@ -268,27 +265,6 @@ onMounted(async () => {
   align-items: center;
   padding-top: 12rpx;
   padding-right: 16rpx;
-}
-/* 查看按钮: 实心 + 靠左不贴右边 + 文字单行 */
-.btn-view {
-  flex-shrink: 0;
-  margin-left: auto;
-  margin-right: 4rpx;
-  min-width: 96rpx;
-  height: 56rpx;
-  padding: 0 24rpx;
-  border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn-view text {
-  font-size: 22rpx;
-  color: var(--dy-card);
-  letter-spacing: 1rpx;
-  white-space: nowrap;
-  line-height: 1;
 }
 .course-price {
   font-size: 32rpx;
