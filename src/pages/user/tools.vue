@@ -164,10 +164,10 @@ import { bazi, liuyao, ziwei, qimen, liuren, GAN, ZHI, SHICHEN } from '../../uti
 
 const tools = [
   { key: 'bazi', label: '四柱八字', icon: '☯' },
-  { key: 'liuyao', label: '六爻', icon: '🪙' },
-  { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
   { key: 'qimen', label: '奇门遁甲', icon: '🧭' },
+  { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
   { key: 'liuren', label: '大六壬', icon: '🌀' },
+  { key: 'liuyao', label: '六爻', icon: '🪙' },
 ]
 const activeTool = ref('bazi')
 

@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "src" / "static" / "tabbar"
 OUT.mkdir(parents=True, exist_ok=True)
 
-SIZE = 81
-PAD = 14  # 内边距, 图形实际区域 [PAD, SIZE-PAD]
+SIZE = 96
+PAD = 16  # 内边距, 图形实际区域 [PAD, SIZE-PAD]
 
 GRAY = (168, 154, 133, 255)    # #A89A85 檀褐灰
 GOLD = (133, 77, 14, 255)      # #854D0E 古铜金

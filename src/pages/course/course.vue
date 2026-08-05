@@ -48,7 +48,9 @@
                 <view class="course-price-row">
                   <text class="course-price">¥{{ cc.price }}</text>
                   <text class="course-otprice">¥{{ cc.ot_price }}</text>
-                  <u-button type="primary" text="查看" shape="circle" size="mini" @tap.stop="goDetail(cc.id)"></u-button>
+                  <view class="btn-view" @tap.stop="goDetail(cc.id)">
+                    <text>查看</text>
+                  </view>
                 </view>
               </view>
             </view>
@@ -203,8 +205,8 @@ onMounted(async () => {
 }
 .course-cover {
   position: relative;
-  width: 240rpx;
-  height: 240rpx;
+  width: 216rpx;
+  height: 216rpx;
   flex-shrink: 0;
 }
 .course-img {
@@ -263,6 +265,23 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding-top: 12rpx;
+  padding-right: 6rpx;
+}
+/* 查看按钮: 实心 + 不贴边缘 */
+.btn-view {
+  margin-left: 14rpx;
+  height: 56rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-view text {
+  font-size: 22rpx;
+  color: #fefbf6;
+  letter-spacing: 1rpx;
 }
 .course-price {
   font-size: 32rpx;
