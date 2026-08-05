@@ -20,7 +20,6 @@
       <!-- ===== 四柱/奇门/紫微 共用出生时间输入 ===== -->
       <view v-if="['bazi', 'qimen', 'ziwei'].includes(activeTool)" class="tool-panel">
         <view class="tp-title">输入出生时间，排出四柱 / 奇门 / 紫微</view>
-        <view class="tp-share-tip">三种排盘共用同一出生时间，点击排盘后在新页面查看结果</view>
 
         <!-- 输入方式 -->
         <view class="tp-row">
@@ -36,17 +35,22 @@
           </view>
         </view>
 
-        <!-- 阳历输入 -->
+        <!-- 阳历输入: 日期 + 时辰 转盘, 真太阳时(省市区) -->
         <template v-if="form.bazi.mode === 'solar'">
           <view class="tp-row">
             <text class="tp-label">阳历日期</text>
-            <picker mode="date" :value="form.bazi.date" @change="(e) => (form.bazi.date = e.detail.value)">
-              <view class="tp-picker">{{ form.bazi.date }}</view>
-            </picker>
+            <view class="tp-pickers-inline">
+              <picker mode="date" :value="form.bazi.date" @change="(e) => (form.bazi.date = e.detail.value)">
+                <view class="tp-picker">{{ form.bazi.date }}</view>
+              </picker>
+              <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
+                <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
+              </picker>
+            </view>
           </view>
         </template>
 
-        <!-- 农历输入 -->
+        <!-- 农历输入: 年月日 + 时辰 转盘 -->
         <template v-else-if="form.bazi.mode === 'lunar'">
           <view class="tp-row">
             <text class="tp-label">农历年</text>
@@ -66,25 +70,26 @@
               <view class="tp-picker">{{ lunarDays[form.bazi.lunarDay] }}</view>
             </picker>
           </view>
+          <view class="tp-row">
+            <text class="tp-label">出生时辰</text>
+            <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
+              <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
+            </picker>
+          </view>
         </template>
 
-        <!-- 四柱输入 -->
+        <!-- 四柱输入: 四柱一排 + 60甲子转盘 -->
         <template v-else>
-          <view class="tp-row" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
-            <text class="tp-label">{{ pn }}</text>
-            <picker mode="selector" :range="jiaziLabels" @change="(e) => (form.bazi.gz[pi] = Number(e.detail.value))">
-              <view class="tp-picker" :class="'wx-' + GAN_WX[(form.bazi.gz[pi]) % 10]">{{ jiaziLabels[form.bazi.gz[pi]] }}</view>
-            </picker>
+          <view class="tp-gz-grid">
+            <view class="tp-gz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
+              <text class="tp-gz-label">{{ pn }}</text>
+              <picker mode="selector" :range="jiaziLabels" @change="(e) => (form.bazi.gz[pi] = Number(e.detail.value))">
+                <view class="tp-picker tp-gz-picker" :class="'wx-' + GAN_WX[(form.bazi.gz[pi]) % 10]">{{ jiaziLabels[form.bazi.gz[pi]] }}</view>
+              </picker>
+            </view>
           </view>
           <view class="tp-tip">四柱输入模式下，大运起运岁数为近似估算</view>
         </template>
-
-        <view class="tp-row">
-          <text class="tp-label">出生时辰</text>
-          <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
-            <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
-          </picker>
-        </view>
 
         <view class="tp-row">
           <text class="tp-label">性别</text>
@@ -94,19 +99,29 @@
           </view>
         </view>
 
-        <!-- 真太阳时 -->
-        <view class="tp-row">
-          <text class="tp-label">真太阳时</text>
-          <switch :checked="form.bazi.trueSolar" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
-        </view>
-        <template v-if="form.bazi.trueSolar">
+        <!-- 真太阳时 (仅阳历) : 省/市/县 三级转盘 -->
+        <template v-if="form.bazi.mode === 'solar'">
           <view class="tp-row">
-            <text class="tp-label">出生地</text>
-            <picker mode="selector" :range="cityNames" @change="(e) => (form.bazi.city = e.detail.value)">
-              <view class="tp-picker">{{ cityNames[form.bazi.city] }}</view>
-            </picker>
+            <text class="tp-label">真太阳时</text>
+            <switch :checked="form.bazi.trueSolar" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
           </view>
-          <view class="tp-tip" v-if="solarDiffText">修正：{{ solarDiffText }}</view>
+          <template v-if="form.bazi.trueSolar">
+            <view class="tp-row">
+              <text class="tp-label">出生地</text>
+              <view class="tp-pickers-inline">
+                <picker mode="selector" :range="provinceNames" @change="onProvinceChange">
+                  <view class="tp-picker">{{ provinceNames[form.bazi.province] }}</view>
+                </picker>
+                <picker mode="selector" :range="cityNames" @change="(e) => (form.bazi.city = e.detail.value)">
+                  <view class="tp-picker">{{ cityNames[form.bazi.city] }}</view>
+                </picker>
+                <picker mode="selector" :range="districtNames" @change="(e) => (form.bazi.district = e.detail.value)">
+                  <view class="tp-picker">{{ districtNames[form.bazi.district] }}</view>
+                </picker>
+              </view>
+            </view>
+            <view class="tp-tip" v-if="solarDiffText">{{ solarDiffText }}</view>
+          </template>
         </template>
 
         <view class="btn-fill btn-pp" @tap="runPaipan"><text>开始排盘</text></view>
@@ -168,7 +183,8 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { fullBazi, liuyao, ziwei, qimen, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
-import { solarToLunar, lunarToSolar, trueSolarTime, CITIES } from '../../utils/lunar'
+import { solarToLunar, lunarToSolar, trueSolarTime } from '../../utils/lunar'
+import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../../utils/cities'
 
 const tools = [
   { key: 'bazi', label: '四柱八字', icon: '☯' },
@@ -197,7 +213,24 @@ const lunarMonthLabels = (() => {
   return arr
 })()
 const jiaziLabels = Array.from({ length: 60 }, (_, i) => GAN[i % 10] + ZHI[i % 12])
-const cityNames = CITIES.map((c) => c.name)
+const provinceNames = PROVINCE_NAMES
+/* 当前选中省的城市列表 */
+const cityNames = computed(() => {
+  const prov = REGION_DATA[form.value.bazi.province]
+  return prov ? prov.cities.map((c) => c.name) : []
+})
+/* 当前选中市的区县列表 */
+const districtNames = computed(() => {
+  const prov = REGION_DATA[form.value.bazi.province]
+  if (!prov || !prov.cities[form.value.bazi.city]) return []
+  return prov.cities[form.value.bazi.city].districts
+})
+
+function onProvinceChange(e) {
+  form.value.bazi.province = Number(e.detail.value)
+  form.value.bazi.city = 0
+  form.value.bazi.district = 0
+}
 
 const form = ref({
   bazi: {
@@ -210,7 +243,9 @@ const form = ref({
     shichen: 6,
     gender: '男',
     trueSolar: false,
+    province: 0,
     city: 0,
+    district: 0,
   },
   liuren: { date: '2026-08-05', shichen: 6 },
 })
@@ -218,20 +253,19 @@ const form = ref({
 const lyResult = ref(null)
 const lrResult = ref(null)
 
-/* 真太阳时修正说明 */
+/* 真太阳时修正说明 (省/市/县 经纬度) */
 const solarDiffText = computed(() => {
   if (!form.value.bazi.trueSolar) return ''
   const f = form.value.bazi
-  const date = f.mode === 'lunar'
-    ? (() => { const s = lunarToSolar(f.lunarYear, f.lunarMonth >= 12 ? -(f.lunarMonth - 11) : f.lunarMonth + 1, f.lunarDay + 1); return new Date(s.y, s.m - 1, s.d, 12, 0) })()
-    : new Date(Number(f.date.split('-')[0]), Number(f.date.split('-')[1]) - 1, Number(f.date.split('-')[2]), 12, 0)
-  const city = CITIES[f.city]
-  if (!city) return ''
-  const ts = trueSolarTime(date, city.lng)
-  return `出生地 ${city.name}（东经${city.lng}°）：${ts.desc}`
+  const loc = getRegionLngLat(f.province, f.city, f.district)
+  if (!loc) return ''
+  const date = new Date(Number(f.date.split('-')[0]), Number(f.date.split('-')[1]) - 1, Number(f.date.split('-')[2]), 12, 0)
+  const ts = trueSolarTime(date, loc.lng)
+  const place = `${provinceNames[f.province] === loc.city ? loc.city : provinceNames[f.province] + loc.city}${loc.district ? '·' + loc.district : ''}`
+  return `出生地 ${place}（东经${loc.lng}° 北纬${loc.lat}°）：${ts.desc}`
 })
 
-/* 计算排盘时的实际时辰 (含真太阳时修正) */
+/* 计算排盘时的实际时辰 (含真太阳时修正, 按省市县经纬度) */
 function resolveShichenHour() {
   const f = form.value.bazi
   let hour = SHICHEN[f.shichen].from
@@ -246,9 +280,9 @@ function resolveShichenHour() {
     } else {
       date = new Date(1990, 0, 1, 12, 0)
     }
-    const city = CITIES[f.city]
-    if (city) {
-      const ts = trueSolarTime(date, city.lng)
+    const loc = getRegionLngLat(f.province, f.city, f.district)
+    if (loc) {
+      const ts = trueSolarTime(date, loc.lng)
       hour = ts.hour
     }
   }
@@ -620,6 +654,38 @@ function runLiuren() {
 }
 
 /* ===== 八字输入 (问真) ===== */
+/* 阳历: 日期+时辰 并排转盘 */
+.tp-pickers-inline {
+  flex: 1;
+  display: flex;
+  gap: 12rpx;
+}
+.tp-pickers-inline .tp-picker {
+  flex: 1;
+  text-align: center;
+}
+/* 四柱: 一排 4 个转盘 */
+.tp-gz-grid {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+.tp-gz-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tp-gz-label {
+  font-size: 22rpx;
+  color: #857563;
+  margin-bottom: 8rpx;
+}
+.tp-gz-picker {
+  width: 100%;
+  text-align: center;
+  font-size: 26rpx;
+}
 .tp-seg {
   display: flex;
   gap: 10rpx;
