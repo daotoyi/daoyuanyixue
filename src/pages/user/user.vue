@@ -784,29 +784,26 @@ onMounted(async () => {
   margin-bottom: 20rpx;
 }
 .invite-link {
+  display: flex;
+  align-items: flex-start;
   background: #f8f3ea;
   border-radius: 12rpx;
-  padding: 20rpx;
-  font-size: 22rpx;
-  color: #8c5a2b;
+  padding: 14rpx 16rpx;
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   margin-bottom: 10rpx;
   overflow: hidden;
-  word-break: break-all;
-  overflow-wrap: anywhere;
-  word-wrap: break-word;
-  white-space: normal;
 }
 .invite-link-text {
-  display: block;
-  width: 100%;
-  max-width: 100%;
+  flex: 1;
+  min-width: 0;
+  font-size: 20rpx;
+  color: #8c5a2b;
+  line-height: 1.5;
   word-break: break-all;
   overflow-wrap: anywhere;
   word-wrap: break-word;
   white-space: normal;
-  line-height: 1.5;
 }
 </style>

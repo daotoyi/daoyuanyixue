@@ -591,6 +591,28 @@ export const WX_COLOR = {
   '水': '#3f6f8c',
 }
 
+/* ===== 十二长生: 以日干五行阴阳定长生位, 阳干顺行/阴干逆行 ===== */
+const CHANGSHENG = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养']
+const CHANGSHENG_START = {
+  0: 11, // 甲木长生亥
+  1: 6,  // 乙木长生午
+  2: 2,  // 丙火长生寅
+  3: 9,  // 丁火长生酉
+  4: 2,  // 戊土长生寅
+  5: 9,  // 己土长生酉
+  6: 5,  // 庚金长生巳
+  7: 0,  // 辛金长生子
+  8: 8,  // 壬水长生申
+  9: 3,  // 癸水长生卯
+}
+/** 某地支相对日干的十二长生状态 (每柱地支均可查, 日柱即"自坐") */
+export function changShengOf(dayGan, zhiIdx) {
+  const start = CHANGSHENG_START[dayGan]
+  const yang = dayGan % 2 === 0
+  const idx = yang ? (zhiIdx - start + 12) % 12 : (start - zhiIdx + 12) % 12
+  return CHANGSHENG[idx]
+}
+
 /** 某大运 10 年流年 (起运岁数 -> 起始年份) */
 export function liunianOfDayun(dayun, birthYear) {
   const startAge = parseInt(dayun.startAge) || 4

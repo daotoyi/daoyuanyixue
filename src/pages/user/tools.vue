@@ -161,16 +161,15 @@
       <view v-else-if="activeTool === 'liuren'" class="tool-panel">
         <view class="tp-title">输入日期时辰，排出天地盘（简化）</view>
         <view class="tp-row">
-          <text class="tp-label">日期</text>
-          <picker mode="date" :value="form.liuren.date" @change="(e) => (form.liuren.date = e.detail.value)">
-            <view class="tp-picker">{{ form.liuren.date }}</view>
-          </picker>
-        </view>
-        <view class="tp-row">
-          <text class="tp-label">时辰</text>
-          <picker mode="selector" :range="shichenLabels" @change="(e) => (form.liuren.shichen = e.detail.value)">
-            <view class="tp-picker">{{ shichenLabels[form.liuren.shichen] }}</view>
-          </picker>
+          <text class="tp-label">日期时辰</text>
+          <view class="tp-pickers-inline">
+            <picker mode="date" :value="form.liuren.date" @change="(e) => (form.liuren.date = e.detail.value)">
+              <view class="tp-picker">{{ form.liuren.date }}</view>
+            </picker>
+            <picker mode="selector" :range="shichenLabels" @change="(e) => (form.liuren.shichen = e.detail.value)">
+              <view class="tp-picker">{{ shichenLabels[form.liuren.shichen] }}</view>
+            </picker>
+          </view>
         </view>
         <view class="btn-fill btn-pp" @tap="runLiuren"><text>开始排盘</text></view>
         <view class="lr-result" v-if="lrResult">

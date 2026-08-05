@@ -31,8 +31,8 @@
 
     <!-- ===== 四柱八字 ===== -->
     <view v-if="tab === 'bazi'" class="pp-body">
-      <!-- 四柱表: 最左列 天干/地支 行标签 + 选中大运/流年/流月联动列 (从左到右: 流时/流日/流月/流年/大运/四柱), 列多可左右滑动 -->
-      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+      <!-- 四柱表: 最左列 天干/地支 行标签 + 选中大运/流年/流月联动列 (从左到右: 流时/流日/流月/流年/大运/四柱), 列多可左右滑动, 下方表格同步滚动 -->
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll" @scroll="onGridScroll">
         <view class="pp-grid">
           <view class="pp-row pp-head">
             <view class="pp-cell pp-label"></view>
@@ -57,8 +57,8 @@
         </view>
       </scroll-view>
 
-      <!-- 地支藏干 (四柱下方, 左侧标签, 含联动列) -->
-      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+      <!-- 地支藏干 (四柱下方, 左侧标签, 含联动列, 与四柱表同步滚动) -->
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll" :scroll-left="gridLeft">
         <view class="pp-block pp-tbl">
           <view class="pp-cg-grid">
           <view class="pp-row">
@@ -74,17 +74,17 @@
         </view>
       </scroll-view>
 
-      <!-- 星运/自坐/空亡 一个板块 (左侧分类标签, 含联动列) -->
-      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+      <!-- 星运/自坐/空亡 一个板块 (左侧分类标签, 含联动列, 与四柱表同步滚动) -->
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll" :scroll-left="gridLeft">
         <view class="pp-block pp-tbl">
           <view class="pp-meta-grid">
           <view class="pp-row">
-            <view class="pp-cell pp-label">星运</view>
+            <view class="pp-cell pp-label">纳音</view>
             <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'ny' + i">{{ c.nayin }}</view>
           </view>
           <view class="pp-row">
-            <view class="pp-cell pp-label">自坐</view>
-            <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'zs' + i">{{ c.zisit || '—' }}</view>
+            <view class="pp-cell pp-label">长生</view>
+            <view class="pp-cell pp-mv" v-for="(c, i) in columns" :key="'zs' + i">{{ c.changsheng || '—' }}</view>
           </view>
           <view class="pp-row">
             <view class="pp-cell pp-label">空亡</view>
@@ -96,8 +96,8 @@
         </view>
       </scroll-view>
 
-      <!-- 神煞 单独板块 (含联动列) -->
-      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll">
+      <!-- 神煞 单独板块 (含联动列, 与四柱表同步滚动) -->
+      <scroll-view scroll-x :show-scrollbar="false" class="pp-grid-scroll" :scroll-left="gridLeft">
         <view class="pp-block pp-tbl">
           <view class="pp-meta-grid">
           <view class="pp-row">
@@ -372,7 +372,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar } from '../../utils/paipan'
+import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../../utils/paipan'
 import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
 import { aiJiepan } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -409,6 +409,12 @@ const HISTORY_KEY = 'paipan_history'
 const showHistory = ref(false)
 const historyList = ref([])
 
+/* 四柱表横向滑动位置 (下方 藏干/纳音/长生/空亡/神煞 表格同步) */
+const gridLeft = ref(0)
+function onGridScroll(e) {
+  gridLeft.value = (e && e.detail && e.detail.scrollLeft) || 0
+}
+
 /* 节气 (流月 -> 节气名+近似日期, 参考问真) */
 const JIEQI = [
   { name: '立春', md: '2/4' }, { name: '惊蛰', md: '3/6' }, { name: '清明', md: '4/5' },
@@ -421,7 +427,7 @@ const JIEQI = [
 const SS1 = { '正官': '官', '七杀': '杀', '正印': '印', '偏印': '枭', '比肩': '比', '劫财': '劫', '食神': '食', '伤官': '伤', '正财': '才', '偏财': '财', '日主': '主' }
 function ss1(ss) { return SS1[ss] || ss }
 
-/* 构建联动列 (大运/流年/流月 的干支+藏干+星运+自坐+空亡+神煞) */
+/* 构建联动列 (大运/流年/流月/流日/流时 的干支+藏干+纳音+长生+空亡+神煞) */
 function buildExtraCol(type, label, ganIdx, zhiIdx) {
   const bazi = data.value.bazi
   const dayGan = bazi.pillars[2].g
@@ -438,6 +444,7 @@ function buildExtraCol(type, label, ganIdx, zhiIdx) {
     gan: GAN[ganIdx], zhi: ZHI[zhiIdx],
     ganShishen: ss, ss1: ss1(ss),
     canggan, nayin: NAYIN[(ganIdx * 12 + zhiIdx) % 60],
+    changsheng: changShengOf(dayGan, zhiIdx),
     zisit: '', isKong: kongZhis.includes(ZHI[zhiIdx]) ? '是' : '',
     shensha: shenshaOf(ganIdx, zhiIdx, yearZhi, monthZhi, dayGan, -1),
   }
@@ -527,9 +534,14 @@ onLoad((options) => {
   applyData(data.value)
 })
 
-/* 应用排盘数据 (新盘 / 历史盘通用): 重置联动状态 + 生成解盘 */
+/* 应用排盘数据 (新盘 / 历史盘通用): 重置联动状态 + 补十二长生 + 生成解盘 */
 function applyData(d) {
   data.value = d
+  // 四柱补充十二长生 (日干为基准, 各柱地支查状态)
+  const dayGan = d.bazi.pillars[2].g
+  d.bazi.pillars.forEach((p) => {
+    if (!p.changsheng) p.changsheng = changShengOf(dayGan, p.z)
+  })
   dyOpen.value = -1
   dyYears.value = []
   lnYear.value = null
