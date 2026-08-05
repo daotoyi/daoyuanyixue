@@ -208,6 +208,14 @@
         "navigationBarBackgroundColor": "#FFFCF5",
         "navigationBarTextStyle": "black"
       }
+    },
+    {
+      "path": "pages/user/paipan",
+      "style": {
+        "navigationBarTitleText": "排盘结果",
+        "navigationBarBackgroundColor": "#FFFCF5",
+        "navigationBarTextStyle": "black"
+      }
     }
   ],
   "globalStyle": {

@@ -17,9 +17,10 @@
     </scroll-view>
 
     <view class="tool-body">
-      <!-- ===== 四柱八字 (问真风格) ===== -->
-      <view v-if="activeTool === 'bazi'" class="tool-panel">
-        <view class="tp-title">输入出生信息，排出四柱八字</view>
+      <!-- ===== 四柱/奇门/紫微 共用出生时间输入 ===== -->
+      <view v-if="['bazi', 'qimen', 'ziwei'].includes(activeTool)" class="tool-panel">
+        <view class="tp-title">输入出生时间，排出四柱 / 奇门 / 紫微</view>
+        <view class="tp-share-tip">三种排盘共用同一出生时间，点击排盘后在新页面查看结果</view>
 
         <!-- 输入方式 -->
         <view class="tp-row">
@@ -108,183 +109,9 @@
           <view class="tp-tip" v-if="solarDiffText">修正：{{ solarDiffText }}</view>
         </template>
 
-        <view class="btn-fill btn-pp" @tap="runBazi"><text>开始排盘</text></view>
-
-        <!-- 问真风格四柱排盘 -->
-        <view class="wz-result" v-if="baziResult">
-          <!-- 顶部: 阳历 + 农历 + 元男/元女 -->
-          <view class="wz-top">
-            <view class="wz-top-date">
-              <text class="wz-top-lunar">农历 {{ baziResult.lunarText }}</text>
-              <text class="wz-top-solar">{{ baziResult.solarText }}</text>
-            </view>
-            <view class="wz-top-gender">
-              <text class="wz-yuan">{{ baziResult.gender === '女' ? '元女' : '元男' }}</text>
-              <text class="wz-daymaster">日主：{{ baziResult.dayGanName }}（{{ GAN_WX[baziResult.pillars[2].g] }}）</text>
-            </view>
-          </view>
-
-          <!-- 四柱表 (干支同字号五行配色 + 每柱星运/自坐/空亡/神煞) -->
-          <view class="wz-grid">
-            <view class="wz-col" v-for="(p, i) in baziResult.pillars" :key="i">
-              <text class="wz-title">{{ ['年柱', '月柱', '日柱', '时柱'][i] }}</text>
-              <text class="wz-ss">{{ p.ganShishen }}</text>
-              <text class="wz-ganzhi" :class="'wx-' + GAN_WX[p.g]">{{ GAN[p.g] }}</text>
-              <text class="wz-ganzhi" :class="'wx-' + ZHI_WX[p.z]">{{ ZHI[p.z] }}</text>
-              <view class="wz-col-meta">
-                <text class="wz-ny">星运·{{ p.nayin }}</text>
-                <text class="wz-zs">自坐{{ p.zisit || '—' }}</text>
-                <text class="wz-kw" :class="{ on: p.isKong }">空亡{{ p.isKong || '无' }}</text>
-                <text class="wz-ss-list" v-if="p.shensha && p.shensha.length">{{ p.shensha.join(' ') }}</text>
-              </view>
-            </view>
-          </view>
-
-          <!-- 地支藏干 (独立模块, 四柱下方) -->
-          <view class="wz-canggan">
-            <text class="wz-section-title">地支藏干</text>
-            <view class="wz-cg-row">
-              <view class="wz-cg-cell" v-for="(p, i) in baziResult.pillars" :key="i">
-                <text class="wz-cg-zhi" :class="'wx-' + ZHI_WX[p.z]">{{ ZHI[p.z] }}</text>
-                <view class="wz-cg-list">
-                  <view class="wz-cg-item" v-for="(c, ci) in p.canggan" :key="ci">
-                    <text class="wz-cg-gan" :class="'wx-' + c.wx">{{ c.gan }}</text>
-                    <text class="wz-cg-ss">{{ c.shishen }}</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-
-          <!-- 五行统计 -->
-          <view class="wz-wxbar">
-            <view class="wz-wx-item" v-for="w in wxOrder" :key="w">
-              <text class="wz-wx-name" :class="'wx-' + w">{{ w }}</text>
-              <view class="wz-wx-bar"><view class="wz-wx-fill" :class="'wx-' + w" :style="{ width: (baziResult.wxCount[w] || 0) * 40 + '%' }"></view></view>
-              <text class="wz-wx-num">{{ baziResult.wxCount[w] }}</text>
-            </view>
-          </view>
-
-          <view class="wz-meta">
-            <view class="wz-meta-row"><text class="wz-mk">八字</text><text class="wz-mv">{{ baziResult.ganZhi.join(' ') }}（{{ baziResult.shichen }}）</text></view>
-            <view class="wz-meta-row"><text class="wz-mk">日主</text><text class="wz-mv">{{ baziResult.dayGanName }} · 元{{ baziResult.gender === '女' ? '女' : '男' }}</text></view>
-            <view class="wz-meta-row"><text class="wz-mk">空亡</text><text class="wz-mv">{{ baziResult.kongwang }}</text></view>
-            <view class="wz-meta-row"><text class="wz-mk">起运</text><text class="wz-mv">{{ baziResult.qiYun }} · {{ baziResult.dayunDir }}</text></view>
-          </view>
-
-          <!-- 大运 (可点击展开流年) -->
-          <view class="wz-dayun">
-            <text class="wz-section-title">大运</text>
-            <scroll-view scroll-x :show-scrollbar="false">
-              <view class="wz-dy-row">
-                <view
-                  class="wz-dy-item"
-                  :class="{ on: dyOpen === i }"
-                  v-for="(dy, i) in baziResult.dayun"
-                  :key="i"
-                  @tap="toggleDayun(i)"
-                >
-                  <text class="wz-dy-age">{{ dy.startAge }}</text>
-                  <text class="wz-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(dy.gan)]">{{ dy.gan }}</text>
-                  <text class="wz-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(dy.zhi)]">{{ dy.zhi }}</text>
-                  <text class="wz-dy-ss">{{ dy.ganShishen }}</text>
-                </view>
-              </view>
-            </scroll-view>
-
-            <!-- 选中大运的 10 年流年 -->
-            <view class="wz-dy-years" v-if="dyOpen >= 0 && dyYears.length">
-              <view class="wz-dy-year-head">流年 · {{ baziResult.dayun[dyOpen].yearRange }}</view>
-              <view class="wz-ln-grid">
-                <view
-                  class="wz-ln-item"
-                  :class="{ on: lnYear === y.year }"
-                  v-for="y in dyYears"
-                  :key="y.year"
-                  @tap="toggleLiunian(y)"
-                >
-                  <text class="wz-ln-year">{{ y.year }}</text>
-                  <text class="wz-ln-gan" :class="'wx-' + GAN_WX[y.ganIdx]">{{ y.gan }}</text>
-                  <text class="wz-ln-zhi" :class="'wx-' + ZHI_WX[y.zhiIdx]">{{ y.zhi }}</text>
-                  <text class="wz-ln-ss">{{ shishenName(y.ganIdx) }}</text>
-                </view>
-              </view>
-
-              <!-- 选中流年的 12 流月 -->
-              <view class="wz-ln-months" v-if="lnYear !== null && lnMonths.length">
-                <view class="wz-dy-year-head">流月 · {{ lnYear }}年</view>
-                <view class="wz-ym-grid">
-                  <view class="wz-ym-item" v-for="(mm, mi) in lnMonths" :key="mi">
-                    <text class="wz-ym-name">{{ mm.month }}</text>
-                    <text class="wz-ym-gan" :class="'wx-' + GAN_WX[GAN.indexOf(mm.gan)]">{{ mm.gan }}</text>
-                    <text class="wz-ym-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(mm.zhi)]">{{ mm.zhi }}</text>
-                    <text class="wz-ym-ss">{{ mm.ganShishen }}</text>
-                  </view>
-                </view>
-              </view>
-            </view>
-          </view>
-
-          <!-- 当前流年 -->
-          <view class="wz-liunian">
-            <text class="wz-section-title">流年 · {{ new Date().getFullYear() }}年</text>
-            <view class="wz-ln-box">
-              <text class="wz-ln-name" :class="'wx-' + GAN_WX[GAN.indexOf(baziResult.liunian.gan)]">{{ baziResult.liunian.name }}</text>
-              <text class="wz-ln-ss">{{ baziResult.liunian.ganShishen }}</text>
-              <text class="wz-ln-wx">纳音 {{ NAYIN[((GAN.indexOf(baziResult.liunian.gan) * 12) + ZHI.indexOf(baziResult.liunian.zhi)) % 60] }}</text>
-            </view>
-          </view>
-          <view class="br-tip">※ 以节气为界排盘，真太阳时按出生地经度修正，大运流月供学习参考</view>
-
-          <!-- ===== AI 解盘 ===== -->
-          <view class="jp-section">
-            <view class="jp-head">
-              <text class="jp-title">AI 智能解盘</text>
-              <text class="jp-summary">{{ jpSummary }}</text>
-            </view>
-
-            <!-- 免费模块 -->
-            <view class="jp-block" v-for="m in freeModules" :key="m.key">
-              <view class="jp-block-head" @tap="toggleJp(m.key)">
-                <text class="jp-block-icon">{{ m.icon }}</text>
-                <text class="jp-block-name">{{ m.name }}</text>
-                <text class="jp-free-tag">免费</text>
-                <text class="jp-arrow">{{ openJp[m.key] ? '▲' : '▼' }}</text>
-              </view>
-              <view class="jp-content" v-if="openJp[m.key]">
-                <text class="jp-para" v-for="(t, i) in jpData[m.key]" :key="i">{{ t }}</text>
-              </view>
-            </view>
-
-            <!-- 付费模块 -->
-            <view class="jp-block paid" v-for="m in paidModules" :key="m.key">
-              <view class="jp-block-head" @tap="unlockJp(m)">
-                <text class="jp-block-icon">{{ m.icon }}</text>
-                <text class="jp-block-name">{{ m.name }}</text>
-                <view class="jp-paid-tag">
-                  <text v-if="!isJpUnlocked(m.key)">¥9.9 解锁</text>
-                  <text v-else class="jp-unlocked">已解锁</text>
-                </view>
-                <text class="jp-arrow">{{ openJp[m.key] ? '▲' : '▼' }}</text>
-              </view>
-              <view class="jp-content" v-if="openJp[m.key] && isJpUnlocked(m.key)">
-                <view class="jp-ai-loading" v-if="jpAiLoading[m.key]">
-                  <text>🤖 DeepSeek AI 正在生成{{ m.name }}解读...</text>
-                </view>
-                <text class="jp-para" v-for="(t, i) in jpData[m.key]" :key="i">{{ t }}</text>
-                <text class="jp-ai-tag" v-if="jpAiDone[m.key]">✎ 由 DeepSeek AI 智能生成</text>
-              </view>
-              <view class="jp-lock" v-if="!isJpUnlocked(m.key) && openJp[m.key]">
-                <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
-                <view class="btn-fill btn-pay" @tap.stop="payJiepan">
-                  <text>¥9.9 立即解锁</text>
-                </view>
-              </view>
-            </view>
-          </view>
-        </view>
+        <view class="btn-fill btn-pp" @tap="runPaipan"><text>开始排盘</text></view>
       </view>
+
 
       <!-- ===== 六爻 ===== -->
       <view v-else-if="activeTool === 'liuyao'" class="tool-panel">
@@ -305,57 +132,6 @@
         </view>
       </view>
 
-      <!-- ===== 紫微斗数 ===== -->
-      <view v-else-if="activeTool === 'ziwei'" class="tool-panel">
-        <view class="tp-title">输入农历生日与时辰，排出十二宫（简化）</view>
-        <view class="tp-row">
-          <text class="tp-label">农历日（初一~三十）</text>
-          <picker mode="selector" :range="lunarDays" @change="(e) => (form.ziwei.day = e.detail.value)">
-            <view class="tp-picker">{{ lunarDays[form.ziwei.day] }}</view>
-          </picker>
-        </view>
-        <view class="tp-row">
-          <text class="tp-label">出生时辰</text>
-          <picker mode="selector" :range="shichenLabels" @change="(e) => (form.ziwei.shichen = e.detail.value)">
-            <view class="tp-picker">{{ shichenLabels[form.ziwei.shichen] }}</view>
-          </picker>
-        </view>
-        <view class="btn-fill btn-pp" @tap="runZiwei"><text>开始排盘</text></view>
-        <view class="zw-grid" v-if="zwResult">
-          <view
-            class="zw-cell"
-            :class="{ ming: p.gong === zwResult.mingGong }"
-            v-for="p in zwResult.palaces"
-            :key="p.gong"
-          >
-            <text class="zw-name">{{ p.name }}</text>
-            <text class="zw-star" v-for="(s, i) in p.stars" :key="i">{{ s }}</text>
-          </view>
-          <view class="br-tip">※ 简化排盘，仅供参考</view>
-        </view>
-      </view>
-
-      <!-- ===== 奇门遁甲 ===== -->
-      <view v-else-if="activeTool === 'qimen'" class="tool-panel">
-        <view class="tp-title">输入日期，排出奇门九宫八门（简化）</view>
-        <view class="tp-row">
-          <text class="tp-label">日期</text>
-          <picker mode="date" :value="form.qimen.date" @change="(e) => (form.qimen.date = e.detail.value)">
-            <view class="tp-picker">{{ form.qimen.date }}</view>
-          </picker>
-        </view>
-        <view class="btn-fill btn-pp" @tap="runQimen"><text>开始排盘</text></view>
-        <view class="qm-grid" v-if="qmResult">
-          <view class="qm-cell" v-for="p in qmResult.palaces" :key="p.gong">
-            <text class="qm-gong">{{ p.gong }}</text>
-            <text class="qm-palace">{{ p.palace }}{{ p.element }}</text>
-            <text class="qm-door">{{ p.door }}</text>
-            <text class="qm-star">{{ p.star }}</text>
-          </view>
-          <view class="br-line"><text class="br-k">日干支：</text><text class="br-v">{{ qmResult.dayName }}</text></view>
-          <view class="br-tip">※ 简化排盘，仅供参考</view>
-        </view>
-      </view>
 
       <!-- ===== 大六壬 ===== -->
       <view v-else-if="activeTool === 'liuren'" class="tool-panel">
@@ -391,13 +167,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { fullBazi, liuyao, ziwei, qimen, liuren, baziFromGanZhi, enrichFull, liunianOfDayun, liuyueOf, shishen, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN, NAYIN } from '../../utils/paipan'
+import { fullBazi, liuyao, ziwei, qimen, liuren, baziFromGanZhi, enrichFull, GAN, ZHI, GAN_WX, ZHI_WX, SHICHEN } from '../../utils/paipan'
 import { solarToLunar, lunarToSolar, trueSolarTime, CITIES } from '../../utils/lunar'
-import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
-import { aiJiepan } from '../../api/api'
-import { useUserStore } from '../../store/index'
-
-const userStore = useUserStore()
 
 const tools = [
   { key: 'bazi', label: '四柱八字', icon: '☯' },
@@ -412,7 +183,7 @@ const shichenLabels = SHICHEN.map((s) => s.zhi + '时')
 const wxOrder = ['木', '火', '土', '金', '水']
 const lunarDays = Array.from({ length: 30 }, (_, i) => '初' + ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'][i])
 
-/* ===== 八字输入 (问真) ===== */
+/* ===== 共用出生时间输入 (四柱/奇门/紫微) ===== */
 const baziModes = [
   { key: 'solar', label: '阳历' },
   { key: 'lunar', label: '农历' },
@@ -441,22 +212,11 @@ const form = ref({
     trueSolar: false,
     city: 0,
   },
-  ziwei: { day: 0, shichen: 6 },
-  qimen: { date: '2026-08-05' },
   liuren: { date: '2026-08-05', shichen: 6 },
 })
 
-const baziResult = ref(null)
 const lyResult = ref(null)
-const zwResult = ref(null)
-const qmResult = ref(null)
 const lrResult = ref(null)
-
-/* 大运/流年/流月 展开 */
-const dyOpen = ref(-1)
-const dyYears = ref([])
-const lnYear = ref(null)
-const lnMonths = ref([])
 
 /* 真太阳时修正说明 */
 const solarDiffText = computed(() => {
@@ -471,19 +231,11 @@ const solarDiffText = computed(() => {
   return `出生地 ${city.name}（东经${city.lng}°）：${ts.desc}`
 })
 
-/* 十神名 (按当前日主) */
-function shishenName(ganIdx) {
-  if (!baziResult.value) return ''
-  const dayGan = baziResult.value.pillars[2].g
-  return shishen(dayGan, ganIdx)
-}
-
 /* 计算排盘时的实际时辰 (含真太阳时修正) */
 function resolveShichenHour() {
   const f = form.value.bazi
   let hour = SHICHEN[f.shichen].from
   if (f.trueSolar) {
-    // 用出生日期12点(平太阳) + 修正量 → 调整时辰
     let date
     if (f.mode === 'solar') {
       const [y, m, d] = f.date.split('-').map(Number)
@@ -497,33 +249,34 @@ function resolveShichenHour() {
     const city = CITIES[f.city]
     if (city) {
       const ts = trueSolarTime(date, city.lng)
-      // 修正后的小时决定时辰
       hour = ts.hour
     }
   }
   return hour
 }
 
-function runBazi() {
+/* 共用排盘: 四柱/奇门/紫微 一次算完, 存 storage 跳结果页 */
+function runPaipan() {
   const f = form.value.bazi
   const gender = f.gender
   const hour = resolveShichenHour()
   let result = null
   let birthYear = 1990
+  let solarDate = ''
 
   if (f.mode === 'solar') {
     const [y, m, d] = f.date.split('-').map(Number)
     birthYear = y
+    solarDate = f.date
     result = fullBazi(y, m, d, hour, gender)
   } else if (f.mode === 'lunar') {
-    // lunarMonth: 0-11 正月~腊月, 12+ 闰月(12=闰正月...)
     const mIdx = f.lunarMonth
     const lMonth = mIdx >= 12 ? -(mIdx - 11) : mIdx + 1
     const s = lunarToSolar(f.lunarYear, lMonth, f.lunarDay + 1)
     birthYear = s.y
+    solarDate = `${s.y}-${String(s.m).padStart(2, '0')}-${String(s.d).padStart(2, '0')}`
     result = fullBazi(s.y, s.m, s.d, hour, gender)
   } else {
-    // 四柱输入: gz[0..3] 为 60 甲子索引
     const gz = f.gz
     result = baziFromGanZhi(
       gz[0] % 10, gz[0] % 12,
@@ -532,157 +285,29 @@ function runBazi() {
       gz[3] % 10, gz[3] % 12,
       gender
     )
+    solarDate = `${birthYear}-01-01`
   }
 
   enrichFull(result, birthYear)
 
-  // 顶部阳历/农历显示
-  const solarDate = f.mode === 'lunar'
-    ? (() => { const s = lunarToSolar(f.lunarYear, f.lunarMonth >= 12 ? -(f.lunarMonth - 11) : f.lunarMonth + 1, f.lunarDay + 1); return `${s.y}-${String(s.m).padStart(2, '0')}-${String(s.d).padStart(2, '0')}` })()
-    : f.mode === 'solar' ? f.date : `${birthYear}-01-01`
   const [ly, lm, ld] = solarDate.split('-').map(Number)
   const lunarInfo = solarToLunar(ly, lm, ld)
   result.solarText = `阳历 ${solarDate}`
   result.lunarText = `${lunarInfo.ganZhi}年 ${lunarInfo.monthName}${lunarInfo.dayName}`
   if (f.trueSolar) result.solarText += `（真太阳时 ${hour}时）`
 
-  baziResult.value = result
-  dyOpen.value = -1
-  dyYears.value = []
-  lnYear.value = null
-  lnMonths.value = []
+  // 奇门 + 紫微 (共用同一时间)
+  const qm = qimen(ly, lm, ld)
+  const zw = ziwei(lunarInfo.day, hour)
 
-  // 生成解盘
-  const jp = generateJiepan(result)
-  jpData.value = jp
-  jpSummary.value = summaryJiepan(result)
-  openJp.value = { liuqin: true, health: false, career: false, wealth: false, marriage: false }
-}
-
-function toggleDayun(i) {
-  if (dyOpen.value === i) {
-    dyOpen.value = -1
-    dyYears.value = []
-    lnYear.value = null
-    lnMonths.value = []
-    return
-  }
-  dyOpen.value = i
-  lnYear.value = null
-  lnMonths.value = []
-  dyYears.value = liunianOfDayun(baziResult.value.dayun[i], baziResult.value.birthYear)
-}
-
-function toggleLiunian(y) {
-  if (lnYear.value === y.year) {
-    lnYear.value = null
-    lnMonths.value = []
-    return
-  }
-  lnYear.value = y.year
-  const dayGan = baziResult.value.pillars[2].g
-  lnMonths.value = liuyueOf(y.ganIdx, dayGan)
-}
-
-/* ===== AI 解盘状态 ===== */
-const jpData = ref({ liuqin: [], health: [], career: [], wealth: [], marriage: [] })
-const jpSummary = ref('')
-const jpAiLoading = ref({ career: false, wealth: false, marriage: false })
-const jpAiDone = ref({}) // 已用真实 AI 生成过的模块
-const openJp = ref({ liuqin: true, health: false, career: false, wealth: false, marriage: false })
-const freeModules = [
-  { key: 'liuqin', name: '六亲缘分', icon: '👨‍👩‍👧' },
-  { key: 'health', name: '健康养生', icon: '🌿' },
-]
-const paidModules = [
-  { key: 'career', name: '事业前程', icon: '💼' },
-  { key: 'wealth', name: '财富格局', icon: '💰' },
-  { key: 'marriage', name: '婚姻感情', icon: '💞' },
-]
-const PAID_KEY = 'jiepan_paid_v1'
-
-function isJpUnlocked(key) {
   try {
-    const paid = uni.getStorageSync(PAID_KEY) || []
-    return paid.includes(key)
+    uni.setStorageSync('paipan_data', { bazi: result, qimen: qm, ziwei: zw })
   } catch (e) {
-    return false
-  }
-}
-
-function toggleJp(key) {
-  openJp.value[key] = !openJp.value[key]
-}
-
-function unlockJp(m) {
-  openJp.value[m.key] = !openJp.value[m.key]
-  // 已解锁的付费模块 → 加载真实 AI 解盘
-  if (openJp.value[m.key] && isJpUnlocked(m.key) && !jpAiDone.value[m.key]) {
-    loadAiJiepan(m.key)
-  }
-}
-
-/* 调用 DeepSeek 生成真实 AI 解盘 */
-function loadAiJiepan(key) {
-  if (jpAiLoading.value[key]) return
-  jpAiLoading.value[key] = true
-  const f = baziResult.value
-  if (!f) {
-    jpAiLoading.value[key] = false
+    uni.showToast({ title: '排盘失败', icon: 'none' })
     return
   }
-  const wxText = Object.entries(f.wxCount).map(([w, n]) => `${w}${n}`).join(' ')
-  aiJiepan({
-    module: key,
-    bazi: {
-      gender: f.gender,
-      ganZhi: f.ganZhi,
-      dayGanName: f.dayGanName,
-      strength: f.dayunDir ? '' : '',
-      kongwang: f.kongwang,
-      wxText,
-    },
-  }).then((res) => {
-    if (res && res.content && res.content.length) {
-      jpData.value[key] = res.content
-      jpAiDone.value[key] = true
-    }
-  }).catch(() => {
-    // 失败保留规则解盘
-  }).finally(() => {
-    jpAiLoading.value[key] = false
-  })
-}
-
-function payJiepan() {
-  uni.showModal({
-    title: '深入解盘 · ¥9.9',
-    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
-    confirmText: '确认支付 ¥9.9',
-    cancelText: '取消',
-    success: (res) => {
-      if (!res.confirm) return
-      try {
-        const paid = uni.getStorageSync(PAID_KEY) || []
-        paidModules.forEach((m) => {
-          if (!paid.includes(m.key)) paid.push(m.key)
-        })
-        uni.setStorageSync(PAID_KEY, paid)
-        uni.showToast({ title: '解锁成功', icon: 'success' })
-        // 记录订单 (便于后台查看)
-        const { createOrder, payOrder } = require('../../api/api')
-        createOrder({
-          items: [{ id: 0, name: '八字深入解盘（事业·财富·婚姻）', price: '9.90', qty: 1, image: '' }],
-          total_price: '9.90',
-          pay_method: 'balance',
-          address: { name: '在线服务', phone: '', detail: '虚拟服务' },
-          uid: userStore.userInfo.uid || 0,
-        }).then((o) => payOrder(o.order_no)).catch(() => {})
-      } catch (e) {
-        uni.showToast({ title: '解锁失败', icon: 'none' })
-      }
-    },
-  })
+  const tool = activeTool.value === 'qimen' || activeTool.value === 'ziwei' ? activeTool.value : 'bazi'
+  uni.navigateTo({ url: `/pages/user/paipan?tool=${tool}` })
 }
 
 // 支持 ?tool= 直达 (bazi/liuyao/ziwei/qimen/liuren)
@@ -693,16 +318,6 @@ onLoad((options) => {
 
 function runLiuyao() {
   lyResult.value = liuyao()
-}
-
-function runZiwei() {
-  const sc = SHICHEN[form.value.ziwei.shichen]
-  zwResult.value = ziwei(form.value.ziwei.day + 1, sc.from)
-}
-
-function runQimen() {
-  const [y, m, d] = form.value.qimen.date.split('-').map(Number)
-  qmResult.value = qimen(y, m, d)
 }
 
 function runLiuren() {
