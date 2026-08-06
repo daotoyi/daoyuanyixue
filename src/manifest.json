@@ -5,7 +5,6 @@
   "versionName": "1.0.0",
   "versionCode": "100",
   "transformPx": false,
-
   "/* ==================== APP 图标与启动图 ==================== */": "",
   "app-plus": {
     "usingComponents": true,
@@ -51,7 +50,11 @@
     "distribute": {
       "android": {
         "packagename": "cn.codebuddy.zhs.workbuddy",
-        "abiFilters": ["armeabi-v7a", "arm64-v8a", "x86"],
+        "abiFilters": [
+          "armeabi-v7a",
+          "arm64-v8a",
+          "x86"
+        ],
         "permissions": [
           "<uses-permission android:name=\"android.permission.INTERNET\"/>",
           "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
@@ -77,7 +80,6 @@
       "sdkConfigs": {}
     }
   },
-
   "/* ==================== 微信小程序 ==================== */": "",
   "mp-weixin": {
     "appid": "wx3ec1337aae9ace3c",
@@ -110,7 +112,11 @@
       },
       "condition": false
     },
-    "requiredPrivateInfos": ["getLocation", "chooseLocation", "chooseAddress"],
+    "requiredPrivateInfos": [
+      "getLocation",
+      "chooseLocation",
+      "chooseAddress"
+    ],
     "permission": {
       "scope.userLocation": {
         "desc": "用于获取您的位置以提供本地化服务"
@@ -118,9 +124,11 @@
     },
     "usingComponents": true,
     "lazyCodeLoading": "requiredComponents",
-    "cloud": true
+    "cloud": true,
+    "optimization": {
+      "subPackages": true
+    }
   },
-
   "/* ==================== macOS 路径适配 ==================== */": "",
   "_macos_compat": {
     "_description": "macOS APFS 默认大小写不敏感，但 CI/部分 Linux 环境大小写敏感。以下规则确保跨平台一致性。",
@@ -138,7 +146,6 @@
     },
     "warn_on_mixed_case": true
   },
-
   "/* ==================== TCB 域名自动适配 ==================== */": "",
   "_tcb_domains": {
     "_description": "TCB 域名自动注入到小程序 request/uploadFile/downloadFile/socket 合法域名",
@@ -168,7 +175,6 @@
       ]
     }
   },
-
   "/* ==================== H5 (Web) ==================== */": "",
   "h5": {
     "title": "道元易学",
@@ -192,7 +198,6 @@
       "useCloudEnv": true
     }
   },
-
   "/* ==================== 跨平台通用 ==================== */": "",
   "uniStatistics": {
     "enable": false

@@ -25,7 +25,6 @@
     "@dcloudio/uni-mp-weixin": "3.0.0-4060620250520001",
     "@cloudbase/js-sdk": "^2.7.0",
     "pinia": "^2.1.7",
-    "uview-plus": "^3.3.0",
     "vue": "^3.4.21",
     "vue-i18n": "^9.13.1",
     "dayjs": "^1.11.10"
