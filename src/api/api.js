@@ -7,6 +7,7 @@
  * 本地 mock 保留在 mock.js, 通过 __USE_MOCK__ 可随时回退
  */
 import mock from './mock'
+import { getCallableFunction } from './cloudbase'
 
 const __USE_MOCK__ = false
 const FN_NAME = 'dy-api'
@@ -26,8 +27,8 @@ function delay(ms = 150) {
 async function _callFunction(action, data = {}) {
   // #ifdef MP-WEIXIN
   // 微信小程序: 走 wx.cloud.callFunction (已绑定环境)
+  // 注意: 不能用动态 import() —— 微信小程序不支持, 编译产物会变成 await 字符串导致运行时报错
   try {
-    const { getCallableFunction } = await import('./cloudbase')
     const fn = await getCallableFunction()
     if (!fn) throw new Error('云服务未初始化')
     const res = await fn(FN_NAME, { action, data })
