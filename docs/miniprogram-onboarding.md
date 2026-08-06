@@ -8,7 +8,7 @@
 ## 一、整体架构（已完成 ✅）
 
 ```
-微信小程序 (dist/build/mp-weixin, AppID wxe4eea58de8107961)
+微信小程序 (dist/build/mp-weixin, AppID wx3ec1337aae9ace3c)
    │
    ├─ wx.cloud.init({ env: zhenhesheng-d6gkez7p221305432 })   ← 云开发接管
    ├─ 登录: wx.login → dy-api user.wechatLogin
@@ -28,7 +28,7 @@
 ### 1️⃣ 云开发控制台：绑定小程序（授权方式=接管模式）
 1. 登录 [腾讯云 CloudBase 控制台](https://console.cloud.tencent.com/tcb) → 环境 `zhenhesheng-d6gkez7p221305432`
 2. 左侧 **环境 → 用户管理 / 登录授权** → **微信小程序授权**
-3. 点击「添加小程序」→ 输入 AppID：`wxe4eea58de8107961`
+3. 点击「添加小程序」→ 输入 AppID：`wx3ec1337aae9ace3c`
 4. 授权方式选择 **「接管模式」**（云开发接管小程序用户体系，登录态由云开发管理）
 5. 确认绑定成功后，云函数内 `getWXContext().OPENID` 即可直接取到用户身份（已实现，无需 secret）
 
@@ -51,7 +51,7 @@
 1. 打开 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)（需管理员/开发者扫码登录）
 2. 导入项目：
    - 目录：`dist/build/mp-weixin`
-   - AppID：`wxe4eea58de8107961`
+   - AppID：`wx3ec1337aae9ace3c`
    - 后端服务：**微信云开发**（如弹窗选择，选「不使用云服务」改为在 app.js 自动 init，本项目已内置 wx.cloud.init）
 3. 本地编译 → 真机预览（扫码体验开发版）
 
