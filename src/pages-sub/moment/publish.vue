@@ -29,7 +29,7 @@
 
     <!-- 发布按钮 -->
     <view class="publish-btn">
-      <u-button type="primary" text="发 布" shape="circle" :loading="publishing" @click="doPublish"></u-button>
+      <view class="btn-p" @click="doPublish">发 布</view>
     </view>
   </view>
 </template>

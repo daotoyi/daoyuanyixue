@@ -48,9 +48,9 @@
       </view>
 
       <view class="empty" v-else>
-        <u-empty text="暂无课程，快去学习吧" mode="book"></u-empty>
+        <view class="empty-tip">暂无课程，快去学习吧</view>
         <view class="empty-btn">
-          <u-button type="primary" text="去选课" shape="circle" @click="goCourse"></u-button>
+          <view class="btn-p" @click="goCourse">去选课</view>
         </view>
       </view>
     </scroll-view>

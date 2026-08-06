@@ -38,3 +38,8 @@
 - **远程仓库 (已推送)**: https://github.com/daotoyi/daoyuanyixue (HTTPS 推送, keychain 存有 PAT 凭证; SSH 不通)
 - 推送命令: git push origin main; 拉取: git pull origin main
 - 云端备份: ✅ GitHub 已同步
+
+## 用户约定
+
+- **项目内文件删除免确认 (2026-08-06)**: 项目目录(/Users/wenhua/WorkBuddy/zhs-deploy)内需要删除的文件直接删, 不要问确认
+

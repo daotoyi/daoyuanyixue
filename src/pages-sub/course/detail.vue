@@ -15,7 +15,7 @@
         <text class="students">{{ course.students_count }} 人学过</text>
       </view>
       <view class="teacher-row">
-        <u-avatar :text="course.teacher[0]" size="56" bg-color="#efe7d8" color="#8c5a2b" shape="circle"></u-avatar>
+        <view class="avatar-circle">{{ course.teacher[0] }}</view>
         <view class="teacher-info">
           <text class="teacher-name">{{ course.teacher }}</text>
           <text class="teacher-sub">课程讲师</text>

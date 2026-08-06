@@ -32,13 +32,7 @@
 
       <view class="err-text" v-if="errorMsg">{{ errorMsg }}</view>
 
-      <u-button
-        :type="'primary'"
-        :text="mode === 'login' ? '登 录' : '注 册'"
-        shape="circle"
-        :loading="loading"
-        @click="submit"
-      ></u-button>
+      <view class="btn-p" @click="submit">{{ mode === 'login' ? '登 录' : '注 册' }}</view>
 
       <!-- 微信一键登录 -->
       <view class="wx-divider">

@@ -51,7 +51,7 @@
       </view>
 
       <view class="empty" v-else>
-        <u-empty text="暂无相关订单" mode="order"></u-empty>
+        <view class="empty-tip">暂无相关订单</view>
       </view>
     </scroll-view>
   </view>

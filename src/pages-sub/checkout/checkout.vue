@@ -83,7 +83,7 @@
     </view>
 
     <!-- 优惠券选择弹窗 -->
-    <u-popup :show="showCoupon" mode="bottom" @close="showCoupon = false">
+    <view class="pp-mask" v-if="showCoupon" @tap="showCoupon = false"><view class="pp-sheet" @tap.stop>
       <view class="coupon-sheet">
         <view class="sheet-head"><text class="sheet-title">选择优惠券</text></view>
         <view class="coupon-item" v-for="c in coupons" :key="c.id" @tap="applyCoupon(c)">
@@ -95,9 +95,9 @@
             <text v-if="selectedCoupon && selectedCoupon.id === c.id">✓</text>
           </view>
         </view>
-        <u-button type="primary" text="不使用优惠券" shape="circle" size="small" plain @click="applyCoupon(null)"></u-button>
+        <view class="btn-p plain sm" @click="applyCoupon(null)">不使用优惠券</view>
       </view>
-    </u-popup>
+    </view></view>
   </view>
 </template>
 

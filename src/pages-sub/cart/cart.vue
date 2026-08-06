@@ -30,9 +30,9 @@
       </view>
 
       <view class="empty" v-else>
-        <u-empty text="购物车空空如也" mode="car"></u-empty>
+        <view class="empty-tip">购物车空空如也</view>
         <view class="empty-btn">
-          <u-button type="primary" text="去逛逛" shape="circle" @click="goShop"></u-button>
+          <view class="btn-p" @click="goShop">去逛逛</view>
         </view>
       </view>
     </scroll-view>

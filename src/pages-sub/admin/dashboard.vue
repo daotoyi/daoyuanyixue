@@ -101,7 +101,7 @@
           <view class="cate-main">
             <view class="module-head">
               <text class="module-title">{{ productActiveCateName }} · 商品（{{ productGrouped[productActiveCate] ? productGrouped[productActiveCate].length : 0 }}）</text>
-              <u-button type="primary" text="＋ 新增商品" shape="circle" size="small" @click="openProductForm()"></u-button>
+              <view class="btn-p sm" @click="openProductForm()">＋ 新增商品</view>
             </view>
             <view class="table">
               <view class="tr th">
@@ -162,7 +162,7 @@
           <view class="cate-main">
             <view class="module-head">
               <text class="module-title">{{ courseActiveCateName }} · 课程（{{ courseGrouped[courseActiveCate] ? courseGrouped[courseActiveCate].length : 0 }}）</text>
-              <u-button type="primary" text="＋ 新增课程" shape="circle" size="small" @click="openCourseForm()"></u-button>
+              <view class="btn-p sm" @click="openCourseForm()">＋ 新增课程</view>
             </view>
             <view class="table">
               <view class="tr th">
@@ -259,7 +259,7 @@
         <view v-else-if="activeModule === 'lives'" class="module">
           <view class="module-head">
             <text class="module-title">直播管理（{{ lives.length }}）</text>
-            <u-button type="primary" text="＋ 新增直播" shape="circle" size="small" @click="openLiveForm()"></u-button>
+            <view class="btn-p sm" @click="openLiveForm()">＋ 新增直播</view>
           </view>
           <view class="table">
             <view class="tr th">
@@ -310,7 +310,7 @@
         <view v-else-if="activeModule === 'coupons'" class="module">
           <view class="module-head">
             <text class="module-title">优惠券管理（{{ coupons.length }}）</text>
-            <u-button type="primary" text="＋ 新增优惠券" shape="circle" size="small" @click="openCouponForm()"></u-button>
+            <view class="btn-p sm" @click="openCouponForm()">＋ 新增优惠券</view>
           </view>
           <view class="table">
             <view class="tr th">
@@ -429,7 +429,7 @@
 
             <view class="settings-actions">
               <text class="settings-tip">敏感字段保存后不显示明文，留空保存则保持原值</text>
-              <u-button type="primary" :text="settingsSaving ? '保存中...' : '保存配置'" shape="circle" size="small" @click="saveSettings"></u-button>
+              <view class="btn-p sm" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存配置' }}</view>
             </view>
           </view>
         </view>
@@ -437,7 +437,7 @@
     </view>
 
     <!-- ===== 小程序绑定弹窗 (填 AppID → 生成授权链接) ===== -->
-    <u-popup :show="showWxmpBind" mode="bottom" @close="showWxmpBind = false">
+    <view class="pp-mask" v-if="showWxmpBind" @tap="showWxmpBind = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">绑定小程序（管理员扫码接管）</view>
         <view class="f-row">
@@ -446,8 +446,8 @@
         </view>
         <view class="wxmp-bind-tip">生成授权链接后，用该小程序的<text class="wxmp-strong">管理员微信</text>扫码确认，即可自动接管</view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showWxmpBind = false"></u-button>
-          <u-button type="primary" text="生成授权链接" shape="circle" size="small" :loading="wxmpBinding" @click="doWxmpBind"></u-button>
+          <view class="btn-p plain sm" @click="showWxmpBind = false">取消</view>
+          <view class="btn-p sm" @click="doWxmpBind">生成授权链接</view>
         </view>
         <view class="wxmp-auth" v-if="wxmpAuthUrl">
           <text class="wxmp-auth-tip">请用管理员微信打开以下链接完成授权：</text>
@@ -455,20 +455,20 @@
           <view class="btn-fill btn-copy" @tap="copyWxmpAuthUrl"><text>复制授权链接</text></view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 体验码弹窗 ===== -->
-    <u-popup :show="showWxmpQr" mode="center" @close="showWxmpQr = false">
+    <view class="pp-mask center" v-if="showWxmpQr" @tap="showWxmpQr = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet qr-sheet">
         <view class="sheet-title">小程序体验码</view>
         <image class="wxmp-qr-img" v-if="wxmpQrB64" :src="'data:image/png;base64,' + wxmpQrB64" mode="widthFix"></image>
         <view class="wxmp-qr-tip" v-else>获取体验码失败或暂无体验版</view>
-        <u-button type="info" text="关闭" shape="circle" size="small" plain @click="showWxmpQr = false"></u-button>
+        <view class="btn-p plain sm" @click="showWxmpQr = false">关闭</view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 商品编辑弹窗 ===== -->
-    <u-popup :show="showProduct" mode="bottom" @close="showProduct = false">
+    <view class="pp-mask" v-if="showProduct" @tap="showProduct = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ productForm.id ? '编辑商品' : '新增商品' }}</view>
         <view class="f-row"><text class="f-label">名称</text><input class="f-input" v-model="productForm.name" /></view>
@@ -505,14 +505,14 @@
           </view>
         </view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showProduct = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveProduct"></u-button>
+          <view class="btn-p plain sm" @click="showProduct = false">取消</view>
+          <view class="btn-p sm" @click="saveProduct">保存</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 课程编辑弹窗 ===== -->
-    <u-popup :show="showCourse" mode="bottom" @close="showCourse = false">
+    <view class="pp-mask" v-if="showCourse" @tap="showCourse = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ courseForm.id ? '编辑课程' : '新增课程' }}</view>
         <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="courseForm.title" /></view>
@@ -529,14 +529,14 @@
         </view>
         <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="courseForm.description" /></view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showCourse = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveCourse"></u-button>
+          <view class="btn-p plain sm" @click="showCourse = false">取消</view>
+          <view class="btn-p sm" @click="saveCourse">保存</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 直播编辑弹窗 ===== -->
-    <u-popup :show="showLive" mode="bottom" @close="showLive = false">
+    <view class="pp-mask" v-if="showLive" @tap="showLive = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ liveForm.id ? '编辑直播' : '新增直播' }}</view>
         <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="liveForm.title" /></view>
@@ -550,28 +550,28 @@
         </view>
         <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="liveForm.description" /></view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showLive = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveLive"></u-button>
+          <view class="btn-p plain sm" @click="showLive = false">取消</view>
+          <view class="btn-p sm" @click="saveLive">保存</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 优惠券编辑弹窗 ===== -->
-    <u-popup :show="showCoupon" mode="bottom" @close="showCoupon = false">
+    <view class="pp-mask" v-if="showCoupon" @tap="showCoupon = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ couponForm.id ? '编辑优惠券' : '新增优惠券' }}</view>
         <view class="f-row"><text class="f-label">名称</text><input class="f-input" v-model="couponForm.name" /></view>
         <view class="f-row"><text class="f-label">优惠</text><input class="f-input" v-model="couponForm.discount" placeholder="如: 满 99 减 20" /></view>
         <view class="f-row"><text class="f-label">有效期</text><input class="f-input" v-model="couponForm.expire_at" placeholder="2026-12-31" /></view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showCoupon = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveCoupon"></u-button>
+          <view class="btn-p plain sm" @click="showCoupon = false">取消</view>
+          <view class="btn-p sm" @click="saveCoupon">保存</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 分配道号弹窗 ===== -->
-    <u-popup :show="showAssignId" mode="bottom" @close="showAssignId = false">
+    <view class="pp-mask" v-if="showAssignId" @tap="showAssignId = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">分配道号 / 角色</view>
         <view class="f-row"><text class="f-label">道号ID</text><input class="f-input" v-model="assignForm.dao_code" placeholder="如 ZHS00002 / ZHSM002" /></view>
@@ -588,26 +588,26 @@
           </view>
         </view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showAssignId = false"></u-button>
-          <u-button type="primary" text="确认分配" shape="circle" size="small" @click="saveAssignId"></u-button>
+          <view class="btn-p plain sm" @click="showAssignId = false">取消</view>
+          <view class="btn-p sm" @click="saveAssignId">确认分配</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 反馈回复弹窗 ===== -->
-    <u-popup :show="showFeedbackReply" mode="bottom" @close="showFeedbackReply = false">
+    <view class="pp-mask" v-if="showFeedbackReply" @tap="showFeedbackReply = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">回复反馈</view>
         <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="replyForm.reply" placeholder="填写回复内容，反馈将标记为已处理" /></view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showFeedbackReply = false"></u-button>
-          <u-button type="primary" text="确认回复" shape="circle" size="small" @click="saveFeedbackReply"></u-button>
+          <view class="btn-p plain sm" @click="showFeedbackReply = false">取消</view>
+          <view class="btn-p sm" @click="saveFeedbackReply">确认回复</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- ===== 分类编辑弹窗 ===== -->
-    <u-popup :show="showCate" mode="bottom" @close="showCate = false">
+    <view class="pp-mask" v-if="showCate" @tap="showCate = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ cateForm.id ? '编辑分类' : '新建分类' }}</view>
         <view class="f-row"><text class="f-label">分类名称</text><input class="f-input" v-model="cateForm.name" /></view>
@@ -620,11 +620,11 @@
           </view>
         </view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showCate = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveCate"></u-button>
+          <view class="btn-p plain sm" @click="showCate = false">取消</view>
+          <view class="btn-p sm" @click="saveCate">保存</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
   </view>
 </template>
 
@@ -2241,7 +2241,7 @@ onMounted(async () => {
   .recent-row { font-size: 13px; padding: 10px 12px; }
   .attr-title { font-size: 14px; }
   .attr-input { font-size: 14px; }
-  .u-sheet .u-button, .u-sheet button { font-size: 14px; }
+
   /* 商品分类栏 (左侧分类) 固定宽 */
   .cate-panel { width: 180px; flex-shrink: 0; }
   .cate-row { font-size: 13px; padding: 9px 12px; }

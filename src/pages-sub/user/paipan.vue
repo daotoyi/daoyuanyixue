@@ -274,7 +274,7 @@
       <view class="pp-tip">※ 以节气为界排盘，真太阳时按出生地经度修正，流月供学习参考</view>
 
       <!-- 排盘历史弹窗 -->
-      <u-popup :show="showHistory" mode="bottom" @close="showHistory = false">
+      <view class="pp-mask" v-if="showHistory" @tap="showHistory = false"><view class="pp-sheet" @tap.stop>
         <view class="hist-sheet">
           <view class="sheet-title">排盘历史</view>
           <view class="hist-list" v-if="historyList.length">
@@ -291,7 +291,7 @@
           </view>
           <view class="hist-empty" v-else><text>暂无保存的排盘\n在排盘页开启「保存排盘」后自动存档</text></view>
         </view>
-      </u-popup>
+      </view></view>
 
       <!-- ===== AI 解盘 ===== -->
       <view class="pp-block jp-section">

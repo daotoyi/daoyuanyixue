@@ -24,7 +24,7 @@
     </view>
 
     <view class="empty" v-else>
-      <u-empty text="暂无消息" mode="message"></u-empty>
+      <view class="empty-tip">暂无消息</view>
     </view>
   </view>
 </template>

@@ -60,7 +60,7 @@
     <view class="version">{{ t('道元易学 v1.0.0', 'Daoyuan Yixue v1.0.0') }}</view>
 
     <!-- 主题选择 -->
-    <u-popup :show="showTheme" mode="bottom" @close="showTheme = false">
+    <view class="pp-mask" v-if="showTheme" @tap="showTheme = false"><view class="pp-sheet" @tap.stop>
       <view class="picker-sheet">
         <view class="sheet-title">{{ t('选择主题', 'Select Theme') }}</view>
         <view
@@ -74,10 +74,10 @@
           <text class="picker-check">{{ settingsState.theme === opt.value ? '✓' : '' }}</text>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- 语言选择 -->
-    <u-popup :show="showLang" mode="bottom" @close="showLang = false">
+    <view class="pp-mask" v-if="showLang" @tap="showLang = false"><view class="pp-sheet" @tap.stop>
       <view class="picker-sheet">
         <view class="sheet-title">{{ t('选择语言', 'Select Language') }}</view>
         <view
@@ -91,10 +91,10 @@
           <text class="picker-check">{{ settingsState.lang === opt.value ? '✓' : '' }}</text>
         </view>
       </view>
-    </u-popup>
+    </view></view>
 
     <!-- 设置密码 -->
-    <u-popup :show="showPassword" mode="bottom" @close="showPassword = false">
+    <view class="pp-mask" v-if="showPassword" @tap="showPassword = false"><view class="pp-sheet" @tap.stop>
       <view class="picker-sheet">
         <view class="sheet-title">{{ t('设置密码', 'Set Password') }}</view>
         <view class="pwd-field">
@@ -106,9 +106,9 @@
           <input class="pwd-input" :password="true" v-model="pwdForm.new_password" :placeholder="t('至少 6 位', 'At least 6 chars')" />
         </view>
         <view class="pwd-err" v-if="pwdErr">{{ pwdErr }}</view>
-        <u-button type="primary" :text="t('确认修改', 'Confirm')" shape="circle" size="small" :loading="pwdSaving" @click="savePassword"></u-button>
+        <view class="btn-p sm" @click="savePassword">{{ t('确认修改', 'Confirm') }}</view>
       </view>
-    </u-popup>
+    </view></view>
   </view>
 </template>
 

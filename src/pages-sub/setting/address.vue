@@ -17,15 +17,15 @@
     </view>
 
     <view class="empty" v-else>
-      <u-empty text="还没有收货地址" mode="address"></u-empty>
+      <view class="empty-tip">还没有收货地址</view>
     </view>
 
     <view class="addr-footer">
-      <u-button type="primary" text="＋ 新增地址" shape="circle" @click="openForm()"></u-button>
+      <view class="btn-p" @click="openForm()">＋ 新增地址</view>
     </view>
 
     <!-- 编辑弹窗 -->
-    <u-popup :show="showForm" mode="bottom" @close="showForm = false">
+    <view class="pp-mask" v-if="showForm" @tap="showForm = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ form.idx === -1 ? '新增地址' : '编辑地址' }}</view>
         <view class="f-row"><text class="f-label">收货人</text><input class="f-input" v-model="form.name" placeholder="姓名" /></view>
@@ -37,14 +37,14 @@
         <view class="f-row"><text class="f-label">详细地址</text><textarea class="f-textarea" v-model="form.detail" placeholder="街道、门牌号等" /></view>
         <view class="f-row">
           <text class="f-label">设为默认</text>
-          <u-switch v-model="form.is_default" size="20"></u-switch>
+          <switch :checked="form.is_default" @change="(e) => form.is_default = e.detail.value" color="#8c5a2b"/>
         </view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showForm = false"></u-button>
-          <u-button type="primary" text="保存" shape="circle" size="small" @click="saveAddr"></u-button>
+          <view class="btn-p plain sm" @click="showForm = false">取消</view>
+          <view class="btn-p sm" @click="saveAddr">保存</view>
         </view>
       </view>
-    </u-popup>
+    </view></view>
   </view>
 </template>
 

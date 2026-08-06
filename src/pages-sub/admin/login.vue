@@ -16,7 +16,7 @@
         <input class="input" v-model="password" :password="true" placeholder="请输入密码" />
       </view>
       <view class="err" v-if="errMsg">{{ errMsg }}</view>
-      <u-button type="primary" text="进入后台" shape="circle" :loading="loading" @click="doLogin"></u-button>
+      <view class="btn-p" @click="doLogin">进入后台</view>
 
       <view class="tip" @tap="fillDemo">示例：管理员 13800138001 / 123456（点击填入）</view>
     </view>

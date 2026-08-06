@@ -42,10 +42,3 @@ walk(MP)
 if (files) console.log(`[postbuild-mp] 还原 ${total} 处 Unicode 转义, 共 ${files} 个 wxss`)
 else console.log('[postbuild-mp] wxss 无转义需还原')
 
-// 检查 uview 在主包且路径引用正确
-const uv = path.join(MP, 'uni_modules/uview-plus')
-if (!fs.existsSync(uv)) {
-  console.warn('[postbuild-mp] 警告: 主包 uni_modules/uview-plus 不存在, 检查分包引用路径!')
-} else {
-  console.log('[postbuild-mp] uview-plus 在主包 uni_modules/ ✅ (分包经 ../../uni_modules/uview-plus 引用)')
-}

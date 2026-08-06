@@ -5,7 +5,7 @@
       <text class="bc-label">账户余额</text>
       <text class="bc-num">¥{{ userInfo.balance || '0.00' }}</text>
       <text class="bc-tip">余额可在结算时抵扣商品金额</text>
-      <u-button type="primary" text="去购物" shape="circle" size="small" @click="goShop"></u-button>
+      <view class="btn-p sm" @click="goShop">去购物</view>
     </view>
 
     <!-- 优惠券 -->
@@ -21,7 +21,7 @@
         </view>
       </view>
       <view class="empty" v-if="!list.length">
-        <u-empty text="暂无优惠券，邀请好友可得 8 折券" mode="coupon"></u-empty>
+        <view class="empty-tip">暂无优惠券，邀请好友可得 8 折券</view>
       </view>
     </view>
 
@@ -35,7 +35,7 @@
         </view>
       </view>
       <view class="empty" v-if="!list.length">
-        <u-empty :text="type === 'favorite' ? '暂无收藏商品' : '暂无浏览足迹'" mode="list"></u-empty>
+        <view class="empty-tip">{{ type === 'favorite' ? '暂无收藏商品' : '暂无浏览足迹' }}</view>
       </view>
     </view>
   </view>

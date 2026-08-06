@@ -140,4 +140,75 @@ page {
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+
+/* ==================== 通用原生组件 (替代 uview, 避免小程序体积/兼容问题) ==================== */
+/* 按钮 */
+.btn-p {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #8c5a2b;
+  color: #fefbf6;
+  border-radius: 999rpx;
+  padding: 14rpx 44rpx;
+  font-size: 28rpx;
+  line-height: 1.4;
+}
+.btn-p.sm { padding: 8rpx 28rpx; font-size: 24rpx; }
+.btn-p.plain {
+  background: transparent;
+  color: #857563;
+  border: 1rpx solid #d8ccb8;
+}
+.btn-p.danger { background: #b04a45; }
+.btn-p.success { background: #6e7f5a; }
+.btn-p.warn { background: #ba7517; }
+.btn-p:active { opacity: 0.85; }
+
+/* 弹层 (mask + sheet) */
+.pp-mask {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(20, 16, 12, 0.55);
+  z-index: 999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.pp-sheet {
+  width: 100%;
+  max-width: 750rpx;
+  background: #fefbf6;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 30rpx 30rpx 60rpx;
+  box-sizing: border-box;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.pp-mask.center { align-items: center; }
+.pp-mask.center .pp-sheet { border-radius: 24rpx; width: 86%; }
+
+/* 空态 */
+.empty-tip {
+  padding: 60rpx 30rpx;
+  text-align: center;
+  color: #b3a595;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+/* 圆形文字头像 */
+.avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #efe7d8;
+  color: #8c5a2b;
+  font-size: 24rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
 </style>
