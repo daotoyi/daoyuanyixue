@@ -6,7 +6,7 @@
       <view class="banner-sub">观天道 · 明人事 · 致中和</view>
       <view class="banner-seal">
         <text class="seal-text">道</text>
-        <text class="seal-sub">眞</text>
+        <text class="seal-sub">眞和盛</text>
       </view>
     </view>
 
@@ -317,10 +317,12 @@ onMounted(async () => {
   color: #c4a484;
 }
 .seal-sub {
-  font-size: 16rpx;
-  line-height: 1.2;
-  color: #c4a484;
-  opacity: 0.9;
+  font-size: 15rpx;
+  line-height: 1.3;
+  color: #7a5c9e;
+  opacity: 0.95;
+  letter-spacing: 1rpx;
+  white-space: nowrap;
 }
 
 /* 子频道 */

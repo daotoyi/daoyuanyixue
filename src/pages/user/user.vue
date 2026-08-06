@@ -283,7 +283,7 @@ function goMyCourse(tab) {
 }
 
 function goTools(tool) {
-  uni.navigateTo({ url: `/pages-sub2/user/tools?tool=${tool || ''}` })
+  uni.navigateTo({ url: `/pages-sub/user/tools?tool=${tool || ''}` })
 }
 
 function goAssets(type) {
@@ -377,13 +377,13 @@ function onMenu(m) {
       uni.navigateTo({ url: '/pages-sub/cart/cart' })
       break
     case 'feedback':
-      uni.navigateTo({ url: '/pages-sub2/user/feedback' })
+      uni.navigateTo({ url: '/pages-sub/user/feedback' })
       break
     case 'admin':
       uni.navigateTo({ url: '/pages-sub/admin/dashboard' })
       break
     case 'about':
-      uni.navigateTo({ url: '/pages-sub2/setting/about' })
+      uni.navigateTo({ url: '/pages-sub/setting/about' })
       break
     default:
       uni.showToast({ title: m.label + ' · 开发中', icon: 'none' })
@@ -560,7 +560,7 @@ onMounted(async () => {
 .vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
 .vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
 /* 等级说明弹窗 */
-.vip-tip { display: block; text-align: center; font-size: 20rpx; color: #b3a595; margin-bottom: 20rpx; }
+.vip-tip { display: block; text-align: center; font-size: 22rpx; color: #857563; margin-bottom: 20rpx; }
 .vip-row {
   display: flex;
   align-items: center;

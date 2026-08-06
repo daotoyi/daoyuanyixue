@@ -45,13 +45,6 @@
         <text class="wx-name">微信一键登录</text>
       </view>
 
-      <view class="demo-tip">
-        <text class="demo-title">示例账号</text>
-        <view class="demo-row" v-for="d in demoAccounts" :key="d.phone" @tap="fillDemo(d)">
-          <text class="demo-phone">{{ d.phone }}</text>
-          <text class="demo-role">{{ d.label }}</text>
-        </view>
-      </view>
     </view>
   </view>
 </template>
@@ -78,16 +71,6 @@ onLoad((options) => {
   }
 })
 
-const demoAccounts = [
-  { phone: '13800138001', password: '123456', label: '管理员' },
-  { phone: '13800138002', password: '123456', label: '普通用户' },
-]
-
-function fillDemo(d) {
-  phone.value = d.phone
-  password.value = d.password
-  errorMsg.value = ''
-}
 
 function saveUser(user) {
   userStore.setToken('demo-token-' + user.uid)
@@ -281,29 +264,16 @@ async function submit() {
   font-size: 24rpx;
   margin: -10rpx 0 20rpx;
 }
+/* 登录/注册按钮居中 */
+.form-card .btn-p {
+  width: 100%;
+  display: flex;
+}
 
 .demo-tip {
   margin-top: 40rpx;
   padding-top: 30rpx;
   border-top: 1rpx dashed #efe7d8;
-}
-.demo-title {
-  font-size: 22rpx;
-  color: #b3a595;
-}
-.demo-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 16rpx 8rpx;
-  border-bottom: 1rpx solid #efe7d8;
-}
-.demo-phone {
-  font-size: 26rpx;
-  color: #42372c;
-}
-.demo-role {
-  font-size: 22rpx;
-  color: #8c5a2b;
 }
 
 /* 微信登录 */

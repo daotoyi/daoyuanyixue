@@ -243,6 +243,11 @@ function goShop() {
 .empty-btn {
   margin: 40rpx auto 0;
   width: 320rpx;
+  text-align: center;
+}
+.empty-btn .btn-p {
+  width: 100%;
+  display: flex;
 }
 
 /* 底部结算栏 */
