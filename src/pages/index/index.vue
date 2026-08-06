@@ -6,6 +6,7 @@
       <view class="banner-sub">观天道 · 明人事 · 致中和</view>
       <view class="banner-seal">
         <text class="seal-text">道</text>
+        <text class="seal-sub">眞</text>
       </view>
     </view>
 
@@ -54,13 +55,36 @@
               <text class="act-icon" :class="{ liked: m._liked }">{{ m._liked ? '❤' : '🤍' }}</text>
               <text class="act-num">{{ m.likes }}</text>
             </view>
-            <view class="act">
+            <view class="act" @tap="toggleComments(m)">
               <text class="act-icon">💬</text>
               <text class="act-num">{{ m.comments }}</text>
             </view>
             <view class="act act-share">
               <text class="act-icon">↗</text>
               <text class="act-num">分享</text>
+            </view>
+          </view>
+
+          <!-- 评论展开区 -->
+          <view class="moment-comments" v-if="m._showComments">
+            <view class="cmt-list" v-if="m._comments && m._comments.length">
+              <view class="cmt-item" v-for="(c, ci) in m._comments" :key="ci">
+                <text class="cmt-user">{{ c.user_name }}：</text>
+                <text class="cmt-text">{{ c.content }}</text>
+                <text class="cmt-time">{{ c.created_at }}</text>
+              </view>
+            </view>
+            <view class="cmt-empty" v-else>暂无评论，来抢沙发～</view>
+            <view class="cmt-input-row">
+              <input
+                class="cmt-input"
+                v-model="m._cmtText"
+                placeholder="友善评论，理性交流"
+                maxlength="200"
+                confirm-type="send"
+                @confirm="submitComment(m)"
+              />
+              <view class="btn-p sm" @click="submitComment(m)">发表</view>
             </view>
           </view>
         </view>
@@ -124,7 +148,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const tabs = [
@@ -147,6 +171,37 @@ function statusText(s) {
 
 function previewImage(urls, index) {
   uni.previewImage({ urls, current: index })
+}
+
+async function toggleComments(m) {
+  m._showComments = !m._showComments
+  if (m._showComments && !m._comments) {
+    try {
+      m._comments = await getComments({ moment_id: m.id }) || []
+    } catch (e) {
+      m._comments = []
+    }
+  }
+}
+
+async function submitComment(m) {
+  const text = (m._cmtText || '').trim()
+  if (!text) return uni.showToast({ title: '请输入评论内容', icon: 'none' })
+  const userStore = useUserStore()
+  try {
+    await addComment({
+      moment_id: m.id,
+      content: text,
+      user_id: userStore.isLoggedIn ? userStore.userInfo.uid : 0,
+      user_name: userStore.isLoggedIn ? userStore.userInfo.nickname : '道友',
+    })
+    m._cmtText = ''
+    m.comments = (m.comments || 0) + 1
+    if (m._comments) m._comments.push({ user_name: userStore.isLoggedIn ? userStore.userInfo.nickname : '道友', content: text, created_at: new Date().toLocaleString('zh-CN', { hour12: false }) })
+    uni.showToast({ title: '评论成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '评论失败: ' + (e.message || ''), icon: 'none' })
+  }
 }
 
 function toggleLike(m) {
@@ -251,13 +306,21 @@ onMounted(async () => {
   border: 2rpx solid #c4a484;
   border-radius: 12rpx;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: rgba(201, 169, 106, 0.12);
 }
 .seal-text {
-  font-size: 48rpx;
+  font-size: 30rpx;
+  line-height: 1.1;
   color: #c4a484;
+}
+.seal-sub {
+  font-size: 16rpx;
+  line-height: 1.2;
+  color: #c4a484;
+  opacity: 0.9;
 }
 
 /* 子频道 */
@@ -382,6 +445,43 @@ onMounted(async () => {
 .act-share {
   margin-left: auto;
   margin-right: 0;
+}
+
+/* 评论展开区 */
+.moment-comments {
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  background: #f8f3ea;
+  border-radius: 12rpx;
+}
+.cmt-list { max-height: 320rpx; overflow-y: auto; }
+.cmt-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 24rpx;
+  line-height: 1.5;
+  padding: 6rpx 0;
+}
+.cmt-user { color: #8c5a2b; font-weight: 500; }
+.cmt-text { color: #42372c; }
+.cmt-time { color: #b3a595; font-size: 20rpx; margin-left: 12rpx; }
+.cmt-empty { color: #b3a595; font-size: 24rpx; padding: 10rpx 0; }
+.cmt-input-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  gap: 12rpx;
+}
+.cmt-input {
+  flex: 1;
+  height: 60rpx;
+  background: #fefbf6;
+  border: 1rpx solid #e6dcca;
+  border-radius: 30rpx;
+  padding: 0 24rpx;
+  font-size: 24rpx;
+  color: #42372c;
 }
 /* 发布动态悬浮按钮 (右下角) */
 .fab-publish {

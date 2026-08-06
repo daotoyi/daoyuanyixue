@@ -123,6 +123,29 @@ async function listMoments() {
   return ok(res.data)
 }
 
+async function listComments(data) {
+  const momentId = data.moment_id
+  if (!momentId) return fail('缺少动态 ID')
+  const res = await db.collection('comments').where({ moment_id: Number(momentId) }).orderBy('created_at', 'asc').limit(100).get()
+  return ok(res.data)
+}
+
+async function addComment(data) {
+  const { moment_id, content, user_id, user_name } = data
+  if (!moment_id || !content) return fail('缺少参数')
+  const doc = {
+    moment_id: Number(moment_id),
+    user_id: user_id || 0,
+    user_name: user_name || '道友',
+    content: String(content).slice(0, 200),
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  }
+  await db.collection('comments').add(doc)
+  // 动态评论数 +1
+  await db.collection('moments').where({ id: Number(moment_id) }).update({ comments: db.command.inc(1) }).catch(() => {})
+  return ok({ id: doc.id, created_at: doc.created_at })
+}
+
 async function publishMoment(data) {
   const doc = {
     user_id: data.user_id || 0,
@@ -167,9 +190,12 @@ async function nextDaoCode() {
 }
 
 async function login(data) {
+  const account = data.account || data.phone || ''
+  const isEmail = String(account).includes('@')
+  const cond = isEmail ? { email: String(account).toLowerCase(), password: data.password } : { phone: String(account), password: data.password }
   const res = await db
     .collection('users')
-    .where({ phone: data.phone, password: data.password })
+    .where(cond)
     .limit(1)
     .get()
   const user = res.data[0]
@@ -191,8 +217,12 @@ async function login(data) {
 }
 
 async function register(data) {
-  const exists = await db.collection('users').where({ phone: data.phone }).limit(1).get()
-  if (exists.data.length) return fail('该手机号已注册')
+  const account = data.account || data.phone || ''
+  const isEmail = String(account).includes('@')
+  const accountKey = isEmail ? 'email' : 'phone'
+  const accountVal = isEmail ? String(account).toLowerCase() : String(account)
+  const exists = await db.collection('users').where({ [accountKey]: accountVal }).limit(1).get()
+  if (exists.data.length) return fail(isEmail ? '该邮箱已注册' : '该手机号已注册')
   // 道号分配 (管理员预留 ZHSM001)
   let daoCode
   if (data.phone === '18500353930' || data.role === 'admin') {
@@ -210,9 +240,10 @@ async function register(data) {
   const user = {
     uid: Date.now() % 1000000,
     dao_code: daoCode,
-    nickname: `道友${String(data.phone).slice(-4)}`,
+    nickname: isEmail ? accountVal.split('@')[0] : `道友${accountVal.slice(-4)}`,
     avatar: '',
-    phone: data.phone,
+    phone: isEmail ? '' : accountVal,
+    email: isEmail ? accountVal : '',
     password: data.password,
     vip_level: 0,
     balance: '0.00',
@@ -668,6 +699,35 @@ async function wechatLogin(data) {
 }
 
 /* ---- 修改密码 / 检查更新 ---- */
+
+async function updatePhone(data) {
+  const { uid, phone, password } = data
+  if (!uid) return fail('请先登录')
+  if (!phone || !/^1\d{10}$/.test(String(phone))) return fail('手机号格式不正确')
+  const res = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
+  const user = res.data[0]
+  if (!user) return fail('用户不存在')
+  if (user.password && user.password !== String(password || '')) return fail('密码不正确')
+  const dup = await db.collection('users').where({ phone: String(phone) }).limit(1).get()
+  if (dup.data.length && dup.data[0].uid !== Number(uid)) return fail('该手机号已被其他账号绑定')
+  await db.collection('users').where({ uid: Number(uid) }).update({ phone: String(phone) })
+  return ok({ updated: true })
+}
+
+async function bindWechat(data) {
+  const { uid } = data
+  if (!uid) return fail('请先登录')
+  let openid = ''
+  try {
+    const ctx = app.getWXContext()
+    openid = ctx.OPENID || ''
+  } catch (e) { openid = '' }
+  if (!openid) return fail('未获取到微信身份，请在微信小程序中操作')
+  const dup = await db.collection('users').where({ openid }).limit(1).get()
+  if (dup.data.length && dup.data[0].uid !== Number(uid)) return fail('该微信已绑定其他账号')
+  await db.collection('users').where({ uid: Number(uid) }).update({ openid })
+  return ok({ updated: true })
+}
 
 async function setPassword(data) {
   const { uid, old_password, new_password } = data
@@ -1203,6 +1263,16 @@ async function adminMomentAudit(data) {
   return ok({ updated: true })
 }
 
+async function adminMomentDelete(data) {
+  const id = Number(data.id)
+  const _id = data._id
+  const cond = _id ? { _id } : { id }
+  await db.collection('moments').where(cond).remove()
+  // 同步删除该动态的评论
+  await db.collection('comments').where({ moment_id: id || _id }).remove().catch(() => {})
+  return ok({ deleted: true })
+}
+
 /* ---- 优惠券管理 ---- */
 
 async function adminCouponCreate(data) {
@@ -1280,11 +1350,15 @@ const ROUTES = {
   'courses.detail': getCourse,
   'moments.list': listMoments,
   'moments.publish': publishMoment,
+  'comments.list': listComments,
+  'comments.add': addComment,
   'live.list': listLiveStreams,
   'coupons.list': listCoupons,
   'user.login': login,
   'user.register': register,
   'user.setPassword': setPassword,
+  'user.updatePhone': updatePhone,
+  'user.bindWechat': bindWechat,
   'user.updateProfile': updateProfile,
   'user.assets': userAssets,
   'user.wechatLogin': wechatLogin,
@@ -1332,6 +1406,7 @@ const ROUTES = {
   'admin.lives.create': adminLiveCreate,
   'admin.lives.update': adminLiveUpdate,
   'admin.moments.audit': adminMomentAudit,
+  'admin.moments.delete': adminMomentDelete,
   'admin.coupons.create': adminCouponCreate,
   'admin.coupons.update': adminCouponUpdate,
   'admin.coupons.delete': adminCouponDelete,

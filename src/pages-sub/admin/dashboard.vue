@@ -301,6 +301,7 @@
               <text class="td w-status" :class="m.is_recommended ? 'on' : 'off'">{{ m.is_recommended ? '已推荐' : '未推荐' }}</text>
               <view class="td w-ops ops">
                 <text class="op" @tap="auditMoment(m)">{{ m.is_recommended ? '取消推荐' : '推荐' }}</text>
+                <text class="op danger" @tap="deleteMoment(m)">删除</text>
               </view>
             </view>
           </view>
@@ -359,37 +360,6 @@
           </view>
         </view>
 
-        <!-- ===== 小程序接管 (微信第三方平台扫码授权, 仿扣子) ===== -->
-        <view v-else-if="activeModule === 'wxmp'" class="module">
-          <view class="module-head">
-            <text class="module-title">小程序接管（{{ wxmpList.length }}）</text>
-            <view class="btn-fill btn-add" @tap="openWxmpBind"><text>＋ 绑定小程序</text></view>
-          </view>
-          <view class="wxmp-tip">填 AppID → 生成授权链接 → 小程序管理员扫码 → 自动接管（上传开发版 / 体验码 / 提审 / 发布）</view>
-          <view class="table" v-if="wxmpList.length">
-            <view class="tr th">
-              <text class="td w-no">小程序</text>
-              <text class="td w-name">AppID</text>
-              <text class="td w-time">绑定时间</text>
-              <text class="td w-status">状态</text>
-              <text class="td w-ops">操作</text>
-            </view>
-            <view class="tr" v-for="m in wxmpList" :key="m.appid">
-              <text class="td w-no ellipsis">{{ m.nickname || m.appid }}</text>
-              <text class="td w-name ellipsis">{{ m.appid }}</text>
-              <text class="td w-time">{{ m.bound_at }}</text>
-              <text class="td w-status" :class="m.status === 'authorized' ? 'st-done' : 'st-wait'">{{ m.status === 'authorized' ? '已接管' : '已取消' }}</text>
-              <view class="td w-ops ops">
-                <text class="op" @tap="wxmpQr(m)">体验码</text>
-                <text class="op" @tap="wxmpUp(m)">上传开发版</text>
-                <text class="op" @tap="wxmpAudit(m)">提审</text>
-                <text class="op danger" @tap="wxmpPub(m)">发布</text>
-              </view>
-            </view>
-          </view>
-          <view class="table-empty" v-else>暂无接管的小程序，点击右上角「绑定小程序」开始</view>
-        </view>
-
         <!-- ===== 系统设置 ===== -->
         <view v-else-if="activeModule === 'settings'" class="module">
           <view class="settings-tabs">
@@ -431,6 +401,40 @@
               <text class="settings-tip">敏感字段保存后不显示明文，留空保存则保持原值</text>
               <view class="btn-p sm" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存配置' }}</view>
             </view>
+          </view>
+
+          <!-- ===== 小程序配置 (微信第三方平台扫码接管) ===== -->
+          <view class="settings-card" style="margin-top: 24rpx">
+            <view class="settings-desc">
+              <text class="sd-title">小程序配置</text>
+              <text class="sd-text">已接管小程序（{{ wxmpList.length }}）：填 AppID → 生成授权链接 → 管理员扫码 → 自动接管（上传开发版 / 体验码 / 提审 / 发布）</text>
+            </view>
+            <view class="f-row">
+              <text class="f-label">绑定小程序</text>
+              <view class="f-input-wrap"><view class="btn-p sm" @click="openWxmpBind"><text>＋ 绑定小程序</text></view></view>
+            </view>
+            <view class="table" v-if="wxmpList.length" style="margin-top: 16rpx">
+              <view class="tr th">
+                <text class="td w-no">小程序</text>
+                <text class="td w-name">AppID</text>
+                <text class="td w-time">绑定时间</text>
+                <text class="td w-status">状态</text>
+                <text class="td w-ops">操作</text>
+              </view>
+              <view class="tr" v-for="m in wxmpList" :key="m.appid">
+                <text class="td w-no ellipsis">{{ m.nickname || m.appid }}</text>
+                <text class="td w-name ellipsis">{{ m.appid }}</text>
+                <text class="td w-time">{{ m.bound_at }}</text>
+                <text class="td w-status" :class="m.status === 'authorized' ? 'st-done' : 'st-wait'">{{ m.status === 'authorized' ? '已接管' : '已取消' }}</text>
+                <view class="td w-ops ops">
+                  <text class="op" @tap="wxmpQr(m)">体验码</text>
+                  <text class="op" @tap="wxmpUp(m)">上传开发版</text>
+                  <text class="op" @tap="wxmpAudit(m)">提审</text>
+                  <text class="op danger" @tap="wxmpPub(m)">发布</text>
+                </view>
+              </view>
+            </view>
+            <view class="table-empty" v-else style="margin-top: 16rpx">暂无接管的小程序，点上方「绑定小程序」开始</view>
           </view>
         </view>
       </scroll-view>
@@ -636,7 +640,7 @@ import { ref, computed, onMounted } from 'vue'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund,
-  adminUserUpdate, adminLiveCreate, adminLiveUpdate, adminMomentAudit,
+  adminUserUpdate, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
@@ -658,7 +662,6 @@ const modules = [
   { key: 'lives', label: '直播管理', icon: '📡' },
   { key: 'moments', label: '动态管理', icon: '📝' },
   { key: 'feedbacks', label: '反馈管理', icon: '💬' },
-  { key: 'wxmp', label: '小程序接管', icon: '🔗' },
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
 // 员工权限: 仅概览/商品/课程/订单/直播
@@ -1249,6 +1252,23 @@ async function saveLive() {
 }
 
 /* 动态 */
+async function deleteMoment(m) {
+  uni.showModal({
+    title: '删除动态',
+    content: '确定删除该条动态吗？其评论也会一并删除',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await adminMomentDelete({ id: m.id, _id: m._id })
+        uni.showToast({ title: '已删除', icon: 'none' })
+        await loadModule('moments')
+      } catch (e) {
+        uni.showToast({ title: '删除失败: ' + (e.message || ''), icon: 'none' })
+      }
+    },
+  })
+}
+
 async function auditMoment(m) {
   await adminMomentAudit({ id: m.id, is_recommended: !m.is_recommended })
   uni.showToast({ title: m.is_recommended ? '已取消推荐' : '已推荐', icon: 'none' })

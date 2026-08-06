@@ -22,6 +22,13 @@
     <!-- 账户 -->
     <view class="group">
       <view class="group-title">{{ t('账户', 'Account') }}</view>
+      <view class="cell" @tap="openAccount">
+        <text class="cell-label">{{ t('我的账号', 'My Account') }}</text>
+        <view class="cell-right">
+          <text class="cell-value">{{ userStore.isLoggedIn ? userStore.userInfo.phone || userStore.userInfo.nickname : '未登录' }}</text>
+          <text class="cell-arrow">›</text>
+        </view>
+      </view>
       <view class="cell" @tap="openPassword">
         <text class="cell-label">{{ t('设置密码', 'Set Password') }}</text>
         <view class="cell-right">
@@ -109,13 +116,40 @@
         <view class="btn-p sm" @click="savePassword">{{ t('确认修改', 'Confirm') }}</view>
       </view>
     </view></view>
+
+    <!-- 我的账号 -->
+    <view class="pp-mask" v-if="showAccount" @tap="showAccount = false"><view class="pp-sheet" @tap.stop>
+      <view class="picker-sheet">
+        <view class="sheet-title">我的账号</view>
+        <view class="ac-row">
+          <text class="ac-label">当前手机号</text>
+          <text class="ac-value">{{ userStore.isLoggedIn ? (userStore.userInfo.phone || '未绑定') : '-' }}</text>
+        </view>
+        <view class="ac-row">
+          <text class="ac-label">微信绑定</text>
+          <text class="ac-value">{{ userStore.isLoggedIn && userStore.userInfo.openid ? '已绑定' : '未绑定' }}</text>
+        </view>
+        <view class="ac-divider"></view>
+        <view class="pwd-field">
+          <text class="pwd-label">新手机号</text>
+          <input class="pwd-input" type="number" maxlength="11" v-model="acForm.phone" placeholder="输入新手机号" />
+        </view>
+        <view class="pwd-field">
+          <text class="pwd-label">登录密码</text>
+          <input class="pwd-input" :password="true" v-model="acForm.password" placeholder="有密码需验证，无密码留空" />
+        </view>
+        <view class="pwd-err" v-if="acErr">{{ acErr }}</view>
+        <view class="btn-p sm" @click="savePhone">保存手机号</view>
+        <view class="btn-p sm" style="margin-top:16rpx" @click="doBindWechat">绑定微信（小程序内使用）</view>
+      </view>
+    </view></view>
   </view>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { settingsState, setTheme, setLang, t, applyTheme, updateTabBar } from '../../utils/settings'
-import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate } from '../../api/api'
+import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate, updatePhone as apiUpdatePhone, bindWechat as apiBindWechat } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -123,6 +157,45 @@ const userStore = useUserStore()
 const showTheme = ref(false)
 const showLang = ref(false)
 const showPassword = ref(false)
+const showAccount = ref(false)
+const acForm = ref({ phone: '', password: '' })
+const acErr = ref('')
+function openAccount() {
+  if (!userStore.isLoggedIn) return uni.showToast({ title: '请先登录', icon: 'none' })
+  acForm.value = { phone: '', password: '' }
+  acErr.value = ''
+  showAccount.value = true
+}
+async function savePhone() {
+  if (!/^1\d{10}$/.test(acForm.value.phone)) return (acErr.value = '请输入正确的11位手机号')
+  acErr.value = ''
+  try {
+    await apiUpdatePhone({ uid: userStore.userInfo.uid, phone: acForm.value.phone, password: acForm.value.password })
+    uni.showToast({ title: '手机号已更新', icon: 'success' })
+    userStore.userInfo.phone = acForm.value.phone
+    showAccount.value = false
+  } catch (e) {
+    acErr.value = e.message || '修改失败'
+  }
+}
+async function doBindWechat() {
+  // #ifdef MP-WEIXIN
+  try {
+    const loginRes = await new Promise((resolve, reject) => {
+      uni.login({ provider: 'weixin', success: resolve, fail: reject })
+    })
+    if (!loginRes.code) throw new Error('获取微信授权码失败')
+    await apiBindWechat({ uid: userStore.userInfo.uid, code: loginRes.code })
+    uni.showToast({ title: '微信绑定成功', icon: 'success' })
+    showAccount.value = false
+  } catch (e) {
+    acErr.value = e.message || '绑定失败'
+  }
+  // #endif
+  // #ifndef MP-WEIXIN
+  uni.showToast({ title: '请在微信小程序中绑定微信', icon: 'none' })
+  // #endif
+}
 const pwdForm = ref({ old_password: '', new_password: '' })
 const pwdErr = ref('')
 const pwdSaving = ref(false)
@@ -344,6 +417,15 @@ onMounted(() => {
   font-size: 26rpx;
   color: #42372c;
 }
+.ac-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  font-size: 28rpx;
+}
+.ac-label { color: #857563; }
+.ac-value { color: #42372c; }
+.ac-divider { height: 1rpx; background: #efe7d8; margin: 10rpx 0 20rpx; }
 .pwd-err {
   color: #b04a45;
   font-size: 22rpx;

@@ -49,6 +49,17 @@ export function applyTheme() {
     if (document.body) document.body.setAttribute('data-theme', dark ? 'dark' : 'light')
   }
   // #endif
+  // tabBar 深色适配 (首页/商城/课程/我的 四栏)
+  try {
+    uni.setTabBarStyle({
+      backgroundColor: dark ? '#1c1712' : '#FFFCF5',
+      color: dark ? '#857563' : '#A89A85',
+      selectedColor: dark ? '#c4a484' : '#854D0E',
+      borderStyle: dark ? 'black' : 'white',
+    })
+  } catch (e) {
+    /* 非 tabBar 环境忽略 */
+  }
   uni.setStorageSync('app_dark', dark)
   return dark
 }

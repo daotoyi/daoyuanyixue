@@ -94,6 +94,10 @@ export const getCourse = (id) =>
 export const getMoments = () =>
   __USE_MOCK__ ? _fromMock(() => mock.moments)() : _callFunction('moments.list')
 
+export const getComments = (data) =>
+  __USE_MOCK__ ? _fromMock(() => [])() : _callFunction('comments.list', data)
+export const addComment = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ id: Date.now() }))() : _callFunction('comments.add', data)
 export const publishMoment = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ id: Date.now(), ...data, likes: 0, comments: 0 }))() : _callFunction('moments.publish', data)
 
@@ -148,6 +152,10 @@ export const register = (params) =>
       })()
     : _callFunction('user.register', params)
 
+export const updatePhone = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.updatePhone', params)
+export const bindWechat = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.bindWechat', params)
 export const setPassword = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.setPassword', params)
 
@@ -240,6 +248,7 @@ export const adminUserUpdate = _admin('admin.users.update')
 export const adminLiveCreate = _admin('admin.lives.create')
 export const adminLiveUpdate = _admin('admin.lives.update')
 export const adminMomentAudit = _admin('admin.moments.audit')
+export const adminMomentDelete = _admin('admin.moments.delete')
 export const adminCouponCreate = _admin('admin.coupons.create')
 export const adminCouponUpdate = _admin('admin.coupons.update')
 export const adminCouponDelete = _admin('admin.coupons.delete')

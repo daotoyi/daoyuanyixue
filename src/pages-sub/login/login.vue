@@ -16,8 +16,8 @@
       </view>
 
       <view class="field">
-        <text class="field-label">手机号</text>
-        <input class="field-input" v-model="phone" type="number" maxlength="11" placeholder="请输入手机号" />
+        <text class="field-label">手机号 / 邮箱</text>
+        <input class="field-input" v-model="phone" type="number" maxlength="11" placeholder="手机号或邮箱" />
       </view>
 
       <view class="field">
@@ -132,8 +132,10 @@ async function wxLogin() {
 
 async function submit() {
   errorMsg.value = ''
-  if (!/^1\d{10}$/.test(phone.value)) {
-    errorMsg.value = '请输入正确的手机号'
+  const acct = phone.value.trim()
+  const isEmail = acct.includes('@')
+  if (!isEmail && !/^1\d{10}$/.test(acct)) {
+    errorMsg.value = '请输入正确的手机号或邮箱'
     return
   }
   if (password.value.length < 6) {
@@ -144,10 +146,10 @@ async function submit() {
   try {
     let user
     if (mode.value === 'login') {
-      user = await login({ phone: phone.value, password: password.value })
+      user = await login({ account: phone.value.trim(), password: password.value })
     } else {
       user = await register({
-        phone: phone.value,
+        account: phone.value.trim(),
         password: password.value,
         invite_code: inviteCode.value,
       })
