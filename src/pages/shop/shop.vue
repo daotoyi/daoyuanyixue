@@ -146,7 +146,7 @@ function clearSearch() {
 function focusSearch() {}
 
 function goDetail(id) {
-  uni.navigateTo({ url: `/pages/product/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
 }
 
 async function loadProducts(kw = '') {

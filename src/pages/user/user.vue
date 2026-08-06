@@ -253,30 +253,30 @@ const visibleMenus = computed(() =>
 )
 
 function goLogin() {
-  uni.navigateTo({ url: '/pages/login/login' })
+  uni.navigateTo({ url: '/pages-sub/login/login' })
 }
 
 function goSetting() {
-  uni.navigateTo({ url: '/pages/setting/setting' })
+  uni.navigateTo({ url: '/pages-sub/setting/setting' })
 }
 
 function goOrders(status) {
   if (!isLoggedIn.value) return goLogin()
-  uni.navigateTo({ url: `/pages/order/list?status=${status}` })
+  uni.navigateTo({ url: `/pages-sub/order/list?status=${status}` })
 }
 
 function goMyCourse(tab) {
   if (!isLoggedIn.value) return goLogin()
-  uni.navigateTo({ url: `/pages/course/my?tab=${tab || ''}` })
+  uni.navigateTo({ url: `/pages-sub/course/my?tab=${tab || ''}` })
 }
 
 function goTools(tool) {
-  uni.navigateTo({ url: `/pages/user/tools?tool=${tool || ''}` })
+  uni.navigateTo({ url: `/pages-sub/user/tools?tool=${tool || ''}` })
 }
 
 function goAssets(type) {
   if (!isLoggedIn.value) return goLogin()
-  uni.navigateTo({ url: `/pages/user/assets?type=${type}` })
+  uni.navigateTo({ url: `/pages-sub/user/assets?type=${type}` })
 }
 
 function copyDaoCode() {
@@ -341,7 +341,7 @@ async function saveProfile() {
 
 function goMessages() {
   if (!isLoggedIn.value) return goLogin()
-  uni.navigateTo({ url: '/pages/user/messages' })
+  uni.navigateTo({ url: '/pages-sub/user/messages' })
 }
 
 function showVipTip() {
@@ -362,16 +362,16 @@ function onMenu(m) {
       showInvite.value = true
       break
     case 'cart':
-      uni.navigateTo({ url: '/pages/cart/cart' })
+      uni.navigateTo({ url: '/pages-sub/cart/cart' })
       break
     case 'feedback':
-      uni.navigateTo({ url: '/pages/user/feedback' })
+      uni.navigateTo({ url: '/pages-sub/user/feedback' })
       break
     case 'admin':
-      uni.navigateTo({ url: '/pages/admin/dashboard' })
+      uni.navigateTo({ url: '/pages-sub/admin/dashboard' })
       break
     case 'about':
-      uni.navigateTo({ url: '/pages/setting/about' })
+      uni.navigateTo({ url: '/pages-sub/setting/about' })
       break
     default:
       uni.showToast({ title: m.label + ' · 开发中', icon: 'none' })

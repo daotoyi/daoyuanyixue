@@ -160,7 +160,7 @@ function toggleLike(m) {
 }
 
 function goPublish() {
-  uni.navigateTo({ url: '/pages/moment/publish' })
+  uni.navigateTo({ url: '/pages-sub/moment/publish' })
 }
 
 async function bookLive(l) {
@@ -168,7 +168,7 @@ async function bookLive(l) {
   const userStore = useUserStore()
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录再预约', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600)
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
   try {

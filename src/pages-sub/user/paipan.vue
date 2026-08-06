@@ -1303,7 +1303,7 @@ function useHistory(rec) {
       uni.setStorageSync(rec.type === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[rec.type])
     } catch (e) { /* 忽略 */ }
     showHistory.value = false
-    uni.navigateTo({ url: `/pages/user/tools?tool=${rec.type}` })
+    uni.navigateTo({ url: `/pages-sub/user/tools?tool=${rec.type}` })
     return
   }
   applyData(rec.data)

@@ -858,7 +858,7 @@ function runPaipan() {
     return
   }
   const tool = activeTool.value === 'qimen' || activeTool.value === 'ziwei' ? activeTool.value : 'bazi'
-  uni.navigateTo({ url: `/pages/user/paipan?tool=${tool}` })
+  uni.navigateTo({ url: `/pages-sub/user/paipan?tool=${tool}` })
 }
 
 // 支持 ?tool= 直达 (bazi/liuyao/ziwei/qimen/liuren)

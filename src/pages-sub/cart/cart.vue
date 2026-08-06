@@ -121,11 +121,11 @@ function goCheckout() {
     uni.showToast({ title: '请先选择商品', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: '/pages/checkout/checkout' })
+  uni.navigateTo({ url: '/pages-sub/checkout/checkout' })
 }
 
 function goDetail(id) {
-  uni.navigateTo({ url: `/pages/product/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
 }
 
 function goShop() {

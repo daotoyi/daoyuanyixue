@@ -96,7 +96,7 @@ const myCourses = computed(() => {
 async function load() {
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600)
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
   try {
@@ -115,7 +115,7 @@ onLoad((options) => {
 })
 
 function goDetail(id) {
-  uni.navigateTo({ url: `/pages/course/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub/course/detail?id=${id}` })
 }
 
 async function toggleFavorite(c) {

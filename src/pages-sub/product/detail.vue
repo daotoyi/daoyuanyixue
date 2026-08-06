@@ -103,7 +103,7 @@ function preview(i) {
 async function toggleCollect() {
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600)
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
   try {
@@ -130,13 +130,13 @@ function addCart() {
   if (!product.value) return
   addToCart(product.value, qty.value)
   uni.showToast({ title: '已加入购物车', icon: 'success' })
-  setTimeout(() => uni.switchTab({ url: '/pages/cart/cart' }), 600)
+  setTimeout(() => uni.switchTab({ url: '/pages-sub/cart/cart' }), 600)
 }
 
 function buyNow() {
   if (!product.value) return
   addToCart(product.value, qty.value)
-  uni.navigateTo({ url: '/pages/checkout/checkout' })
+  uni.navigateTo({ url: '/pages-sub/checkout/checkout' })
 }
 </script>
 

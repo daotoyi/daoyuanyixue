@@ -104,7 +104,7 @@ async function loadCourses(cateId) {
 }
 
 function goDetail(id) {
-  uni.navigateTo({ url: `/pages/course/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub/course/detail?id=${id}` })
 }
 
 onMounted(async () => {

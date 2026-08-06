@@ -98,7 +98,7 @@ async function buyCourse() {
   if (buying.value) return
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录再购买', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600)
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
   uni.showModal({
@@ -121,7 +121,7 @@ async function buyCourse() {
 }
 
 function startLearn() {
-  uni.navigateTo({ url: '/pages/course/my' })
+  uni.navigateTo({ url: '/pages-sub/course/my' })
 }
 </script>
 

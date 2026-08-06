@@ -73,7 +73,7 @@ async function load() {
 }
 
 function goProduct(id) {
-  uni.navigateTo({ url: `/pages/product/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
 }
 
 function goShop() {
