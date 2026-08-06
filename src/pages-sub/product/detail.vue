@@ -63,7 +63,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getProduct, toggleFavoriteProduct, addFootprint } from '../../api/api'
-import { addToCart } from '../../utils/cart'
+import { addToCart } from '../utils/cart'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()

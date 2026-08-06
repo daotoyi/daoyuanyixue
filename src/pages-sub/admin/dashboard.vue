@@ -1196,7 +1196,7 @@ async function payForOrder(o) {
 
 /* 发货: 跳转物流选择页 */
 function openShip(o) {
-  uni.navigateTo({ url: `/pages-sub2/admin/logistics?order_no=${o.order_no}` })
+  uni.navigateTo({ url: `/pages-sub/admin/logistics?order_no=${o.order_no}` })
 }
 
 async function shipOrder(o) {

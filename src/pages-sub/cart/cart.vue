@@ -67,7 +67,7 @@ import { onShow } from '@dcloudio/uni-app'
 import {
   getCart, updateQty, toggleSelect, toggleAll as toggleAllSelection, removeByIds,
   getSelectedItems, isAllSelected,
-} from '../../utils/cart'
+} from '../utils/cart'
 
 const cartList = ref([])
 
@@ -125,7 +125,7 @@ function goCheckout() {
 }
 
 function goDetail(id) {
-  uni.navigateTo({ url: `/pages-sub2/product/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
 }
 
 function goShop() {

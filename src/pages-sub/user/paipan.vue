@@ -680,9 +680,9 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../../utils/paipan'
-import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../../utils/ziwei'
-import { generateJiepan, summaryJiepan } from '../../utils/jiepan'
+import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../utils/paipan'
+import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../utils/ziwei'
+import { generateJiepan, summaryJiepan } from '../utils/jiepan'
 import { aiJiepan, aiAsk } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -1310,7 +1310,7 @@ function useHistory(rec) {
       uni.setStorageSync(rec.type === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[rec.type])
     } catch (e) { /* 忽略 */ }
     showHistory.value = false
-    uni.navigateTo({ url: `/pages-sub2/user/tools?tool=${rec.type}` })
+    uni.navigateTo({ url: `/pages-sub/user/tools?tool=${rec.type}` })
     return
   }
   applyData(rec.data)

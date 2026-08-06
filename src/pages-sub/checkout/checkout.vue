@@ -103,7 +103,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getCart, getSelectedItems, clearSelected } from '../../utils/cart'
+import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
 import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -215,7 +215,7 @@ async function submitOrder() {
         uni.showToast({ title: '支付成功', icon: 'success' })
         clearSelected()
         setTimeout(() => {
-          uni.redirectTo({ url: `/pages-sub2/order/detail?order_no=${order.order_no}` })
+          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
         }, 800)
         submitting.value = false
         return
@@ -226,7 +226,7 @@ async function submitOrder() {
       uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
       // 支付失败仍留在订单页可重新支付
       setTimeout(() => {
-        uni.redirectTo({ url: `/pages-sub2/order/detail?order_no=${order.order_no}` })
+        uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
       }, 800)
       return
     }
@@ -237,7 +237,7 @@ async function submitOrder() {
     clearSelected()
     uni.showToast({ title: '支付成功', icon: 'success' })
     setTimeout(() => {
-      uni.redirectTo({ url: `/pages-sub2/order/detail?order_no=${order.order_no}` })
+      uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
     }, 800)
     // #endif
   } catch (e) {
