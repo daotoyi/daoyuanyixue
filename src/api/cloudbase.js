@@ -26,11 +26,10 @@ let _initPromise = null
  */
 export async function initCloudBase() {
   // #ifdef MP-WEIXIN
-  // 微信小程序: 使用原生 wx.cloud
+  // 微信小程序: 使用原生 wx.cloud (注意: 微信小程序 wx.cloud.init 不支持 region 参数, 只传 env)
   if (typeof wx !== 'undefined' && wx.cloud) {
     wx.cloud.init({
       env: ENV_ID,
-      region: REGION,
       traceUser: true,
     })
     cloudApp = wx.cloud
