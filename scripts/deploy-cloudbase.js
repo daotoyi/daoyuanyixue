@@ -15,7 +15,7 @@ const fs = require('fs')
 const path = require('path')
 
 const ROOT = path.resolve(__dirname, '..')
-const ENV_ID = 'zhenhesheng-d6gkez7p221305432'
+const ENV_ID = 'cloud1-d8gs2k9m311f7272f'
 const REGION = 'ap-shanghai'
 
 const GREEN = '\x1b[0;32m'
@@ -66,7 +66,7 @@ async function deployH5() {
     )
     ok('H5 部署完成')
     log(`\n🌐 访问地址:`)
-    log(`   https://${ENV_ID}-1309518368.tcloudbaseapp.com/\n`)
+    log(`   https://${ENV_ID}-1464523137.tcloudbaseapp.com/\n`)
   } catch (e) {
     warn('H5 部署失败, 请检查 mcporter 连接')
     console.error(e.message)

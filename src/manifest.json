@@ -142,28 +142,28 @@
   "/* ==================== TCB 域名自动适配 ==================== */": "",
   "_tcb_domains": {
     "_description": "TCB 域名自动注入到小程序 request/uploadFile/downloadFile/socket 合法域名",
-    "envId": "zhenhesheng-d6gkez7p221305432",
+    "envId": "cloud1-d8gs2k9m311f7272f",
     "region": "ap-shanghai",
     "domains": {
       "request": [
-        "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
-        "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+        "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
+        "https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
         "https://tcb-api.tencentcloudapi.com",
         "https://ap-shanghai.tcb-api.tencentcloudapi.com",
         "https://api.weixin.qq.com"
       ],
       "uploadFile": [
-        "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
-        "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+        "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
+        "https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
         "https://tcb-api.tencentcloudapi.com"
       ],
       "downloadFile": [
-        "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
-        "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+        "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
+        "https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
         "https://tcb-api.tencentcloudapi.com"
       ],
       "socket": [
-        "wss://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+        "wss://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
         "wss://tcb-api.tencentcloudapi.com"
       ]
     }
@@ -172,7 +172,7 @@
   "/* ==================== H5 (Web) ==================== */": "",
   "h5": {
     "title": "道元易学",
-    "domain": "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+    "domain": "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
     "router": {
       "mode": "hash",
       "base": "/"

@@ -8,7 +8,7 @@
  */
 
 // CloudBase 环境配置
-const ENV_ID = 'zhenhesheng-d6gkez7p221305432'
+const ENV_ID = 'cloud1-d8gs2k9m311f7272f'
 const REGION = 'ap-shanghai'
 
 // #ifdef H5 || APP-PLUS
@@ -185,6 +185,6 @@ export async function getAuth() {
 export const CLOUDBASE_CONFIG = {
   envId: ENV_ID,
   region: REGION,
-  staticDomain: 'zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com',
-  storageDomain: '7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la',
+  staticDomain: 'cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com',
+  storageDomain: '7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la',
 }

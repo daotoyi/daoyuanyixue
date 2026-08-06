@@ -216,7 +216,7 @@ async function checkUpdate() {
       success: (res) => {
         if (res.confirm) {
           // #ifdef H5
-          window.open(info.url || 'https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com/download/')
+          window.open(info.url || 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/download/')
           // #endif
           // #ifndef H5
           uni.showToast({ title: '请到应用市场更新', icon: 'none' })

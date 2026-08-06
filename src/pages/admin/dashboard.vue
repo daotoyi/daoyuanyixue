@@ -1031,7 +1031,7 @@ function uploadProductImg() {
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID
-          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la/')
+          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         const arr = (productForm.value.imagesText || '').split(',').map((s) => s.trim()).filter(Boolean)
         arr.push(url)
         productForm.value.imagesText = arr.join(',')

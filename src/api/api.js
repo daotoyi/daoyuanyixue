@@ -10,7 +10,7 @@ import mock from './mock'
 
 const __USE_MOCK__ = false
 const FN_NAME = 'dy-api'
-const API_BASE = 'https://zhenhesheng-d6gkez7p221305432-1309518368.ap-shanghai.app.tcloudbase.com/dy-api'
+const API_BASE = 'https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api'
 
 /** 模拟网络延迟 (mock 模式) */
 function delay(ms = 150) {

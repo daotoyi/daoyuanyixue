@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 SEED_DIR = Path("/tmp/dy-seed")
-ENV_ID = "zhenhesheng-d6gkez7p221305432"
+ENV_ID = "cloud1-d8gs2k9m311f7272f"
 
 def call(collection, documents):
     docs_json = json.dumps(documents, ensure_ascii=False)

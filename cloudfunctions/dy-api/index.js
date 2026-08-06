@@ -686,7 +686,7 @@ async function checkUpdate() {
   return ok({
     latest: '1.0.0',
     versionCode: 100,
-    url: 'https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com/download/',
+    url: 'https://cloud1-d8gs2k9m311f7272f-1309518368.tcloudbaseapp.com/download/',
     changelog: '1. 新增后台系统设置\n2. 商品/课程分类管理\n3. 课程页分类导航\n4. 设置中心\n5. 配色与体验优化',
     force: false,
   })
@@ -1414,7 +1414,7 @@ exports.main = async (event = {}) => {
 
 /* ============ 微信第三方平台 · 小程序扫码接管 (仿扣子平台) ============
    前置: 微信开放平台创建第三方平台(需企业认证), 在开放平台配置:
-   - 授权事件接收 URL: https://zhenhesheng-d6gkez7p221305432-1309518368.ap-shanghai.app.tcloudbase.com/dy-api?action=wxmp.authCallback
+   - 授权事件接收 URL: https://cloud1-d8gs2k9m311f7272f-1309518368.ap-shanghai.app.tcloudbase.com/dy-api?action=wxmp.authCallback
    - 消息校验 Token / EncodingAESKey → 填入 config.local.js WXMP_TOKEN / WXMP_AES_KEY
    数据: wxmp_authors 集合 (已接管小程序), wxmp_ticket 集合 (verify_ticket) */
 const crypto = require('crypto')
@@ -1530,7 +1530,7 @@ async function wxmpGetAuthUrl(data) {
     component_appid: cfg.appid,
   })
   if (!res.pre_auth_code) return fail('获取预授权码失败: ' + (res.errmsg || ''))
-  const redirect = (data && data.redirect_uri) || 'https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com/#/pages/admin/dashboard'
+  const redirect = (data && data.redirect_uri) || 'https://cloud1-d8gs2k9m311f7272f-1309518368.tcloudbaseapp.com/#/pages/admin/dashboard'
   const url = 'https://open.weixin.qq.com/connect/oauth2/authorize?component_appid=' + cfg.appid +
     '&pre_auth_code=' + res.pre_auth_code +
     '&redirect_uri=' + encodeURIComponent(redirect) +
@@ -1655,7 +1655,7 @@ async function wxmpUploadCode(data) {
   const templateId = await _wxmpEnsureTemplate(cfg)
   const extJson = JSON.stringify({
     extAppid: appid,
-    ext: { envId: 'zhenhesheng-d6gkez7p221305432' },
+    ext: { envId: 'cloud1-d8gs2k9m311f7272f' },
     pages: ['pages/index/index', 'pages/shop/shop', 'pages/course/course', 'pages/user/user'],
     cloud: true,
   })

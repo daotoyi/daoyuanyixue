@@ -183,7 +183,7 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 const userInfo = computed(() => userStore.userInfo)
 
 const daoCode = computed(() => userInfo.value.dao_code || userInfo.value.invite_code || '')
-const inviteLink = computed(() => `https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com/download/?invite=${daoCode.value}`)
+const inviteLink = computed(() => `https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/download/?invite=${daoCode.value}`)
 
 // 会员等级: 按累计消费 (储值/购买) 自动划分
 const vipLevel = computed(() => {
@@ -310,7 +310,7 @@ function pickAvatar() {
         if (!fileID) throw new Error('上传失败')
         // fileID → https URL
         const url = fileID
-          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la/')
+          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         profileForm.value.avatar = url
       } catch (e) {
         // 上传失败则用本地临时路径 (App 内可显示)
