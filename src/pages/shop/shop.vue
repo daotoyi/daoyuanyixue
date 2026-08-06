@@ -59,7 +59,8 @@
           </view>
 
           <view class="section-empty" v-else>
-            <u-empty text="该分类暂无商品" mode="list"></u-empty>
+            <text class="empty-icon">🛍</text>
+            <text class="empty-tip">该分类暂无商品</text>
           </view>
         </view>
 
@@ -329,8 +330,13 @@ onMounted(async () => {
 }
 
 .section-empty {
-  padding: 20rpx 0;
+  padding: 40rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+.section-empty .empty-icon { font-size: 64rpx; }
+.section-empty .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #b3a595; }
 .goods-bottom {
   text-align: center;
   color: #b3a595;

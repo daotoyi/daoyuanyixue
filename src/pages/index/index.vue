@@ -28,7 +28,7 @@
       <view class="feed" v-if="momentList.length">
         <view class="moment-card" v-for="m in momentList" :key="m.id">
           <view class="moment-head">
-            <u-avatar :text="m.user_name[0]" size="40" bg-color="#efe7d8" color="#8c5a2b" shape="circle"></u-avatar>
+            <view class="avatar-circle"><text>{{ m.user_name[0] }}</text></view>
             <view class="moment-user">
               <text class="moment-name">{{ m.user_name }}</text>
               <text class="moment-time">{{ m.created_at }}</text>
@@ -67,7 +67,8 @@
       </view>
 
       <view class="empty" v-else>
-        <u-empty text="暂无动态" mode="list"></u-empty>
+        <text class="empty-icon">📭</text>
+        <text class="empty-tip">暂无动态</text>
       </view>
 
       <!-- 发布动态: 悬浮右下角 -->
@@ -100,20 +101,13 @@
 
             <view class="live-actions">
               <template v-if="l.status === 'live'">
-                <u-button type="error" text="进入直播间" shape="circle" size="small" @click="enterLive(l)"></u-button>
+                <view class="live-btn error" @tap="enterLive(l)"><text>进入直播间</text></view>
               </template>
               <template v-else-if="l.status === 'upcoming'">
-                <u-button
-                  :type="l._booked ? 'success' : 'primary'"
-                  :text="l._booked ? '已预约' : '预约直播'"
-                  shape="circle"
-                  size="small"
-                  plain
-                  @click="bookLive(l)"
-                ></u-button>
+                <view class="live-btn" :class="l._booked ? 'ok' : ''" @tap="bookLive(l)"><text>{{ l._booked ? '已预约' : '预约直播' }}</text></view>
               </template>
               <template v-else>
-                <u-button type="info" text="看回放" shape="circle" size="small" plain @click="enterLive(l)"></u-button>
+                <view class="live-btn plain" @tap="enterLive(l)"><text>看回放</text></view>
               </template>
             </view>
           </view>
@@ -121,7 +115,8 @@
       </view>
 
       <view class="empty" v-if="!liveList.length">
-        <u-empty text="暂无直播" mode="data"></u-empty>
+        <text class="empty-icon">📺</text>
+        <text class="empty-tip">暂无直播</text>
       </view>
     </scroll-view>
   </view>
@@ -312,6 +307,18 @@ onMounted(async () => {
   display: flex;
   align-items: center;
 }
+.avatar-circle {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #efe7d8;
+  color: #8c5a2b;
+  font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 .moment-user {
   margin-left: 16rpx;
   display: flex;
@@ -464,8 +471,31 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
 }
+.live-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 26rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #fefbf6;
+  background: linear-gradient(135deg, #b04a45, #8c3228);
+}
+.live-btn.ok { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
+.live-btn.plain {
+  background: none;
+  border: 1rpx solid #d8ccb8;
+  color: #857563;
+}
+.live-btn text { font-size: 24rpx; }
 
 .empty {
   padding-top: 80rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+.empty-icon { font-size: 64rpx; }
+.empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #b3a595; }
 </style>

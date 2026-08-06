@@ -37,7 +37,7 @@
               <view class="course-body-inner">
                 <text class="course-title">{{ cc.title }}</text>
                 <view class="course-teacher">
-                  <u-icon name="account" color="#857563" size="14"></u-icon>
+                  <text class="teacher-icon">👤</text>
                   <text class="teacher-name">{{ cc.teacher }}</text>
                 </view>
                 <view class="course-stats">
@@ -54,7 +54,8 @@
           </view>
 
           <view class="section-empty" v-else>
-            <u-empty text="该分类暂无课程" mode="list"></u-empty>
+            <text class="empty-icon">📚</text>
+            <text class="empty-tip">该分类暂无课程</text>
           </view>
         </view>
 
@@ -244,6 +245,7 @@ onMounted(async () => {
   align-items: center;
   margin-top: 10rpx;
 }
+.teacher-icon { font-size: 20rpx; color: #857563; }
 .teacher-name {
   margin-left: 8rpx;
   font-size: 22rpx;
@@ -280,8 +282,13 @@ onMounted(async () => {
 }
 
 .section-empty {
-  padding: 20rpx 0 40rpx;
+  padding: 40rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+.section-empty .empty-icon { font-size: 64rpx; }
+.section-empty .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #b3a595; }
 .course-bottom {
   text-align: center;
   color: #b3a595;

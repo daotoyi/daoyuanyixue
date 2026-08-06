@@ -116,15 +116,19 @@
 
     <!-- 退出登录 -->
     <view class="logout" v-if="isLoggedIn">
-      <u-button type="error" text="退出登录" shape="circle" plain @click="onLogout"></u-button>
+      <view class="logout-btn" @tap="onLogout"><text>退出登录</text></view>
     </view>
 
     <view class="version">道元易学 {{ APP_FULL_VERSION }}</view>
 
     <!-- 修改资料弹窗 -->
-    <u-popup :show="showProfile" mode="bottom" @close="showProfile = false">
+    <view class="popup-mask" v-if="showProfile" @tap="showProfile = false"></view>
+    <view class="popup-sheet" v-if="showProfile">
       <view class="form-sheet">
-        <view class="sheet-title">修改资料</view>
+        <view class="sheet-head">
+          <text class="sheet-title">修改资料</text>
+          <text class="sheet-close" @tap="showProfile = false">✕</text>
+        </view>
         <view class="pf-avatar-row">
           <image v-if="profileForm.avatar" class="pf-avatar-img" :src="profileForm.avatar" mode="aspectFill"></image>
           <view v-else class="pf-avatar-img pf-avatar-fallback"><text>+</text></view>
@@ -134,18 +138,22 @@
         </view>
         <view class="f-row"><text class="f-label">昵称</text><input class="f-input" v-model="profileForm.nickname" maxlength="12" /></view>
         <view class="sheet-actions">
-          <u-button type="info" text="取消" shape="circle" size="small" plain @click="showProfile = false"></u-button>
+          <view class="sheet-btn" @tap="showProfile = false"><text>取消</text></view>
           <view class="btn-fill btn-save" @tap="saveProfile">
             <text>保存</text>
           </view>
         </view>
       </view>
-    </u-popup>
+    </view>
 
     <!-- 邀请有礼弹窗 -->
-    <u-popup :show="showInvite" mode="bottom" @close="showInvite = false">
+    <view class="popup-mask" v-if="showInvite" @tap="showInvite = false"></view>
+    <view class="popup-sheet" v-if="showInvite">
       <view class="form-sheet invite-sheet">
-        <view class="sheet-title">邀请有礼</view>
+        <view class="sheet-head">
+          <text class="sheet-title">邀请有礼</text>
+          <text class="sheet-close" @tap="showInvite = false">✕</text>
+        </view>
         <view class="invite-code">{{ daoCode }}</view>
         <text class="invite-tip">好友通过你的专属链接注册，双方得 8 折优惠券</text>
         <view class="invite-link" @tap="copyInviteLink">
@@ -155,19 +163,23 @@
           <text>复制邀请链接</text>
         </view>
       </view>
-    </u-popup>
+    </view>
 
     <!-- 会员等级说明弹窗 (每行一个等级) -->
-    <u-popup :show="showVipSheet" mode="bottom" @close="showVipSheet = false">
+    <view class="popup-mask" v-if="showVipSheet" @tap="showVipSheet = false"></view>
+    <view class="popup-sheet" v-if="showVipSheet">
       <view class="form-sheet">
-        <view class="sheet-title">会员等级说明</view>
+        <view class="sheet-head">
+          <text class="sheet-title">会员等级说明</text>
+          <text class="sheet-close" @tap="showVipSheet = false">✕</text>
+        </view>
         <text class="vip-tip">等级按累计消费/储值金额自动划分</text>
         <view class="vip-row" v-for="v in vipLevels" :key="v.level">
           <view class="vip-badge-lg" :class="'vip-' + v.level"><text>{{ v.label }}</text></view>
           <text class="vip-range">{{ v.range }}</text>
         </view>
       </view>
-    </u-popup>
+    </view>
   </view>
 </template>
 
@@ -706,6 +718,19 @@ onMounted(async () => {
 .logout {
   margin: 40rpx 60rpx 0;
 }
+.logout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #d8ccb8;
+  background: #fefbf6;
+}
+.logout-btn text {
+  font-size: 28rpx;
+  color: #b04a45;
+}
 .version {
   text-align: center;
   color: #b3a595;
@@ -713,6 +738,51 @@ onMounted(async () => {
   padding: 40rpx 0 0;
 }
 
+/* 弹窗 (自定义底部弹层, 替代 u-popup) */
+.popup-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+.popup-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fefbf6;
+  border-radius: 24rpx 24rpx 0 0;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+  max-height: 75vh;
+  overflow-y: auto;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 30rpx 0;
+}
+.sheet-head .sheet-title { margin-bottom: 0; }
+.sheet-close {
+  font-size: 30rpx;
+  color: #b3a595;
+  padding: 6rpx 0 6rpx 30rpx;
+}
+.sheet-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 72rpx;
+  padding: 0 40rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #d8ccb8;
+  color: #857563;
+  font-size: 26rpx;
+}
 /* 弹窗 */
 .form-sheet {
   padding: 30rpx 30rpx 60rpx;
