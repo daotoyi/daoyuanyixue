@@ -22,7 +22,9 @@ fs.mkdirSync(path.dirname(UV_DST), { recursive: true })
 fs.renameSync(UV_SRC, UV_DST)
 console.log('[postbuild-mp] uview-plus 已移入分包 pages-sub/')
 
-// 2. 改写分包页面 json 的 uview 引用路径: ../../node-modules/uview-plus → ../../uview-plus
+// 2. 改写分包页面 json 的 uview 引用路径:
+//    原路径 ../../node-modules/uview-plus (从 pages-sub/<dir>/ 出发指向主包 node-modules)
+//    新位置 pages-sub/uview-plus → 从 pages-sub/<dir>/ 出发应为 ../uview-plus
 let fixed = 0
 function walk(dir) {
   for (const f of fs.readdirSync(dir)) {
@@ -31,7 +33,7 @@ function walk(dir) {
     if (!f.endsWith('.json')) continue
     const text = fs.readFileSync(p, 'utf8')
     if (text.includes('node-modules/uview-plus')) {
-      fs.writeFileSync(p, text.replace(/node-modules\/uview-plus/g, 'uview-plus'))
+      fs.writeFileSync(p, text.replace(/\.\.\/\.\.\/node-modules\/uview-plus/g, '../uview-plus'))
       fixed++
       console.log('[postbuild-mp] 改写:', path.relative(MP, p))
     }
