@@ -13,6 +13,36 @@ const MP = path.join(ROOT, 'dist/build/mp-weixin')
 const UV_SRC = path.join(MP, 'uni_modules/uview-plus')
 const UV_DST = path.join(MP, 'pages-sub/uni_modules/uview-plus')
 
+/* 0. 还原 wxss 中的 Unicode 转义 (\\XXXX → 中文)
+   uni-app 会把源码中的中文类名(如 .st-待处理) 转义为 CSS 转义 (如 .st-\\5f85\\4ed8\\6b3e)。
+   H5/App 的 CSS 引擎支持转义, 但微信小程序 wxss 解析器不支持 \\, 直接编译报错
+   "unexpected '\\'"。这里还原为 UTF-8 中文类名(微信 wxss 支持中文选择器)。 */
+function fixWxssEscapes() {
+  let files = 0, total = 0
+  function walk(dir) {
+    if (!fs.existsSync(dir)) return
+    for (const f of fs.readdirSync(dir)) {
+      const p = path.join(dir, f)
+      if (fs.statSync(p).isDirectory()) { walk(p); continue }
+      if (!f.endsWith('.wxss')) continue
+      const text = fs.readFileSync(p, 'utf8')
+      if (!text.includes('\\')) continue
+      const fixed = text.replace(/\\[0-9a-fA-F]{4}(?![0-9a-fA-F])/g, (m) =>
+        String.fromCodePoint(parseInt(m.slice(1), 16)))
+      if (fixed !== text) {
+        fs.writeFileSync(p, fixed)
+        files++
+        total += (text.match(/\\[0-9a-fA-F]{4}(?![0-9a-fA-F])/g) || []).length
+        console.log('[postbuild-mp] wxss 转义还原:', path.relative(MP, p))
+      }
+    }
+  }
+  walk(MP)
+  if (files) console.log(`[postbuild-mp] 还原 ${total} 处 Unicode 转义, 共 ${files} 个 wxss`)
+  else console.log('[postbuild-mp] wxss 无转义需还原')
+}
+fixWxssEscapes()
+
 if (!fs.existsSync(UV_SRC)) {
   console.log('[postbuild-mp] uni_modules/uview-plus 不在主包, 跳过')
   process.exit(0)
