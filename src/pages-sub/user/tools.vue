@@ -912,12 +912,21 @@ function runLiuren() {
 .tool-tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8rpx;
   padding: 12rpx 26rpx;
   border-radius: 999rpx;
   background: #f8f3ea;
   font-size: 24rpx;
   color: #857563;
+  line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.tool-tab text:first-child {
+  width: 30rpx;
+  text-align: center;
+  flex-shrink: 0;
 }
 .tool-tab.on {
   background: #8c5a2b;
