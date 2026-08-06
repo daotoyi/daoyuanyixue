@@ -35,8 +35,12 @@ $u-content-color: #857563;
 $u-tips-color: #c2b5a2;
 $u-light-color: #b3a595;
 
-/* uview-plus 主题变量 */
-@import '@/uni_modules/uview-plus/index.scss';
+/* uview-plus 主题变量 (仅核心变量 + flex mixin。
+   注意: 不能 import 完整 index.scss —— uni-app 会把 uni.scss 自动注入每个页面/组件的
+   scss 编译, 全量样式(工具类+全部组件样式)会塞进每个 wxss(100KB+/个), 直接导致
+   小程序主包/分包体积爆炸。这里只引入变量默认值 + mixin 定义即可。 */
+@import '@/uni_modules/uview-plus/libs/css/theme-vars-core.scss';
+@import '@/uni_modules/uview-plus/libs/css/mixin.scss';
 
 /* ---- uni-app 官方变量 ---- */
 $uni-color-primary: #8c5a2b;
