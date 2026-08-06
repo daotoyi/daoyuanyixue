@@ -64,7 +64,7 @@
       </view>
     </view>
 
-    <view class="version">{{ t('道元易学 v1.0.0', 'Daoyuan Yixue v1.0.0') }}</view>
+    <view class="version">道元易学 {{ APP_FULL_VERSION }}</view>
 
     <!-- 主题选择 -->
     <view class="pp-mask" v-if="showTheme" @tap="showTheme = false"><view class="pp-sheet" @tap.stop>
@@ -151,6 +151,7 @@ import { ref, computed, onMounted } from 'vue'
 import { settingsState, setTheme, setLang, t, applyTheme, updateTabBar } from '../../utils/settings'
 import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate, updatePhone as apiUpdatePhone, bindWechat as apiBindWechat } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { APP_FULL_VERSION } from '../../version'
 
 const userStore = useUserStore()
 

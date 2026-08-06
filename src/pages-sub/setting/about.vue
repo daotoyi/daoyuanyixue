@@ -1,7 +1,7 @@
 <template>
   <view class="about-page">
     <view class="about-head">
-      <view class="about-seal"><text>道</text></view>
+      <view class="about-seal"><image class="about-seal-img" src="/static/logo.png" mode="aspectFit"></image></view>
       <text class="about-brand">真和盛</text>
       <text class="about-name">道元易学</text>
       <text class="about-slogan">观天道 · 明人事 · 致中和</text>
@@ -37,8 +37,8 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
   padding: 80rpx 0 60rpx;
 }
 .about-seal {
-  width: 140rpx;
-  height: 140rpx;
+  width: 150rpx;
+  height: 150rpx;
   border: 3rpx solid #c4a484;
   border-radius: 20rpx;
   display: flex;
@@ -47,9 +47,9 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
   background: rgba(196, 164, 132, 0.12);
   margin-bottom: 26rpx;
 }
-.about-seal text {
-  font-size: 76rpx;
-  color: #c4a484;
+.about-seal-img {
+  width: 120rpx;
+  height: 120rpx;
 }
 .about-brand {
   margin-top: 16rpx;

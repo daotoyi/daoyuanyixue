@@ -374,7 +374,7 @@
             </view>
           </view>
 
-          <view class="settings-card">
+          <view class="settings-card" v-if="activeSettingsTab !== 'wxmp'">
             <view class="settings-desc">
               <text class="sd-title">{{ currentSettingsTab.label }}</text>
               <text class="sd-text">{{ currentSettingsTab.desc }}</text>
@@ -403,10 +403,10 @@
             </view>
           </view>
 
-          <!-- ===== 小程序配置 (微信第三方平台扫码接管) ===== -->
-          <view class="settings-card" style="margin-top: 24rpx">
+          <!-- ===== 小程序接管 (独立板块, 在"小程序"tab 后) ===== -->
+          <view class="settings-card" v-else>
             <view class="settings-desc">
-              <text class="sd-title">小程序配置</text>
+              <text class="sd-title">小程序接管（{{ wxmpList.length }}）</text>
               <text class="sd-text">已接管小程序（{{ wxmpList.length }}）：填 AppID → 生成授权链接 → 管理员扫码 → 自动接管（上传开发版 / 体验码 / 提审 / 发布）</text>
             </view>
             <view class="f-row">
@@ -1361,6 +1361,9 @@ const settingsTabs = [
       { key: 'pull_url', label: '拉流地址' },
       { key: 'license_url', label: 'License 地址', secret: true },
     ],
+  },
+  {
+    group: 'wxmp', label: '小程序接管', desc: '微信第三方平台扫码授权（上传开发版 / 体验码 / 提审 / 发布）', fields: [],
   },
 ]
 

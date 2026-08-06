@@ -5,8 +5,7 @@
       <view class="banner-title">道元易学</view>
       <view class="banner-sub">观天道 · 明人事 · 致中和</view>
       <view class="banner-seal">
-        <text class="seal-text">道</text>
-        <text class="seal-sub">眞和盛</text>
+        <image class="seal-img" src="/static/logo.png" mode="aspectFit"></image>
       </view>
     </view>
 
@@ -306,23 +305,13 @@ onMounted(async () => {
   border: 2rpx solid #c4a484;
   border-radius: 12rpx;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: rgba(201, 169, 106, 0.12);
 }
-.seal-text {
-  font-size: 30rpx;
-  line-height: 1.1;
-  color: #c4a484;
-}
-.seal-sub {
-  font-size: 15rpx;
-  line-height: 1.3;
-  color: #7a5c9e;
-  opacity: 0.95;
-  letter-spacing: 1rpx;
-  white-space: nowrap;
+.seal-img {
+  width: 72rpx;
+  height: 72rpx;
 }
 
 /* 子频道 */

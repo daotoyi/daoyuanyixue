@@ -102,11 +102,6 @@
           </view>
         </view>
 
-        <view class="tp-row">
-          <text class="tp-label">保存排盘</text>
-          <switch :checked="form.bazi.saveHistory" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.saveHistory = e.detail.value)" />
-          <text class="tp-save-tip">开启后每次排盘自动存入历史</text>
-        </view>
 
         <!-- 奇门专用: 起局方式 + 排盘方式 -->
         <template v-if="activeTool === 'qimen'">
@@ -161,6 +156,11 @@
           </template>
         </template>
 
+        <view class="tp-row">
+          <text class="tp-label">保存排盘</text>
+          <switch :checked="form.bazi.saveHistory" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.saveHistory = e.detail.value)" />
+          <text class="tp-save-tip">开启后每次排盘自动存入历史</text>
+        </view>
         <view class="btn-fill btn-pp" @tap="runPaipan"><text>开始排盘</text></view>
       </view>
 
@@ -240,12 +240,12 @@
             </view>
           </view>
 
-          <!-- AI 智能问答 (¥1/次, 参考八字) -->
+          <!-- AI 智能问答 (¥0.5/次, 参考八字) -->
           <view class="jp-section">
-            <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+            <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
             <view class="ai-q-row">
               <input class="ai-q-input" v-model="lyAIQuestion" placeholder="向 AI 提问（如：此卦近期财运如何）" placeholder-class="qm-c-ph" />
-              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 ¥1</text></view>
+              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 ¥0.5</text></view>
             </view>
             <view class="jp-ai-loading" v-if="lyAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
             <view v-if="lyAIAnswer && lyAIAnswer.length" class="ai-q-answer">
@@ -343,12 +343,12 @@
             </view>
           </view>
 
-          <!-- AI 智能问答 (¥1/次, 参考八字) -->
+          <!-- AI 智能问答 (¥0.5/次, 参考八字) -->
           <view class="jp-section">
-            <view class="pp-block-head">AI 智能问答 · ¥1/次</view>
+            <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
             <view class="ai-q-row">
               <input class="ai-q-input" v-model="lrAIQuestion" placeholder="向 AI 提问（如：此课出行宜忌）" placeholder-class="qm-c-ph" />
-              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 ¥1</text></view>
+              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 ¥0.5</text></view>
             </view>
             <view class="jp-ai-loading" v-if="lrAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
             <view v-if="lrAIAnswer && lrAIAnswer.length" class="ai-q-answer">
@@ -556,7 +556,7 @@ function saveLiuyao() {
   saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value)
 }
 
-/* ===== 六爻 AI 智能问答 (¥1/次, 参考八字) ===== */
+/* ===== 六爻 AI 智能问答 (¥0.5/次, 参考八字) ===== */
 const lyAIQuestion = ref('')
 const lyAIAnswer = ref([])
 const lyAIAsking = ref(false)
@@ -573,7 +573,7 @@ function askLyAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从余额扣除 1 元，是否继续？',
+    content: '本次提问将从余额扣除 0.5 元，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {
@@ -675,7 +675,7 @@ function saveLiuren() {
   saveHistory('liuren', `大六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
 }
 
-/* ===== 大六壬 AI 智能问答 (¥1/次, 参考八字) ===== */
+/* ===== 大六壬 AI 智能问答 (¥0.5/次, 参考八字) ===== */
 const lrAIQuestion = ref('')
 const lrAIAnswer = ref([])
 const lrAIAsking = ref(false)
@@ -692,7 +692,7 @@ function askLrAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从余额扣除 1 元，是否继续？',
+    content: '本次提问将从余额扣除 0.5 元，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {

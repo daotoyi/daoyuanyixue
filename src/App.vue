@@ -147,6 +147,7 @@ page {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   background: #8c5a2b;
   color: #fefbf6;
   border-radius: 999rpx;
