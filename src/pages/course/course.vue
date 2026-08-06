@@ -32,7 +32,7 @@
             <view class="course-card" v-for="cc in grouped[c.id]" :key="cc.id" @tap="goDetail(cc.id)">
               <view class="course-cover">
                 <image class="course-img" :src="cc.cover" mode="aspectFill"></image>
-                <view class="course-level" :class="'lv-' + cc.level">{{ cc.level }}</view>
+                <view class="course-level" :class="'lv-' + lvCls(cc.level)">{{ cc.level }}</view>
               </view>
               <view class="course-body-inner">
                 <text class="course-title">{{ cc.title }}</text>
@@ -66,6 +66,9 @@
 </template>
 
 <script setup>
+const LV_CLS = {'入门':'basic','进阶':'inter','高级':'senior','庙':'miao','旺':'wang','得':'de','利':'li','平':'ping','不':'bu','陷':'xian'}
+const lvCls = (v) => LV_CLS[v] || v
+
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { getCourseCategories, getCourses } from '../../api/api'
 
@@ -222,9 +225,9 @@ onMounted(async () => {
   font-size: 20rpx;
   color: #fefbf6;
 }
-.lv-入门 { background: #6e7f5a; }
-.lv-进阶 { background: #8c5a2b; }
-.lv-高级 { background: #b04a45; }
+.lv-basic { background: #6e7f5a; }
+.lv-inter { background: #8c5a2b; }
+.lv-senior { background: #b04a45; }
 
 .course-body-inner {
   flex: 1;

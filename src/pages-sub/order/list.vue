@@ -7,7 +7,7 @@
           v-for="s in statuses"
           :key="s"
           class="o-tab"
-          :class="['ot-' + s, { active: activeStatus === s }]"
+          :class="['ot-' + stCls(s), { active: activeStatus === s }]"
           @tap="switchStatus(s)"
         >
           <text class="ot-label">{{ s }}</text>
@@ -22,7 +22,7 @@
         <view class="order-card" v-for="o in orders" :key="o._id || o.order_no" @tap="goDetail(o.order_no)">
           <view class="order-head">
             <text class="order-no">订单号 {{ o.order_no }}</text>
-            <text class="order-status" :class="'st-' + o.status">{{ o.status }}</text>
+            <text class="order-status" :class="'st-' + stCls(o.status)">{{ o.status }}</text>
           </view>
 
           <view class="order-items">
@@ -58,6 +58,9 @@
 </template>
 
 <script setup>
+const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已退款':'refunded','全部':'all'}
+const stCls = (v) => ST_CLS[v] || v
+
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getOrders, payOrder, confirmOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
@@ -185,41 +188,41 @@ async function doConfirm(o) {
   font-weight: 500;
 }
 /* 每个状态固定颜色 */
-.ot-全部 { border-color: #857563; background: #faf3e9; }
-.ot-全部 .ot-label { color: #857563; }
-.ot-全部 .ot-badge { background: #857563; }
-.ot-全部.active { background: #857563; }
-.ot-全部.active .ot-label { color: #fefbf6; }
+.ot-all { border-color: #857563; background: #faf3e9; }
+.ot-all .ot-label { color: #857563; }
+.ot-all .ot-badge { background: #857563; }
+.ot-all.active { background: #857563; }
+.ot-all.active .ot-label { color: #fefbf6; }
 
-.ot-待付款 { border-color: #b04a45; background: #faf3e9; }
-.ot-待付款 .ot-label { color: #b04a45; }
-.ot-待付款 .ot-badge { background: #b04a45; }
-.ot-待付款.active { background: #b04a45; }
-.ot-待付款.active .ot-label { color: #fefbf6; }
+.ot-unpaid { border-color: #b04a45; background: #faf3e9; }
+.ot-unpaid .ot-label { color: #b04a45; }
+.ot-unpaid .ot-badge { background: #b04a45; }
+.ot-unpaid.active { background: #b04a45; }
+.ot-unpaid.active .ot-label { color: #fefbf6; }
 
-.ot-待发货 { border-color: #8c5a2b; background: #faf3e9; }
-.ot-待发货 .ot-label { color: #8c5a2b; }
-.ot-待发货 .ot-badge { background: #8c5a2b; }
-.ot-待发货.active { background: #8c5a2b; }
-.ot-待发货.active .ot-label { color: #fefbf6; }
+.ot-unshipped { border-color: #8c5a2b; background: #faf3e9; }
+.ot-unshipped .ot-label { color: #8c5a2b; }
+.ot-unshipped .ot-badge { background: #8c5a2b; }
+.ot-unshipped.active { background: #8c5a2b; }
+.ot-unshipped.active .ot-label { color: #fefbf6; }
 
-.ot-待收货 { border-color: #ba7517; background: #faf3e9; }
-.ot-待收货 .ot-label { color: #ba7517; }
-.ot-待收货 .ot-badge { background: #ba7517; }
-.ot-待收货.active { background: #ba7517; }
-.ot-待收货.active .ot-label { color: #fefbf6; }
+.ot-unreceived { border-color: #ba7517; background: #faf3e9; }
+.ot-unreceived .ot-label { color: #ba7517; }
+.ot-unreceived .ot-badge { background: #ba7517; }
+.ot-unreceived.active { background: #ba7517; }
+.ot-unreceived.active .ot-label { color: #fefbf6; }
 
-.ot-已完成 { border-color: #6e7f5a; background: #faf3e9; }
-.ot-已完成 .ot-label { color: #6e7f5a; }
-.ot-已完成 .ot-badge { background: #6e7f5a; }
-.ot-已完成.active { background: #6e7f5a; }
-.ot-已完成.active .ot-label { color: #fefbf6; }
+.ot-done { border-color: #6e7f5a; background: #faf3e9; }
+.ot-done .ot-label { color: #6e7f5a; }
+.ot-done .ot-badge { background: #6e7f5a; }
+.ot-done.active { background: #6e7f5a; }
+.ot-done.active .ot-label { color: #fefbf6; }
 
-.ot-已退款 { border-color: #857563; background: #faf3e9; }
-.ot-已退款 .ot-label { color: #857563; }
-.ot-已退款 .ot-badge { background: #857563; }
-.ot-已退款.active { background: #857563; }
-.ot-已退款.active .ot-label { color: #fefbf6; }
+.ot-refunded { border-color: #857563; background: #faf3e9; }
+.ot-refunded .ot-label { color: #857563; }
+.ot-refunded .ot-badge { background: #857563; }
+.ot-refunded.active { background: #857563; }
+.ot-refunded.active .ot-label { color: #fefbf6; }
 
 .order-scroll {
   flex: 1;
@@ -249,11 +252,11 @@ async function doConfirm(o) {
   font-size: 24rpx;
   font-weight: 500;
 }
-.st-待付款 { color: #b04a45; }
-.st-待发货 { color: #8c5a2b; }
-.st-待收货 { color: #ba7517; }
-.st-已完成 { color: #6e7f5a; }
-.st-已退款 { color: #857563; }
+.st-unpaid { color: #b04a45; }
+.st-unshipped { color: #8c5a2b; }
+.st-unreceived { color: #ba7517; }
+.st-done { color: #6e7f5a; }
+.st-refunded { color: #857563; }
 /* 状态按钮: 实心彩色 */
 .btn-fill {
   flex-shrink: 0;

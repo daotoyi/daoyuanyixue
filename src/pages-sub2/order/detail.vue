@@ -1,7 +1,7 @@
 <template>
   <view class="od-page" v-if="order">
     <!-- 状态横幅 -->
-    <view class="status-banner" :class="'sb-' + order.status">
+    <view class="status-banner" :class="'sb-' + stCls(order.status)">
       <text class="sb-status">{{ order.status }}</text>
       <text class="sb-tip">{{ statusTip }}</text>
     </view>
@@ -58,6 +58,9 @@
 </template>
 
 <script setup>
+const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已退款':'refunded','全部':'all'}
+const stCls = (v) => ST_CLS[v] || v
+
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getOrder, payOrder, confirmOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
@@ -135,11 +138,11 @@ function goShop() {
   display: flex;
   flex-direction: column;
 }
-.sb-待付款 { background: linear-gradient(135deg, #6b1f1f, #b04a45); }
-.sb-待发货 { background: linear-gradient(135deg, #6e4a26, #8c5a2b); }
-.sb-待收货 { background: linear-gradient(135deg, #7a5610, #ba7517); }
-.sb-已完成 { background: linear-gradient(135deg, #3d4a26, #6e7f5a); }
-.sb-已退款 { background: linear-gradient(135deg, #5a5144, #857563); }
+.sb-unpaid { background: linear-gradient(135deg, #6b1f1f, #b04a45); }
+.sb-unshipped { background: linear-gradient(135deg, #6e4a26, #8c5a2b); }
+.sb-unreceived { background: linear-gradient(135deg, #7a5610, #ba7517); }
+.sb-done { background: linear-gradient(135deg, #3d4a26, #6e7f5a); }
+.sb-refunded { background: linear-gradient(135deg, #5a5144, #857563); }
 .sb-status {
   font-size: 44rpx;
   font-weight: 500;

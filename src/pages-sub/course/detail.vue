@@ -3,7 +3,7 @@
     <!-- 封面 -->
     <view class="cover">
       <image class="cover-img" :src="course.cover" mode="aspectFill"></image>
-      <view class="cover-level" :class="'lv-' + course.level">{{ course.level }}</view>
+      <view class="cover-level" :class="'lv-' + lvCls(course.level)">{{ course.level }}</view>
       <view class="cover-title">{{ course.title }}</view>
     </view>
 
@@ -66,6 +66,9 @@
 </template>
 
 <script setup>
+const LV_CLS = {'入门':'basic','进阶':'inter','高级':'senior','庙':'miao','旺':'wang','得':'de','利':'li','平':'ping','不':'bu','陷':'xian'}
+const lvCls = (v) => LV_CLS[v] || v
+
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCourse, buyCourse as apiBuyCourse, getMyCourses } from '../../api/api'
@@ -149,9 +152,9 @@ function startLearn() {
   font-size: 22rpx;
   color: #fefbf6;
 }
-.lv-入门 { background: #6e7f5a; }
-.lv-进阶 { background: #8c5a2b; }
-.lv-高级 { background: #b04a45; }
+.lv-basic { background: #6e7f5a; }
+.lv-inter { background: #8c5a2b; }
+.lv-senior { background: #b04a45; }
 .cover-title {
   position: absolute;
   left: 24rpx;

@@ -45,13 +45,13 @@
           <view class="pp-row">
             <view class="pp-cell pp-label">天干</view>
             <view class="pp-cell pp-gan" v-for="(c, i) in columns" :key="'g' + i">
-              <text :class="'wx-' + GAN_WX[c.g]">{{ GAN[c.g] }}</text>
+              <text :class="'wx-' + wxCls(GAN_WX[c.g])">{{ GAN[c.g] }}</text>
             </view>
           </view>
           <view class="pp-row">
             <view class="pp-cell pp-label">地支</view>
             <view class="pp-cell pp-zhi" v-for="(c, i) in columns" :key="'z' + i">
-              <text :class="'wx-' + ZHI_WX[c.z]">{{ ZHI[c.z] }}</text>
+              <text :class="'wx-' + wxCls(ZHI_WX[c.z])">{{ ZHI[c.z] }}</text>
             </view>
           </view>
         </view>
@@ -65,7 +65,7 @@
             <view class="pp-cell pp-label">藏干</view>
             <view class="pp-cell" v-for="(c, i) in columns" :key="'cg' + i">
               <view class="pp-cg-item" v-for="(cc, ci) in c.canggan" :key="ci">
-                <text class="pp-cg-gan" :class="'wx-' + cc.wx">{{ cc.gan }}</text>
+                <text class="pp-cg-gan" :class="'wx-' + wxCls(cc.wx)">{{ cc.gan }}</text>
                 <text class="pp-cg-ss">{{ cc.shishen }}</text>
               </view>
             </view>
@@ -115,8 +115,8 @@
       <view class="pp-block">
         <view class="pp-block-head">五行统计</view>
         <view class="pp-wx" v-for="w in wxOrder" :key="w">
-          <text class="pp-wx-name" :class="'wx-' + w">{{ w }}</text>
-          <view class="pp-wx-bar"><view class="pp-wx-fill" :class="'wx-' + w" :style="{ width: (data.bazi.wxCount[w] || 0) * 40 + '%' }"></view></view>
+          <text class="pp-wx-name" :class="'wx-' + wxCls(w)">{{ w }}</text>
+          <view class="pp-wx-bar"><view class="pp-wx-fill" :class="'wx-' + wxCls(w)" :style="{ width: (data.bazi.wxCount[w] || 0) * 40 + '%' }"></view></view>
           <text class="pp-wx-num">{{ data.bazi.wxCount[w] }}</text>
         </view>
       </view>
@@ -136,11 +136,11 @@
               <text class="pp-dy-age">{{ dy.startAge }}</text>
               <view class="pp-gz-stack">
                 <view class="pp-gz-line">
-                  <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(dy.gan)]">{{ dy.gan }}</text>
+                  <text class="pp-dy-gan" :class="'wx-' + wxCls(GAN_WX[GAN.indexOf(dy.gan)])">{{ dy.gan }}</text>
                   <text class="pp-ss-right">{{ ss1(dy.ganShishen) }}</text>
                 </view>
                 <view class="pp-gz-line">
-                  <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(dy.zhi)]">{{ dy.zhi }}</text>
+                  <text class="pp-dy-zhi" :class="'wx-' + wxCls(ZHI_WX[ZHI.indexOf(dy.zhi)])">{{ dy.zhi }}</text>
                   <text class="pp-ss-right">{{ zhiSs1(dy.zhi) }}</text>
                 </view>
               </view>
@@ -163,11 +163,11 @@
                 <text class="pp-dy-age">{{ y.year }}</text>
                 <view class="pp-gz-stack">
                   <view class="pp-gz-line">
-                    <text class="pp-dy-gan" :class="'wx-' + GAN_WX[y.ganIdx]">{{ y.gan }}</text>
+                    <text class="pp-dy-gan" :class="'wx-' + wxCls(GAN_WX[y.ganIdx])">{{ y.gan }}</text>
                     <text class="pp-ss-right">{{ ss1(shishenName(y.ganIdx)) }}</text>
                   </view>
                   <view class="pp-gz-line">
-                    <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[y.zhiIdx]">{{ y.zhi }}</text>
+                    <text class="pp-dy-zhi" :class="'wx-' + wxCls(ZHI_WX[y.zhiIdx])">{{ y.zhi }}</text>
                     <text class="pp-ss-right">{{ zhiSs1(y.zhi) }}</text>
                   </view>
                 </view>
@@ -190,11 +190,11 @@
                   <text class="pp-dy-age">{{ mm.month }}\n{{ JIEQI[mi].name }} {{ JIEQI[mi].md }}</text>
                   <view class="pp-gz-stack">
                     <view class="pp-gz-line">
-                      <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(mm.gan)]">{{ mm.gan }}</text>
+                      <text class="pp-dy-gan" :class="'wx-' + wxCls(GAN_WX[GAN.indexOf(mm.gan)])">{{ mm.gan }}</text>
                       <text class="pp-ss-right">{{ ss1(mm.ganShishen) }}</text>
                     </view>
                     <view class="pp-gz-line">
-                      <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(mm.zhi)]">{{ mm.zhi }}</text>
+                      <text class="pp-dy-zhi" :class="'wx-' + wxCls(ZHI_WX[ZHI.indexOf(mm.zhi)])">{{ mm.zhi }}</text>
                       <text class="pp-ss-right">{{ zhiSs1(mm.zhi) }}</text>
                     </view>
                   </view>
@@ -217,11 +217,11 @@
                     <text class="pp-dy-age">{{ r.day }}</text>
                     <view class="pp-gz-stack">
                       <view class="pp-gz-line">
-                        <text class="pp-dy-gan" :class="'wx-' + GAN_WX[r.ganIdx]">{{ r.gan }}</text>
+                        <text class="pp-dy-gan" :class="'wx-' + wxCls(GAN_WX[r.ganIdx])">{{ r.gan }}</text>
                         <text class="pp-ss-right">{{ ss1(shishenName(r.ganIdx)) }}</text>
                       </view>
                       <view class="pp-gz-line">
-                        <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[r.zhiIdx]">{{ r.zhi }}</text>
+                        <text class="pp-dy-zhi" :class="'wx-' + wxCls(ZHI_WX[r.zhiIdx])">{{ r.zhi }}</text>
                         <text class="pp-ss-right">{{ zhiSs1(r.zhi) }}</text>
                       </view>
                     </view>
@@ -244,11 +244,11 @@
                       <text class="pp-dy-age">{{ ts.hour }}</text>
                       <view class="pp-gz-stack">
                         <view class="pp-gz-line">
-                          <text class="pp-dy-gan" :class="'wx-' + GAN_WX[GAN.indexOf(ts.gan)]">{{ ts.gan }}</text>
+                          <text class="pp-dy-gan" :class="'wx-' + wxCls(GAN_WX[GAN.indexOf(ts.gan)])">{{ ts.gan }}</text>
                           <text class="pp-ss-right">{{ ss1(shishenName(GAN.indexOf(ts.gan))) }}</text>
                         </view>
                         <view class="pp-gz-line">
-                          <text class="pp-dy-zhi" :class="'wx-' + ZHI_WX[ZHI.indexOf(ts.zhi)]">{{ ts.zhi }}</text>
+                          <text class="pp-dy-zhi" :class="'wx-' + wxCls(ZHI_WX[ZHI.indexOf(ts.zhi)])">{{ ts.zhi }}</text>
                           <text class="pp-ss-right">{{ zhiSs1(ts.zhi) }}</text>
                         </view>
                       </view>
@@ -265,7 +265,7 @@
       <view class="pp-block">
         <view class="pp-block-head">流年 · {{ curYear }}年</view>
         <view class="pp-ln-box">
-          <text class="pp-ln-name" :class="'wx-' + GAN_WX[GAN.indexOf(data.bazi.liunian.gan)]">{{ data.bazi.liunian.name }}</text>
+          <text class="pp-ln-name" :class="'wx-' + wxCls(GAN_WX[GAN.indexOf(data.bazi.liunian.gan)])">{{ data.bazi.liunian.name }}</text>
           <text class="pp-ln-ss">{{ data.bazi.liunian.ganShishen }}</text>
           <text class="pp-ln-wx">纳音 {{ NAYIN[((GAN.indexOf(data.bazi.liunian.gan) * 12) + ZHI.indexOf(data.bazi.liunian.zhi)) % 60] }}</text>
         </view>
@@ -383,8 +383,8 @@
           <view class="qm-sz-grid">
             <view class="qm-sz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
               <text class="qm-sz-p">{{ pn }}</text>
-              <text class="qm-sz-gan" :class="'wx-' + qmWxOf((data.bazi.ganZhi[pi] || '甲')[0])">{{ (data.bazi.ganZhi[pi] || '—')[0] }}</text>
-              <text class="qm-sz-zhi" :class="'wx-' + qmWxOfZhi((data.bazi.ganZhi[pi] || '子')[1])">{{ (data.bazi.ganZhi[pi] || '—')[1] }}</text>
+              <text class="qm-sz-gan" :class="'wx-' + wxCls(qmWxOf((data.bazi.ganZhi[pi] || '甲')[0]))">{{ (data.bazi.ganZhi[pi] || '—')[0] }}</text>
+              <text class="qm-sz-zhi" :class="'wx-' + wxCls(qmWxOfZhi((data.bazi.ganZhi[pi] || '子')[1]))">{{ (data.bazi.ganZhi[pi] || '—')[1] }}</text>
             </view>
           </view>
         </view>
@@ -422,8 +422,8 @@
           <view class="qm-chs" v-if="showChangSheng && p.changSheng">{{ p.changSheng }}</view>
           <view class="qm-palace">{{ p.palace }}{{ p.element }}</view>
           <view class="qm-tian-di">
-            <text class="qm-tian" :class="'wx-' + qmWxOf(p.tian)">{{ p.tian || '—' }}</text>
-            <text class="qm-di" :class="'wx-' + qmWxOf(p.di)">{{ p.di || '—' }}</text>
+            <text class="qm-tian" :class="'wx-' + wxCls(qmWxOf(p.tian))">{{ p.tian || '—' }}</text>
+            <text class="qm-di" :class="'wx-' + wxCls(qmWxOf(p.di))">{{ p.di || '—' }}</text>
           </view>
           <view class="qm-door">{{ p.door || (p.gong === 5 ? '寄坤' : '—') }}</view>
           <view class="qm-star">{{ p.star || '' }}</view>
@@ -533,11 +533,11 @@
           <text class="zw-pname" :class="{ on: pos.ming || pos.shen }">{{ pos.name }}</text>
           <view class="zw-stars">
             <text class="zw-star" :class="'st-' + s.kind + (s.sihua ? ' sh4' : '')" v-for="(s, si) in pos.stars" :key="si">
-              {{ s.name }}<text class="zw-sh" :class="'sh-' + s.sihua" v-if="s.sihua">{{ s.sihua }}</text>
-              <text class="zw-lv" :class="'lv-' + s.light">{{ s.light }}</text>
+              {{ s.name }}<text class="zw-sh" :class="'sh-' + shCls(s.sihua)" v-if="s.sihua">{{ s.sihua }}</text>
+              <text class="zw-lv" :class="'lv-' + lvCls(s.light)">{{ s.light }}</text>
             </text>
             <text class="zw-star" :class="'st-' + a.kind" v-for="(a, ai) in pos.aux" :key="'a' + ai">
-              {{ a.name }}<text class="zw-lv" :class="'lv-' + a.light">{{ a.light }}</text>
+              {{ a.name }}<text class="zw-lv" :class="'lv-' + lvCls(a.light)">{{ a.light }}</text>
             </text>
           </view>
           <text class="zw-dayun">{{ pos.dayun }}</text>
@@ -671,6 +671,13 @@
 </template>
 
 <script setup>
+const WX_CLS = {'木':'wood','火':'fire','土':'earth','金':'metal','水':'water'}
+const wxCls = (v) => WX_CLS[v] || v
+const SH_CLS = {'禄':'lu','权':'quan','科':'ke','忌':'ji'}
+const shCls = (v) => SH_CLS[v] || v
+const LV_CLS = {'入门':'basic','进阶':'inter','高级':'senior','庙':'miao','旺':'wang','得':'de','利':'li','平':'ping','不':'bu','陷':'xian'}
+const lvCls = (v) => LV_CLS[v] || v
+
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../../utils/paipan'
@@ -1668,11 +1675,11 @@ function payJiepan() {
 .pp-wx-name { width: 60rpx; font-size: 22rpx; font-weight: 500; }
 .pp-wx-bar { flex: 1; height: 14rpx; background: #efe7d8; border-radius: 7rpx; margin: 0 14rpx; overflow: hidden; }
 .pp-wx-fill { height: 100%; border-radius: 7rpx; }
-.pp-wx-fill.wx-木 { background: #2e7d32; }
-.pp-wx-fill.wx-火 { background: #c62828; }
-.pp-wx-fill.wx-土 { background: #8d6e3f; }
-.pp-wx-fill.wx-金 { background: #b8860b; }
-.pp-wx-fill.wx-水 { background: #1565c0; }
+.pp-wx-fill.wx-wood { background: #2e7d32; }
+.pp-wx-fill.wx-fire { background: #c62828; }
+.pp-wx-fill.wx-earth { background: #8d6e3f; }
+.pp-wx-fill.wx-metal { background: #b8860b; }
+.pp-wx-fill.wx-water { background: #1565c0; }
 .pp-wx-num { width: 60rpx; font-size: 22rpx; color: #857563; text-align: right; }
 
 /* 大运/流年/流月/流日/流时 (一行, 超紧凑, 干支框约减半) */
@@ -1742,11 +1749,11 @@ function payJiepan() {
 .hist-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
 
 /* 五行色 */
-.wx-木 { color: #2e7d32; }
-.wx-火 { color: #c62828; }
-.wx-土 { color: #8d6e3f; }
-.wx-金 { color: #b8860b; }
-.wx-水 { color: #1565c0; }
+.wx-wood { color: #2e7d32; }
+.wx-fire { color: #c62828; }
+.wx-earth { color: #8d6e3f; }
+.wx-metal { color: #b8860b; }
+.wx-water { color: #1565c0; }
 
 /* 奇门 */
 /* 内容行 (可手动填写) */
@@ -2081,19 +2088,19 @@ function payJiepan() {
 .zw-star.st-ping { color: #3f6f8c; }
 .zw-star.sh4 { color: #7a5c9e; }
 .zw-sh { font-size: 15rpx; font-weight: 600; margin-left: 1rpx; }
-.zw-sh.sh-禄 { color: #2e7d32; }
-.zw-sh.sh-权 { color: #7a5c9e; }
-.zw-sh.sh-科 { color: #3f6f8c; }
-.zw-sh.sh-忌 { color: #b04a45; }
+.zw-sh.sh-lu { color: #2e7d32; }
+.zw-sh.sh-quan { color: #7a5c9e; }
+.zw-sh.sh-ke { color: #3f6f8c; }
+.zw-sh.sh-ji { color: #b04a45; }
 /* 亮度状态 (庙红/旺橙/得绿/利青/平灰/不深灰/陷蓝灰) */
 .zw-lv { font-size: 14rpx; margin-left: 2rpx; }
-.zw-lv.lv-庙 { color: #b04a45; }
-.zw-lv.lv-旺 { color: #d98e32; }
-.zw-lv.lv-得 { color: #2e7d32; }
-.zw-lv.lv-利 { color: #3f6f8c; }
-.zw-lv.lv-平 { color: #a99a85; }
-.zw-lv.lv-不 { color: #857563; }
-.zw-lv.lv-陷 { color: #7a8ba3; }
+.zw-lv.lv-miao { color: #b04a45; }
+.zw-lv.lv-wang { color: #d98e32; }
+.zw-lv.lv-de { color: #2e7d32; }
+.zw-lv.lv-li { color: #3f6f8c; }
+.zw-lv.lv-ping { color: #a99a85; }
+.zw-lv.lv-bu { color: #857563; }
+.zw-lv.lv-xian { color: #7a8ba3; }
 /* 联动高亮标记 (大限金/流年红/流月绿/流日蓝) */
 .zw-tag {
   font-size: 14rpx;

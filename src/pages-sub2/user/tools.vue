@@ -1438,11 +1438,11 @@ function runLiuren() {
   line-height: 1.15;
 }
 /* 五行颜色 */
-.wx-木 { color: #2e7d32; }
-.wx-火 { color: #c62828; }
-.wx-土 { color: #8d6e3f; }
-.wx-金 { color: #b8860b; }
-.wx-水 { color: #1565c0; }
+.wx-wood { color: #2e7d32; }
+.wx-fire { color: #c62828; }
+.wx-earth { color: #8d6e3f; }
+.wx-metal { color: #b8860b; }
+.wx-water { color: #1565c0; }
 
 /* 五行统计 */
 .wz-wxbar {
@@ -1476,11 +1476,11 @@ function runLiuren() {
   height: 100%;
   border-radius: 7rpx;
 }
-.wz-wx-fill.wx-木 { background: #2e7d32; }
-.wz-wx-fill.wx-火 { background: #c62828; }
-.wz-wx-fill.wx-土 { background: #8d6e3f; }
-.wz-wx-fill.wx-金 { background: #b8860b; }
-.wz-wx-fill.wx-水 { background: #1565c0; }
+.wz-wx-fill.wx-wood { background: #2e7d32; }
+.wz-wx-fill.wx-fire { background: #c62828; }
+.wz-wx-fill.wx-earth { background: #8d6e3f; }
+.wz-wx-fill.wx-metal { background: #b8860b; }
+.wz-wx-fill.wx-water { background: #1565c0; }
 .wz-wx-num {
   width: 60rpx;
   font-size: 22rpx;

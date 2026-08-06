@@ -215,7 +215,7 @@
               <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
               <text class="td w-price">¥{{ o.total_price }}</text>
               <view class="td w-status">
-                <text :class="'st-' + o.status">{{ o.status }}</text>
+                <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
               </view>
               <view class="td w-ops ops">
@@ -629,6 +629,9 @@
 </template>
 
 <script setup>
+const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已退款':'refunded','全部':'all'}
+const stCls = (v) => ST_CLS[v] || v
+
 import { ref, computed, onMounted } from 'vue'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
@@ -1998,13 +2001,13 @@ onMounted(async () => {
   font-size: 26rpx;
   color: #42372c;
 }
-.st-待付款 { color: #b04a45; font-weight: 500; }
+.st-unpaid { color: #b04a45; font-weight: 500; }
 .st-wait { color: #ba7517; font-weight: 500; }
 .st-done { color: #6e7f5a; font-weight: 500; }
-.st-待发货 { color: #8c5a2b; font-weight: 500; }
-.st-待收货 { color: #ba7517; font-weight: 500; }
-.st-已完成 { color: #6e7f5a; font-weight: 500; }
-.st-已退款 { color: #857563; font-weight: 500; }
+.st-unshipped { color: #8c5a2b; font-weight: 500; }
+.st-unreceived { color: #ba7517; font-weight: 500; }
+.st-done { color: #6e7f5a; font-weight: 500; }
+.st-refunded { color: #857563; font-weight: 500; }
 .td-logis {
   display: block;
   font-size: 20rpx;
