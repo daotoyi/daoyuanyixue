@@ -283,7 +283,7 @@ function goMyCourse(tab) {
 }
 
 function goTools(tool) {
-  uni.navigateTo({ url: `/pages-sub/user/tools?tool=${tool || ''}` })
+  uni.navigateTo({ url: `/pages-sub2/user/tools?tool=${tool || ''}` })
 }
 
 function goAssets(type) {
@@ -377,13 +377,13 @@ function onMenu(m) {
       uni.navigateTo({ url: '/pages-sub/cart/cart' })
       break
     case 'feedback':
-      uni.navigateTo({ url: '/pages-sub/user/feedback' })
+      uni.navigateTo({ url: '/pages-sub2/user/feedback' })
       break
     case 'admin':
       uni.navigateTo({ url: '/pages-sub/admin/dashboard' })
       break
     case 'about':
-      uni.navigateTo({ url: '/pages-sub/setting/about' })
+      uni.navigateTo({ url: '/pages-sub2/setting/about' })
       break
     default:
       uni.showToast({ title: m.label + ' · 开发中', icon: 'none' })

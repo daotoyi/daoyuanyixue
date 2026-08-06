@@ -40,11 +40,11 @@
     <!-- 关于 -->
     <view class="group">
       <view class="group-title">{{ t('关于', 'About') }}</view>
-      <view class="cell" @tap="goPage('/pages-sub/setting/agreement')">
+      <view class="cell" @tap="goPage('/pages-sub2/setting/agreement')">
         <text class="cell-label">{{ t('用户协议', 'User Agreement') }}</text>
         <view class="cell-right"><text class="cell-arrow">›</text></view>
       </view>
-      <view class="cell" @tap="goPage('/pages-sub/setting/privacy')">
+      <view class="cell" @tap="goPage('/pages-sub2/setting/privacy')">
         <text class="cell-label">{{ t('隐私协议', 'Privacy Policy') }}</text>
         <view class="cell-right"><text class="cell-arrow">›</text></view>
       </view>

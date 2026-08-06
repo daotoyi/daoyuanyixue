@@ -125,7 +125,7 @@ function goCheckout() {
 }
 
 function goDetail(id) {
-  uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
+  uni.navigateTo({ url: `/pages-sub2/product/detail?id=${id}` })
 }
 
 function goShop() {

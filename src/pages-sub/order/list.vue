@@ -98,7 +98,7 @@ async function switchStatus(s) {
 }
 
 function goDetail(orderNo) {
-  uni.navigateTo({ url: `/pages-sub/order/detail?order_no=${orderNo}` })
+  uni.navigateTo({ url: `/pages-sub2/order/detail?order_no=${orderNo}` })
 }
 
 async function doPay(o) {
