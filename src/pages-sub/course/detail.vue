@@ -31,7 +31,7 @@
             <text class="ti-courses-label">主讲课程</text>
             <text class="ti-course" v-for="(t, ti) in teacherInfoData.courses" :key="ti">· {{ t }}</text>
           </view>
-          <view class="btn-p sm" @click="showTeacherPanel = false">关闭</view>
+          <view class="btn-p sm ti-close" @click="showTeacherPanel = false">关闭</view>
         </view>
       </view></view>
     </view>
@@ -251,6 +251,12 @@ function startLearn() {
   color: #857563;
   line-height: 1.8;
 }
+.ti-close {
+  display: flex;
+  margin: 0 auto;
+  width: 320rpx;
+  justify-content: center;
+}
 .teacher-name {
   font-size: 28rpx;
   font-weight: 500;
@@ -365,4 +371,19 @@ function startLearn() {
 .btn-learn {
   background: linear-gradient(135deg, #8c5a2b, #6e4a26);
 }
+/* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
+@media screen and (min-width: 1025px) {
+  .cd-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+}
+@media screen and (min-width: 1440px) {
+  .cd-page {
+    max-width: 1320px;
+  }
+}
+
 </style>

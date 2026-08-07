@@ -2594,4 +2594,14 @@ onMounted(async () => {
   /* 表头字号 */
   .th { font-size: 13px; padding: 10px 10px; }
 }
+/* 后台: 保持 1400px 宽 (原有设计), 收拢居中 */
+@media screen and (min-width: 1025px) {
+  .admin-dash {
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+}
+
 </style>

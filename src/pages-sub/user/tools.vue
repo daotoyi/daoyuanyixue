@@ -1965,4 +1965,19 @@ function runLiuren() {
   padding: 16rpx 18rpx;
 }
 .ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #b04a45; }
+/* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
+@media screen and (min-width: 1025px) {
+  .tools-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+}
+@media screen and (min-width: 1440px) {
+  .tools-page {
+    max-width: 1320px;
+  }
+}
+
 </style>

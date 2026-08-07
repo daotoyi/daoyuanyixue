@@ -328,4 +328,19 @@ function goCourse() {
   width: 320rpx;
   margin: 40rpx auto 0;
 }
+/* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
+@media screen and (min-width: 1025px) {
+  .my-course-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+}
+@media screen and (min-width: 1440px) {
+  .my-course-page {
+    max-width: 1320px;
+  }
+}
+
 </style>
