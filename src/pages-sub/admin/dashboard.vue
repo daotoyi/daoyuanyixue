@@ -731,9 +731,9 @@ function vipFilterMenu() {
 }
 function roleFilterMenu() {
   uni.showActionSheet({
-    itemList: ['全部', '管理员', '员工', '用户'],
+    itemList: ['全部', '管理员', '受限管理员', '员工', '用户'],
     success: (r) => {
-      roleFilter.value = ['全部', 'admin', 'staff', 'user'][r.tapIndex]
+      roleFilter.value = ['全部', 'admin', 'manager', 'staff', 'user'][r.tapIndex]
     },
   })
 }

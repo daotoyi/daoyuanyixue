@@ -215,14 +215,18 @@ async function listCoupons() {
 /* ============ 用户 ============ */
 
 /* 生成道号: ZHSM001 = 管理员(昊辰), 普通用户 ZHS00001 起 */
-async function nextDaoCode() {
-  const res = await db.collection('users').orderBy('dao_code', 'desc').limit(50).get()
+async function nextDaoCode(role = 'user') {
+  // 管理员/员工/受限管理员 → ZHSM 系列; 普通用户 → ZHS 系列
+  const prefix = ['admin', 'staff', 'manager'].includes(role) ? 'ZHSM' : 'ZHS'
+  const pad = prefix === 'ZHSM' ? 3 : 5
+  const res = await db.collection('users').orderBy('dao_code', 'desc').limit(200).get()
   let max = 0
+  const re = new RegExp('^' + prefix + '(\\d+)$')
   res.data.forEach((u) => {
-    const m = String(u.dao_code || '').match(/^ZHS(\d+)$/)
+    const m = String(u.dao_code || '').match(re)
     if (m) max = Math.max(max, Number(m[1]))
   })
-  return `ZHS${String(max + 1).padStart(5, '0')}`
+  return `${prefix}${String(max + 1).padStart(pad, '0')}`
 }
 
 async function login(data) {
@@ -237,14 +241,9 @@ async function login(data) {
   const user = res.data[0]
   if (!user) return fail('手机号或密码不正确')
   const { password, ...safe } = user
-  // 老用户补发道号
+  // 老用户补发道号 (按角色: 管理员/员工 ZHSM, 用户 ZHS)
   if (!safe.dao_code) {
-    let code = 'ZHS00001'
-    if (safe.role === 'admin' || data.phone === '18500353930') {
-      code = 'ZHSM001'
-    } else {
-      code = await nextDaoCode()
-    }
+    let code = await nextDaoCode(safe.role)
     await db.collection('users').where({ uid: safe.uid }).update({ dao_code: code, invite_code: code })
     safe.dao_code = code
     safe.invite_code = code
@@ -259,13 +258,9 @@ async function register(data) {
   const accountVal = isEmail ? String(account).toLowerCase() : String(account)
   const exists = await db.collection('users').where({ [accountKey]: accountVal }).limit(1).get()
   if (exists.data.length) return fail(isEmail ? '该邮箱已注册' : '该手机号已注册')
-  // 道号分配 (管理员预留 ZHSM001)
-  let daoCode
-  if (data.phone === '18500353930' || data.role === 'admin') {
-    daoCode = 'ZHSM001'
-  } else {
-    daoCode = await nextDaoCode()
-  }
+  // 道号分配 (按角色: 管理员/员工 ZHSM 系列, 用户 ZHS 系列)
+  const role = data.role || 'user'
+  let daoCode = await nextDaoCode(role)
   // 邀请人 (按道号/invite_code 匹配)
   let inviter = null
   if (data.invite_code) {
@@ -273,8 +268,11 @@ async function register(data) {
     const r = await db.collection('users').where({ dao_code: inv }).limit(1).get()
     if (r.data.length) inviter = r.data[0]
   }
+  // uid 自增 (避免与重排后的小号冲突)
+  const maxUid = await db.collection('users').orderBy('uid', 'desc').limit(1).get()
+  const uid = maxUid.data.length ? (maxUid.data[0].uid || 0) + 1 : 1
   const user = {
-    uid: Date.now() % 1000000,
+    uid,
     dao_code: daoCode,
     nickname: isEmail ? accountVal.split('@')[0] : `道友${accountVal.slice(-4)}`,
     avatar: '',
@@ -1167,6 +1165,11 @@ async function adminList(data) {
   } else {
     res = await query.limit(200).get()
   }
+  // 用户列表: 管理员 > 受限管理员 > 员工 > 用户, 同级按 uid 升序
+  if (collection === 'users') {
+    const rank = { admin: 0, manager: 1, staff: 2, user: 3 }
+    res.data.sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || (a.uid - b.uid))
+  }
   return ok(res.data)
 }
 
@@ -1333,6 +1336,50 @@ async function adminAssignDaoCodes() {
     }
   }
   return ok({ assigned: n })
+}
+
+async function adminRenumberUids(data) {
+  // 一次性数据迁移: uid 重排 + 道号重编 + 角色调整
+  // data: { uidMap: {旧uid: 新uid}, daoMap: {旧uid: 新道号}, roleMap: {旧uid: 新角色} }
+  const uidMap = data.uidMap || {}
+  const daoMap = data.daoMap || {}
+  const roleMap = data.roleMap || {}
+  const users = (await db.collection('users').limit(200).get()).data
+  let moved = 0
+  // 1. 更新 users (按 _id, 避免 uid 互换冲突)
+  for (const u of users) {
+    const doc = {}
+    if (uidMap[u.uid] !== undefined) doc.uid = Number(uidMap[u.uid])
+    if (daoMap[u.uid]) { doc.dao_code = daoMap[u.uid]; doc.invite_code = daoMap[u.uid] }
+    if (roleMap[u.uid]) doc.role = roleMap[u.uid]
+    if (u.inviter_uid !== undefined && uidMap[u.inviter_uid] !== undefined) doc.inviter_uid = Number(uidMap[u.inviter_uid])
+    if (Object.keys(doc).length) {
+      await db.collection('users').doc(u._id).update(doc)
+      moved++
+    }
+  }
+  // 2. 关联集合 uid 字段 (按 _id 逐条, 避免互换冲突)
+  const uidCols = ['orders', 'favorites', 'footprints', 'coupons', 'messages', 'user_courses', 'live_bookings', 'ai_asks', 'feedbacks']
+  for (const c of uidCols) {
+    let list = []
+    try { list = (await db.collection(c).limit(500).get()).data } catch (e) { continue }
+    for (const doc of list) {
+      if (doc.uid !== undefined && uidMap[doc.uid] !== undefined) {
+        await db.collection(c).doc(doc._id).update({ uid: Number(uidMap[doc.uid]) })
+      }
+    }
+  }
+  // 3. 关联集合 user_id 字段
+  for (const c of ['moments', 'comments']) {
+    let list = []
+    try { list = (await db.collection(c).limit(500).get()).data } catch (e) { continue }
+    for (const doc of list) {
+      if (doc.user_id !== undefined && uidMap[doc.user_id] !== undefined) {
+        await db.collection(c).doc(doc._id).update({ user_id: Number(uidMap[doc.user_id]) })
+      }
+    }
+  }
+  return ok({ moved, users: users.length })
 }
 
 async function adminUserDelete(data) {
@@ -1504,6 +1551,7 @@ const ROUTES = {
   'admin.lives.update': adminLiveUpdate,
   'admin.moments.audit': adminMomentAudit,
   'admin.users.delete': adminUserDelete,
+  'admin.renumberUids': adminRenumberUids,
   'admin.assignDaoCodes': adminAssignDaoCodes,
   'admin.moments.delete': adminMomentDelete,
   'admin.coupons.create': adminCouponCreate,
