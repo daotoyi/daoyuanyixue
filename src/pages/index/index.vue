@@ -166,6 +166,9 @@ const currentTab = ref('recommend')
 const momentList = ref([])
 const liveList = ref([])
 
+// 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
+const userStore = useUserStore()
+
 function switchTab(key) {
   currentTab.value = key
 }
