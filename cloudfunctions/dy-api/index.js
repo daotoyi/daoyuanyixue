@@ -131,8 +131,8 @@ async function listCourses(data) {
   } else {
     res = await db.collection('courses').limit(200).get()
   }
-  // 过滤隐藏课程 (status='off')
-  return ok(res.data.filter((c) => c.status !== 'off'))
+  // 过滤隐藏课程 (status 布尔 false 或字符串 'off')
+  return ok(res.data.filter((c) => c.status !== false && c.status !== 'off'))
 }
 
 async function getCourse(data) {
