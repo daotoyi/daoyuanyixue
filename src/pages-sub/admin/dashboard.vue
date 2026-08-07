@@ -1745,6 +1745,13 @@ onMounted(async () => {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   max-width: 100%;
+  box-sizing: border-box;
+  padding-right: 24rpx;
+  margin-right: -24rpx;
+}
+/* 概览内容与右缘保持间距 */
+.module-content-scroll > .overview {
+  padding-right: 4rpx;
 }
 .module-content-scroll > .module,
 .module-content-scroll > .overview {
