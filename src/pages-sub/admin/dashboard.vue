@@ -1,11 +1,11 @@
 <template>
   <view class="admin-dash">
     <!-- ===== 左侧侧边栏 ===== -->
-    <view class="sidebar">
+    <view class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <view class="logo-area">
-        <view class="logo-seal"><text>道</text></view>
-        <text class="logo-name">道元易学</text>
-        <text class="logo-sub">管理后台</text>
+        <view class="logo-seal" @tap="sidebarCollapsed = !sidebarCollapsed"><text>{{ sidebarCollapsed ? '☰' : '道' }}</text></view>
+        <text class="logo-name" v-if="!sidebarCollapsed">道元易学</text>
+        <text class="logo-sub" v-if="!sidebarCollapsed">管理后台</text>
       </view>
 
       <scroll-view scroll-y class="menu-scroll">
@@ -17,18 +17,21 @@
           @tap="switchModule(m.key)"
         >
           <text class="menu-icon">{{ m.icon }}</text>
-          <text class="menu-label">{{ m.label }}</text>
+          <text class="menu-label" v-if="!sidebarCollapsed">{{ m.label }}</text>
         </view>
       </scroll-view>
 
       <view class="sidebar-foot">
         <view class="admin-user">
           <text class="au-avatar">{{ userStore.userInfo.nickname ? userStore.userInfo.nickname[0] : '管' }}</text>
-          <view class="au-info">
+          <view class="au-info" v-if="!sidebarCollapsed">
             <text class="au-name">{{ userStore.userInfo.nickname }}</text>
             <text class="au-role">{{ userRole === 'admin' ? '超级管理员' : (userRole === 'staff' ? '内部员工' : '管理员') }}</text>
           </view>
         </view>
+      </view>
+      <view class="sidebar-collapse" @tap="sidebarCollapsed = !sidebarCollapsed">
+        <text>{{ sidebarCollapsed ? '›' : '‹' }}</text>
       </view>
     </view>
 
@@ -45,7 +48,7 @@
 
       <scroll-view scroll-y class="content">
         <!-- ===== 数据概览 ===== -->
-        <view v-if="activeModule === 'overview'" class="overview">
+        <view v-if="activeModule === 'overview'" class="module-content-scroll"><view class="overview">
           <view class="stat-grid">
             <view class="stat-card" v-for="s in statCards" :key="s.label">
               <text class="stat-num">{{ s.value }}</text>
@@ -68,15 +71,16 @@
             </view>
             <view class="recent-empty" v-else>暂无订单</view>
           </view>
-        </view>
+        </view></view>
 
         <!-- ===== 商品管理 ===== -->
         <view v-else-if="activeModule === 'products'" class="module cate-module">
           <!-- 左侧分类栏 -->
-          <view class="cate-panel">
+          <view class="cate-panel" :class="{ collapsed: cateCollapsed }">
             <view class="cate-panel-head">
-              <text class="cate-panel-title">商品分类</text>
-              <text class="cate-add" @tap="openCateForm('products')">＋ 新建</text>
+              <text class="cate-panel-title" v-if="!cateCollapsed">商品分类</text>
+              <text class="cate-add" v-if="!cateCollapsed" @tap="openCateForm('products')">＋ 新建</text>
+              <text class="cate-toggle" @tap="cateCollapsed = !cateCollapsed">{{ cateCollapsed ? '›' : '‹' }}</text>
             </view>
             <scroll-view scroll-y class="cate-panel-list">
               <view
@@ -136,10 +140,11 @@
         <!-- ===== 课程管理 ===== -->
         <view v-else-if="activeModule === 'courses'" class="module cate-module">
           <!-- 左侧分类栏 -->
-          <view class="cate-panel">
+          <view class="cate-panel" :class="{ collapsed: cateCollapsed }">
             <view class="cate-panel-head">
-              <text class="cate-panel-title">课程分类</text>
-              <text class="cate-add" @tap="openCateForm('courses')">＋ 新建</text>
+              <text class="cate-panel-title" v-if="!cateCollapsed">课程分类</text>
+              <text class="cate-add" v-if="!cateCollapsed" @tap="openCateForm('courses')">＋ 新建</text>
+              <text class="cate-toggle" @tap="cateCollapsed = !cateCollapsed">{{ cateCollapsed ? '›' : '‹' }}</text>
             </view>
             <scroll-view scroll-y class="cate-panel-list">
               <view
@@ -740,6 +745,8 @@ function roleFilterMenu() {
 const lives = ref([])
 const moments = ref([])
 const coupons = ref([])
+const sidebarCollapsed = ref(false)
+const cateCollapsed = ref(false)
 const orderStatuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已取消', '已退款']
 const orderFilter = ref('全部')
 
@@ -1568,6 +1575,27 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: width 0.2s;
+  position: relative;
+}
+.sidebar.collapsed {
+  width: 96rpx;
+}
+.sidebar-collapse {
+  position: absolute;
+  right: -32rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36rpx;
+  height: 64rpx;
+  background: #4e3420;
+  border-radius: 0 12rpx 12rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4a484;
+  font-size: 26rpx;
+  z-index: 5;
 }
 .logo-area {
   padding: 32rpx 12rpx 24rpx;
@@ -1576,6 +1604,7 @@ onMounted(async () => {
   align-items: center;
   border-bottom: 1rpx solid rgba(201, 169, 106, 0.2);
 }
+.sidebar.collapsed .logo-area { padding: 32rpx 12rpx 24rpx; }
 .logo-seal {
   width: 72rpx;
   height: 72rpx;
@@ -1700,6 +1729,15 @@ onMounted(async () => {
 .content {
   flex: 1;
   padding: 30rpx 40rpx;
+}
+/* 内容区横向滑动: 手机/窄屏下模块内容可左右滑动 */
+.module-content-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 100%;
+}
+.module-content-scroll > .module {
+  min-width: 640rpx;
 }
 .module-head {
   display: flex;
@@ -2044,6 +2082,19 @@ onMounted(async () => {
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  transition: width 0.2s;
+}
+.cate-panel.collapsed {
+  width: 56rpx;
+}
+.cate-toggle {
+  font-size: 30rpx;
+  color: #8c5a2b;
+  padding: 0 10rpx;
+}
+.cate-panel.collapsed .cate-panel-list,
+.cate-panel.collapsed .cate-add {
+  display: none;
 }
 .cate-panel-head {
   display: flex;
