@@ -731,10 +731,12 @@ async function wechatLogin(data) {
   // 查 openid 关联用户
   let user = (await db.collection('users').where({ openid }).limit(1).get()).data[0]
   if (!user) {
-    // 自动注册
+    // 自动注册 (uid 自增, 与 register 一致避免冲突)
     const daoCode = await nextDaoCode()
+    const maxUid = await db.collection('users').orderBy('uid', 'desc').limit(1).get()
+    const newUid = maxUid.data.length ? (maxUid.data[0].uid || 0) + 1 : 1
     user = {
-      uid: Date.now() % 1000000,
+      uid: newUid,
       dao_code: daoCode,
       nickname: nickname || '微信道友',
       avatar: avatar || '',
@@ -928,6 +930,33 @@ async function confirmOrder(data) {
         type: 'order',
         title: '订单已完成',
         content: `订单 ${o.data[0].order_no} 已确认收货，感谢您的信任`,
+        read: false,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+    }
+  } catch (e) {}
+  return ok({ updated: true })
+}
+
+async function cancelOrder(data) {
+  const cond = data.order_no
+    ? { order_no: data.order_no }
+    : { _id: data._id }
+  // 仅待付款可取消
+  const exist = await db.collection('orders').where(cond).limit(1).get()
+  if (!exist.data.length) return fail('订单不存在')
+  if (exist.data[0].status !== '待付款') return fail('只有待付款订单可以取消')
+  await db.collection('orders').where(cond).update({ status: '已取消' })
+  // 推送消息
+  try {
+    const o = exist.data[0]
+    if (o.uid) {
+      await db.collection('messages').add({
+        id: Date.now() % 1000000,
+        uid: o.uid,
+        type: 'order',
+        title: '订单已取消',
+        content: `订单 ${o.order_no} 已取消`,
         read: false,
         created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       })

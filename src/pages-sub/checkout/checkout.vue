@@ -44,10 +44,10 @@
         <text class="line-arrow">›</text>
       </view>
 
-      <view class="co-row-line" @tap="toggleBalance">
+      <view class="co-row-line">
         <text class="line-label">余额抵扣</text>
         <view class="balance-right">
-          <text class="line-value">{{ balanceUsed ? '已使用' : '可用 ¥' + balance }}</text>
+          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount : '可用 ¥' + balance }}</text>
           <switch :checked="balanceUsed" color="#8c5a2b" style="transform: scale(0.8)" @change="toggleBalance" />
         </view>
       </view>
@@ -185,8 +185,18 @@ function applyCoupon(c) {
 }
 
 function toggleBalance() {
+  const bal = parseFloat(balance.value) || 0
+  if (!balanceUsed.value && bal <= 0) {
+    uni.showToast({ title: '余额为 0，请先充值', icon: 'none' })
+    return
+  }
   balanceUsed.value = !balanceUsed.value
 }
+// 余额实际抵扣金额
+const balanceDiscount = computed(() => {
+  if (!balanceUsed.value) return '0.00'
+  return Math.min(parseFloat(balance.value) || 0, Math.max(0, subTotal.value - couponDiscount.value)).toFixed(2)
+})
 
 async function submitOrder() {
   if (!items.value.length) return
