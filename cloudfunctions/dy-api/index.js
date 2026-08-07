@@ -18,13 +18,13 @@ const fail = (msg, status = 400) => ({ status, msg })
 /* ============ 商品 ============ */
 
 async function listCategories() {
-  const res = await db.collection('categories').orderBy('sort', 'asc').orderBy('id', 'asc').limit(100).get()
+  const res = await db.collection('categories').orderBy('sort', 'asc').orderBy('id', 'asc').limit(200).get()
   // 前端只展示 is_show !== false 的分类
   return ok(res.data.filter((c) => c.is_show !== false))
 }
 
 async function listCourseCategories() {
-  const res = await db.collection('course_categories').orderBy('sort', 'asc').orderBy('id', 'asc').limit(100).get()
+  const res = await db.collection('course_categories').orderBy('sort', 'asc').orderBy('id', 'asc').limit(200).get()
   // 前端只展示 is_show !== false 的分类
   return ok(res.data.filter((c) => c.is_show !== false))
 }
@@ -36,7 +36,7 @@ const CATE_COLLECTIONS = { products: 'categories', courses: 'course_categories' 
 async function adminCateList(data) {
   const collection = CATE_COLLECTIONS[data.type]
   if (!collection) return fail('未知分类类型')
-  const res = await db.collection(collection).orderBy('sort', 'asc').orderBy('id', 'asc').limit(100).get()
+  const res = await db.collection(collection).orderBy('sort', 'asc').orderBy('id', 'asc').limit(200).get()
   return ok(res.data)
 }
 
@@ -80,9 +80,9 @@ async function listProducts(data) {
   if (data.cate_id) conds.push({ cate_id: Number(data.cate_id) })
   let res
   if (conds.length === 1) {
-    res = await query.where(conds[0]).limit(100).get()
+    res = await query.where(conds[0]).limit(200).get()
   } else {
-    res = await query.limit(100).get()
+    res = await query.limit(200).get()
   }
   let list = res.data
   if (data.keyword) {
@@ -127,9 +127,9 @@ async function teacherInfo(data) {
 async function listCourses(data) {
   let res
   if (data.category_id) {
-    res = await db.collection('courses').where({ category_id: Number(data.category_id) }).limit(100).get()
+    res = await db.collection('courses').where({ category_id: Number(data.category_id) }).limit(200).get()
   } else {
-    res = await db.collection('courses').limit(100).get()
+    res = await db.collection('courses').limit(200).get()
   }
   // 过滤隐藏课程 (status='off')
   return ok(res.data.filter((c) => c.status !== 'off'))
@@ -160,7 +160,7 @@ async function deleteOwnMoment(data) {
 async function listComments(data) {
   const momentId = data.moment_id
   if (!momentId) return fail('缺少动态 ID')
-  const res = await db.collection('comments').where({ moment_id: Number(momentId) }).orderBy('created_at', 'asc').limit(100).get()
+  const res = await db.collection('comments').where({ moment_id: Number(momentId) }).orderBy('created_at', 'asc').limit(200).get()
   return ok(res.data)
 }
 
@@ -363,7 +363,7 @@ async function toggleFavorite(data) {
 async function myFavorites(data) {
   const { uid } = data
   if (!uid) return ok([])
-  const res = await db.collection('favorites').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(100).get()
+  const res = await db.collection('favorites').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(200).get()
   return ok(res.data)
 }
 
@@ -385,7 +385,7 @@ async function addFootprint(data) {
 async function myFootprints(data) {
   const { uid } = data
   if (!uid) return ok([])
-  const res = await db.collection('footprints').where({ uid: Number(uid) }).orderBy('visited_at', 'desc').limit(100).get()
+  const res = await db.collection('footprints').where({ uid: Number(uid) }).orderBy('visited_at', 'desc').limit(200).get()
   return ok(res.data)
 }
 
@@ -416,7 +416,7 @@ async function myFeedbacks(data) {
 }
 
 async function adminFeedbacks(data) {
-  const res = await db.collection('feedbacks').orderBy('id', 'desc').limit(100).get()
+  const res = await db.collection('feedbacks').orderBy('id', 'desc').limit(200).get()
   return ok(res.data)
 }
 
@@ -1067,7 +1067,7 @@ async function buyCourse(data) {
 async function myCourses(data) {
   const { uid } = data
   if (!uid) return ok([])
-  const rels = await db.collection('user_courses').where({ uid }).limit(100).get()
+  const rels = await db.collection('user_courses').where({ uid }).limit(200).get()
   const list = []
   for (const rel of rels.data) {
     const c = await db.collection('courses').where({ id: rel.course_id }).limit(1).get()
@@ -1124,7 +1124,7 @@ async function bookLive(data) {
 async function myBookings(data) {
   const { uid } = data
   if (!uid) return ok([])
-  const rels = await db.collection('live_bookings').where({ uid }).limit(100).get()
+  const rels = await db.collection('live_bookings').where({ uid }).limit(200).get()
   const ids = rels.data.map((r) => r.live_id)
   if (!ids.length) return ok([])
   const res = await db.collection('live_streams').where({ id: _.in(ids) }).limit(50).get()
