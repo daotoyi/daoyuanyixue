@@ -43,5 +43,6 @@
 
 - **项目内文件删除免确认 (2026-08-06)**: 项目目录(/Users/wenhua/WorkBuddy/zhs-deploy)内需要删除的文件直接删, 不要问确认
 - **版本号策略 (2026-08-07 用户确认)**: 日常小改动/测试**不升版本号** (微信上传支持同版本号覆盖); 只有**正式提审/上线前**才用 `node scripts/bump-version.js` 升一次 (当前 v1.10.5); 构建前跑 `node scripts/gen-version.js` 同步完整版本; bump 读 git tag 为准
+- **版本迭代 (2026-08-07 13:30 用户最新要求)**: **每次提交都升小版本** — 每次改动完成提交前先 `node scripts/bump-version.js && node scripts/gen-version.js` (patch+1), 再构建提交推送; 当前 v1.10.6
 
 
