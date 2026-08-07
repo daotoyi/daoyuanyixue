@@ -43,9 +43,12 @@
     </view>
 
     <!-- 底部操作 -->
-    <view class="action-bar" v-if="order.status !== '已完成' && order.status !== '已退款'">
+    <view class="action-bar" v-if="order.status !== '已完成' && order.status !== '已退款' && order.status !== '已取消'">
       <view v-if="order.status === '待付款'" class="btn-fill btn-pay" @tap="doPay">
         <text>立即支付</text>
+      </view>
+      <view v-if="order.status === '待付款'" class="btn-fill btn-cancel" @tap="doCancel">
+        <text>取消订单</text>
       </view>
       <view v-else-if="order.status === '待收货'" class="btn-fill btn-confirm" @tap="doConfirm">
         <text>确认收货</text>
@@ -58,12 +61,12 @@
 </template>
 
 <script setup>
-const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已退款':'refunded','全部':'all'}
+const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已取消':'cancelled','已退款':'refunded','全部':'all'}
 const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, payOrder, confirmOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { getOrder, payOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
 
 const order = ref(null)
 const orderNo = ref(null)
@@ -115,6 +118,22 @@ async function doPay() {
   // #endif
 }
 
+async function doCancel() {
+  uni.showModal({
+    title: '取消订单',
+    content: '确定取消该订单吗？',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await cancelOrder({ order_no: orderNo.value })
+        uni.showToast({ title: '订单已取消', icon: 'success' })
+        order.value.status = '已取消'
+      } catch (e) {
+        uni.showToast({ title: e.message || '取消失败', icon: 'none' })
+      }
+    },
+  })
+}
 async function doConfirm() {
   await confirmOrder(orderNo.value)
   uni.showToast({ title: '已确认收货', icon: 'success' })
@@ -278,5 +297,9 @@ function goShop() {
 }
 .btn-shop {
   background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
+.btn-cancel {
+  background: linear-gradient(135deg, #9a9a9a, #777);
+  margin-left: 16rpx;
 }
 </style>

@@ -221,6 +221,8 @@ export const wxmpRelease = (data) => _callFunction('wxmp.release', data)
 
 export const confirmOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.confirm', { order_no: orderNo })
+export const cancelOrder = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.cancel', data)
 
 /* ============ 后台管理 (需 role=admin) ============ */
 

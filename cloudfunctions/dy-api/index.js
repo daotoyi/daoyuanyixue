@@ -1562,6 +1562,7 @@ const ROUTES = {
   'order.pay': payOrder,
   'order.wxpay': wxpayPrepay,
   'order.confirm': confirmOrder,
+  'order.cancel': cancelOrder,
   'course.buy': buyCourse,
   'course.mine': myCourses,
   'course.favorite': favoriteCourse,

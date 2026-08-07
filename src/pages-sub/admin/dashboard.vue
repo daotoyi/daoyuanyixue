@@ -649,7 +649,7 @@
 </template>
 
 <script setup>
-const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已退款':'refunded','全部':'all'}
+const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已取消':'cancelled','已退款':'refunded','全部':'all'}
 const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed, onMounted } from 'vue'
@@ -740,7 +740,7 @@ function roleFilterMenu() {
 const lives = ref([])
 const moments = ref([])
 const coupons = ref([])
-const orderStatuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
+const orderStatuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已取消', '已退款']
 const orderFilter = ref('全部')
 
 /* ---- 分类布局 (商品/课程) ---- */
