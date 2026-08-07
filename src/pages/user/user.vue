@@ -560,7 +560,7 @@ onMounted(async () => {
 .vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
 .vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
 /* 等级说明弹窗 */
-.vip-tip { display: block; text-align: center; font-size: 22rpx; color: #857563; margin-bottom: 20rpx; }
+.vip-tip { display: block; text-align: center; font-size: 26rpx; color: #5f4c3a; margin-bottom: 20rpx; font-weight: 500; }
 .vip-row {
   display: flex;
   align-items: center;

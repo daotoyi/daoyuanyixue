@@ -40,6 +40,15 @@
         <text class="wx-text">其他登录方式</text>
         <view class="wx-line"></view>
       </view>
+      <!-- #ifdef MP-WEIXIN -->
+      <view class="wx-profile">
+        <view class="wx-avatar-btn" @tap="chooseWxAvatar">
+          <image v-if="wxAvatar" class="wx-avatar-img" :src="wxAvatar" mode="aspectFill"></image>
+          <text v-else class="wx-avatar-tip">点击选择微信头像</text>
+        </view>
+        <input class="wx-nick-input" type="nickname" v-model="wxNickname" placeholder="点击输入微信昵称" />
+      </view>
+      <!-- #endif -->
       <view class="wx-login" @tap="wxLogin">
         <text class="wx-icon">💬</text>
         <text class="wx-name">微信一键登录</text>
@@ -53,6 +62,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { login, register, wechatLogin } from '../../api/api'
+import { getStorage } from '../../api/cloudbase'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -62,6 +72,39 @@ const password = ref('')
 const inviteCode = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
+// 微信登录资料 (头像昵称)
+const wxAvatar = ref('')
+const wxNickname = ref('')
+const wxAvatarUploading = ref(false)
+function chooseWxAvatar() {
+  // #ifdef MP-WEIXIN
+  uni.chooseMedia({
+    count: 1,
+    mediaType: ['image'],
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const filePath = res.tempFiles[0].tempFilePath
+      wxAvatarUploading.value = true
+      uni.showLoading({ title: '上传头像...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = `avatars/wx_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        wxAvatar.value = fileID.replace(/^cloud:\/\/[^\/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+      } catch (e) {
+        wxAvatar.value = filePath
+        uni.showToast({ title: e.message || '上传失败，已使用本地图片', icon: 'none' })
+      } finally {
+        wxAvatarUploading.value = false
+        uni.hideLoading()
+      }
+    },
+  })
+  // #endif
+}
 
 // 邀请链接自动填充: ?invite=道号
 onLoad((options) => {
@@ -94,7 +137,7 @@ async function wxLogin() {
     // 小程序: wx.login 换取 code → 云函数换 openid 自动登录
     const codeRes = await new Promise((resolve) => wx.login({ success: resolve, fail: resolve }))
     if (!codeRes || !codeRes.code) throw new Error('微信登录失败，请重试')
-    const user = await wechatLogin({ code: codeRes.code })
+    const user = await wechatLogin({ code: codeRes.code, nickname: wxNickname.value, avatar: wxAvatar.value })
     saveUser(user)
     uni.showToast({ title: '微信登录成功', icon: 'success' })
     setTimeout(() => uni.navigateBack(), 600)
@@ -291,6 +334,43 @@ async function submit() {
   margin: 0 20rpx;
   font-size: 22rpx;
   color: #b3a595;
+}
+.wx-profile {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+.wx-avatar-btn {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 2rpx dashed #c4a484;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f8f3ea;
+}
+.wx-avatar-img {
+  width: 100%;
+  height: 100%;
+}
+.wx-avatar-tip {
+  font-size: 20rpx;
+  color: #857563;
+  text-align: center;
+  padding: 0 10rpx;
+}
+.wx-nick-input {
+  flex: 1;
+  height: 88rpx;
+  background: #f8f3ea;
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  color: #42372c;
 }
 .wx-login {
   display: flex;

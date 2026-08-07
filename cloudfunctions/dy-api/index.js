@@ -748,6 +748,13 @@ async function wechatLogin(data) {
       created_at: new Date().toISOString().slice(0, 10),
     }
     await db.collection('users').add(user)
+  } else if (nickname || avatar) {
+    // 老用户: 微信登录时同步更新头像昵称
+    const upd = {}
+    if (nickname) upd.nickname = String(nickname).slice(0, 30)
+    if (avatar) upd.avatar = String(avatar)
+    await db.collection('users').where({ openid }).update(upd)
+    user = { ...user, ...upd }
   }
   const { password, ...safe } = user
   return ok(safe)
