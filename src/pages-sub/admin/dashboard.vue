@@ -333,8 +333,8 @@
             </view>
             <view class="tr" v-for="c in coupons" :key="c.id">
               <text class="td w-name">{{ c.name }}</text>
-              <text class="td w-price" style="color:#8c5a2b">{{ c.discount }}</text>
-              <text class="td w-stock">{{ c.expire_at }}</text>
+              <text class="td w-price" style="color:#8c5a2b; white-space:nowrap">{{ c.discount }}</text>
+              <text class="td w-stock" style="white-space:nowrap">{{ c.expire_at }}</text>
               <text class="td w-status">{{ c.status === 'valid' ? '有效' : '失效' }}</text>
               <view class="td w-ops ops">
                 <text class="op" @tap="openCouponForm(c)">编辑</text>
@@ -1036,33 +1036,43 @@ function goFront() {
   uni.switchTab({ url: '/pages/index/index' })
 }
 
-/* 旋转屏幕: 管理后台横屏完整显示 (Capacitor App / H5) */
+/* 旋转屏幕: 管理后台横屏完整显示 (小程序/App/H5 多端支持) */
 let isLandscape = false
 function rotateScreen() {
   const target = isLandscape ? 'portrait' : 'landscape'
-  // Capacitor App 环境
-  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.ScreenOrientation) {
-    window.Capacitor.Plugins.ScreenOrientation.lock({ orientation: target }).then(() => {
-      isLandscape = !isLandscape
-    }).catch(() => {
-      uni.showToast({ title: '旋转失败，请手动旋转手机', icon: 'none' })
+  const done = () => { isLandscape = !isLandscape }
+  const fail = () => uni.showToast({ title: '当前环境不支持自动旋转，请手动旋转手机横屏', icon: 'none' })
+  // #ifdef MP-WEIXIN
+  // 小程序: 需页面配置 pageOrientation, 动态切换全屏方向
+  try {
+    uni.setPageOrientation({
+      pageOrientation: target,
+      success: done,
+      fail,
     })
     return
-  }
+  } catch (e) { fail(); return }
+  // #endif
+  // #ifdef APP-PLUS
+  try {
+    // plus 原生旋转 (App)
+    plus.screen.lockOrientation(target === 'landscape' ? 'landscape-primary' : 'portrait-primary')
+    done()
+    return
+  } catch (e) { fail(); return }
+  // #endif
+  // #ifdef H5
   // H5 原生 API
   try {
     if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock(target).then(() => {
-        isLandscape = !isLandscape
-      }).catch(() => {
-        uni.showToast({ title: '请手动旋转手机横屏', icon: 'none' })
-      })
+      screen.orientation.lock(target).then(done).catch(fail)
     } else {
-      uni.showToast({ title: '请手动旋转手机横屏', icon: 'none' })
+      fail()
     }
   } catch (e) {
-    uni.showToast({ title: '请手动旋转手机横屏', icon: 'none' })
+    fail()
   }
+  // #endif
 }
 
 function logout() {
