@@ -249,7 +249,7 @@
               <text class="td w-no">手机号</text>
               <text class="td w-price">道号</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
-              <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
+              <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr" v-for="u in usersFiltered" :key="u._id || u.uid">
@@ -257,7 +257,7 @@
               <text class="td w-no">{{ u.phone }}</text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
-              <text class="td w-status">{{ { admin: '管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
+              <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
                 <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
                 <text class="op" @tap="openEditUser(u)">编辑</text>
@@ -770,7 +770,7 @@ function vipFilterMenu() {
 }
 function roleFilterMenu() {
   uni.showActionSheet({
-    itemList: ['全部', '管理员', '受限管理员', '员工', '用户'],
+    itemList: ['全部', '超级管理员', '管理员', '员工', '用户'],
     success: (r) => {
       roleFilter.value = ['全部', 'admin', 'manager', 'staff', 'user'][r.tapIndex]
     },
