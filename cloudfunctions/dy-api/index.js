@@ -149,7 +149,7 @@ async function listMoments() {
 
 async function deleteOwnMoment(data) {
   const { user_id, _id } = data
-  if (!user_id || !_id) return fail('缺少参数')
+  if (user_id === undefined || !_id) return fail('缺少参数')
   const res = await db.collection('moments').where({ _id, user_id: Number(user_id) }).limit(1).get()
   if (!res.data.length) return fail('动态不存在或无权删除')
   await db.collection('moments').doc(_id).remove()

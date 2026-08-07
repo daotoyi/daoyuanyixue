@@ -152,6 +152,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -270,7 +271,7 @@ function enterLive(l) {
   }
 }
 
-onMounted(async () => {
+onShow(async () => {
   try {
     const [moments, lives] = await Promise.all([getMoments(), getLiveStreams()])
     momentList.value = moments.map((m) => ({ ...m, _liked: false }))
