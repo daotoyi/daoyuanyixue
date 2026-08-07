@@ -250,11 +250,11 @@
               <text class="td w-no">{{ u.phone }}</text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
-              <text class="td w-status">{{ { admin: '管理员', staff: '员工', user: '用户' }[u.role] || '用户' }}</text>
+              <text class="td w-status">{{ { admin: '管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
                 <text class="op" @tap="openAssignId(u)">分配道号</text>
                 <text class="op" v-if="u.role === 'staff'" @tap="toggleAdmin(u)">设为管理</text>
-                <text class="op danger" v-if="u.role === 'admin'" @tap="toggleAdmin(u)">取消管理</text>
+                <text class="op danger" v-if="u.role === 'manager'" @tap="toggleAdmin(u)">取消管理</text>
               </view>
             </view>
           </view>
@@ -684,7 +684,7 @@ const modules = [
 const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'lives']
 const userRole = computed(() => userStore.userInfo.role || 'user')
 const visibleModules = computed(() => {
-  if (userRole.value === 'staff') {
+  if (userRole.value === 'staff' || userRole.value === 'manager') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))
   }
   return modules
@@ -1333,9 +1333,10 @@ async function refundOrder(o) {
 
 /* 用户 */
 async function toggleAdmin(u) {
-  const role = u.role === 'admin' ? 'user' : 'admin'
+  // 员工→受限管理员(manager); 受限管理员→员工
+  const role = u.role === 'staff' ? 'manager' : 'staff'
   await adminUserUpdate({ uid: u.uid, role })
-  uni.showToast({ title: role === 'admin' ? '已设为管理员' : '已取消管理员', icon: 'none' })
+  uni.showToast({ title: role === 'manager' ? '已设为管理员' : '已取消管理员', icon: 'none' })
   await loadModule('users')
 }
 

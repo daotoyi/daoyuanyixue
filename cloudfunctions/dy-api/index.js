@@ -1098,7 +1098,7 @@ const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'cat
 async function requireAdmin(data) {
   const role = data.opRole || data.role
   const uid = data.opUid || data.uid
-  if (role === 'admin' || role === 'staff') return true
+  if (role === 'admin' || role === 'staff' || role === 'manager') return true
   const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
   if (user && user.data[0]) {
     const r = user.data[0].role
@@ -1112,12 +1112,12 @@ async function requireStaffAllowed(action, data) {
   const role = data.opRole || data.role
   const uid = data.opUid || data.uid
   const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
-  const realRole = role === 'admin' || role === 'staff'
+  const realRole = ['admin', 'staff', 'manager'].includes(role)
     ? role
     : (user && user.data[0] ? user.data[0].role : '')
   // 超管全部放行
   if (realRole === 'admin') return true
-  if (realRole !== 'staff') return false
+  if (realRole !== 'staff' && realRole !== 'manager') return false
   // 员工: 白名单接口
   if (STAFF_ROUTES.includes(action)) return true
   // admin.list: 仅允许指定集合
