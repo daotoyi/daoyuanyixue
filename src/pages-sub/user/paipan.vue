@@ -261,24 +261,30 @@
         </view>
       </view>
 
-      <!-- 天干/地支作用关系 (随大运流年流月流日流时联动) -->
-      <view class="pp-block" v-if="activeTarget">
-        <view class="pp-block-head">作用关系 · 目标：{{ activeTarget.name }}{{ activeTarget.label ? '（' + activeTarget.label + '）' : '' }}</view>
-        <view class="pp-rel-row">
+      <!-- 天干/地支作用关系 (盘面全部干支两两关系, 随大运流年流月流日流时联动) -->
+      <view class="pp-block" v-if="ganRelations.length || zhiRelations.length">
+        <view class="pp-block-head">作用关系（盘面干支）</view>
+        <view class="pp-rel-row" v-if="ganRelations.length">
           <text class="pp-rel-kind">天干</text>
-          <text class="pp-rel-item" v-for="(r, i) in ganRelations" :key="'g' + i">
-            <text class="pp-rel-pillar">{{ r.pillar }}</text>
-            <text class="pp-rel-desc" :class="{ hit: r.rel }">{{ r.rel || '—' }}</text>
-          </text>
+          <view class="pp-rel-list">
+            <text class="pp-rel-chip" v-for="(r, i) in ganRelations" :key="'g' + i">
+              <text class="pp-rel-name">{{ r.a }}·{{ r.b }}</text>
+              <text class="pp-rel-desc hit">{{ r.rel }}</text>
+              <text class="pp-rel-src">{{ r.la }}↔{{ r.lb }}</text>
+            </text>
+          </view>
         </view>
-        <view class="pp-rel-row">
+        <view class="pp-rel-row" v-if="zhiRelations.length">
           <text class="pp-rel-kind">地支</text>
-          <text class="pp-rel-item" v-for="(r, i) in zhiRelations" :key="'z' + i">
-            <text class="pp-rel-pillar">{{ r.pillar }}</text>
-            <text class="pp-rel-desc" :class="{ hit: r.rel }">{{ r.rel || '—' }}</text>
-          </text>
+          <view class="pp-rel-list">
+            <text class="pp-rel-chip" v-for="(r, i) in zhiRelations" :key="'z' + i">
+              <text class="pp-rel-name">{{ r.a }}·{{ r.b }}</text>
+              <text class="pp-rel-desc hit">{{ r.rel }}</text>
+              <text class="pp-rel-src">{{ r.la }}↔{{ r.lb }}</text>
+            </text>
+          </view>
         </view>
-        <view class="pp-tip2">※ 天干显示五合/冲克，地支显示六冲/六合/三刑/相破/六害/暗合；随所点大运、流年、流月、流日、流时联动</view>
+        <view class="pp-tip2">※ 列出盘面所有干支（四柱 + 所选大运/流年/流月/流日/流时）两两之间的作用关系：天干五合/冲克，地支六冲/六合/三刑/相破/六害/暗合；重复关系不重复列出</view>
       </view>
 
       <!-- 当前流年 -->
@@ -1238,31 +1244,65 @@ function buildLiuri(liunianYear, monthIdx) {
 
 /* 联动列 + 四柱 (从左到右: 流时/流日/流月/流年/大运/四柱) */
 /* ---- 天干/地支作用关系板块 ---- */
-const activeTarget = computed(() => {
-  if (!data.value) return null
+/* 盘面全部干支: 四柱 + 选中的大运/流年/流月/流日/流时 (默认含当前流年) */
+const allGanzhi = computed(() => {
+  if (!data.value) return []
+  const list = data.value.bazi.pillars.map((p, i) => ({
+    ganIdx: p.g, zhiIdx: p.z, label: ['年柱', '月柱', '日柱', '时柱'][i],
+  }))
   const seq = [
-    [selectedLiushi.value, '流时'], [selectedLiuri.value, '流日'], [selectedLiuyue.value, '流月'],
-    [selectedLiunian.value, '流年'], [selectedDayun.value, '大运'],
+    [selectedDayun.value, '大运'], [selectedLiunian.value, '流年'], [selectedLiuyue.value, '流月'],
+    [selectedLiuri.value, '流日'], [selectedLiushi.value, '流时'],
   ]
   for (const [v, name] of seq) {
-    if (v && v.ganIdx !== undefined) return { ganIdx: v.ganIdx, zhiIdx: v.zhiIdx, name, label: v.label }
+    if (v && v.ganIdx !== undefined) list.push({ ganIdx: v.ganIdx, zhiIdx: v.zhiIdx, label: name + '（' + v.label + '）' })
   }
-  const ln = data.value.bazi.liunian
-  return { ganIdx: GAN.indexOf(ln.gan), zhiIdx: ZHI.indexOf(ln.zhi), name: '流年', label: ln.name }
+  // 默认补充当前流年 (若未选中任何)
+  if (!list.some((x) => x.label.startsWith('流年'))) {
+    const ln = data.value.bazi.liunian
+    list.push({ ganIdx: GAN.indexOf(ln.gan), zhiIdx: ZHI.indexOf(ln.zhi), label: '流年（' + ln.name + '）' })
+  }
+  return list
 })
+/* 天干作用: 全部天干两两组合, 去重(按关系字符串+配对键) */
 const ganRelations = computed(() => {
-  if (!data.value || !activeTarget.value) return []
-  const four = ['年柱', '月柱', '日柱', '时柱']
-  return data.value.bazi.pillars.map((p, i) => ({
-    pillar: four[i], target: GAN[activeTarget.value.ganIdx], base: GAN[p.g], rel: ganRelation(activeTarget.value.ganIdx, p.g),
-  }))
+  const arr = allGanzhi.value
+  if (arr.length < 2) return []
+  const seen = new Set()
+  const out = []
+  for (let i = 0; i < arr.length; i++) {
+    for (let j = i + 1; j < arr.length; j++) {
+      const a = arr[i], b = arr[j]
+      if (a.ganIdx === b.ganIdx) continue
+      const rel = ganRelation(a.ganIdx, b.ganIdx)
+      if (!rel) continue
+      const key = [Math.min(a.ganIdx, b.ganIdx), Math.max(a.ganIdx, b.ganIdx), rel].join('|')
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({ a: GAN[a.ganIdx], b: GAN[b.ganIdx], la: a.label, lb: b.label, rel })
+    }
+  }
+  return out
 })
+/* 地支作用: 全部地支两两组合, 去重 */
 const zhiRelations = computed(() => {
-  if (!data.value || !activeTarget.value) return []
-  const four = ['年柱', '月柱', '日柱', '时柱']
-  return data.value.bazi.pillars.map((p, i) => ({
-    pillar: four[i], target: ZHI[activeTarget.value.zhiIdx], base: ZHI[p.z], rel: zhiRelation(activeTarget.value.zhiIdx, p.z),
-  }))
+  const arr = allGanzhi.value
+  if (arr.length < 2) return []
+  const seen = new Set()
+  const out = []
+  for (let i = 0; i < arr.length; i++) {
+    for (let j = i + 1; j < arr.length; j++) {
+      const a = arr[i], b = arr[j]
+      if (a.zhiIdx === b.zhiIdx) continue
+      const rel = zhiRelation(a.zhiIdx, b.zhiIdx)
+      if (!rel) continue
+      const key = [Math.min(a.zhiIdx, b.zhiIdx), Math.max(a.zhiIdx, b.zhiIdx), rel].join('|')
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({ a: ZHI[a.zhiIdx], b: ZHI[b.zhiIdx], la: a.label, lb: b.label, rel })
+    }
+  }
+  return out
 })
 
 const columns = computed(() => {
@@ -1767,18 +1807,22 @@ function payJiepan() {
 .pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }
 .pp-rel-row:last-of-type { border-bottom: none; }
 .pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #8c5a2b; font-weight: 500; }
-.pp-rel-item { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
-.pp-rel-pillar { font-size: 20rpx; color: #b3a595; margin-bottom: 4rpx; }
-.pp-rel-desc { font-size: 24rpx; color: #c9a9a9; }
+.pp-rel-list { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; min-width: 0; }
+.pp-rel-chip { display: flex; align-items: baseline; background: #f8f3ea; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
+.pp-rel-name { font-size: 22rpx; color: #42372c; font-weight: 500; }
+.pp-rel-desc { font-size: 22rpx; color: #c9a9a9; }
 .pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
+.pp-rel-src { font-size: 18rpx; color: #b3a595; }
 .pp-tip2 { font-size: 20rpx; color: #b3a595; margin-top: 12rpx; line-height: 1.5; }
 .pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }
 .pp-rel-row:last-of-type { border-bottom: none; }
 .pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #8c5a2b; font-weight: 500; }
-.pp-rel-item { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
-.pp-rel-pillar { font-size: 20rpx; color: #b3a595; margin-bottom: 4rpx; }
-.pp-rel-desc { font-size: 24rpx; color: #c9a9a9; }
+.pp-rel-list { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; min-width: 0; }
+.pp-rel-chip { display: flex; align-items: baseline; background: #f8f3ea; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
+.pp-rel-name { font-size: 22rpx; color: #42372c; font-weight: 500; }
+.pp-rel-desc { font-size: 22rpx; color: #c9a9a9; }
 .pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
+.pp-rel-src { font-size: 18rpx; color: #b3a595; }
 
 /* 排盘历史弹窗 */
 .hist-sheet { padding: 30rpx 30rpx 60rpx; max-height: 70vh; }

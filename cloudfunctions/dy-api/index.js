@@ -1157,6 +1157,13 @@ const STAFF_ROUTES = [
   'admin.dashboard',
 ]
 
+// 管理员(manager)额外权限: 课程管理 (员工 staff 无此权限)
+const MANAGER_ROUTES = [
+  'admin.courses.create',
+  'admin.courses.update',
+  'admin.courses.delete',
+]
+
 // 员工允许查询的集合
 const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'categories', 'course_categories']
 
@@ -1185,6 +1192,8 @@ async function requireStaffAllowed(action, data) {
   if (realRole !== 'staff' && realRole !== 'manager') return false
   // 员工: 白名单接口
   if (STAFF_ROUTES.includes(action)) return true
+  // 管理员(manager): 额外课程管理权限
+  if (realRole === 'manager' && MANAGER_ROUTES.includes(action)) return true
   // admin.list: 仅允许指定集合
   if (action === 'admin.list' && data.collection && STAFF_COLLECTIONS.includes(data.collection)) return true
   return false
