@@ -172,7 +172,7 @@
           <view class="cate-main">
             <view class="module-head">
               <text class="module-title">{{ courseActiveCateName }} · 课程（{{ courseGrouped[courseActiveCate] ? courseGrouped[courseActiveCate].length : 0 }}）</text>
-              <view class="btn-p sm" @click="openCourseForm()">＋ 新增课程</view>
+              <view class="btn-p sm" v-if="canManageCourses" @click="openCourseForm()">＋ 新增课程</view>
             </view>
             <view class="table">
               <view class="tr th">
@@ -187,7 +187,7 @@
                 <text class="td w-price">¥{{ c.price }}</text>
                 <text class="td w-stock">{{ c.lessons_count }}</text>
                 <text class="td w-status">{{ c.level }}</text>
-                <view class="td w-ops ops">
+                <view class="td w-ops ops" v-if="canManageCourses">
                   <text class="op" @tap="openCourseForm(c)">编辑</text>
                 </view>
               </view>
@@ -722,6 +722,8 @@ const modules = [
 // 员工权限: 仅概览/商品/课程/订单/直播
 const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'lives']
 const userRole = computed(() => userStore.userInfo.role || 'user')
+/* 课程管理权限: 超管(admin)/管理员(manager)可管理, 员工(staff)只能查看 */
+const canManageCourses = computed(() => ['admin', 'manager'].includes(userRole.value))
 const visibleModules = computed(() => {
   if (userRole.value === 'staff' || userRole.value === 'manager') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))
@@ -2020,7 +2022,7 @@ onMounted(async () => {
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 280rpx; font-size: 20rpx; }
-.w-status { width: 110rpx; text-align: center; }
+.w-status { width: 170rpx; text-align: center; white-space: nowrap; }
 .w-ops { width: 340rpx; display: flex; align-items: center; flex-wrap: nowrap; gap: 8rpx; }
 .thumb {
   width: 60rpx;
