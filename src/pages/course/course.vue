@@ -105,8 +105,9 @@ async function loadAllCourses() {
     const list = await getCourses({})
     Object.keys(grouped).forEach((k) => delete grouped[k])
     list.forEach((c) => {
-      if (!grouped[c.cate_id]) grouped[c.cate_id] = []
-      grouped[c.cate_id].push(c)
+      const cid = c.category_id
+      if (!grouped[cid]) grouped[cid] = []
+      grouped[cid].push(c)
     })
   } catch (e) {
     console.error('[Course] loadAll failed', e)
