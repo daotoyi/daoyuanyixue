@@ -1716,13 +1716,16 @@ onMounted(async () => {
   background: #fefbf6;
   border-radius: 16rpx;
   border: 1rpx solid #efe7d8;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tr {
   display: flex;
   align-items: center;
   padding: 18rpx 24rpx;
   border-bottom: 1rpx solid #efe7d8;
+  /* 手机端表格超宽时横向滑动, 显示更规整 */
+  min-width: 1080rpx;
 }
 .tr:last-child {
   border-bottom: none;

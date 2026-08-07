@@ -381,7 +381,7 @@ import { useUserStore } from '../../store/index'
 const userStore = useUserStore()
 
 const tools = [
-  { key: 'bazi', label: '四柱八字', icon: '☯' },
+  { key: 'bazi', label: '四柱八字', icon: '☯️' },
   { key: 'qimen', label: '奇门遁甲', icon: '🧭' },
   { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
   { key: 'liuren', label: '大六壬', icon: '🌀' },
