@@ -1732,13 +1732,11 @@ onMounted(async () => {
 
 /* 概览 */
 .stat-grid {
-  display: flex;
-  flex-wrap: wrap;
-  margin: -8rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
 }
 .stat-card {
-  width: calc(50% - 16rpx);
-  margin: 8rpx;
   background: #fefbf6;
   border-radius: 14rpx;
   border: 1rpx solid #efe7d8;
@@ -2358,9 +2356,6 @@ onMounted(async () => {
 @media screen and (max-width: 800px) {
   .sidebar {
     width: 200rpx;
-  }
-  .stat-card {
-    width: calc(50% - 16rpx);
   }
 }
 
