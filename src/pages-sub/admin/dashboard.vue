@@ -1744,10 +1744,11 @@ onMounted(async () => {
 .module-content-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  min-width: 100%;
+  max-width: 100%;
 }
-.module-content-scroll > .module {
-  min-width: 640rpx;
+.module-content-scroll > .module,
+.module-content-scroll > .overview {
+  min-width: 100%;
 }
 .module-head {
   display: flex;
@@ -1839,9 +1840,13 @@ onMounted(async () => {
   border-bottom: none;
 }
 .rr-no {
-  width: 300rpx;
+  width: 240rpx;
   font-size: 20rpx;
   color: #857563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 .rr-items {
   flex: 1;
@@ -1849,9 +1854,11 @@ onMounted(async () => {
   color: #42372c;
 }
 .rr-price {
-  width: 120rpx;
+  width: 110rpx;
   text-align: right;
   font-size: 24rpx;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: #b04a45;
 }
 .rr-status {
