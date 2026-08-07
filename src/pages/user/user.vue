@@ -173,7 +173,7 @@
           <text class="sheet-title">会员等级说明</text>
           <text class="sheet-close" @tap="showVipSheet = false">✕</text>
         </view>
-        <text class="vip-tip">等级按累计消费/储值金额自动划分</text>
+        <text class="vip-tip">等级 = 累计消费 + 累计储值，自动划分</text>
         <view class="vip-row" v-for="v in vipLevels" :key="v.level">
           <view class="vip-badge-lg" :class="'vip-' + v.level"><text>{{ v.label }}</text></view>
           <text class="vip-range">{{ v.range }}</text>
@@ -184,7 +184,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../store/index'
 import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
@@ -199,7 +200,8 @@ const inviteLink = computed(() => `https://cloud1-d8gs2k9m311f7272f-1464523137.t
 
 // 会员等级: 按累计消费 (储值/购买) 自动划分
 const vipLevel = computed(() => {
-  const total = Number(userInfo.value.total_spent || 0)
+  // 等级 = 累计消费 + 累计储值
+  const total = (Number(userInfo.value.total_spent || 0) || 0) + (Number(userInfo.value.total_recharge || 0) || 0)
   if (total >= 50000) return 6
   if (total >= 20000) return 5
   if (total >= 10000) return 4
@@ -403,7 +405,7 @@ function onLogout() {
   })
 }
 
-onMounted(async () => {
+onShow(async () => {
   if (!isLoggedIn.value) return
   try {
     const [a, coupons, favs, foots, unread, vip] = await Promise.all([
@@ -416,9 +418,14 @@ onMounted(async () => {
     ])
     assets.value = a || { coupon_count: 0, favorite_count: 0, footprint_count: 0 }
     unreadCount.value = (unread && unread.count) || 0
-    // 会员等级回写
+    // 会员等级回写 (等级/消费/储值 同步, 颜色随等级变化)
     if (vip && vip.level !== undefined) {
-      userStore.setUserInfo({ vip_level: vip.level, total_spent: vip.total_spent })
+      userStore.setUserInfo({
+        vip_level: vip.level,
+        total_spent: vip.total_spent,
+        total_recharge: vip.total_recharge,
+        total_amount: vip.total_amount,
+      })
     }
   } catch (e) {
     /* 忽略 */

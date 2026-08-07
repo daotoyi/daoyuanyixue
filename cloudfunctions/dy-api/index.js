@@ -466,22 +466,33 @@ async function markMessagesRead(data) {
 async function vipLevel(data) {
   const { uid } = data
   if (!uid) return fail('请先登录')
-  const orderRes = await db.collection('orders').where({ uid: Number(uid) }).limit(100).get()
+  // 1. 订单累计消费 (排除未付款/已退款/已取消)
+  const orderRes = await db.collection('orders').where({ uid: Number(uid) }).limit(200).get()
   let total = 0
   orderRes.data.forEach((o) => {
-    if (o.status !== '待付款' && o.status !== '已退款') {
+    if (o.status !== '待付款' && o.status !== '已退款' && o.status !== '已取消') {
       total += Number(o.total_price) || 0
     }
   })
+  // 2. 储值累计 = 历史累计储值 total_recharge (充值/后台加余额时累计) + 兜底当前余额
+  const userRes = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
+  const user = userRes.data[0] || {}
+  const recharge = Number(user.total_recharge || user.balance || 0) || 0
+  // 等级 = 消费 + 储值 合计
+  const totalAmount = total + recharge
   let level = 0
-  if (total >= 50000) level = 6
-  else if (total >= 20000) level = 5
-  else if (total >= 10000) level = 4
-  else if (total >= 5000) level = 3
-  else if (total >= 2000) level = 2
-  else if (total > 1000) level = 1
-  await db.collection('users').where({ uid: Number(uid) }).update({ vip_level: level, total_spent: Math.round(total * 100) / 100 })
-  return ok({ level, total_spent: Math.round(total * 100) / 100 })
+  if (totalAmount >= 50000) level = 6
+  else if (totalAmount >= 20000) level = 5
+  else if (totalAmount >= 10000) level = 4
+  else if (totalAmount >= 5000) level = 3
+  else if (totalAmount >= 2000) level = 2
+  else if (totalAmount > 1000) level = 1
+  await db.collection('users').where({ uid: Number(uid) }).update({
+    vip_level: level,
+    total_spent: Math.round(total * 100) / 100,
+    total_recharge: recharge,
+  })
+  return ok({ level, total_spent: Math.round(total * 100) / 100, total_recharge: recharge, total_amount: Math.round(totalAmount * 100) / 100 })
 }
 
 /* ---- DeepSeek AI 解盘 ---- */
@@ -1349,6 +1360,17 @@ async function adminUserUpdate(data) {
   })
   if (data.dao_code) {
     doc.invite_code = data.dao_code
+  }
+  // 后台改余额(充值)时累计储值总额 total_recharge (用于 VIP 等级)
+  if (data.balance !== undefined && data.balance !== '') {
+    const exist = await db.collection('users').where({ uid: Number(data.uid) }).limit(1).get()
+    const oldUser = exist.data[0] || {}
+    const oldBal = Number(oldUser.balance || 0) || 0
+    const newBal = Number(data.balance) || 0
+    if (newBal > oldBal) {
+      const addRecharge = Math.round((newBal - oldBal) * 100) / 100
+      doc.total_recharge = Math.round(((Number(oldUser.total_recharge || 0) || 0) + addRecharge) * 100) / 100
+    }
   }
   await db.collection('users').where({ uid: Number(data.uid) }).update(doc)
   return ok({ updated: true })
