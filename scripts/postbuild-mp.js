@@ -42,3 +42,18 @@ walk(MP)
 if (files) console.log(`[postbuild-mp] 还原 ${total} 处 Unicode 转义, 共 ${files} 个 wxss`)
 else console.log('[postbuild-mp] wxss 无转义需还原')
 
+// 确保 project.config.json 含 miniprogramRoot (微信 CLI/IDE 依赖此字段, 缺失报 app.json not found)
+try {
+  const pc = path.join(MP, 'project.config.json')
+  if (fs.existsSync(pc)) {
+    const cfg = JSON.parse(fs.readFileSync(pc, 'utf8'))
+    if (!cfg.miniprogramRoot) {
+      cfg.miniprogramRoot = './'
+      cfg.projectname = 'daoyuanyixue'
+      fs.writeFileSync(pc, JSON.stringify(cfg, null, 2))
+      console.log('[postbuild-mp] project.config.json 已补 miniprogramRoot')
+    }
+  }
+} catch (e) {
+  console.warn('[postbuild-mp] project.config 处理失败:', e.message)
+}
