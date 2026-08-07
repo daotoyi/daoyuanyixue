@@ -4,6 +4,7 @@
   "description": "道源易学 API 网关",
   "main": "index.js",
   "dependencies": {
-    "@cloudbase/node-sdk": "^2.9.0"
+    "@cloudbase/node-sdk": "^2.9.0",
+    "wx-server-sdk": "^2.6.3"
   }
 }

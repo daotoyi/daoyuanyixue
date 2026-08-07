@@ -680,18 +680,28 @@ async function aiAsk(data) {
   }
 }
 
+/* 获取当前调用者 OPENID: 微信云开发环境用 wx-server-sdk 的 getWXContext
+   (@cloudbase/node-sdk 没有该方法, 之前调 app.getWXContext() 抛错导致走 jscode2session 兜底) */
+let _wxCloud = null
+function getWxOpenId() {
+  try {
+    if (!_wxCloud) {
+      _wxCloud = require('wx-server-sdk')
+      _wxCloud.init({ env: _wxCloud.DYNAMIC_CURRENT_ENV })
+    }
+    const ctx = _wxCloud.getWXContext()
+    return ctx.OPENID || ''
+  } catch (e) {
+    return ''
+  }
+}
+
 async function wechatLogin(data) {
   // 微信一键登录 (小程序)
-  // 接管模式: 云开发直接提供 OPENID (cloud.getWXContext), 无需 code/secret
+  // 接管模式: 云开发直接提供 OPENID (wx-server-sdk getWXContext), 无需 code/secret
   // 非接管模式兜底: jscode2session (需环境变量 WX_APPID / WX_SECRET)
   const { code, nickname, avatar } = data
-  let openid = ''
-  try {
-    const ctx = app.getWXContext()
-    openid = ctx.OPENID || ''
-  } catch (e) {
-    openid = ''
-  }
+  let openid = getWxOpenId()
   if (!openid) {
     // 兜底: 用 code 换 openid
     if (!code) return fail('缺少微信授权码')
@@ -762,11 +772,7 @@ async function updatePhone(data) {
 async function bindWechat(data) {
   const { uid } = data
   if (!uid) return fail('请先登录')
-  let openid = ''
-  try {
-    const ctx = app.getWXContext()
-    openid = ctx.OPENID || ''
-  } catch (e) { openid = '' }
+  const openid = getWxOpenId()
   if (!openid) return fail('未获取到微信身份，请在微信小程序中操作')
   const dup = await db.collection('users').where({ openid }).limit(1).get()
   if (dup.data.length && dup.data[0].uid !== Number(uid)) return fail('该微信已绑定其他账号')
