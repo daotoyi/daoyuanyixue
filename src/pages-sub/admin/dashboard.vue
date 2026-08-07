@@ -234,7 +234,13 @@
         <!-- ===== 用户管理 ===== -->
         <view v-else-if="activeModule === 'users'" class="module">
           <view class="module-head">
-            <text class="module-title">用户管理（{{ users.length }}）</text>
+            <text class="module-title">用户管理（{{ usersFiltered.length }}）</text>
+          </view>
+          <view class="filter-row">
+            <text class="filter-label">VIP</text>
+            <text class="filter-pill" :class="{ on: vipFilter === v }" v-for="v in ['全部', '0', '1', '2', '3']" :key="'v' + v" @tap="vipFilter = v">{{ v === '全部' ? '全部' : 'VIP' + v }}</text>
+            <text class="filter-label">角色</text>
+            <text class="filter-pill" :class="{ on: roleFilter === r }" v-for="r in ['全部', 'admin', 'staff', 'user']" :key="'r' + r" @tap="roleFilter = r">{{ { admin: '管理员', staff: '员工', user: '用户' }[r] || r }}</text>
           </view>
           <view class="table">
             <view class="tr th">
@@ -245,7 +251,7 @@
               <text class="td w-status">角色</text>
               <text class="td w-ops">操作</text>
             </view>
-            <view class="tr" v-for="u in users" :key="u._id || u.uid">
+            <view class="tr" v-for="u in usersFiltered" :key="u._id || u.uid">
               <text class="td w-name">{{ u.nickname }}</text>
               <text class="td w-no">{{ u.phone }}</text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
@@ -253,7 +259,8 @@
               <text class="td w-status">{{ { admin: '管理员', staff: '员工', user: '用户' }[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
                 <text class="op" @tap="openAssignId(u)">分配道号</text>
-                <text class="op" @tap="toggleAdmin(u)">{{ u.role === 'admin' ? '取消管理' : '设为管理' }}</text>
+                <text class="op" v-if="u.role === 'staff'" @tap="toggleAdmin(u)">设为管理</text>
+                <text class="op danger" v-if="u.role === 'admin'" @tap="toggleAdmin(u)">取消管理</text>
               </view>
             </view>
           </view>
@@ -710,6 +717,15 @@ const products = ref([])
 const courses = ref([])
 const orders = ref([])
 const users = ref([])
+const vipFilter = ref('全部')
+const roleFilter = ref('全部')
+const usersFiltered = computed(() => {
+  return users.value.filter((u) => {
+    if (vipFilter.value !== '全部' && String(u.vip_level) !== vipFilter.value) return false
+    if (roleFilter.value !== '全部' && (u.role || 'user') !== roleFilter.value) return false
+    return true
+  })
+})
 const lives = ref([])
 const moments = ref([])
 const coupons = ref([])
@@ -965,6 +981,25 @@ async function saveAssignId() {
     uni.showToast({ title: '请输入道号ID', icon: 'none' })
     return
   }
+  // 道号修改双重确认
+  uni.showModal({
+    title: '确认修改道号',
+    content: '确定将道号修改为 ' + String(assignForm.value.dao_code).trim().toUpperCase() + ' 吗？',
+    success: (r1) => {
+      if (!r1.confirm) return
+      uni.showModal({
+        title: '再次确认',
+        content: '道号是用户唯一身份标识，修改后不可自动恢复，请再次确认！',
+        success: (r2) => {
+          if (!r2.confirm) return
+          doSaveAssignId()
+        },
+      })
+    },
+  })
+}
+
+async function doSaveAssignId() {
   try {
     await adminUserUpdate({
       uid: assignForm.value.uid,
@@ -1864,6 +1899,52 @@ onMounted(async () => {
   height: 90rpx;
   border-radius: 8rpx;
   border: 1rpx solid #efe7d8;
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  padding: 0 0 16rpx;
+}
+.filter-label {
+  font-size: 24rpx;
+  color: #857563;
+  margin-right: 6rpx;
+}
+.filter-pill {
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: #f8f3ea;
+  color: #857563;
+}
+.filter-pill.on {
+  background: #8c5a2b;
+  color: #fefbf6;
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  padding: 0 0 16rpx;
+}
+.filter-label {
+  font-size: 24rpx;
+  color: #857563;
+  margin-right: 6rpx;
+}
+.filter-pill {
+  font-size: 22rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  background: #f8f3ea;
+  color: #857563;
+}
+.filter-pill.on {
+  background: #8c5a2b;
+  color: #fefbf6;
 }
 .settings-card {
   background: #fefbf6;

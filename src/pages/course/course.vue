@@ -99,12 +99,17 @@ function onSideScroll(e) {
   sideTop = e.detail.scrollTop
 }
 
-async function loadCourses(cateId) {
+async function loadAllCourses() {
+  // 一次加载全部课程, 按分类分组 (右侧所有分类一次性显示)
   try {
-    const list = await getCourses({ category_id: cateId })
-    grouped[cateId] = list
+    const list = await getCourses({})
+    Object.keys(grouped).forEach((k) => delete grouped[k])
+    list.forEach((c) => {
+      if (!grouped[c.cate_id]) grouped[c.cate_id] = []
+      grouped[c.cate_id].push(c)
+    })
   } catch (e) {
-    grouped[cateId] = []
+    console.error('[Course] loadAll failed', e)
   }
 }
 
@@ -116,10 +121,8 @@ onShow(async () => {
   try {
     const cats = await getCourseCategories()
     cateList.value = cats
-    if (cats.length) {
-      activeCate.value = cats[0].id
-      await loadCourses(cats[0].id)
-    }
+    if (cats.length) activeCate.value = cats[0].id
+    await loadAllCourses()
   } catch (e) {
     console.error('[Course] load failed', e)
   }
