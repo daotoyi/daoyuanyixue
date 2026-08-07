@@ -24,7 +24,7 @@ async function listCategories() {
 }
 
 async function listCourseCategories() {
-  const res = await db.collection('course_categories').orderBy('id', 'asc').limit(100).get()
+  const res = await db.collection('course_categories').orderBy('sort', 'asc').orderBy('id', 'asc').limit(100).get()
   // 前端只展示 is_show !== false 的分类
   return ok(res.data.filter((c) => c.is_show !== false))
 }

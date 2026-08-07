@@ -89,6 +89,8 @@
                 <text class="cate-row-name ellipsis">{{ c.name }}</text>
                 <text class="cate-row-badge" :class="c.is_show === false ? 'off' : ''">{{ c.is_show === false ? '隐藏' : '显示' }}</text>
                 <view class="cate-row-ops" @tap.stop>
+                  <text class="cate-op" @tap="moveCate(c, -1, 'products')">↑</text>
+                  <text class="cate-op" @tap="moveCate(c, 1, 'products')">↓</text>
                   <text class="cate-op" @tap="openCateForm('products', c)">编</text>
                   <text class="cate-op" @tap="toggleCateShow(c, 'products')">{{ c.is_show === false ? '显' : '隐' }}</text>
                   <text class="cate-op danger" @tap="deleteCate(c, 'products')">删</text>
@@ -150,6 +152,8 @@
                 <text class="cate-row-name ellipsis">{{ c.name }}</text>
                 <text class="cate-row-badge" :class="c.is_show === false ? 'off' : ''">{{ c.is_show === false ? '隐藏' : '显示' }}</text>
                 <view class="cate-row-ops" @tap.stop>
+                  <text class="cate-op" @tap="moveCate(c, -1, 'courses')">↑</text>
+                  <text class="cate-op" @tap="moveCate(c, 1, 'courses')">↓</text>
                   <text class="cate-op" @tap="openCateForm('courses', c)">编</text>
                   <text class="cate-op" @tap="toggleCateShow(c, 'courses')">{{ c.is_show === false ? '显' : '隐' }}</text>
                   <text class="cate-op danger" @tap="deleteCate(c, 'courses')">删</text>
@@ -1160,6 +1164,27 @@ async function saveCate() {
     else await loadCourseCates()
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  }
+}
+
+async function moveCate(c, dir, type) {
+  // 获取当前分类排序列表 (与前端显示一致: 按 sort)
+  const list = type === 'products' ? productCates.value : courseCates.value
+  const idx = list.findIndex((x) => x.id === c.id)
+  if (idx < 0) return
+  const target = idx + dir
+  if (target < 0 || target >= list.length) return uni.showToast({ title: dir < 0 ? '已在最前' : '已在最后', icon: 'none' })
+  const a = list[idx]
+  const b = list[target]
+  try {
+    // 交换 sort
+    await adminCateUpdate({ type, id: a.id, sort: b.sort || b.id })
+    await adminCateUpdate({ type, id: b.id, sort: a.sort || a.id })
+    uni.showToast({ title: '已调整顺序', icon: 'none' })
+    if (type === 'products') await loadProductCates()
+    else await loadCourseCates()
+  } catch (e) {
+    uni.showToast({ title: '调整失败: ' + (e.message || ''), icon: 'none' })
   }
 }
 
