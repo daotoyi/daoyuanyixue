@@ -1563,14 +1563,14 @@ onMounted(async () => {
 
 /* ===== 侧边栏 ===== */
 .sidebar {
-  width: 260rpx;
+  width: 210rpx;
   background: #4e3420;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
 }
 .logo-area {
-  padding: 40rpx 20rpx 30rpx;
+  padding: 32rpx 12rpx 24rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1609,9 +1609,9 @@ onMounted(async () => {
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 26rpx 30rpx;
-  margin: 4rpx 16rpx;
-  border-radius: 12rpx;
+  padding: 22rpx 16rpx;
+  margin: 4rpx 10rpx;
+  border-radius: 10rpx;
 }
 .menu-item.active {
   background: rgba(201, 169, 106, 0.18);
@@ -1737,25 +1737,25 @@ onMounted(async () => {
   margin: -8rpx;
 }
 .stat-card {
-  width: calc(25% - 16rpx);
+  width: calc(50% - 16rpx);
   margin: 8rpx;
   background: #fefbf6;
-  border-radius: 16rpx;
+  border-radius: 14rpx;
   border: 1rpx solid #efe7d8;
-  padding: 34rpx 20rpx;
+  padding: 22rpx 14rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 2rpx 12rpx rgba(69, 26, 3, 0.04);
+  box-shadow: 0 2rpx 10rpx rgba(69, 26, 3, 0.04);
 }
 .stat-num {
-  font-size: 42rpx;
+  font-size: 36rpx;
   font-weight: 500;
   color: #8c5a2b;
 }
 .stat-label {
-  margin-top: 12rpx;
-  font-size: 22rpx;
+  margin-top: 8rpx;
+  font-size: 20rpx;
   color: #857563;
 }
 

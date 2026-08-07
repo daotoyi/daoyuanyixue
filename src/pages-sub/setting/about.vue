@@ -9,7 +9,7 @@
 
     <view class="about-info">
       <view class="info-row"><text class="info-label">关于我们</text><text class="info-value">真和盛文化</text></view>
-      <view class="info-row"><text class="info-label">版本</text><text class="info-value">道元易学 {{ APP_FULL_VERSION }}（{{ APP_BUILD_DATE }}）</text></view>
+      <view class="info-row"><text class="info-label">版本</text><text class="info-value">{{ APP_FULL_VERSION }}（{{ APP_BUILD_DATE }}）</text></view>
       <view class="info-row"><text class="info-label">理念</text><text class="info-value">融合传统智慧与现代科技</text></view>
     </view>
 
@@ -96,6 +96,9 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
   flex: 1;
   font-size: 26rpx;
   color: #42372c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .about-foot {
