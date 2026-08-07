@@ -345,4 +345,20 @@ onShow(async () => {
   padding: 30rpx 0 40rpx;
   letter-spacing: 2rpx;
 }
+
+/* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
+@media screen and (min-width: 1025px) {
+  .shop-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
+    min-height: 100vh;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .shop-page {
+    max-width: 1320px;
+  }
+}
+
 </style>

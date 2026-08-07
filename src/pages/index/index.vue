@@ -628,4 +628,20 @@ onShow(async () => {
 }
 .empty-icon { font-size: 64rpx; }
 .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #b3a595; }
+
+/* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
+@media screen and (min-width: 1025px) {
+  .home-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
+    min-height: 100vh;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .home-page {
+    max-width: 1320px;
+  }
+}
+
 </style>
