@@ -47,6 +47,7 @@
       </view>
 
       <scroll-view scroll-y class="content">
+        <view class="content-inner">
         <!-- ===== 数据概览 ===== -->
         <view v-if="activeModule === 'overview'" class="overview">
           <view class="stat-grid">
@@ -446,6 +447,7 @@
             </view>
             <view class="table-empty" v-else style="margin-top: 16rpx">暂无接管的小程序，点上方「绑定小程序」开始</view>
           </view>
+        </view>
         </view>
       </scroll-view>
     </view>
@@ -1738,11 +1740,16 @@ onMounted(async () => {
 
 .content {
   flex: 1;
-  padding: 30rpx 40rpx;
 }
-/* 概览区: 直接使用 content 内边距, 右侧与屏幕保持间距 */
+/* content-inner: 承担内边距 (scroll-view 的 padding 在部分环境失效, 移到内部 view 保证四边间距) */
+.content-inner {
+  padding: 30rpx 40rpx;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+/* 概览区: 直接使用 content-inner 内边距, 右侧与屏幕保持间距 */
 .overview {
-  padding-right: 24rpx;
+  padding-right: 16rpx;
 }
 .module-head {
   display: flex;
@@ -2433,7 +2440,7 @@ onMounted(async () => {
     width: 208px;
     flex-shrink: 0;
   }
-  .content {
+  .content-inner {
     padding: 18px 22px;
   }
   .topbar {
