@@ -178,6 +178,7 @@ function previewImage(urls, index) {
 }
 
 function deleteMoment(m) {
+  const userStore = useUserStore()
   uni.showModal({
     title: '删除动态',
     content: '确定删除这条动态吗？其评论也会一并删除',
