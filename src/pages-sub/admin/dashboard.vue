@@ -241,6 +241,7 @@
         <view v-else-if="activeModule === 'users'" class="module">
           <view class="module-head">
             <text class="module-title">用户管理（{{ usersFiltered.length }}）</text>
+            <view class="btn-p sm" v-if="userRole === 'admin'" @click="showCreateUser = true">＋ 新建员工/管理员</view>
           </view>
           <view class="table">
             <view class="tr th">
@@ -258,9 +259,10 @@
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
-                <text class="op" @tap="openAssignId(u)">分配道号</text>
-                <text class="op" v-if="u.role === 'staff'" @tap="toggleAdmin(u)">设为管理</text>
-                <text class="op danger" v-if="u.role === 'manager'" @tap="toggleAdmin(u)">取消管理</text>
+                <!-- 管理员/受限管理员/员工: 编辑(角色在编辑弹窗中调整) -->
+                <text class="op" v-if="u.role !== 'user'" @tap="openEditUser(u)">编辑</text>
+                <!-- 普通用户: 仅分配道号 -->
+                <text class="op" v-else @tap="openAssignId(u)">分配道号</text>
               </view>
             </view>
           </view>
@@ -597,16 +599,19 @@
       </view>
     </view></view>
 
-    <!-- ===== 分配道号弹窗 ===== -->
+    <!-- ===== 分配道号 / 编辑账号弹窗 (双模式) ===== -->
     <view class="pp-mask" v-if="showAssignId" @tap="showAssignId = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
-        <view class="sheet-title">分配道号 / 角色</view>
+        <view class="sheet-title">{{ assignMode === 'edit' ? '编辑账号' : '分配道号' }}</view>
+        <template v-if="assignMode === 'edit'">
+          <view class="f-row"><text class="f-label">昵称</text><input class="f-input" v-model="assignForm.nickname" placeholder="用户昵称" /></view>
+        </template>
         <view class="f-row"><text class="f-label">道号ID</text><input class="f-input" v-model="assignForm.dao_code" placeholder="如 ZHS00002 / ZHSM002" /></view>
         <view class="f-row">
           <text class="f-label">角色</text>
           <view class="f-pills wrap">
             <text
-              v-for="r in roleOptions"
+              v-for="r in editRoleOptions"
               :key="r.value"
               class="pill"
               :class="{ on: assignForm.role === r.value }"
@@ -616,7 +621,33 @@
         </view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showAssignId = false">取消</view>
-          <view class="btn-p sm" @click="saveAssignId">确认分配</view>
+          <view class="btn-p sm" @click="saveAssignId">{{ assignMode === 'edit' ? '保存修改' : '确认分配' }}</view>
+        </view>
+      </view>
+    </view></view>
+
+    <!-- ===== 新建员工/管理员弹窗 (仅超级管理员) ===== -->
+    <view class="pp-mask" v-if="showCreateUser" @tap="showCreateUser = false"><view class="pp-sheet" @tap.stop>
+      <view class="form-sheet">
+        <view class="sheet-title">新建员工 / 管理员</view>
+        <view class="f-row"><text class="f-label">手机号</text><input class="f-input" type="number" maxlength="11" v-model="createForm.phone" placeholder="11位手机号" /></view>
+        <view class="f-row"><text class="f-label">昵称</text><input class="f-input" v-model="createForm.nickname" placeholder="如：李明" /></view>
+        <view class="f-row"><text class="f-label">初始密码</text><input class="f-input" v-model="createForm.password" placeholder="默认 123456" /></view>
+        <view class="f-row">
+          <text class="f-label">角色</text>
+          <view class="f-pills wrap">
+            <text
+              v-for="r in createRoleOptions"
+              :key="r.value"
+              class="pill"
+              :class="{ on: createForm.role === r.value }"
+              @tap="createForm.role = r.value"
+            >{{ r.label }}</text>
+          </view>
+        </view>
+        <view class="sheet-actions">
+          <view class="btn-p plain sm" @click="showCreateUser = false">取消</view>
+          <view class="btn-p sm" @click="doCreateUser">创建账号</view>
         </view>
       </view>
     </view></view>
@@ -663,7 +694,7 @@ import { ref, computed, onMounted } from 'vue'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund,
-  adminUserUpdate, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
+  adminUserCreate, adminUserUpdate, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
@@ -984,53 +1015,77 @@ async function wxmpPub(m) {
 
 /* 分配道号 / 角色弹窗 (超管) */
 const showAssignId = ref(false)
-const assignForm = ref({ uid: null, dao_code: '', role: 'user' })
-const roleOptions = [
-  { value: 'user', label: '普通用户' },
+const showCreateUser = ref(false)
+const createForm = ref({ phone: '', nickname: '', password: '123456', role: 'staff' })
+const assignForm = ref({ uid: null, dao_code: '', role: 'user', nickname: '' })
+/* 编辑弹窗角色: 管理员/受限管理员/员工 (不含普通用户) */
+const editRoleOptions = [
+  { value: 'admin', label: '管理员' },
+  { value: 'manager', label: '受限管理员' },
+  { value: 'staff', label: '内部员工' },
+]
+/* 新建员工/管理员角色 */
+const createRoleOptions = [
   { value: 'staff', label: '内部员工' },
   { value: 'admin', label: '管理员' },
 ]
 
+const assignMode = ref('edit') // 'edit' | 'assign'
 function openAssignId(u) {
-  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user' }
+  assignMode.value = 'assign'
+  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '' }
+  showAssignId.value = true
+}
+function openEditUser(u) {
+  assignMode.value = 'edit'
+  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '' }
   showAssignId.value = true
 }
 
 async function saveAssignId() {
-  if (!assignForm.value.dao_code.trim()) {
+  const dao = String(assignForm.value.dao_code || '').trim().toUpperCase()
+  if (assignMode.value === 'assign' && !dao) {
     uni.showToast({ title: '请输入道号ID', icon: 'none' })
     return
   }
-  // 道号修改双重确认
-  uni.showModal({
-    title: '确认修改道号',
-    content: '确定将道号修改为 ' + String(assignForm.value.dao_code).trim().toUpperCase() + ' 吗？',
-    success: (r1) => {
-      if (!r1.confirm) return
-      uni.showModal({
-        title: '再次确认',
-        content: '道号是用户唯一身份标识，修改后不可自动恢复，请再次确认！',
-        success: (r2) => {
-          if (!r2.confirm) return
-          doSaveAssignId()
-        },
-      })
-    },
-  })
+  // 编辑模式: 角色变更仅弹一次确认; 分配道号: 双重确认
+  const confirmChain = (fn) => {
+    if (assignMode.value === 'edit') {
+      fn()
+      return
+    }
+    uni.showModal({
+      title: '确认修改道号',
+      content: '确定将道号修改为 ' + dao + ' 吗？',
+      success: (r1) => {
+        if (!r1.confirm) return
+        uni.showModal({
+          title: '再次确认',
+          content: '道号是用户唯一身份标识，修改后不可自动恢复，请再次确认！',
+          success: (r2) => {
+            if (!r2.confirm) return
+            fn()
+          },
+        })
+      },
+    })
+  }
+  confirmChain(() => doSaveAssignId(dao))
 }
 
-async function doSaveAssignId() {
+async function doSaveAssignId(dao) {
   try {
-    await adminUserUpdate({
-      uid: assignForm.value.uid,
-      dao_code: String(assignForm.value.dao_code).trim().toUpperCase(),
-      role: assignForm.value.role,
-    })
+    const payload = { uid: assignForm.value.uid, role: assignForm.value.role }
+    if (dao) payload.dao_code = dao
+    if (assignMode.value === 'edit' && assignForm.value.nickname) {
+      payload.nickname = assignForm.value.nickname
+    }
+    await adminUserUpdate(payload)
     showAssignId.value = false
-    uni.showToast({ title: '已分配', icon: 'success' })
-    users.value = await adminList({ collection: 'users' })
+    uni.showToast({ title: assignMode.value === 'edit' ? '已保存' : '已分配', icon: 'success' })
+    await loadModule('users')
   } catch (e) {
-    uni.showToast({ title: e.message || '分配失败', icon: 'none' })
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
   }
 }
 
@@ -1351,6 +1406,27 @@ async function refundOrder(o) {
 }
 
 /* 用户 */
+async function doCreateUser() {
+  const phone = createForm.value.phone.trim()
+  const nickname = createForm.value.nickname.trim()
+  if (!/^1\d{10}$/.test(phone)) return uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+  if (!nickname) return uni.showToast({ title: '请输入昵称', icon: 'none' })
+  try {
+    const res = await adminUserCreate({
+      phone,
+      nickname,
+      role: createForm.value.role,
+      password: createForm.value.password || '123456',
+    })
+    uni.showToast({ title: '已创建：' + res.dao_code, icon: 'none' })
+    showCreateUser.value = false
+    createForm.value = { phone: '', nickname: '', password: '123456', role: 'staff' }
+    await loadModule('users')
+  } catch (e) {
+    uni.showToast({ title: e.message || '创建失败', icon: 'none' })
+  }
+}
+
 async function toggleAdmin(u) {
   // 员工→受限管理员(manager); 受限管理员→员工
   const role = u.role === 'staff' ? 'manager' : 'staff'

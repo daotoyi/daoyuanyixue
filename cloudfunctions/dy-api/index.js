@@ -1353,6 +1353,38 @@ async function adminOrderRefund(data) {
   return ok({ updated: true })
 }
 
+async function adminUserCreate(data) {
+  // 仅超级管理员可调用 (requireStaffAllowed: 不在 STAFF_ROUTES, staff/manager 会被拒)
+  const { phone, nickname, role } = data
+  const targetRole = role === 'admin' ? 'admin' : 'staff'
+  if (!phone || !/^1\d{10}$/.test(String(phone))) return fail('请输入正确的手机号')
+  if (!nickname) return fail('请输入昵称')
+  const exists = await db.collection('users').where({ phone: String(phone) }).limit(1).get()
+  if (exists.data.length) return fail('该手机号已存在')
+  // uid 自增
+  const maxUid = await db.collection('users').orderBy('uid', 'desc').limit(1).get()
+  const uid = maxUid.data.length ? (maxUid.data[0].uid || 0) + 1 : 1
+  // 道号: 管理员/员工 ZHSM 系列
+  const daoCode = await nextDaoCode(targetRole)
+  const user = {
+    uid,
+    dao_code: daoCode,
+    nickname: String(nickname).slice(0, 20),
+    avatar: '',
+    phone: String(phone),
+    email: '',
+    password: String(data.password || '123456'),
+    vip_level: 0,
+    balance: '0.00',
+    role: targetRole,
+    invite_code: daoCode,
+    inviter_uid: null,
+    created_at: new Date().toISOString().slice(0, 10),
+  }
+  await db.collection('users').add(user)
+  return ok({ uid, dao_code: daoCode, role: targetRole })
+}
+
 async function adminUserUpdate(data) {
   const doc = {}
   ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code'].forEach((k) => {
@@ -1629,6 +1661,7 @@ const ROUTES = {
   'admin.courses.update': adminCourseUpdate,
   'admin.orders.ship': adminOrderShip,
   'admin.orders.refund': adminOrderRefund,
+  'admin.users.create': adminUserCreate,
   'admin.users.update': adminUserUpdate,
   'admin.lives.create': adminLiveCreate,
   'admin.lives.update': adminLiveUpdate,
