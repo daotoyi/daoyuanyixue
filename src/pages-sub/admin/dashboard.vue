@@ -526,7 +526,18 @@
         <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="courseForm.title" /></view>
         <view class="f-row"><text class="f-label">讲师</text><input class="f-input" v-model="courseForm.teacher" /></view>
         <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="courseForm.price" /></view>
-        <view class="f-row"><text class="f-label">封面URL</text><input class="f-input" v-model="courseForm.cover" /></view>
+        <view class="f-row"><text class="f-label">原价</text><input class="f-input" v-model="courseForm.ot_price" placeholder="选填，划线原价" /></view>
+        <view class="f-row">
+          <text class="f-label">封面</text>
+          <view class="f-input-wrap">
+            <input class="f-input" v-model="courseForm.cover" placeholder="封面图片地址" />
+            <text class="btn-p sm" style="margin-left: 12rpx; flex-shrink: 0" @tap="uploadCourseCover">上传封面</text>
+          </view>
+        </view>
+        <view class="f-row" v-if="courseForm.cover">
+          <text class="f-label">预览</text>
+          <image class="cover-preview" :src="courseForm.cover" mode="aspectFill"></image>
+        </view>
         <view class="f-row"><text class="f-label">分类ID</text><input class="f-input" type="number" v-model="courseForm.category_id" /></view>
         <view class="f-row"><text class="f-label">课时</text><input class="f-input" type="number" v-model="courseForm.lessons_count" /></view>
         <view class="f-row">
@@ -1026,6 +1037,33 @@ function removeProductImg(i) {
   arr.splice(i, 1)
   productForm.value.imagesText = arr.join(',')
 }
+function uploadCourseCover() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const filePath = res.tempFilePaths[0]
+      uni.showLoading({ title: '上传中...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = 'covers/c' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png'
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        const url = fileID
+          .replace(/^cloud:\/\/[^\/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        courseForm.value.cover = url
+        uni.showToast({ title: '封面已上传', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+  })
+}
+
 function uploadProductImg() {
   uni.chooseImage({
     count: 1,
@@ -1124,7 +1162,7 @@ const courseForm = ref({})
 function openCourseForm(c) {
   courseForm.value = c
     ? { ...c }
-    : { id: null, title: '', teacher: '', price: '0.00', cover: '', category_id: courseActiveCate.value || 1, lessons_count: 0, level: '入门', description: '' }
+    : { id: null, title: '', teacher: '', price: '0.00', ot_price: '', cover: '', category_id: courseActiveCate.value || 1, lessons_count: 0, level: '入门', description: '' }
   showCourse.value = true
 }
 
@@ -1820,6 +1858,12 @@ onMounted(async () => {
   background: #8c5a2b;
   color: #fefbf6;
   font-weight: 500;
+}
+.cover-preview {
+  width: 140rpx;
+  height: 90rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #efe7d8;
 }
 .settings-card {
   background: #fefbf6;

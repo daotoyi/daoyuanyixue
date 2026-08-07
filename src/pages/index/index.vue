@@ -25,8 +25,8 @@
 
     <!-- 推荐 / 关注: 动态流 -->
     <scroll-view scroll-y class="feed-scroll" v-if="currentTab !== 'live'">
-      <view class="feed" v-if="momentList.length">
-        <view class="moment-card" v-for="m in momentList" :key="m.id">
+      <view class="feed" v-if="shownMoments.length">
+        <view class="moment-card" v-for="m in shownMoments" :key="m.id">
           <view class="moment-head">
             <view class="avatar-circle"><text>{{ m.user_name[0] }}</text></view>
             <view class="moment-user">
@@ -151,7 +151,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -168,6 +168,12 @@ const liveList = ref([])
 
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
+
+// 推荐=全部动态; 关注=精选(推荐)动态
+const shownMoments = computed(() => {
+  if (currentTab.value === 'follow') return momentList.value.filter((m) => m.is_recommended)
+  return momentList.value
+})
 
 function switchTab(key) {
   currentTab.value = key
