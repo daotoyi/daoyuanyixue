@@ -162,6 +162,8 @@ export const bindWechat = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.bindWechat', params)
 export const updateEmail = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.updateEmail', params)
+export const unbindAccount = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.unbindAccount', params)
 export const setPassword = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.setPassword', params)
 

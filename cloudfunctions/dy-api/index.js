@@ -802,6 +802,23 @@ async function updateEmail(data) {
   return ok({ updated: true })
 }
 
+async function unbindAccount(data) {
+  const { uid, type, password } = data
+  if (!uid) return fail('请先登录')
+  if (!['phone', 'wechat', 'email'].includes(type)) return fail('不支持的解绑类型')
+  const res = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
+  const user = res.data[0]
+  if (!user) return fail('用户不存在')
+  // 有密码需验证 (微信解绑也验证, 防止误操作)
+  if (user.password && user.password !== String(password || '')) return fail('密码不正确')
+  const upd = {}
+  if (type === 'phone') upd.phone = ''
+  if (type === 'wechat') upd.openid = ''
+  if (type === 'email') upd.email = ''
+  await db.collection('users').where({ uid: Number(uid) }).update(upd)
+  return ok({ updated: true })
+}
+
 async function setPassword(data) {
   const { uid, old_password, new_password } = data
   if (!uid) return fail('请先登录')
@@ -1516,6 +1533,7 @@ const ROUTES = {
   'user.updatePhone': updatePhone,
   'user.updateEmail': updateEmail,
   'user.bindWechat': bindWechat,
+  'user.unbindAccount': unbindAccount,
   'user.updateProfile': updateProfile,
   'user.assets': userAssets,
   'user.wechatLogin': wechatLogin,

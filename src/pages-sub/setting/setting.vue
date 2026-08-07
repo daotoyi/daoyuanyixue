@@ -122,34 +122,53 @@
       <view class="picker-sheet">
         <view class="sheet-title">我的账号</view>
         <view class="ac-row">
-          <text class="ac-label">当前手机号</text>
-          <text class="ac-value">{{ userStore.isLoggedIn ? (userStore.userInfo.phone || '未绑定') : '-' }}</text>
+          <text class="ac-label">手机号</text>
+          <template v-if="userInfo.phone">
+            <text class="ac-value">{{ userInfo.phone }}</text>
+            <text class="ac-btn danger" @tap="unbind('phone')">解绑</text>
+          </template>
+          <template v-else>
+            <text class="ac-value muted">未绑定</text>
+            <text class="ac-btn" @tap="acMode = 'phone'">绑定</text>
+          </template>
         </view>
         <view class="ac-row">
-          <text class="ac-label">微信绑定</text>
-          <text class="ac-value">{{ userStore.isLoggedIn && userStore.userInfo.openid ? '已绑定' : '未绑定' }}</text>
+          <text class="ac-label">微信</text>
+          <template v-if="userInfo.openid">
+            <text class="ac-value">已绑定</text>
+            <text class="ac-btn danger" @tap="unbind('wechat')">解绑</text>
+          </template>
+          <template v-else>
+            <text class="ac-value muted">未绑定</text>
+            <text class="ac-btn" @tap="doBindWechat">绑定</text>
+          </template>
         </view>
         <view class="ac-row">
           <text class="ac-label">邮箱</text>
-          <text class="ac-value">{{ userStore.isLoggedIn ? (userStore.userInfo.email || '未绑定') : '-' }}</text>
+          <template v-if="userInfo.email">
+            <text class="ac-value">{{ userInfo.email }}</text>
+            <text class="ac-btn danger" @tap="unbind('email')">解绑</text>
+          </template>
+          <template v-else>
+            <text class="ac-value muted">未绑定</text>
+            <text class="ac-btn" @tap="acMode = 'email'">绑定</text>
+          </template>
         </view>
         <view class="ac-divider"></view>
-        <view class="pwd-field">
-          <text class="pwd-label">新手机号</text>
-          <input class="pwd-input" type="number" maxlength="11" v-model="acForm.phone" placeholder="输入新手机号" />
-        </view>
-        <view class="pwd-field">
-          <text class="pwd-label">登录密码</text>
-          <input class="pwd-input" :password="true" v-model="acForm.password" placeholder="有密码需验证，无密码留空" />
-        </view>
-        <view class="pwd-field">
-          <text class="pwd-label">新邮箱</text>
-          <input class="pwd-input" v-model="acForm.email" placeholder="选填，绑定邮箱" />
-        </view>
-        <view class="pwd-err" v-if="acErr">{{ acErr }}</view>
-        <view class="btn-p sm" @click="savePhone">保存手机号</view>
-        <view class="btn-p sm" style="margin-top:16rpx" @click="saveEmail">保存邮箱</view>
-        <view class="btn-p sm" style="margin-top:16rpx" @click="doBindWechat">绑定微信（小程序内使用）</view>
+
+        <!-- 绑定输入区 (点绑定后显示) -->
+        <template v-if="acMode">
+          <view class="pwd-field">
+            <text class="pwd-label">{{ acMode === 'phone' ? '手机号' : '邮箱' }}</text>
+            <input class="pwd-input" :type="acMode === 'phone' ? 'number' : 'text'" maxlength="30" v-model="acForm.value" :placeholder="acMode === 'phone' ? '输入11位手机号' : '输入邮箱地址'" />
+          </view>
+          <view class="pwd-field">
+            <text class="pwd-label">登录密码</text>
+            <input class="pwd-input" :password="true" v-model="acForm.password" placeholder="有密码需验证，无密码留空" />
+          </view>
+          <view class="pwd-err" v-if="acErr">{{ acErr }}</view>
+          <view class="btn-p sm" @click="saveBind">{{ acMode === 'phone' ? '保存手机号' : '保存邮箱' }}</view>
+        </template>
       </view>
     </view></view>
   </view>
@@ -158,7 +177,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { settingsState, setTheme, setLang, t, applyTheme, updateTabBar } from '../../utils/settings'
-import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate, updatePhone as apiUpdatePhone, bindWechat as apiBindWechat, updateEmail as apiUpdateEmail } from '../../api/api'
+import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate, updatePhone as apiUpdatePhone, bindWechat as apiBindWechat, updateEmail as apiUpdateEmail, unbindAccount as apiUnbindAccount } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { APP_FULL_VERSION } from '../../version'
 
@@ -168,39 +187,58 @@ const showTheme = ref(false)
 const showLang = ref(false)
 const showPassword = ref(false)
 const showAccount = ref(false)
-const acForm = ref({ phone: '', password: '', email: '' })
+const acForm = ref({ value: '', password: '' })
+const acMode = ref('') // '' | 'phone' | 'email'
 const acErr = ref('')
+const userInfo = computed(() => userStore.userInfo || {})
 function openAccount() {
   if (!userStore.isLoggedIn) return uni.showToast({ title: '请先登录', icon: 'none' })
-  acForm.value = { phone: '', password: '' }
+  acForm.value = { value: '', password: '' }
+  acMode.value = ''
   acErr.value = ''
   showAccount.value = true
 }
-async function savePhone() {
-  if (!/^1\d{10}$/.test(acForm.value.phone)) return (acErr.value = '请输入正确的11位手机号')
+async function saveBind() {
+  const val = acForm.value.value.trim()
+  if (!val) return (acErr.value = acMode.value === 'phone' ? '请输入手机号' : '请输入邮箱')
   acErr.value = ''
   try {
-    await apiUpdatePhone({ uid: userStore.userInfo.uid, phone: acForm.value.phone, password: acForm.value.password })
-    uni.showToast({ title: '手机号已更新', icon: 'success' })
-    userStore.userInfo.phone = acForm.value.phone
-    showAccount.value = false
+    if (acMode.value === 'phone') {
+      if (!/^1\d{10}$/.test(val)) return (acErr.value = '请输入正确的11位手机号')
+      await apiUpdatePhone({ uid: userInfo.value.uid, phone: val, password: acForm.value.password })
+      userStore.userInfo.phone = val
+    } else {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return (acErr.value = '邮箱格式不正确')
+      await apiUpdateEmail({ uid: userInfo.value.uid, email: val, password: acForm.value.password })
+      userStore.userInfo.email = val
+    }
+    uni.showToast({ title: '绑定成功', icon: 'success' })
+    acMode.value = ''
+    acForm.value = { value: '', password: '' }
   } catch (e) {
-    acErr.value = e.message || '修改失败'
+    acErr.value = e.message || '绑定失败'
   }
 }
-async function saveEmail() {
-  const em = acForm.value.email.trim()
-  if (!em) return (acErr.value = '请输入邮箱')
-  acErr.value = ''
-  try {
-    await apiUpdateEmail({ uid: userStore.userInfo.uid, email: em, password: acForm.value.password })
-    uni.showToast({ title: '邮箱已更新', icon: 'success' })
-    userStore.userInfo.email = em
-    acForm.value.email = ''
-    acForm.value.password = ''
-  } catch (e) {
-    acErr.value = e.message || '修改失败'
-  }
+async function unbind(type) {
+  const names = { phone: '手机号', wechat: '微信', email: '邮箱' }
+  uni.showModal({
+    title: '解绑' + names[type],
+    content: '确定解绑' + names[type] + '吗？' + (type === 'wechat' ? '' : '（有密码需输入验证）'),
+    editable: type !== 'wechat',
+    placeholderText: type === 'wechat' ? '' : '输入登录密码',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await apiUnbindAccount({ uid: userInfo.value.uid, type, password: r.content || '' })
+        if (type === 'phone') userStore.userInfo.phone = ''
+        if (type === 'wechat') userStore.userInfo.openid = ''
+        if (type === 'email') userStore.userInfo.email = ''
+        uni.showToast({ title: '已解绑', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '解绑失败', icon: 'none' })
+      }
+    },
+  })
 }
 
 async function doBindWechat() {
@@ -211,6 +249,7 @@ async function doBindWechat() {
     })
     if (!loginRes.code) throw new Error('获取微信授权码失败')
     await apiBindWechat({ uid: userStore.userInfo.uid, code: loginRes.code })
+    userStore.userInfo.openid = 'bound'
     uni.showToast({ title: '微信绑定成功', icon: 'success' })
     showAccount.value = false
   } catch (e) {
@@ -451,6 +490,23 @@ onMounted(() => {
 .ac-label { color: #857563; }
 .ac-value { color: #42372c; }
 .ac-divider { height: 1rpx; background: #efe7d8; margin: 10rpx 0 20rpx; }
+.ac-btn {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: #8c5a2b;
+  border: 1rpx solid #8c5a2b;
+  border-radius: 999rpx;
+  padding: 6rpx 24rpx;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.ac-btn.danger {
+  color: #b04a45;
+  border-color: #b04a45;
+}
+.ac-value.muted {
+  color: #b3a595;
+}
 .pwd-err {
   color: #b04a45;
   font-size: 22rpx;
