@@ -48,7 +48,7 @@
 
       <scroll-view scroll-y class="content">
         <!-- ===== 数据概览 ===== -->
-        <view v-if="activeModule === 'overview'" class="module-content-scroll"><view class="overview">
+        <view v-if="activeModule === 'overview'" class="overview">
           <view class="stat-grid">
             <view class="stat-card" v-for="s in statCards" :key="s.label">
               <text class="stat-num">{{ s.value }}</text>
@@ -71,7 +71,7 @@
             </view>
             <view class="recent-empty" v-else>暂无订单</view>
           </view>
-        </view></view>
+        </view>
 
         <!-- ===== 商品管理 ===== -->
         <view v-else-if="activeModule === 'products'" class="module cate-module">
@@ -1740,22 +1740,9 @@ onMounted(async () => {
   flex: 1;
   padding: 30rpx 40rpx;
 }
-/* 内容区横向滑动: 手机/窄屏下模块内容可左右滑动 */
-.module-content-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  max-width: 100%;
-  box-sizing: border-box;
+/* 概览区: 直接使用 content 内边距, 右侧与屏幕保持间距 */
+.overview {
   padding-right: 24rpx;
-  margin-right: -24rpx;
-}
-/* 概览内容与右缘保持间距 */
-.module-content-scroll > .overview {
-  padding-right: 4rpx;
-}
-.module-content-scroll > .module,
-.module-content-scroll > .overview {
-  min-width: 100%;
 }
 .module-head {
   display: flex;
