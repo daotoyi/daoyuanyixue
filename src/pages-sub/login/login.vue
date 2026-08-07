@@ -40,6 +40,16 @@
         <text class="wx-text">其他登录方式</text>
         <view class="wx-line"></view>
       </view>
+      <!-- 小程序: 微信授权头像昵称 (chooseAvatar + nickname input, 官方新方案) -->
+      <!-- #ifdef MP-WEIXIN -->
+      <view class="wx-profile">
+        <button class="wx-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+          <image v-if="wxAvatar" class="wx-avatar-img" :src="wxAvatar" mode="aspectFill"></image>
+          <view v-else class="wx-avatar-fallback"><text>👤</text></view>
+        </button>
+        <input class="wx-nick-input" type="nickname" v-model="wxNickname" placeholder="点击填写微信昵称（选填）" />
+      </view>
+      <!-- #endif -->
       <view class="wx-login" @tap="wxLogin">
         <text class="wx-icon">💬</text>
         <text class="wx-name">微信一键登录</text>
@@ -63,6 +73,12 @@ const password = ref('')
 const inviteCode = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
+// 小程序微信授权头像昵称 (chooseAvatar 官方方案)
+const wxAvatar = ref('')
+const wxNickname = ref('')
+function onChooseAvatar(e) {
+  if (e && e.detail && e.detail.avatarUrl) wxAvatar.value = e.detail.avatarUrl
+}
 
 // 邀请链接自动填充: ?invite=道号
 onLoad((options) => {
@@ -93,16 +109,19 @@ async function wxLogin() {
   try {
     // #ifdef MP-WEIXIN
     // 小程序: 点击登录时自动获取头像昵称 (微信授权, 无需手动选/填) → wx.login 换 code → 云函数登录
-    let profile = { nickname: '', avatar: '' }
-    try {
-      const p = await new Promise((resolve) => {
-        uni.getUserProfile({ desc: '用于完善会员资料', success: resolve, fail: resolve })
-      })
-      if (p && p.userInfo) {
-        profile.nickname = p.userInfo.nickName || ''
-        profile.avatar = p.userInfo.avatarUrl || ''
-      }
-    } catch (e) { /* 用户拒绝授权则匿名登录 */ }
+    let profile = { nickname: wxNickname.value || '', avatar: wxAvatar.value || '' }
+    // 未手动选择头像/昵称时, 尝试 getUserProfile 兜底 (新版基础库可能返回匿名)
+    if (!profile.nickname || !profile.avatar) {
+      try {
+        const p = await new Promise((resolve) => {
+          uni.getUserProfile({ desc: '用于完善会员资料', success: resolve, fail: resolve })
+        })
+        if (p && p.userInfo) {
+          profile.nickname = profile.nickname || p.userInfo.nickName || ''
+          profile.avatar = profile.avatar || p.userInfo.avatarUrl || ''
+        }
+      } catch (e) { /* 用户拒绝授权则匿名登录 */ }
+    }
     const codeRes = await new Promise((resolve) => wx.login({ success: resolve, fail: resolve }))
     if (!codeRes || !codeRes.code) throw new Error('微信登录失败，请重试')
     const user = await wechatLogin({ code: codeRes.code, nickname: profile.nickname, avatar: profile.avatar })
@@ -302,6 +321,80 @@ async function submit() {
   margin: 0 20rpx;
   font-size: 22rpx;
   color: #b3a595;
+}
+.wx-profile {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin: 24rpx 0;
+  padding: 20rpx 28rpx;
+  background: #f8f3ea;
+  border-radius: 16rpx;
+}
+.wx-avatar-btn {
+  flex-shrink: 0;
+  width: 96rpx;
+  height: 96rpx;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #efe7d8;
+  border: none;
+  line-height: normal;
+}
+.wx-avatar-btn::after { border: none; }
+.wx-avatar-img { width: 100%; height: 100%; }
+.wx-avatar-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44rpx;
+}
+.wx-nick-input {
+  flex: 1;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: #42372c;
+  background: #fefbf6;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+}
+.wx-profile {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin: 24rpx 0;
+  padding: 20rpx 28rpx;
+  background: #f8f3ea;
+  border-radius: 16rpx;
+}
+.wx-avatar-btn {
+  flex-shrink: 0;
+  width: 96rpx;
+  height: 96rpx;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #efe7d8;
+  border: none;
+  line-height: normal;
+}
+.wx-avatar-btn::after { border: none; }
+.wx-avatar-img { width: 100%; height: 100%; }
+.wx-avatar-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 44rpx;
+}
+.wx-nick-input {
+  flex: 1;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: #42372c;
+  background: #fefbf6;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
 }
 .wx-login {
   display: flex;

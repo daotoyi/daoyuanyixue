@@ -245,16 +245,16 @@
             <view class="btn-p sm" v-if="userRole === 'admin'" @click="showCreateUser = true">＋ 新建员工/管理员</view>
           </view>
           <view class="table">
-            <view class="tr th">
-              <text class="td w-name">昵称</text>
+            <view class="tr th users-row">
+              <text class="td w-name users-nick">昵称</text>
               <text class="td w-no">手机号</text>
               <text class="td w-price">道号</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
               <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
               <text class="td w-ops">操作</text>
             </view>
-            <view class="tr" v-for="u in usersFiltered" :key="u._id || u.uid">
-              <text class="td w-name">{{ u.nickname }}</text>
+            <view class="tr users-row" v-for="u in usersFiltered" :key="u._id || u.uid">
+              <text class="td w-name users-nick">{{ u.nickname }}</text>
               <text class="td w-no">{{ u.phone }}</text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
@@ -782,7 +782,7 @@ function roleFilterMenu() {
 const lives = ref([])
 const moments = ref([])
 const coupons = ref([])
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const cateCollapsed = ref(false)
 const orderStatuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已取消', '已退款']
 const orderFilter = ref('全部')
@@ -2026,10 +2026,13 @@ onMounted(async () => {
   color: #42372c;
 }
 .w-img { width: 76rpx; }
-.w-name { flex: 2; padding: 0 10rpx; min-width: 0; }
+.w-name { flex: 2; padding: 0 10rpx; min-width: 0; white-space: nowrap; }
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
-.w-no { width: 280rpx; font-size: 20rpx; }
+.w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
+.users-row { min-width: 1380rpx; }
+.users-nick { flex: none; width: 200rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-price { white-space: nowrap; }
 .w-status { width: 170rpx; text-align: center; white-space: nowrap; }
 .w-ops { width: 340rpx; display: flex; align-items: center; flex-wrap: nowrap; gap: 8rpx; }
 .thumb {
