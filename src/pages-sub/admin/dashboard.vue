@@ -246,6 +246,7 @@
           </view>
           <view class="table">
             <view class="tr th users-row">
+              <text class="td w-avatar-cell">头像</text>
               <text class="td w-name users-nick">昵称</text>
               <text class="td w-no">手机号</text>
               <text class="td w-price">道号</text>
@@ -254,6 +255,10 @@
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr users-row" v-for="u in usersFiltered" :key="u._id || u.uid">
+              <text class="td w-avatar-cell">
+                <image v-if="u.avatar" class="user-td-avatar" :src="u.avatar" mode="aspectFill"></image>
+                <view v-else class="user-td-avatar user-td-avatar-fallback"><text>{{ u.nickname ? u.nickname[0] : '?' }}</text></view>
+              </text>
               <text class="td w-name users-nick">{{ u.nickname }}</text>
               <text class="td w-no">{{ u.phone }}</text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
@@ -2030,7 +2035,10 @@ onMounted(async () => {
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
-.users-row { min-width: 1380rpx; }
+.users-row { min-width: 1460rpx; }
+.w-avatar-cell { flex: none; width: 90rpx; display: flex; align-items: center; justify-content: center; }
+.user-td-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; overflow: hidden; background: #efe7d8; }
+.user-td-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: #8c5a2b; }
 .users-nick { flex: none; width: 200rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w-price { white-space: nowrap; }
 .w-status { width: 170rpx; text-align: center; white-space: nowrap; }

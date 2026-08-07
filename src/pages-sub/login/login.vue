@@ -122,6 +122,20 @@ async function wxLogin() {
         }
       } catch (e) { /* 用户拒绝授权则匿名登录 */ }
     }
+    // 微信头像临时路径持久化: chooseAvatar/getUserProfile 返回的是临时路径, 重启失效 → 上传云存储换永久 URL
+    if (profile.avatar && !/^https?:\/\//.test(profile.avatar)) {
+      try {
+        const storage = await getStorage()
+        if (storage && storage.uploadFile) {
+          const cloudPath = 'avatars/wx' + Date.now() + '.png'
+          const upRes = await storage.uploadFile(profile.avatar, cloudPath)
+          const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+          if (fileID) {
+            profile.avatar = String(fileID).replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+          }
+        }
+      } catch (e) { /* 上传失败则保持原路径 */ }
+    }
     const codeRes = await new Promise((resolve) => wx.login({ success: resolve, fail: resolve }))
     if (!codeRes || !codeRes.code) throw new Error('微信登录失败，请重试')
     const user = await wechatLogin({ code: codeRes.code, nickname: profile.nickname, avatar: profile.avatar })
