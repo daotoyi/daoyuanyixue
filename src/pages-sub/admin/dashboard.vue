@@ -1806,7 +1806,18 @@ onMounted(async () => {
   -webkit-overflow-scrolling: touch;
 }
 .settings-card .f-row {
-  min-width: 600rpx;
+  min-width: 680rpx;
+  flex-shrink: 0;
+}
+.settings-card .f-label {
+  flex-shrink: 0;
+  width: 150rpx;
+}
+.settings-card .f-input-wrap {
+  min-width: 0;
+}
+.settings-card .settings-actions {
+  min-width: 680rpx;
 }
 .settings-desc {
   display: flex;

@@ -18,7 +18,7 @@ const fail = (msg, status = 400) => ({ status, msg })
 /* ============ 商品 ============ */
 
 async function listCategories() {
-  const res = await db.collection('categories').orderBy('id', 'asc').limit(100).get()
+  const res = await db.collection('categories').orderBy('sort', 'asc').orderBy('id', 'asc').limit(100).get()
   // 前端只展示 is_show !== false 的分类
   return ok(res.data.filter((c) => c.is_show !== false))
 }
@@ -36,7 +36,7 @@ const CATE_COLLECTIONS = { products: 'categories', courses: 'course_categories' 
 async function adminCateList(data) {
   const collection = CATE_COLLECTIONS[data.type]
   if (!collection) return fail('未知分类类型')
-  const res = await db.collection(collection).orderBy('id', 'asc').limit(100).get()
+  const res = await db.collection(collection).orderBy('sort', 'asc').orderBy('id', 'asc').limit(100).get()
   return ok(res.data)
 }
 
@@ -60,7 +60,7 @@ async function adminCateUpdate(data) {
   const collection = CATE_COLLECTIONS[data.type]
   if (!collection) return fail('未知分类类型')
   const doc = {}
-  ;['name', 'icon', 'description', 'is_show'].forEach((k) => {
+  ;['name', 'icon', 'description', 'is_show', 'sort'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   await db.collection(collection).where({ id: Number(data.id) }).update(doc)
