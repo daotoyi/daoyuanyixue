@@ -236,19 +236,13 @@
           <view class="module-head">
             <text class="module-title">用户管理（{{ usersFiltered.length }}）</text>
           </view>
-          <view class="filter-row">
-            <text class="filter-label">VIP</text>
-            <text class="filter-pill" :class="{ on: vipFilter === v }" v-for="v in ['全部', '0', '1', '2', '3']" :key="'v' + v" @tap="vipFilter = v">{{ v === '全部' ? '全部' : 'VIP' + v }}</text>
-            <text class="filter-label">角色</text>
-            <text class="filter-pill" :class="{ on: roleFilter === r }" v-for="r in ['全部', 'admin', 'staff', 'user']" :key="'r' + r" @tap="roleFilter = r">{{ { admin: '管理员', staff: '员工', user: '用户' }[r] || r }}</text>
-          </view>
           <view class="table">
             <view class="tr th">
               <text class="td w-name">昵称</text>
               <text class="td w-no">手机号</text>
               <text class="td w-price">道号</text>
-              <text class="td w-price">VIP</text>
-              <text class="td w-status">角色</text>
+              <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
+              <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr" v-for="u in usersFiltered" :key="u._id || u.uid">
@@ -726,6 +720,23 @@ const usersFiltered = computed(() => {
     return true
   })
 })
+
+function vipFilterMenu() {
+  uni.showActionSheet({
+    itemList: ['全部', 'VIP0', 'VIP1', 'VIP2', 'VIP3'],
+    success: (r) => {
+      vipFilter.value = ['全部', '0', '1', '2', '3'][r.tapIndex]
+    },
+  })
+}
+function roleFilterMenu() {
+  uni.showActionSheet({
+    itemList: ['全部', '管理员', '员工', '用户'],
+    success: (r) => {
+      roleFilter.value = ['全部', 'admin', 'staff', 'user'][r.tapIndex]
+    },
+  })
+}
 const lives = ref([])
 const moments = ref([])
 const coupons = ref([])

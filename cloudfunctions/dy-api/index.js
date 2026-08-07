@@ -1335,6 +1335,22 @@ async function adminAssignDaoCodes() {
   return ok({ assigned: n })
 }
 
+async function adminUserDelete(data) {
+  const { uid } = data
+  if (uid === undefined) return fail('缺少用户ID')
+  const res = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
+  if (!res.data.length) return fail('用户不存在')
+  if (res.data[0].role === 'admin') return fail('不能删除管理员账号')
+  await db.collection('users').doc(res.data[0]._id).remove()
+  // 删除关联数据
+  const rel = ['orders', 'favorites', 'footprints', 'coupons', 'messages', 'user_courses', 'live_bookings']
+  for (const c of rel) {
+    await db.collection(c).where({ uid: Number(uid) }).remove().catch(() => {})
+  }
+  await db.collection('moments').where({ user_id: Number(uid) }).remove().catch(() => {})
+  return ok({ deleted: true })
+}
+
 async function adminMomentAudit(data) {
   const cond = data._id ? { _id: data._id } : { id: Number(data.id) }
   await db.collection('moments').where(cond).update({ is_recommended: !!data.is_recommended })
@@ -1487,6 +1503,7 @@ const ROUTES = {
   'admin.lives.create': adminLiveCreate,
   'admin.lives.update': adminLiveUpdate,
   'admin.moments.audit': adminMomentAudit,
+  'admin.users.delete': adminUserDelete,
   'admin.assignDaoCodes': adminAssignDaoCodes,
   'admin.moments.delete': adminMomentDelete,
   'admin.coupons.create': adminCouponCreate,
