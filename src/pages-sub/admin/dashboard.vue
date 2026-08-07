@@ -186,8 +186,9 @@
                 <text class="td w-name ellipsis">{{ c.title }}</text>
                 <text class="td w-price">¥{{ c.price }}</text>
                 <text class="td w-stock">{{ c.lessons_count }}</text>
-                <text class="td w-status">{{ c.level }}</text>
+                <text class="td w-status" :class="c.status === false || c.status === 'off' ? 'off' : 'on'">{{ c.status === false || c.status === 'off' ? '已下架' : '已上架' }}</text>
                 <view class="td w-ops ops" v-if="canManageCourses">
+                  <text class="op" @tap="toggleCourse(c)">{{ c.status === false || c.status === 'off' ? '上架' : '下架' }}</text>
                   <text class="op" @tap="openCourseForm(c)">编辑</text>
                 </view>
               </view>
@@ -1262,6 +1263,13 @@ async function saveProduct() {
 async function toggleProduct(p) {
   await adminProductUpdate({ id: p.id, is_show: p.is_show === false })
   await loadProductCates()
+}
+
+async function toggleCourse(c) {
+  const off = c.status === false || c.status === 'off'
+  await adminCourseUpdate({ id: c.id, status: !off })
+  uni.showToast({ title: off ? '已上架' : '已下架', icon: 'success' })
+  await loadModule('courses')
 }
 
 async function deleteProduct(p) {
