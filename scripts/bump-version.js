@@ -16,12 +16,9 @@ function sh(cmd) {
 function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8') }
 function write(p, c) { fs.writeFileSync(path.join(ROOT, p), c) }
 
-// 读取当前版本 (从 version.js 或 git 最新 tag)
-let cur = (read('src/version.js').match(/APP_VERSION = 'v([\d.]+)'/) || [])[1]
-if (!cur) {
-  const tag = sh('git describe --tags --abbrev=0')
-  cur = (tag || '').replace(/^v/, '')
-}
+// 读取当前版本 (以 git 最新 tag 为准, 避免与 gen-version.js 互相覆盖)
+let cur = sh('git describe --tags --abbrev=0').replace(/^v/, '')
+if (!cur) cur = (read('src/version.js').match(/APP_VERSION = 'v([\d.]+)'/) || [])[1]
 if (!cur) { console.error('无法识别当前版本'); process.exit(1) }
 
 const [major, minor, patch] = cur.split('.').map(Number)

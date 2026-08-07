@@ -129,6 +129,10 @@
           <text class="ac-label">微信绑定</text>
           <text class="ac-value">{{ userStore.isLoggedIn && userStore.userInfo.openid ? '已绑定' : '未绑定' }}</text>
         </view>
+        <view class="ac-row">
+          <text class="ac-label">邮箱</text>
+          <text class="ac-value">{{ userStore.isLoggedIn ? (userStore.userInfo.email || '未绑定') : '-' }}</text>
+        </view>
         <view class="ac-divider"></view>
         <view class="pwd-field">
           <text class="pwd-label">新手机号</text>
@@ -138,8 +142,13 @@
           <text class="pwd-label">登录密码</text>
           <input class="pwd-input" :password="true" v-model="acForm.password" placeholder="有密码需验证，无密码留空" />
         </view>
+        <view class="pwd-field">
+          <text class="pwd-label">新邮箱</text>
+          <input class="pwd-input" v-model="acForm.email" placeholder="选填，绑定邮箱" />
+        </view>
         <view class="pwd-err" v-if="acErr">{{ acErr }}</view>
         <view class="btn-p sm" @click="savePhone">保存手机号</view>
+        <view class="btn-p sm" style="margin-top:16rpx" @click="saveEmail">保存邮箱</view>
         <view class="btn-p sm" style="margin-top:16rpx" @click="doBindWechat">绑定微信（小程序内使用）</view>
       </view>
     </view></view>
@@ -149,7 +158,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { settingsState, setTheme, setLang, t, applyTheme, updateTabBar } from '../../utils/settings'
-import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate, updatePhone as apiUpdatePhone, bindWechat as apiBindWechat } from '../../api/api'
+import { setPassword as apiSetPassword, checkUpdate as apiCheckUpdate, updatePhone as apiUpdatePhone, bindWechat as apiBindWechat, updateEmail as apiUpdateEmail } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { APP_FULL_VERSION } from '../../version'
 
@@ -159,7 +168,7 @@ const showTheme = ref(false)
 const showLang = ref(false)
 const showPassword = ref(false)
 const showAccount = ref(false)
-const acForm = ref({ phone: '', password: '' })
+const acForm = ref({ phone: '', password: '', email: '' })
 const acErr = ref('')
 function openAccount() {
   if (!userStore.isLoggedIn) return uni.showToast({ title: '请先登录', icon: 'none' })
@@ -179,6 +188,21 @@ async function savePhone() {
     acErr.value = e.message || '修改失败'
   }
 }
+async function saveEmail() {
+  const em = acForm.value.email.trim()
+  if (!em) return (acErr.value = '请输入邮箱')
+  acErr.value = ''
+  try {
+    await apiUpdateEmail({ uid: userStore.userInfo.uid, email: em, password: acForm.value.password })
+    uni.showToast({ title: '邮箱已更新', icon: 'success' })
+    userStore.userInfo.email = em
+    acForm.value.email = ''
+    acForm.value.password = ''
+  } catch (e) {
+    acErr.value = e.message || '修改失败'
+  }
+}
+
 async function doBindWechat() {
   // #ifdef MP-WEIXIN
   try {

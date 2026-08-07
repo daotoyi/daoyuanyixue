@@ -24,7 +24,7 @@
           :class="{ on: company === l.code }"
           @tap="company = l.code"
         >
-          <text class="lg-icon">{{ l.icon }}</text>
+          <image class="lg-icon" :src="l.icon" mode="aspectFit"></image>
           <text class="lg-name">{{ l.name }}</text>
           <text class="lg-check" v-if="company === l.code">✓</text>
         </view>
@@ -65,6 +65,7 @@ const DETECT_RULES = [
   { code: 'STO', pattern: /^[2-4,8]\d{11,14}$/, name: '申通快递', icon: '🟢' },
   { code: 'YUNDA', pattern: /^[3-9]\d{12}$/, name: '韵达快递', icon: '🟣' },
   { code: 'ZTO', pattern: /^[7-9]\d{11,13}$/, name: '中通快递', icon: '🟠' },
+  { code: 'JT', pattern: /^JT\d{10,}$/i, name: '极兔速递', icon: '🟥' },
 ]
 
 const detectedName = ref('')
@@ -78,7 +79,7 @@ onLoad(async (options) => {
     ])
     logistics.value = lg.map((l) => ({
       ...l,
-      icon: { SF: '🚀', ZTO: '🟠', YTO: '🔵', STO: '🟢', YUNDA: '🟣', JD: '🐶', EMS: '📮' }[l.code] || '📦',
+      icon: '/static/logis/' + l.code + '.png',
     }))
     if (orderNo.value) {
       order.value = orders.find((o) => o.order_no === orderNo.value) || null
@@ -195,7 +196,8 @@ async function confirmShip() {
   background: #faf3e9;
 }
 .lg-icon {
-  font-size: 40rpx;
+  width: 56rpx;
+  height: 56rpx;
 }
 .lg-name {
   margin-top: 10rpx;

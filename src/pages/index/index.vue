@@ -33,6 +33,11 @@
               <text class="moment-name">{{ m.user_name }}</text>
               <text class="moment-time">{{ m.created_at }}</text>
             </view>
+            <text
+              v-if="userStore.isLoggedIn && m.user_id === userStore.userInfo.uid"
+              class="moment-del"
+              @tap.stop="deleteMoment(m)"
+            >删除</text>
           </view>
 
           <view class="moment-content">{{ m.content }}</view>
@@ -147,7 +152,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const tabs = [
@@ -170,6 +175,23 @@ function statusText(s) {
 
 function previewImage(urls, index) {
   uni.previewImage({ urls, current: index })
+}
+
+function deleteMoment(m) {
+  uni.showModal({
+    title: '删除动态',
+    content: '确定删除这条动态吗？其评论也会一并删除',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await deleteOwnMoment({ user_id: userStore.userInfo.uid, _id: m._id })
+        uni.showToast({ title: '已删除', icon: 'none' })
+        momentList.value = momentList.value.filter((x) => x._id !== m._id)
+      } catch (e) {
+        uni.showToast({ title: '删除失败: ' + (e.message || ''), icon: 'none' })
+      }
+    },
+  })
 }
 
 async function toggleComments(m) {
@@ -438,6 +460,12 @@ onMounted(async () => {
   margin-right: 0;
 }
 
+.moment-del {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: #b04a45;
+  padding: 6rpx 14rpx;
+}
 /* 评论展开区 */
 .moment-comments {
   margin-top: 16rpx;

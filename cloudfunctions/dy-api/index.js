@@ -123,6 +123,16 @@ async function listMoments() {
   return ok(res.data)
 }
 
+async function deleteOwnMoment(data) {
+  const { user_id, _id } = data
+  if (!user_id || !_id) return fail('缺少参数')
+  const res = await db.collection('moments').where({ _id, user_id: Number(user_id) }).limit(1).get()
+  if (!res.data.length) return fail('动态不存在或无权删除')
+  await db.collection('moments').doc(_id).remove()
+  await db.collection('comments').where({ moment_id: res.data[0].id || res.data[0]._id }).remove().catch(() => {})
+  return ok({ deleted: true })
+}
+
 async function listComments(data) {
   const momentId = data.moment_id
   if (!momentId) return fail('缺少动态 ID')
@@ -147,7 +157,9 @@ async function addComment(data) {
 }
 
 async function publishMoment(data) {
+  const momentId = Date.now()
   const doc = {
+    id: momentId,
     user_id: data.user_id || 0,
     user_name: data.user_name || '道友',
     avatar: data.avatar || '',
@@ -740,6 +752,21 @@ async function bindWechat(data) {
   return ok({ updated: true })
 }
 
+async function updateEmail(data) {
+  const { uid, email, password } = data
+  if (!uid) return fail('请先登录')
+  const em = String(email || '').trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return fail('邮箱格式不正确')
+  const res = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
+  const user = res.data[0]
+  if (!user) return fail('用户不存在')
+  if (user.password && user.password !== String(password || '')) return fail('密码不正确')
+  const dup = await db.collection('users').where({ email: em }).limit(1).get()
+  if (dup.data.length && dup.data[0].uid !== Number(uid)) return fail('该邮箱已被其他账号绑定')
+  await db.collection('users').where({ uid: Number(uid) }).update({ email: em })
+  return ok({ updated: true })
+}
+
 async function setPassword(data) {
   const { uid, old_password, new_password } = data
   if (!uid) return fail('请先登录')
@@ -1189,6 +1216,7 @@ const LOGISTICS_COMPANIES = [
   { code: 'YTO', name: '圆通速递' },
   { code: 'STO', name: '申通快递' },
   { code: 'YUNDA', name: '韵达快递' },
+  { code: 'JT', name: '极兔速递' },
   { code: 'JD', name: '京东物流' },
   { code: 'EMS', name: '中国邮政 EMS' },
 ]
@@ -1269,8 +1297,23 @@ async function adminLiveCreate(data) {
   return ok(doc)
 }
 
+async function adminAssignDaoCodes() {
+  // 给所有缺少道号的用户批量分配 (管理员调用)
+  const all = await db.collection('users').limit(1000).get()
+  let n = 0
+  for (const u of all.data) {
+    if (!u.dao_code) {
+      const code = await nextDaoCode()
+      await db.collection('users').doc(u._id).update({ dao_code: code })
+      n++
+    }
+  }
+  return ok({ assigned: n })
+}
+
 async function adminMomentAudit(data) {
-  await db.collection('moments').where({ id: Number(data.id) }).update({ is_recommended: !!data.is_recommended })
+  const cond = data._id ? { _id: data._id } : { id: Number(data.id) }
+  await db.collection('moments').where(cond).update({ is_recommended: !!data.is_recommended })
   return ok({ updated: true })
 }
 
@@ -1361,6 +1404,7 @@ const ROUTES = {
   'courses.detail': getCourse,
   'moments.list': listMoments,
   'moments.publish': publishMoment,
+  'moments.deleteOwn': deleteOwnMoment,
   'comments.list': listComments,
   'comments.add': addComment,
   'live.list': listLiveStreams,
@@ -1369,6 +1413,7 @@ const ROUTES = {
   'user.register': register,
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,
+  'user.updateEmail': updateEmail,
   'user.bindWechat': bindWechat,
   'user.updateProfile': updateProfile,
   'user.assets': userAssets,
@@ -1417,6 +1462,7 @@ const ROUTES = {
   'admin.lives.create': adminLiveCreate,
   'admin.lives.update': adminLiveUpdate,
   'admin.moments.audit': adminMomentAudit,
+  'admin.assignDaoCodes': adminAssignDaoCodes,
   'admin.moments.delete': adminMomentDelete,
   'admin.coupons.create': adminCouponCreate,
   'admin.coupons.update': adminCouponUpdate,

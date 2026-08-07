@@ -96,6 +96,8 @@ export const getMoments = () =>
 
 export const getComments = (data) =>
   __USE_MOCK__ ? _fromMock(() => [])() : _callFunction('comments.list', data)
+export const deleteOwnMoment = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ deleted: true }))() : _callFunction('moments.deleteOwn', data)
 export const addComment = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ id: Date.now() }))() : _callFunction('comments.add', data)
 export const publishMoment = (data) =>
@@ -156,6 +158,8 @@ export const updatePhone = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.updatePhone', params)
 export const bindWechat = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.bindWechat', params)
+export const updateEmail = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.updateEmail', params)
 export const setPassword = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.setPassword', params)
 
@@ -249,6 +253,7 @@ export const adminLiveCreate = _admin('admin.lives.create')
 export const adminLiveUpdate = _admin('admin.lives.update')
 export const adminMomentAudit = _admin('admin.moments.audit')
 export const adminMomentDelete = _admin('admin.moments.delete')
+export const adminAssignDaoCodes = _admin('admin.assignDaoCodes')
 export const adminCouponCreate = _admin('admin.coupons.create')
 export const adminCouponUpdate = _admin('admin.coupons.update')
 export const adminCouponDelete = _admin('admin.coupons.delete')

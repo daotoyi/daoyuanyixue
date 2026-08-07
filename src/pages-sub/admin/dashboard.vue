@@ -1270,7 +1270,7 @@ async function deleteMoment(m) {
 }
 
 async function auditMoment(m) {
-  await adminMomentAudit({ id: m.id, is_recommended: !m.is_recommended })
+  await adminMomentAudit({ id: m.id, _id: m._id, is_recommended: !m.is_recommended })
   uni.showToast({ title: m.is_recommended ? '已取消推荐' : '已推荐', icon: 'none' })
   await loadModule('moments')
 }
@@ -1801,6 +1801,12 @@ onMounted(async () => {
   border-radius: 16rpx;
   border: 1rpx solid #efe7d8;
   padding: 30rpx;
+  /* 手机端设置表单横向滑动 */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.settings-card .f-row {
+  min-width: 600rpx;
 }
 .settings-desc {
   display: flex;
