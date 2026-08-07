@@ -91,15 +91,38 @@ async function listProducts(data) {
       (p) => (p.name && p.name.includes(kw)) || (p.description && p.description.includes(kw))
     )
   }
-  return ok(list)
+  // 过滤后台下架商品 (is_show === false)
+  return ok(list.filter((p) => p.is_show !== false))
 }
 
 async function getProduct(data) {
   const res = await db.collection('products').where({ id: Number(data.id) }).limit(1).get()
-  return ok(res.data[0] || null)
+  const p = res.data[0] || null
+  // 下架商品详情不可访问
+  if (p && p.is_show === false) return ok(null)
+  return ok(p)
 }
 
 /* ============ 课程 ============ */
+
+// 老师简介 (可按课程动态扩展)
+const TEACHER_INTRO = {
+  '昊辰老师': '深耕四柱八字与紫微斗数多年，授课由浅入深、善用生活案例解读命理逻辑，主讲《八字入门》《紫微斗数》。',
+  '梁坤老师': '专研八字格局与用神取用，融汇古籍今解，实战经验丰富，主讲《八字进阶》。',
+  '宥呈老师': '精研奇门遁甲排盘起局与实战运筹，讲究理法并重、知行合一，主讲《奇门遁甲》。',
+  '智明老师': '专注阳宅风水与居家布局，师承传统、注重实用，主讲《风水堪舆》。',
+}
+async function teacherInfo(data) {
+  const name = data.teacher
+  if (!name) return fail('缺少老师姓名')
+  const intro = TEACHER_INTRO[name] || '暂无简介'
+  const res = await db.collection('courses').where({ teacher: name }).limit(20).get()
+  return ok({
+    teacher: name,
+    intro,
+    courses: res.data.filter((c) => c.status !== 'off').map((c) => c.title),
+  })
+}
 
 async function listCourses(data) {
   let res
@@ -1402,6 +1425,7 @@ const ROUTES = {
   'products.detail': getProduct,
   'courseCategories.list': listCourseCategories,
   'courses.list': listCourses,
+  'teacher.info': teacherInfo,
   'courses.detail': getCourse,
   'moments.list': listMoments,
   'moments.publish': publishMoment,

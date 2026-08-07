@@ -14,13 +14,26 @@
         <text class="otprice">¥{{ course.ot_price }}</text>
         <text class="students">{{ course.students_count }} 人学过</text>
       </view>
-      <view class="teacher-row">
+      <view class="teacher-row" @tap="showTeacher">
         <view class="avatar-circle">{{ course.teacher[0] }}</view>
         <view class="teacher-info">
           <text class="teacher-name">{{ course.teacher }}</text>
-          <text class="teacher-sub">课程讲师</text>
+          <text class="teacher-sub">课程讲师 · 点击查看简介 ›</text>
         </view>
       </view>
+
+      <!-- 老师简介弹层 -->
+      <view class="pp-mask" v-if="showTeacherPanel" @tap="showTeacherPanel = false"><view class="pp-sheet" @tap.stop>
+        <view class="picker-sheet">
+          <view class="sheet-title">{{ teacherInfoData.teacher }}</view>
+          <view class="ti-intro">{{ teacherInfoData.intro }}</view>
+          <view class="ti-courses" v-if="teacherInfoData.courses && teacherInfoData.courses.length">
+            <text class="ti-courses-label">主讲课程</text>
+            <text class="ti-course" v-for="(t, ti) in teacherInfoData.courses" :key="ti">· {{ t }}</text>
+          </view>
+          <view class="btn-p sm" @click="showTeacherPanel = false">关闭</view>
+        </view>
+      </view></view>
     </view>
 
     <!-- 课程介绍 -->
@@ -71,11 +84,22 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getCourse, buyCourse as apiBuyCourse, getMyCourses } from '../../api/api'
+import { getCourse, teacherInfo, buyCourse as apiBuyCourse, getMyCourses } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
 const course = ref(null)
+const showTeacherPanel = ref(false)
+const teacherInfoData = ref({})
+async function showTeacher() {
+  try {
+    const info = await teacherInfo({ teacher: course.value.teacher })
+    teacherInfoData.value = info || {}
+    showTeacherPanel.value = true
+  } catch (e) {
+    uni.showToast({ title: '获取老师简介失败', icon: 'none' })
+  }
+}
 const owned = ref(false)
 const buying = ref(false)
 
@@ -202,6 +226,30 @@ function startLearn() {
 }
 .teacher-info {
   margin-left: 20rpx;
+}
+.ti-intro {
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #42372c;
+  padding: 16rpx 4rpx;
+}
+.ti-courses {
+  margin: 10rpx 0 24rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #efe7d8;
+}
+.ti-courses-label {
+  display: block;
+  font-size: 26rpx;
+  color: #8c5a2b;
+  font-weight: 500;
+  margin-bottom: 10rpx;
+}
+.ti-course {
+  display: block;
+  font-size: 24rpx;
+  color: #857563;
+  line-height: 1.8;
 }
 .teacher-name {
   font-size: 28rpx;

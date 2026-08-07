@@ -86,6 +86,8 @@ export const getCourseCategories = () =>
 export const getCourses = (params = {}) =>
   __USE_MOCK__ ? _fromMock(() => mock.courses)() : _callFunction('courses.list', params)
 
+export const teacherInfo = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ intro: '' }))() : _callFunction('teacher.info', data)
 export const getCourse = (id) =>
   __USE_MOCK__ ? _fromMock(() => mock.courses.find((c) => c.id === Number(id)) || null)() : _callFunction('courses.detail', { id })
 
