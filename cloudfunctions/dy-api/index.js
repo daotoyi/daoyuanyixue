@@ -1386,6 +1386,12 @@ async function adminUserCreate(data) {
 }
 
 async function adminUserUpdate(data) {
+  // 设置/解除 超级管理员(admin) 仅超级管理员可操作
+  if (data.role === 'admin') {
+    const opUser = await db.collection('users').where({ uid: Number(data.opUid || 0) }).limit(1).get()
+    const opRole = opUser.data[0] ? opUser.data[0].role : (data.opRole || '')
+    if (opRole !== 'admin') return fail('只有超级管理员可以任命超级管理员')
+  }
   const doc = {}
   ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
@@ -1500,7 +1506,14 @@ async function adminUserDelete(data) {
   if (uid === undefined) return fail('缺少用户ID')
   const res = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
   if (!res.data.length) return fail('用户不存在')
-  if (res.data[0].role === 'admin') return fail('不能删除管理员账号')
+  if (res.data[0].role === 'admin') {
+    // 只有超级管理员能删管理员, 且不能删自己/其他超管
+    const opUser = await db.collection('users').where({ uid: Number(data.opUid || 0) }).limit(1).get()
+    const opRole = opUser.data[0] ? opUser.data[0].role : (data.opRole || '')
+    if (opRole !== 'admin') return fail('只有超级管理员可以删除管理员账号')
+    if (Number(data.opUid) === Number(uid)) return fail('不能删除自己的账号')
+    return fail('超管账号不可删除，可先降级为管理员')
+  }
   await db.collection('users').doc(res.data[0]._id).remove()
   // 删除关联数据
   const rel = ['orders', 'favorites', 'footprints', 'coupons', 'messages', 'user_courses', 'live_bookings']

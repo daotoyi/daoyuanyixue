@@ -259,10 +259,8 @@
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
-                <!-- 管理员/受限管理员/员工: 编辑(角色在编辑弹窗中调整) -->
-                <text class="op" v-if="u.role !== 'user'" @tap="openEditUser(u)">编辑</text>
-                <!-- 普通用户: 仅分配道号 -->
-                <text class="op" v-else @tap="openAssignId(u)">分配道号</text>
+                <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
+                <text class="op" @tap="openEditUser(u)">编辑</text>
               </view>
             </view>
           </view>
@@ -623,6 +621,9 @@
           <view class="btn-p plain sm" @click="showAssignId = false">取消</view>
           <view class="btn-p sm" @click="saveAssignId">{{ assignMode === 'edit' ? '保存修改' : '确认分配' }}</view>
         </view>
+        <view v-if="assignMode === 'edit'" class="sheet-actions" style="margin-top: 16rpx">
+          <view class="btn-p danger sm" @click="deleteUser(assignForm)">删除用户</view>
+        </view>
       </view>
     </view></view>
 
@@ -694,7 +695,7 @@ import { ref, computed, onMounted } from 'vue'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund,
-  adminUserCreate, adminUserUpdate, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
+  adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
@@ -1018,10 +1019,10 @@ const showAssignId = ref(false)
 const showCreateUser = ref(false)
 const createForm = ref({ phone: '', nickname: '', password: '123456', role: 'staff' })
 const assignForm = ref({ uid: null, dao_code: '', role: 'user', nickname: '' })
-/* 编辑弹窗角色: 管理员/受限管理员/员工 (不含普通用户) */
+/* 编辑弹窗角色: 超级管理员(仅超管可任命)/管理员/受限管理员/员工 */
 const editRoleOptions = [
-  { value: 'admin', label: '管理员' },
-  { value: 'manager', label: '受限管理员' },
+  { value: 'admin', label: '超级管理员' },
+  { value: 'manager', label: '管理员' },
   { value: 'staff', label: '内部员工' },
 ]
 /* 新建员工/管理员角色 */
@@ -1406,6 +1407,38 @@ async function refundOrder(o) {
 }
 
 /* 用户 */
+function deleteUser(form) {
+  const isAdminUser = form.role === 'admin'
+  uni.showModal({
+    title: '删除用户',
+    content: isAdminUser
+      ? '该账号是超级管理员，不可直接删除。可先将其降级为管理员/员工后再删除。'
+      : '确定删除用户 ' + (form.nickname || form.dao_code || form.uid) + ' 吗？将同时清除其订单/收藏/足迹等数据，不可恢复！',
+    showCancel: !isAdminUser,
+    confirmText: isAdminUser ? '知道了' : '删除',
+    confirmColor: '#b04a45',
+    success: (r) => {
+      if (!r.confirm || isAdminUser) return
+      uni.showModal({
+        title: '再次确认',
+        content: '删除后不可恢复，请再次确认！',
+        confirmColor: '#b04a45',
+        success: async (r2) => {
+          if (!r2.confirm) return
+          try {
+            await adminUserDelete({ uid: form.uid })
+            uni.showToast({ title: '已删除', icon: 'success' })
+            showAssignId.value = false
+            await loadModule('users')
+          } catch (e) {
+            uni.showToast({ title: e.message || '删除失败', icon: 'none' })
+          }
+        },
+      })
+    },
+  })
+}
+
 async function doCreateUser() {
   const phone = createForm.value.phone.trim()
   const nickname = createForm.value.nickname.trim()
