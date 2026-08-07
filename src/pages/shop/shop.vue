@@ -72,6 +72,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { getCategories, getProducts } from '../../api/api'
 
 const cateList = ref([])
@@ -160,7 +161,7 @@ async function loadProducts(kw = '') {
   nextTick(() => measureOffsets())
 }
 
-onMounted(async () => {
+onShow(async () => {
   try {
     const cats = await getCategories()
     cateList.value = cats
