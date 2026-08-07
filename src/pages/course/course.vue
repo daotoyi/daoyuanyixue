@@ -69,7 +69,8 @@
 const LV_CLS = {'入门':'basic','进阶':'inter','高级':'senior','庙':'miao','旺':'wang','得':'de','利':'li','平':'ping','不':'bu','陷':'xian'}
 const lvCls = (v) => LV_CLS[v] || v
 
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, nextTick } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { getCourseCategories, getCourses } from '../../api/api'
 
 const cateList = ref([])
@@ -111,7 +112,7 @@ function goDetail(id) {
   uni.navigateTo({ url: `/pages-sub/course/detail?id=${id}` })
 }
 
-onMounted(async () => {
+onShow(async () => {
   try {
     const cats = await getCourseCategories()
     cateList.value = cats
