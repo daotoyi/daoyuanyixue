@@ -261,6 +261,26 @@
         </view>
       </view>
 
+      <!-- 天干/地支作用关系 (随大运流年流月流日流时联动) -->
+      <view class="pp-block" v-if="activeTarget">
+        <view class="pp-block-head">作用关系 · 目标：{{ activeTarget.name }}{{ activeTarget.label ? '（' + activeTarget.label + '）' : '' }}</view>
+        <view class="pp-rel-row">
+          <text class="pp-rel-kind">天干</text>
+          <text class="pp-rel-item" v-for="(r, i) in ganRelations" :key="'g' + i">
+            <text class="pp-rel-pillar">{{ r.pillar }}</text>
+            <text class="pp-rel-desc" :class="{ hit: r.rel }">{{ r.rel || '—' }}</text>
+          </text>
+        </view>
+        <view class="pp-rel-row">
+          <text class="pp-rel-kind">地支</text>
+          <text class="pp-rel-item" v-for="(r, i) in zhiRelations" :key="'z' + i">
+            <text class="pp-rel-pillar">{{ r.pillar }}</text>
+            <text class="pp-rel-desc" :class="{ hit: r.rel }">{{ r.rel || '—' }}</text>
+          </text>
+        </view>
+        <view class="pp-tip2">※ 天干显示五合/冲克，地支显示六冲/六合/三刑/相破/六害/暗合；随所点大运、流年、流月、流日、流时联动</view>
+      </view>
+
       <!-- 当前流年 -->
       <view class="pp-block">
         <view class="pp-block-head">流年 · {{ curYear }}年</view>
@@ -680,7 +700,7 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf } from '../utils/paipan'
+import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf, ganRelation, zhiRelation } from '../utils/paipan'
 import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../utils/ziwei'
 import { generateJiepan, summaryJiepan } from '../utils/jiepan'
 import { aiJiepan, aiAsk } from '../../api/api'
@@ -1217,6 +1237,34 @@ function buildLiuri(liunianYear, monthIdx) {
 }
 
 /* 联动列 + 四柱 (从左到右: 流时/流日/流月/流年/大运/四柱) */
+/* ---- 天干/地支作用关系板块 ---- */
+const activeTarget = computed(() => {
+  if (!data.value) return null
+  const seq = [
+    [selectedLiushi.value, '流时'], [selectedLiuri.value, '流日'], [selectedLiuyue.value, '流月'],
+    [selectedLiunian.value, '流年'], [selectedDayun.value, '大运'],
+  ]
+  for (const [v, name] of seq) {
+    if (v && v.ganIdx !== undefined) return { ganIdx: v.ganIdx, zhiIdx: v.zhiIdx, name, label: v.label }
+  }
+  const ln = data.value.bazi.liunian
+  return { ganIdx: GAN.indexOf(ln.gan), zhiIdx: ZHI.indexOf(ln.zhi), name: '流年', label: ln.name }
+})
+const ganRelations = computed(() => {
+  if (!data.value || !activeTarget.value) return []
+  const four = ['年柱', '月柱', '日柱', '时柱']
+  return data.value.bazi.pillars.map((p, i) => ({
+    pillar: four[i], target: GAN[activeTarget.value.ganIdx], base: GAN[p.g], rel: ganRelation(activeTarget.value.ganIdx, p.g),
+  }))
+})
+const zhiRelations = computed(() => {
+  if (!data.value || !activeTarget.value) return []
+  const four = ['年柱', '月柱', '日柱', '时柱']
+  return data.value.bazi.pillars.map((p, i) => ({
+    pillar: four[i], target: ZHI[activeTarget.value.zhiIdx], base: ZHI[p.z], rel: zhiRelation(activeTarget.value.zhiIdx, p.z),
+  }))
+})
+
 const columns = computed(() => {
   if (!data.value) return []
   const extra = []
@@ -1715,6 +1763,22 @@ function payJiepan() {
 .pp-ln-ss { margin-left: 20rpx; font-size: 22rpx; color: #c4a484; }
 .pp-ln-wx { margin-left: auto; font-size: 20rpx; color: rgba(240, 230, 205, 0.6); }
 .pp-tip { font-size: 20rpx; color: #b3a595; margin-top: 10rpx; }
+.pp-tip2 { font-size: 20rpx; color: #b3a595; margin-top: 12rpx; line-height: 1.5; }
+.pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }
+.pp-rel-row:last-of-type { border-bottom: none; }
+.pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #8c5a2b; font-weight: 500; }
+.pp-rel-item { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+.pp-rel-pillar { font-size: 20rpx; color: #b3a595; margin-bottom: 4rpx; }
+.pp-rel-desc { font-size: 24rpx; color: #c9a9a9; }
+.pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
+.pp-tip2 { font-size: 20rpx; color: #b3a595; margin-top: 12rpx; line-height: 1.5; }
+.pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }
+.pp-rel-row:last-of-type { border-bottom: none; }
+.pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #8c5a2b; font-weight: 500; }
+.pp-rel-item { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+.pp-rel-pillar { font-size: 20rpx; color: #b3a595; margin-bottom: 4rpx; }
+.pp-rel-desc { font-size: 24rpx; color: #c9a9a9; }
+.pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
 
 /* 排盘历史弹窗 */
 .hist-sheet { padding: 30rpx 30rpx 60rpx; max-height: 70vh; }

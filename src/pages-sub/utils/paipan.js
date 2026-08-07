@@ -310,7 +310,7 @@ export function fullBazi(y, m, d, hour, gender) {
   const dayun = []
   let g = mp.g
   let z = mp.z
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     g = (g + step + 10) % 10
     z = (z + step + 12) % 12
     const startAge = qiYun + i * 10
@@ -539,7 +539,7 @@ export function baziFromGanZhi(yg, yz, mg, mz, dg, dz, hg, hz, gender) {
   const qiYun = 1 + ((dg + dz) % 8)
   const dayun = []
   let g = mg, z = mz
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     g = (g + step + 10) % 10
     z = (z + step + 12) % 12
     const startAge = qiYun + i * 10
@@ -606,6 +606,83 @@ const CHANGSHENG_START = {
   9: 3,  // 癸水长生卯
 }
 /** 某地支相对日干的十二长生状态 (每柱地支均可查, 日柱即"自坐") */
+/* ============ 天干/地支作用关系 (冲克合刑破害暗合) ============ */
+/* 天干五合: 甲己合土 乙庚合金 丙辛合水 丁壬合木 戊癸合火 */
+const GAN_WUHE = {
+  0: { to: 5, name: '甲己合' }, 5: { to: 0, name: '甲己合' },
+  1: { to: 6, name: '乙庚合' }, 6: { to: 1, name: '乙庚合' },
+  2: { to: 7, name: '丙辛合' }, 7: { to: 2, name: '丙辛合' },
+  3: { to: 8, name: '丁壬合' }, 8: { to: 3, name: '丁壬合' },
+  4: { to: 9, name: '戊癸合' }, 9: { to: 4, name: '戊癸合' },
+}
+/* 天干相冲: 甲庚冲 乙辛冲 丙壬冲 丁癸冲 */
+const GAN_CHONG = {
+  0: 7, 7: 0, 1: 8, 8: 1, 2: 9, 9: 2, 3: 0, 4: 5, 5: 4, 6: 3,
+}
+/* 五行相克: 木克土 土克水 水克火 火克金 金克木 */
+const WX_KE = { '木': '土', '土': '水', '水': '火', '火': '金', '金': '木' }
+/* 地支六冲: 子午冲 丑未冲 寅申冲 卯酉冲 辰戌冲 巳亥冲 */
+const ZHI_LIUCHONG = {
+  0: 6, 6: 0, 1: 7, 7: 1, 2: 8, 8: 2, 3: 9, 9: 3, 4: 10, 10: 4, 5: 11, 11: 5,
+}
+/* 地支六合: 子丑合 寅亥合 卯戌合 辰酉合 巳申合 午未合 */
+const ZHI_LIUHE = {
+  0: 1, 1: 0, 2: 11, 11: 2, 3: 10, 10: 3, 4: 9, 9: 4, 5: 8, 8: 5, 6: 7, 7: 6,
+}
+/* 地支三刑: 寅刑巳 巳刑申 申刑寅(无恩之刑); 丑刑戌 戌刑未 未刑丑(恃势之刑); 子刑卯 卯刑子(无礼之刑); 辰午酉亥自刑 */
+const ZHI_XING = {
+  2: { to: 5, name: '寅刑巳' }, 5: { to: 8, name: '巳刑申' }, 8: { to: 2, name: '申刑寅' },
+  1: { to: 10, name: '丑刑戌' }, 10: { to: 7, name: '戌刑未' }, 7: { to: 1, name: '未刑丑' },
+  0: { to: 3, name: '子刑卯' }, 3: { to: 0, name: '卯刑子' },
+  4: { to: 4, name: '辰自刑' }, 6: { to: 6, name: '午自刑' }, 9: { to: 9, name: '酉自刑' }, 11: { to: 11, name: '亥自刑' },
+}
+/* 地支相破: 子酉破 丑辰破 寅亥破 卯午破 巳申破 未戌破 */
+const ZHI_PO = {
+  0: 9, 9: 0, 1: 4, 4: 1, 2: 11, 11: 2, 3: 6, 6: 3, 5: 8, 8: 5, 7: 10, 10: 7,
+}
+/* 地支六害: 子未害 丑午害 寅巳害 卯辰害 申亥害 酉戌害 */
+const ZHI_HAI = {
+  0: 7, 7: 0, 1: 6, 6: 1, 2: 5, 5: 2, 3: 4, 4: 3, 8: 11, 11: 8, 9: 10, 10: 9,
+}
+/* 地支暗合: 寅丑暗合(寅藏甲丙戊/丑藏己癸辛→甲己暗合) 午亥暗合 卯申暗合 辰子暗合 巳戌暗合 */
+const ZHI_ANHE = {
+  2: 1, 1: 2, 6: 11, 11: 6, 3: 8, 8: 3, 4: 0, 0: 4, 5: 10, 10: 5,
+}
+
+/** 天干 vs 天干: 返回作用关系描述 (无则空字符串) */
+export function ganRelation(a, b) {
+  if (a === b) return ''
+  const he = GAN_WUHE[a] && GAN_WUHE[a].to === b
+  if (he) return GAN_WUHE[a].name
+  const chong = GAN_CHONG[a] === b
+  if (chong) return GAN[Math.min(a, b)] + GAN[Math.max(a, b)] + '冲'
+  const wa = GAN_WX[a], wb = GAN_WX[b]
+  if (WX_KE[wa] === wb) return GAN[b] + '克' + GAN[a]
+  if (WX_KE[wb] === wa) return GAN[a] + '克' + GAN[b]
+  return ''
+}
+
+/** 地支 vs 地支: 返回作用关系 (优先: 六冲>六合>三刑>相破>六害>暗合) */
+export function zhiRelation(a, b) {
+  if (a === b) {
+    return ZHI_XING[a] && ZHI_XING[a].to === a ? ZHI_XING[a].name : ''
+  }
+  if (ZHI_LIUCHONG[a] === b) return ZHI[Math.min(a, b)] + ZHI[Math.max(a, b)] + '冲'
+  if (ZHI_LIUHE[a] === b) return ZHI[Math.min(a, b)] + ZHI[Math.max(a, b)] + '合'
+  const xing = ZHI_XING[a] && ZHI_XING[a].to === b
+  if (xing) return ZHI_XING[a].name
+  if (ZHI_PO[a] === b) return ZHI[Math.min(a, b)] + ZHI[Math.max(a, b)] + '破'
+  if (ZHI_HAI[a] === b) return ZHI[Math.min(a, b)] + ZHI[Math.max(a, b)] + '害'
+  if (ZHI_ANHE[a] === b) return ZHI[Math.min(a, b)] + ZHI[Math.max(a, b)] + '暗合'
+  return ''
+}
+
+/** 简化六合名称: 返回 子丑合 形式 */
+export function zhiLiuheName(a, b) {
+  if (ZHI_LIUHE[a] !== b) return ''
+  return ZHI[Math.min(a, b)] + ZHI[Math.max(a, b)] + '合'
+}
+
 export function changShengOf(dayGan, zhiIdx) {
   const start = CHANGSHENG_START[dayGan]
   const yang = dayGan % 2 === 0
