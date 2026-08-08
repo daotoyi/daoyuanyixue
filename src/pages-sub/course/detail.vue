@@ -84,7 +84,7 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getCourse, teacherInfo, buyCourse as apiBuyCourse, getMyCourses } from '../../api/api'
+import { getCourse, teacherInfo, getMyCourses } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -128,23 +128,8 @@ async function buyCourse() {
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
-  uni.showModal({
-    title: '购买课程',
-    content: `确认购买「${course.value.title}」？\n价格 ¥${course.value.price}（模拟支付）`,
-    success: async (res) => {
-      if (!res.confirm) return
-      buying.value = true
-      try {
-        await apiBuyCourse({ uid: userStore.userInfo.uid, course_id: course.value.id })
-        owned.value = true
-        uni.showToast({ title: '购买成功，已加入我的课程', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: e.message || '购买失败', icon: 'none' })
-      } finally {
-        buying.value = false
-      }
-    },
-  })
+  // 课程购买: 跳转结算页走订单+微信支付 (支付成功后自动发放课程)
+  uni.navigateTo({ url: '/pages-sub/checkout/checkout?course_id=' + course.value.id })
 }
 
 function startLearn() {

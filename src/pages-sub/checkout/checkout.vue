@@ -107,14 +107,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment, getCourse } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
 
 const items = ref([])
+const courseId = ref(0) // 课程直购: 非0表示本次结算为课程
 const address = ref(null)
 const coupons = ref([])
 const selectedCoupon = ref(null)
@@ -153,9 +155,27 @@ const finalPrice = computed(() =>
   Math.max(0, subTotal.value - discount.value).toFixed(2)
 )
 
-onMounted(() => {
-  const { items: list } = getSelectedItems()
-  items.value = list
+// 支持两种进入方式: 购物车结算(getSelectedItems) / 课程直购(course_id)
+onLoad(async (options) => {
+  if (options && options.course_id) {
+    try {
+      const c = await getCourse(options.course_id)
+      if (c) {
+        items.value = [{
+          id: 'course_' + c.id,
+          course_id: c.id,
+          name: c.title,
+          price: String(c.price),
+          qty: 1,
+          image: c.cover,
+        }]
+        courseId.value = Number(c.id)
+      }
+    } catch (e) {}
+  } else {
+    const { items: list } = getSelectedItems()
+    items.value = list
+  }
   loadCoupons()
 })
 
@@ -220,6 +240,7 @@ async function submitOrder() {
       pay_method: payMethod.value,
       address: address.value,
       uid: userStore.userInfo.uid || 0,
+      course_id: courseId.value || 0,
     })
     // 微信小程序: 真实微信支付; 其他端: 演示支付
     // #ifdef MP-WEIXIN

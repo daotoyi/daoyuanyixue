@@ -883,6 +883,7 @@ async function createOrder(data) {
     pay_method: data.pay_method || 'wechat',
     address: data.address || {},
     uid: data.uid || 0,
+    course_id: data.course_id || 0, // 课程直购标记: 非0=课程订单, 支付成功自动发课
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   const res = await db.collection('orders').add(order)
@@ -1048,6 +1049,45 @@ async function wxpayCallback(event) {
   }
   // 微信支付回调要求返回 { errcode: 0, errmsg: 'OK' }
   return { errcode: 0, errmsg: 'OK' }
+}
+
+/**
+ * 上报发货信息 (微信小程序「订单发货管理」- uploadShippingInfo, 云调用免 token)
+ * 交易类小程序必须接入, 否则支付 JSAPI 会被禁用 ("小程序违规支付功能暂时无法使用")
+ * @param {string} outTradeNo 商户订单号
+ * @param {string} transactionId 微信支付单号 (可选, 有则用单号类型2更稳)
+ */
+async function reportShippingInfo(outTradeNo, transactionId, openid) {
+  try {
+    if (!_wxCloud) {
+      _wxCloud = require('wx-server-sdk')
+      _wxCloud.init({ env: _wxCloud.DYNAMIC_CURRENT_ENV })
+    }
+    // 订单发货管理: 虚拟商品用 logistics_type=3 (无实体配送)
+    const res = await _wxCloud.openapi.wxa.sec.order.uploadShippingInfo({
+      order_key: {
+        order_number_type: 2,
+        transaction_id: transactionId || '',
+        mchid: '1116271440',
+        out_trade_no: outTradeNo,
+      },
+      logistics_type: 3, // 虚拟商品
+      delivery_mode: 1, // 统一发货
+      shipping_list: [
+        {
+          tracking_no: '',
+          item_desc: '道元易学-虚拟商品',
+          contact: {},
+        },
+      ],
+      upload_time: new Date().toISOString(),
+      payer: { openid: openid || '' },
+    })
+    return res || {}
+  } catch (e) {
+    console.error('[dy-api] 发货信息上报失败:', e.message || e)
+    return { errcode: -1, errmsg: (e.message || '上报失败') }
+  }
 }
 
 /* ============ 我的课程 ============ */
@@ -1799,6 +1839,27 @@ exports.main = async (event = {}) => {
               read: false,
               created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
             })
+            // 上报发货信息 (订单发货管理, 虚拟商品) — 交易类小程序必须接入
+            try {
+              const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
+              await reportShippingInfo(resource.out_trade_no, resource.transaction_id || '', (u && u.openid) || '')
+            } catch (e2) {}
+            // 课程直购订单: 支付成功自动发放课程
+            if (o.course_id) {
+              try {
+                const existed = (await db.collection('user_courses').where({ uid: Number(o.uid), course_id: Number(o.course_id) }).limit(1).get()).data[0]
+                if (!existed) {
+                  await db.collection('user_courses').add({
+                    uid: Number(o.uid),
+                    course_id: Number(o.course_id),
+                    progress: 0,
+                    status: '学习中',
+                    favorited: false,
+                    bought_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+                  })
+                }
+              } catch (e3) {}
+            }
           }
         } catch (e) {}
       }
