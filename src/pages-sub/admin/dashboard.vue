@@ -1301,7 +1301,8 @@ async function toggleProduct(p) {
 
 async function toggleCourse(c) {
   const off = c.status === false || c.status === 'off'
-  await adminCourseUpdate({ id: c.id, status: !off })
+  // 当前下架→点上架(设true); 当前上架→点下架(设false)
+  await adminCourseUpdate({ id: c.id, status: off ? true : false })
   // 本地立即更新 (响应式, 不依赖重新请求)
   const newStatus = off ? true : false
   const g = { ...courseGrouped.value }
@@ -1310,7 +1311,6 @@ async function toggleCourse(c) {
   })
   courseGrouped.value = g
   uni.showToast({ title: off ? '已上架' : '已下架', icon: 'success' })
-  await loadModule('courses')
 }
 
 async function deleteProduct(p) {
