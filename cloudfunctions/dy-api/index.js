@@ -999,33 +999,26 @@ async function wxpayPrepay(data) {
   if (!order_no) return fail('缺少订单号')
   const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
   if (!order) return fail('订单不存在')
-  if (order.status !== '待支付') return fail('订单状态不可支付')
+  if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
   const price = Number(order.total_price)
   if (!price || price <= 0) return fail('订单金额异常')
-  let mchid = ''
+  const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
+  // 取用户 openid (v3 JSAPI 必须)
+  let openid = ''
   try {
-    mchid = (require('./config.local') || {}).WXPAY_MCHID || ''
+    const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
+    openid = (u && u.openid) || ''
   } catch (e) {}
-  // 组装统一下单参数 (云开发微信支付, 免证书)
-  const params = {
-    body: (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 100),
-    outTradeNo: order_no,
-    spbillCreateIp: '127.0.0.1',
-    totalFee: Math.round(price * 100),
-    envId: cloudbase.SYMBOL_CURRENT_ENV,
-    functionName: 'dy-api', // 支付成功后回调本函数
-  }
-  if (mchid) params.subMchId = mchid
-  let res
+  if (!openid) return fail('未获取到微信身份，请在小程序内微信登录后支付')
+  // 微信支付 API v3 直连 (JSAPI)
+  const wxpay = require('./wxpay-v3')
+  let payment
   try {
-    res = await app.cloudPay.unifiedOrder(params)
+    payment = await wxpay.unifiedOrder({ outTradeNo: order_no, totalFee: Math.round(price * 100), body, openid })
   } catch (e) {
-    return fail('微信支付下单失败: ' + (e.message || e.errMsg || '请确认已开通云开发微信支付'))
+    return fail('微信支付下单失败: ' + (e.message || '请检查商户配置'))
   }
-  if (!res || res.returnCode !== 'SUCCESS') {
-    return fail((res && (res.returnMsg || res.errMsg)) || '微信支付下单失败')
-  }
-  return ok({ payment: res.payment, order_no })
+  return ok({ payment, order_no })
 }
 
 /* 微信支付结果回调 (云开发支付成功后调用本云函数) */
@@ -1778,6 +1771,41 @@ exports.main = async (event = {}) => {
         if (!data.rawBody) data.query = event.queryStringParameters
       }
     }
+  }
+
+  // 微信支付 v3 回调: 路径 /dy-api/pay/notify (HTTP POST JSON, 需原样验签)
+  const reqPath = (event.queryStringParameters && event.queryStringParameters.action) || ''
+  if (event.httpMethod === 'POST' && (reqPath === 'pay.notify' || reqPath === 'refund.notify')) {
+    try {
+      const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body
+      const wxpay = require('./wxpay-v3')
+      const { resource } = wxpay.handleNotify(event.headers || {}, raw)
+      if (resource && resource.out_trade_no) {
+        await db.collection('orders').where({ order_no: resource.out_trade_no }).update({
+          status: '待发货',
+          pay_method: '微信支付',
+          pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+          trade_no: resource.transaction_id || '',
+        })
+        try {
+          const o = (await db.collection('orders').where({ order_no: resource.out_trade_no }).limit(1).get()).data[0]
+          if (o && o.uid) {
+            await db.collection('messages').add({
+              id: Date.now() % 1000000,
+              uid: o.uid,
+              type: 'order',
+              title: '订单支付成功',
+              content: '订单 ' + resource.out_trade_no + ' 已支付成功，商家正在加紧备货',
+              read: false,
+              created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+            })
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      return { code: 'FAIL', message: e.message || '验签失败' }
+    }
+    return { code: 'SUCCESS', message: '成功' }
   }
 
   const handler = ROUTES[action]

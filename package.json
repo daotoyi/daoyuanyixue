@@ -1,6 +1,6 @@
 {
   "name": "zhs-workbuddy",
-  "version": "1.0.0",
+  "version": "1.11.0",
   "description": "WorkBuddy 智能工作助手 - 多端统一应用",
   "private": true,
   "scripts": {
