@@ -261,7 +261,7 @@
               </text>
               <text class="td w-name users-nick">{{ u.nickname }}</text>
               <text class="td w-no">
-                <view v-if="u.openid" class="cred-tag cred-wx">{{ u.openid }}</view>
+                <view v-if="u.openid" class="cred-tag cred-wx">微信一键登录</view>
                 <view v-else-if="u.email" class="cred-tag cred-mail">{{ u.email }}</view>
                 <view v-else-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
                 <view v-else class="cred-tag cred-none">无凭证</view>
@@ -2075,14 +2075,14 @@ onMounted(async () => {
 .w-name { flex: 2; padding: 0 10rpx; min-width: 0; white-space: nowrap; }
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
-.w-no { width: 340rpx; font-size: 20rpx; white-space: nowrap; }
+.w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
 .users-row { min-width: 1460rpx; }
 .cred-tag {
   display: inline-block;
   padding: 6rpx 14rpx;
   border-radius: 8rpx;
   font-size: 20rpx;
-  max-width: 310rpx;
+  max-width: 220rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
