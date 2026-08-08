@@ -173,7 +173,7 @@
           <text class="sheet-title">会员等级说明</text>
           <text class="sheet-close" @tap="showVipSheet = false">✕</text>
         </view>
-        <text class="vip-tip">等级 = 累计消费 + 累计储值，自动划分</text>
+        <text class="vip-tip vip-formula">等级 = 累计消费 + 累计储值，自动划分</text>
         <view class="vip-row" v-for="v in vipLevels" :key="v.level">
           <view class="vip-badge-lg" :class="'vip-' + v.level"><text>{{ v.label }}</text></view>
           <text class="vip-range">{{ v.range }}</text>
@@ -573,6 +573,7 @@ onShow(async () => {
 .vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
 /* 等级说明弹窗 */
 .vip-tip { display: block; text-align: center; font-size: 26rpx; color: #5f4c3a; margin-bottom: 20rpx; font-weight: 500; }
+.vip-formula { font-size: 28rpx; color: #3a2c1e; font-weight: 600; }
 .vip-row {
   display: flex;
   align-items: center;

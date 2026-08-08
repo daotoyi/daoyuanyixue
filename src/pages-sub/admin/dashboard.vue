@@ -1273,6 +1273,13 @@ async function toggleProduct(p) {
 async function toggleCourse(c) {
   const off = c.status === false || c.status === 'off'
   await adminCourseUpdate({ id: c.id, status: !off })
+  // 本地立即更新 (响应式, 不依赖重新请求)
+  const newStatus = off ? true : false
+  const g = { ...courseGrouped.value }
+  Object.keys(g).forEach((k) => {
+    g[k] = g[k].map((x) => (x.id === c.id ? { ...x, status: newStatus } : x))
+  })
+  courseGrouped.value = g
   uni.showToast({ title: off ? '已上架' : '已下架', icon: 'success' })
   await loadModule('courses')
 }
