@@ -248,7 +248,7 @@
             <view class="tr th users-row">
               <text class="td w-avatar-cell">头像</text>
               <text class="td w-name users-nick">昵称</text>
-              <text class="td w-no">手机号</text>
+              <text class="td w-no">登录凭证</text>
               <text class="td w-price">道号</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
               <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
@@ -260,7 +260,12 @@
                 <view v-else class="user-td-avatar user-td-avatar-fallback"><text>{{ u.nickname ? u.nickname[0] : '?' }}</text></view>
               </text>
               <text class="td w-name users-nick">{{ u.nickname }}</text>
-              <text class="td w-no">{{ u.phone }}</text>
+              <text class="td w-no">
+                <view v-if="u.openid" class="cred-tag cred-wx">微信一键登录</view>
+                <view v-else-if="u.email" class="cred-tag cred-mail">{{ u.email }}</view>
+                <view v-else-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
+                <view v-else class="cred-tag cred-none">无凭证</view>
+              </text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
@@ -2072,6 +2077,20 @@ onMounted(async () => {
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
 .users-row { min-width: 1460rpx; }
+.cred-tag {
+  display: inline-block;
+  padding: 6rpx 14rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  max-width: 220rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cred-wx { background: #e8f5e9; color: #2e7d32; }
+.cred-mail { background: #e3f2fd; color: #1565c0; }
+.cred-phone { background: #f3e5f5; color: #6a1b9a; }
+.cred-none { background: #f5f5f5; color: #9e9e9e; }
 .w-avatar-cell { flex: none; width: 90rpx; display: flex; align-items: center; justify-content: center; }
 .user-td-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; overflow: hidden; background: #efe7d8; }
 .user-td-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: #8c5a2b; }

@@ -707,6 +707,21 @@ function getWxOpenId() {
   }
 }
 
+/* 微信登录检查: 返回该微信是否已注册 + 是否已有头像昵称 */
+async function wechatCheck(data) {
+  const openid = getWxOpenId()
+  if (!openid) return ok({ registered: false, hasProfile: false })
+  const user = (await db.collection('users').where({ openid }).limit(1).get()).data[0]
+  if (!user) return ok({ registered: false, hasProfile: false })
+  return ok({
+    registered: true,
+    hasProfile: !!(user.avatar && user.nickname),
+    uid: user.uid,
+    nickname: user.nickname || '',
+    avatar: user.avatar || '',
+  })
+}
+
 async function wechatLogin(data) {
   // 微信一键登录 (小程序)
   // 接管模式: 云开发直接提供 OPENID (wx-server-sdk getWXContext), 无需 code/secret
@@ -1655,6 +1670,7 @@ const ROUTES = {
   'user.updateProfile': updateProfile,
   'user.assets': userAssets,
   'user.wechatLogin': wechatLogin,
+  'user.wechatCheck': wechatCheck,
   'user.coupons': myCoupons,
   'user.favorites': myFavorites,
   'user.favorite.toggle': toggleFavorite,

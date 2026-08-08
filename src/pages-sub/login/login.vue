@@ -72,7 +72,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { login, register, wechatLogin } from '../../api/api'
+import { login, register, wechatLogin, wechatCheck } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { useUserStore } from '../../store/index'
 
@@ -118,7 +118,18 @@ const showWxAuth = ref(false)
 async function wxLogin() {
   errorMsg.value = ''
   // #ifdef MP-WEIXIN
-  // 小程序: 弹出微信授权面板 (头像 nickname 数据均来自微信官方组件, 非手动输入)
+  // 小程序: 已注册且有头像昵称 → 直接登录; 首次/无资料 → 弹授权面板
+  try {
+    const chk = await wechatCheck()
+    if (chk && chk.registered && chk.hasProfile) {
+      // 老用户: 直接登录 (用已有头像昵称, 无需再授权)
+      wxNickname.value = chk.nickname || ''
+      wxAvatar.value = chk.avatar || ''
+      showWxAuth.value = false
+      await doWxLogin()
+      return
+    }
+  } catch (e) { /* check 失败则弹面板 */ }
   showWxAuth.value = true
   // #endif
   // #ifndef MP-WEIXIN
@@ -148,8 +159,8 @@ async function doWxLogin() {
         }
       } catch (e) { /* 保持当前值 */ }
     }
-    // 临时路径 → 云存储永久 fileID (cloud:// 原生渲染)
-    if (profile.avatar && !/^https?:\/\//.test(profile.avatar)) {
+    // 临时路径 → 云存储永久 fileID (已是 cloud:///https 不上传)
+    if (profile.avatar && !/^(https?:|cloud:)/.test(profile.avatar)) {
       try {
         const storage = await getStorage()
         if (storage && storage.uploadFile) {
