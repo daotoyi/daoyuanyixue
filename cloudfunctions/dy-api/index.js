@@ -1056,14 +1056,29 @@ async function wxpayCallback(event) {
  * 交易类小程序必须接入, 否则支付 JSAPI 会被禁用 ("小程序违规支付功能暂时无法使用")
  * @param {string} outTradeNo 商户订单号
  * @param {string} transactionId 微信支付单号 (可选, 有则用单号类型2更稳)
+ * @param {object} opts 可选: { logisticsType, company, trackingNo, itemDesc }
+ *   - 虚拟商品: logisticsType=3 (支付回调自动上报, 免人工)
+ *   - 实体商品: logisticsType=1 (后台发货时上报, 带物流公司+运单号, 自动推送物流数据)
  */
-async function reportShippingInfo(outTradeNo, transactionId, openid) {
+async function reportShippingInfo(outTradeNo, transactionId, openid, opts = {}) {
   try {
     if (!_wxCloud) {
       _wxCloud = require('wx-server-sdk')
       _wxCloud.init({ env: _wxCloud.DYNAMIC_CURRENT_ENV })
     }
-    // 订单发货管理: 虚拟商品用 logistics_type=3 (无实体配送)
+    const logisticsType = opts.logisticsType || 3 // 默认虚拟商品
+    const shippingItem = {
+      item_desc: opts.itemDesc || '道元易学-订单',
+      contact: {},
+    }
+    // 实体物流: 微信要求 tracking_company(物流公司编码) + tracking_no(运单号)
+    if (logisticsType === 1) {
+      shippingItem.tracking_company = opts.company || ''
+      shippingItem.tracking_no = opts.trackingNo || ''
+      shippingItem.contact = { receiver_phone: '010-00000000' } // 脱敏, 微信仅用于异常联系
+    } else {
+      shippingItem.tracking_no = ''
+    }
     const res = await _wxCloud.openapi.wxa.sec.order.uploadShippingInfo({
       order_key: {
         order_number_type: 2,
@@ -1071,15 +1086,9 @@ async function reportShippingInfo(outTradeNo, transactionId, openid) {
         mchid: '1116271440',
         out_trade_no: outTradeNo,
       },
-      logistics_type: 3, // 虚拟商品
+      logistics_type: logisticsType, // 1实体物流 3虚拟商品
       delivery_mode: 1, // 统一发货
-      shipping_list: [
-        {
-          tracking_no: '',
-          item_desc: '道元易学-虚拟商品',
-          contact: {},
-        },
-      ],
+      shipping_list: [shippingItem],
       upload_time: new Date().toISOString(),
       payer: { openid: openid || '' },
     })
@@ -1413,6 +1422,20 @@ async function adminOrderShip(data) {
         read: false,
         created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       })
+      // 实体商品订单: 自动上报微信发货信息 (推送物流数据, 免人工录入)
+      if (!o.data[0].course_id) {
+        try {
+          const u = (await db.collection('users').where({ uid: Number(o.data[0].uid) }).limit(1).get()).data[0]
+          // 中文公司名 → 微信物流编码 (后台传的是中文名, 微信要编码)
+          const companyCode = (LOGISTICS_COMPANIES.find((l) => l.name === data.company || l.code === data.company) || {}).code || ''
+          await reportShippingInfo(data.order_no, o.data[0].trade_no || '', (u && u.openid) || '', {
+            logisticsType: 1,
+            company: companyCode,
+            trackingNo: data.tracking_no || '',
+            itemDesc: (o.data[0].items && o.data[0].items.map((i) => i.name).join('、')) || '道元易学-订单',
+          })
+        } catch (e2) {}
+      }
     }
   } catch (e) {}
   return ok({ updated: true })
@@ -1839,10 +1862,13 @@ exports.main = async (event = {}) => {
               read: false,
               created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
             })
-            // 上报发货信息 (订单发货管理, 虚拟商品) — 交易类小程序必须接入
+            // 上报发货信息: 仅课程/虚拟订单支付成功即自动报虚拟发货(免人工);
+            // 实体商品订单不在此上报, 等后台发货时上报实体物流(一个支付单仅一次上报机会)
             try {
               const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
-              await reportShippingInfo(resource.out_trade_no, resource.transaction_id || '', (u && u.openid) || '')
+              if (o.course_id) {
+                await reportShippingInfo(resource.out_trade_no, resource.transaction_id || '', (u && u.openid) || '', { logisticsType: 3, itemDesc: '课程' })
+              }
             } catch (e2) {}
             // 课程直购订单: 支付成功自动发放课程
             if (o.course_id) {
