@@ -252,6 +252,7 @@
               <text class="td w-price">道号</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
               <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
+              <text class="td w-remark">备注</text>
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr users-row" v-for="u in usersFiltered" :key="u._id || u.uid">
@@ -269,6 +270,7 @@
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
+              <text class="td w-remark ellipsis" @tap="openEditUser(u)">{{ u.remark || '—' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
                 <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
                 <text class="op" @tap="openEditUser(u)">编辑</text>
@@ -628,6 +630,9 @@
             >{{ r.label }}</text>
           </view>
         </view>
+        <template v-if="assignMode === 'edit'">
+          <view class="f-row"><text class="f-label">备注</text><input class="f-input" v-model="assignForm.remark" placeholder="备注描述（仅管理员可见）" /></view>
+        </template>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showAssignId = false">取消</view>
           <view class="btn-p sm" @click="saveAssignId">{{ assignMode === 'edit' ? '保存修改' : '确认分配' }}</view>
@@ -1076,12 +1081,12 @@ const createRoleOptions = [
 const assignMode = ref('edit') // 'edit' | 'assign'
 function openAssignId(u) {
   assignMode.value = 'assign'
-  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '' }
+  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '', remark: u.remark || '' }
   showAssignId.value = true
 }
 function openEditUser(u) {
   assignMode.value = 'edit'
-  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '' }
+  assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '', remark: u.remark || '' }
   showAssignId.value = true
 }
 
@@ -1120,6 +1125,7 @@ async function doSaveAssignId(dao) {
   try {
     const payload = { uid: assignForm.value.uid, role: assignForm.value.role }
     if (dao) payload.dao_code = dao
+    if (assignMode.value === 'edit') payload.remark = String(assignForm.value.remark || '').slice(0, 200)
     if (assignMode.value === 'edit' && assignForm.value.nickname) {
       payload.nickname = assignForm.value.nickname
     }
@@ -2076,7 +2082,8 @@ onMounted(async () => {
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
-.users-row { min-width: 1460rpx; }
+.users-row { min-width: 1720rpx; }
+.w-remark { flex: 1.2; min-width: 240rpx; padding: 0 10rpx; font-size: 22rpx; color: #6b5a45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-tag {
   display: inline-block;
   padding: 6rpx 14rpx;

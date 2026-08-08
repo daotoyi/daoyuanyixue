@@ -1430,7 +1430,7 @@ async function adminUserUpdate(data) {
     if (opRole !== 'admin') return fail('只有超级管理员可以任命超级管理员')
   }
   const doc = {}
-  ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code'].forEach((k) => {
+  ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code', 'remark'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   if (data.dao_code) {
