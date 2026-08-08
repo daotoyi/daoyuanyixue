@@ -1774,8 +1774,8 @@ exports.main = async (event = {}) => {
   }
 
   // 微信支付 v3 回调: 路径 /dy-api/pay/notify (HTTP POST JSON, 需原样验签)
-  const reqPath = (event.queryStringParameters && event.queryStringParameters.action) || ''
-  if (event.httpMethod === 'POST' && (reqPath === 'pay.notify' || reqPath === 'refund.notify')) {
+  const reqPath = (event.queryStringParameters && event.queryStringParameters.action) || (event.path || '') || ''
+  if (event.httpMethod === 'POST' && (reqPath === 'pay.notify' || reqPath === 'refund.notify' || String(event.path || '').includes('/pay/notify') || String(event.path || '').includes('/refund/notify'))) {
     try {
       const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body
       const wxpay = require('./wxpay-v3')

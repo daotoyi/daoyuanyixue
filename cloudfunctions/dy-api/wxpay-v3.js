@@ -112,7 +112,7 @@ async function unifiedOrder({ outTradeNo, totalFee, body, openid }) {
     mchid: c.WXPAY_MCHID,
     description: String(body || '道元易学-订单').slice(0, 127),
     out_trade_no: outTradeNo,
-    notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api?action=pay.notify`,
+    notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api/pay/notify`,
     amount: { total: Math.round(totalFee), currency: 'CNY' },
     payer: { openid },
   })
@@ -146,7 +146,7 @@ async function refund({ outTradeNo, outRefundNo, totalFee, refundFee, reason }) 
     out_trade_no: outTradeNo,
     out_refund_no: outRefundNo,
     reason: String(reason || '').slice(0, 80),
-    notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api?action=refund.notify`,
+    notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api/refund/notify`,
     amount: { refund: Math.round(refundFee), total: Math.round(totalFee), currency: 'CNY' },
   })
   if (res.status >= 300) throw new Error((res.json && res.json.message) || '退款失败(' + res.status + ')')
