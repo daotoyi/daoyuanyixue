@@ -78,7 +78,12 @@
         <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
       </view>
       <view class="btn-fill btn-submit" @tap="submitOrder">
+        <!-- #ifdef MP-WEIXIN -->
+        <text>{{ submitting ? '提交中...' : '提交订单 · 微信支付' }}</text>
+        <!-- #endif -->
+        <!-- #ifndef MP-WEIXIN -->
         <text>{{ submitting ? '提交中...' : '提交订单 · 模拟支付' }}</text>
+        <!-- #endif -->
       </view>
     </view>
 
