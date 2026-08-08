@@ -40,20 +40,30 @@
         <text class="wx-text">其他登录方式</text>
         <view class="wx-line"></view>
       </view>
-      <!-- 小程序: 微信授权头像昵称 (chooseAvatar + nickname input, 官方新方案) -->
-      <!-- #ifdef MP-WEIXIN -->
-      <view class="wx-profile">
-        <button class="wx-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
-          <image v-if="wxAvatar" class="wx-avatar-img" :src="wxAvatar" mode="aspectFill"></image>
-          <view v-else class="wx-avatar-fallback"><text>👤</text></view>
-        </button>
-        <input class="wx-nick-input" type="nickname" v-model="wxNickname" placeholder="点击填写微信昵称（选填）" />
-      </view>
-      <!-- #endif -->
       <view class="wx-login" @tap="wxLogin">
         <text class="wx-icon">💬</text>
         <text class="wx-name">微信一键登录</text>
       </view>
+      <!-- 小程序: 微信授权面板 (chooseAvatar 微信头像 + nickname 微信昵称, 点登录后弹出) -->
+      <!-- #ifdef MP-WEIXIN -->
+      <view class="pp-mask" v-if="showWxAuth" @tap="showWxAuth = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
+        <view class="sheet-title">微信授权头像昵称</view>
+        <view class="wx-auth-row">
+          <button class="wx-avatar-btn" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+            <image v-if="wxAvatar" class="wx-avatar-img" :src="wxAvatar" mode="aspectFill"></image>
+            <view v-else class="wx-avatar-fallback"><text>👤</text></view>
+          </button>
+          <text class="wx-auth-hint">点击选择头像（含“使用微信头像”）</text>
+        </view>
+        <view class="wx-auth-row">
+          <input class="wx-nick-input" type="nickname" v-model="wxNickname" placeholder="点击自动填入微信昵称" />
+        </view>
+        <view class="sheet-actions">
+          <view class="btn-p plain sm" @click="showWxAuth = false">取消</view>
+          <view class="btn-p sm" @click="doWxLogin">微信登录</view>
+        </view>
+      </view></view>
+      <!-- #endif -->
 
     </view>
   </view>
@@ -103,14 +113,30 @@ function saveUser(user) {
   })
 }
 
+const showWxAuth = ref(false)
+
 async function wxLogin() {
+  errorMsg.value = ''
+  // #ifdef MP-WEIXIN
+  // 小程序: 弹出微信授权面板 (头像 nickname 数据均来自微信官方组件, 非手动输入)
+  showWxAuth.value = true
+  // #endif
+  // #ifndef MP-WEIXIN
+  uni.showModal({
+    title: '提示',
+    content: '微信一键登录需配置微信开放平台/公众号（App 与 H5 端）。当前请使用手机号登录，或前往小程序体验微信登录。',
+    showCancel: false,
+  })
+  // #endif
+}
+
+/* 真正执行微信登录: 已通过授权面板取得头像昵称 */
+async function doWxLogin() {
   errorMsg.value = ''
   loading.value = true
   try {
-    // #ifdef MP-WEIXIN
-    // 小程序: 点击登录时自动获取头像昵称 (微信授权, 无需手动选/填) → wx.login 换 code → 云函数登录
     let profile = { nickname: wxNickname.value || '', avatar: wxAvatar.value || '' }
-    // 未手动选择头像/昵称时, 尝试 getUserProfile 兜底 (新版基础库可能返回匿名)
+    // 未选头像/昵称时, getUserProfile 兜底 (部分基础库仍返回真实信息)
     if (!profile.nickname || !profile.avatar) {
       try {
         const p = await new Promise((resolve) => {
@@ -120,9 +146,9 @@ async function wxLogin() {
           profile.nickname = profile.nickname || p.userInfo.nickName || ''
           profile.avatar = profile.avatar || p.userInfo.avatarUrl || ''
         }
-      } catch (e) { /* 用户拒绝授权则匿名登录 */ }
+      } catch (e) { /* 保持当前值 */ }
     }
-    // 微信头像临时路径持久化: chooseAvatar/getUserProfile 返回的是临时路径, 重启失效 → 上传云存储换永久 URL
+    // 临时路径 → 云存储永久 fileID (cloud:// 原生渲染)
     if (profile.avatar && !/^https?:\/\//.test(profile.avatar)) {
       try {
         const storage = await getStorage()
@@ -130,9 +156,7 @@ async function wxLogin() {
           const cloudPath = 'avatars/wx' + Date.now() + '.png'
           const upRes = await storage.uploadFile(profile.avatar, cloudPath)
           const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
-          if (fileID) {
-            profile.avatar = String(fileID).replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
-          }
+          if (fileID) profile.avatar = String(fileID)
         }
       } catch (e) { /* 上传失败则保持原路径 */ }
     }
@@ -140,16 +164,9 @@ async function wxLogin() {
     if (!codeRes || !codeRes.code) throw new Error('微信登录失败，请重试')
     const user = await wechatLogin({ code: codeRes.code, nickname: profile.nickname, avatar: profile.avatar })
     saveUser(user)
+    showWxAuth.value = false
     uni.showToast({ title: '微信登录成功', icon: 'success' })
     setTimeout(() => uni.navigateBack(), 600)
-    // #endif
-    // #ifndef MP-WEIXIN
-    uni.showModal({
-      title: '提示',
-      content: '微信一键登录需配置微信开放平台/公众号（App 与 H5 端）。当前请使用手机号登录，或前往小程序体验微信登录。',
-      showCancel: false,
-    })
-    // #endif
   } catch (e) {
     errorMsg.value = e.message || '微信登录失败'
   } finally {
@@ -336,15 +353,14 @@ async function submit() {
   font-size: 22rpx;
   color: #b3a595;
 }
-.wx-profile {
+.wx-auth-sheet { padding: 40rpx 40rpx 60rpx; }
+.wx-auth-row {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 24rpx;
   margin: 24rpx 0;
-  padding: 20rpx 28rpx;
-  background: #f8f3ea;
-  border-radius: 16rpx;
 }
+.wx-auth-hint { font-size: 24rpx; color: #857563; flex: 1; }
 .wx-avatar-btn {
   flex-shrink: 0;
   width: 96rpx;
@@ -373,15 +389,14 @@ async function submit() {
   border-radius: 12rpx;
   padding: 0 20rpx;
 }
-.wx-profile {
+.wx-auth-sheet { padding: 40rpx 40rpx 60rpx; }
+.wx-auth-row {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 24rpx;
   margin: 24rpx 0;
-  padding: 20rpx 28rpx;
-  background: #f8f3ea;
-  border-radius: 16rpx;
 }
+.wx-auth-hint { font-size: 24rpx; color: #857563; flex: 1; }
 .wx-avatar-btn {
   flex-shrink: 0;
   width: 96rpx;

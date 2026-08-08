@@ -322,10 +322,15 @@ function pickAvatar() {
         const upRes = await storage.uploadFile(filePath, cloudPath)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
-        // fileID → https URL
-        const url = fileID
-          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        // #ifdef MP-WEIXIN
+        // 小程序: 直接用 cloud:// fileID (wx.cloud 原生渲染, 无需域名白名单)
+        profileForm.value.avatar = String(fileID)
+        // #endif
+        // #ifndef MP-WEIXIN
+        // H5/App: 用真实临时 URL (fileID 转 URL)
+        const url = String(fileID).replace(/^cloud:\/\/[^/]+\//, '')
         profileForm.value.avatar = url
+        // #endif
       } catch (e) {
         // 上传失败则用本地临时路径 (App 内可显示)
         profileForm.value.avatar = filePath
