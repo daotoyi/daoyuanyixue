@@ -1245,6 +1245,22 @@ async function adminList(data) {
   if (collection === 'users') {
     const rank = { admin: 0, manager: 1, staff: 2, user: 3 }
     res.data.sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || (a.uid - b.uid))
+    // 头像: cloud:// fileID → 可访问 URL (H5/后台无法直接渲染 cloud://)
+    const cloudUsers = res.data.filter((u) => u.avatar && u.avatar.startsWith('cloud://'))
+    if (cloudUsers.length) {
+      // cloud:// 转相对路径 (getTempFileURL 用相对路径最稳, 兼容各 fileID 格式)
+      const toRel = (fid) => String(fid).replace(/^cloud:\/\/[^/]+\//, '')
+      await Promise.all(
+        res.data.map(async (u) => {
+          if (u.avatar && u.avatar.startsWith('cloud://')) {
+            try {
+              const r2 = await app.getTempFileURL({ fileList: [toRel(u.avatar)] })
+              if (r2.fileList && r2.fileList[0] && r2.fileList[0].tempFileURL) u.avatar = r2.fileList[0].tempFileURL
+            } catch (e2) { /* 保持 */ }
+          }
+        })
+      )
+    }
   }
   return ok(res.data)
 }

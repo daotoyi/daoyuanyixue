@@ -861,7 +861,36 @@ async function loadModule(key) {
     } else if (key === 'products') await loadProductCates()
     else if (key === 'courses') await loadCourseCates()
     else if (key === 'orders') await loadOrders()
-    else if (key === 'users') users.value = await adminList({ collection: 'users' })
+    else if (key === 'users') {
+      users.value = await adminList({ collection: 'users' })
+      // cloud:// 头像转可访问 URL (H5 image 无法渲染 cloud://)
+      const cloudUids = users.value.filter((u) => u.avatar && u.avatar.startsWith('cloud://'))
+      if (cloudUids.length) {
+        try {
+          const storage = await getStorage()
+          if (storage && storage.getTempFileURL) {
+            const rels = cloudUids.map((u) => String(u.avatar).replace(/^cloud:\/\/[^/]+\//, ''))
+            // 兼容两种 SDK 签名: js-sdk 用 {fileList}, 小程序用数组
+            const tr = await (async () => {
+              // 小程序封装: 1参数传数组; js-sdk(H5): 传 {fileList}
+              if (storage.getTempFileURL.length <= 1) {
+                return await new Promise((resolve) => {
+                  const p = storage.getTempFileURL(rels)
+                  if (p && p.then) p.then(resolve).catch(() => resolve({ fileList: [] }))
+                  else resolve({ fileList: [] })
+                })
+              }
+              return await new Promise((resolve) => storage.getTempFileURL({ fileList: rels }, { success: resolve, fail: () => resolve({ fileList: [] }) }))
+            })()
+            const urlMap = {}
+            ;((tr && tr.fileList) || []).forEach((f, i) => {
+              if (f.tempFileURL) urlMap[cloudUids[i].uid] = f.tempFileURL
+            })
+            users.value = users.value.map((u) => (urlMap[u.uid] ? { ...u, avatar: urlMap[u.uid] } : u))
+          }
+        } catch (e) { /* 转换失败保持 */ }
+      }
+    }
     else if (key === 'lives') lives.value = await adminList({ collection: 'live_streams' })
     else if (key === 'moments') moments.value = await adminList({ collection: 'moments' })
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })

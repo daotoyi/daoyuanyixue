@@ -58,9 +58,9 @@
         <view class="wx-auth-row">
           <input class="wx-nick-input" type="nickname" v-model="wxNickname" placeholder="点击自动填入微信昵称" />
         </view>
-        <view class="sheet-actions">
-          <view class="btn-p plain sm" @click="showWxAuth = false">取消</view>
-          <view class="btn-p sm" @click="doWxLogin">微信登录</view>
+        <view class="wx-auth-actions">
+          <view class="btn-p plain wx-auth-btn" @click="showWxAuth = false">取消</view>
+          <view class="btn-p wx-auth-btn" @click="doWxLogin">微信登录</view>
         </view>
       </view></view>
       <!-- #endif -->
@@ -354,6 +354,16 @@ async function submit() {
   color: #b3a595;
 }
 .wx-auth-sheet { padding: 40rpx 40rpx 60rpx; }
+.wx-auth-actions {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 40rpx;
+}
+.wx-auth-actions .wx-auth-btn {
+  flex: 1;
+  height: 92rpx;
+  font-size: 30rpx;
+}
 .wx-auth-row {
   display: flex;
   align-items: center;
@@ -390,6 +400,16 @@ async function submit() {
   padding: 0 20rpx;
 }
 .wx-auth-sheet { padding: 40rpx 40rpx 60rpx; }
+.wx-auth-actions {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 40rpx;
+}
+.wx-auth-actions .wx-auth-btn {
+  flex: 1;
+  height: 92rpx;
+  font-size: 30rpx;
+}
 .wx-auth-row {
   display: flex;
   align-items: center;
