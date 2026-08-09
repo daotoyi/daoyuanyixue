@@ -2,11 +2,26 @@
   "description": "WorkBuddy - 智能工作助手",
   "packOptions": {
     "ignore": [
-      { "type": "file", "value": ".gitignore" },
-      { "type": "folder", "value": ".workbuddy" },
-      { "type": "folder", "value": "config" },
-      { "type": "file", "value": "cloudbaserc.json" },
-      { "type": "glob", "value": "**/*.md" }
+      {
+        "type": "file",
+        "value": ".gitignore"
+      },
+      {
+        "type": "folder",
+        "value": ".workbuddy"
+      },
+      {
+        "type": "folder",
+        "value": "config"
+      },
+      {
+        "type": "file",
+        "value": "cloudbaserc.json"
+      },
+      {
+        "type": "glob",
+        "value": "**/*.md"
+      }
     ],
     "include": []
   },
@@ -46,22 +61,19 @@
   },
   "compileType": "miniprogram",
   "libVersion": "3.7.0",
-  "appid": "wxe4eea58de8107961",
+  "appid": "wx3ec1337aae9ace3c",
   "projectname": "zhs-workbuddy",
   "condition": {},
-
   "/* --- macOS 路径适配：全部使用小写 + 正斜杠 --- */": "",
   "miniprogramRoot": "dist/build/mp-weixin/",
   "srcMiniprogramRoot": "src/",
   "qcloudRoot": "cloudfunctions/",
   "pluginRoot": "",
-
   "/* ==================== TCB 域名自动适配到小程序合法域名 ==================== */": "",
   "_tcb_domain_note": "适配环境 zhenhesheng-d6gkez7p221305432 (ap-shanghai)",
   "cloudfunctionRoot": "cloudfunctions/",
   "cloudbaseRoot": "cloudbaserc.json",
   "cloud": true,
-
   "scripts": {
     "beforeCompile": "",
     "beforePreview": "",
