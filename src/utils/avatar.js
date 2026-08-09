@@ -32,30 +32,29 @@ export async function resolveCloudUrl(src) {
 }
 
 /**
- * 批量转换 (用于列表数据, 走云函数一次性转换)
+ * 批量转换 (用于列表数据, 走云函数一次性转换, 按 fileID 精确匹配防止错位)
  * @param {Array} list 数据数组
  * @param {string} field 头像字段名 (默认 avatar)
- * @param {Function} keyFn 可选: 取每项的转换标识 (默认取 field 值)
  * @returns {Promise<Array>} 转换后的新数组 (转换成功的项替换 field)
  */
-export async function resolveCloudList(list, field = 'avatar', keyFn) {
+export async function resolveCloudList(list, field = 'avatar') {
   if (!Array.isArray(list) || !list.length) return list
   const need = list.filter((item) => item && isCloudFile(item[field]))
   if (!need.length) return list
   try {
     const fileList = need.map((item) => item[field])
     const res = await fileUrl({ fileList })
+    // 按 fileID 匹配 (服务端返回顺序可能不一致, 不能按 index 对应!)
     const urlMap = {}
-    ;((res && res.list) || []).forEach((f, i) => {
-      if (f.url) {
-        const key = keyFn ? keyFn(need[i]) : need[i][field]
-        urlMap[key] = f.url
-        _cache[need[i][field]] = f.url
+    ;((res && res.list) || []).forEach((f) => {
+      if (f.url && f.fileID) {
+        urlMap[f.fileID] = f.url
+        _cache[f.fileID] = f.url
       }
     })
     return list.map((item) => {
-      const key = keyFn ? keyFn(item) : item[field]
-      return urlMap[key] ? { ...item, [field]: urlMap[key] } : item
+      const src = item[field]
+      return urlMap[src] ? { ...item, [field]: urlMap[src] } : item
     })
   } catch (e) {
     console.error('[avatar] 批量转换失败', e)
