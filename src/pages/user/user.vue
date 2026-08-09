@@ -506,14 +506,14 @@ onShow(async () => {
 }
 .home-entry {
   position: absolute;
-  right: 196rpx;
-  top: 44rpx;
+  right: 40rpx;
+  bottom: 24rpx;
   z-index: 5;
   display: flex;
   align-items: center;
   gap: 8rpx;
-  padding: 0 20rpx;
-  height: 64rpx;
+  padding: 0 24rpx;
+  height: 56rpx;
   border-radius: 999rpx;
   background: rgba(254, 251, 246, 0.16);
   border: 1rpx solid rgba(254, 251, 246, 0.3);
