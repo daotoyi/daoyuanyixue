@@ -1791,7 +1791,17 @@ async function pandaoBook(data) {
   return ok({ order_no, order_type: 'appointment' })
 }
 
-/* 后台: 新增盘道场次 */
+/* 取消盘道预约: 删除该用户该场次的预约订单 */
+async function pandaoCancel(data) {
+  const { uid, session_id } = data
+  if (!uid) return fail('请先登录')
+  if (!session_id) return fail('缺少场次')
+  const res = await db.collection('orders')
+    .where({ uid: Number(uid), session_id: Number(session_id), order_type: 'appointment' })
+    .remove()
+  if (!res.deleted) return fail('未找到预约记录')
+  return ok({ deleted: true, count: res.deleted })
+}
 async function adminPandaoCreate(data) {
   await ensureCollection('pandao_sessions')
   const max = await db.collection('pandao_sessions').orderBy('id', 'desc').limit(1).get().catch(() => ({ data: [] }))
@@ -2492,6 +2502,7 @@ const ROUTES = {
   'live.myBookings': myBookings,
   'pandao.list': pandaoList,
   'pandao.book': pandaoBook,
+  'pandao.cancel': pandaoCancel,
   'pandao.mine': pandaoMine,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,

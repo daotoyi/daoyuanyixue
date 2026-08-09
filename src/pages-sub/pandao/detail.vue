@@ -35,7 +35,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
-import { getPandaoDetail, pandaoBook, getPandaoMine } from '../../api/api'
+import { getPandaoDetail, pandaoBook, pandaoCancel, getPandaoMine } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -89,10 +89,30 @@ function shareH5() {
 }
 
 async function bookNow() {
-  if (!session.value || session.value._booked) return
+  if (!session.value) return
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录再报名', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  // 已预约 → 取消预约
+  if (session.value._booked) {
+    uni.showModal({
+      title: '取消预约',
+      content: '确定取消该场次的预约吗？',
+      confirmText: '取消预约',
+      confirmColor: '#b04a45',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await pandaoCancel({ uid: userStore.userInfo.uid, session_id: sessionId.value })
+          session.value._booked = false
+          uni.showToast({ title: '已取消预约', icon: 'success' })
+        } catch (e) {
+          uni.showToast({ title: (e && e.message) || '取消失败', icon: 'none' })
+        }
+      },
+    })
     return
   }
   try {
@@ -193,11 +213,12 @@ async function bookNow() {
   display: flex;
   gap: 20rpx;
   align-items: center;
+  justify-content: center;
 }
 .pd-share-btn {
-  flex: 1;
-  height: 72rpx;
-  line-height: 72rpx;
+  width: 220rpx;
+  height: 76rpx;
+  line-height: 76rpx;
   text-align: center;
   padding: 0;
   border-radius: 999rpx;
@@ -219,16 +240,17 @@ async function bookNow() {
   display: flex;
   gap: 20rpx;
   align-items: center;
+  justify-content: center;
 }
 .pd-book-btn {
-  flex: 1;
+  width: 260rpx;
   background: #8c5a2b;
   color: #fff;
   font-size: 26rpx;
   font-weight: bold;
   text-align: center;
-  height: 72rpx;
-  line-height: 72rpx;
+  height: 76rpx;
+  line-height: 76rpx;
   padding: 0;
   border-radius: 999rpx;
 }
