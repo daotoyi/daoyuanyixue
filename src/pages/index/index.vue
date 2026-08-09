@@ -207,11 +207,22 @@ import { onShow } from '@dcloudio/uni-app'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
-// 默认只显示 推荐 + 盘道; 关注/直播 由后台首页管理开关控制 (默认隐藏)
+// tab 顺序固定: 推荐 → 关注 → 盘道 → 直播 (显示与否由后台首页管理开关控制)
 const tabs = ref([
   { key: 'recommend', label: '推荐' },
   { key: 'pandao', label: '盘道' },
 ])
+
+/* 按后台配置构建 tabs (保持固定顺序) */
+function buildTabs(cfg) {
+  const arr = []
+  if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐' })
+  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '关注' })
+  arr.push({ key: 'pandao', label: '盘道' }) // 盘道始终显示
+  if (cfg.show_live === true) arr.push({ key: 'live', label: '直播' })
+  tabs.value = arr
+  if (!arr.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
+}
 
 const currentTab = ref('recommend')
 const momentList = ref([])
@@ -445,13 +456,7 @@ onShow(async () => {
   try {
     const cfg = await getPayConfig()
     homeShowPublish.value = cfg.show_publish === true
-    const want = []
-    if (cfg.show_follow === true) want.push({ key: 'follow', label: '关注' })
-    if (cfg.show_live === true) want.push({ key: 'live', label: '直播' })
-    const has = (k) => tabs.value.some((t) => t.key === k)
-    want.forEach((t) => { if (!has(t.key)) tabs.value.push(t) })
-    // 当前 tab 被隐藏时切回推荐
-    if (!tabs.value.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
+    buildTabs(cfg)
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
 
   // ①.5 我的关注列表 (关注页只显示关注的人)

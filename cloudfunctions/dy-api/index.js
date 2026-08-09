@@ -2289,12 +2289,13 @@ async function appPayConfig() {
     return ok({
       show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
       show_balance: payDoc.show_balance !== '0', // 默认显示余额
+      show_recommend: homeDoc.show_recommend !== '0', // 首页精选推荐tab, 默认显示
       show_publish: homeDoc.show_publish === '1' || homeDoc.show_publish === true || false, // 首页发布动态按钮, 默认隐藏
       show_live: homeDoc.show_live === '1' || homeDoc.show_live === true || false, // 首页直播入口, 默认隐藏
       show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_publish: false, show_live: false, show_follow: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_live: false, show_follow: false })
   }
 }
 
