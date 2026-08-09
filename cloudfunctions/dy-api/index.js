@@ -147,6 +147,114 @@ async function listMoments() {
   return ok(res.data)
 }
 
+/* ============ 动态点赞 / 关注 / 个人主页 ============ */
+
+/* 点赞/取消点赞 (likes 集合持久化 + 通知) */
+async function toggleMomentLike(data) {
+  const { uid, moment_id } = data
+  if (!uid || !moment_id) return fail('缺少参数')
+  await ensureCollection('moment_likes')
+  const momentId = Number(moment_id)
+  const existed = (await db.collection('moment_likes').where({ uid: Number(uid), moment_id: momentId }).limit(1).get()).data[0]
+  let liked = false
+  if (existed) {
+    await db.collection('moment_likes').where({ _id: existed._id }).remove()
+    await db.collection('moments').where({ id: momentId }).update({ likes: db.command.inc(-1) }).catch(() => {})
+  } else {
+    await db.collection('moment_likes').add({ uid: Number(uid), moment_id: momentId, created_at: new Date().toLocaleString('zh-CN', { hour12: false }) })
+    liked = true
+    await db.collection('moments').where({ id: momentId }).update({ likes: db.command.inc(1) }).catch(() => {})
+    // 通知动态作者
+    try {
+      const m = (await db.collection('moments').where({ id: momentId }).limit(1).get()).data[0]
+      if (m && m.user_id && Number(m.user_id) !== Number(uid)) {
+        await db.collection('messages').add({
+          id: Date.now() % 1000000,
+          uid: Number(m.user_id),
+          type: 'like',
+          title: '收到点赞',
+          content: '有人赞了你的动态',
+          read: false,
+          created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        })
+      }
+    } catch (e) {}
+  }
+  return ok({ liked })
+}
+
+/* 是否已点赞列表 (前端标记) */
+async function myLikes(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  await ensureCollection('moment_likes')
+  const res = await db.collection('moment_likes').where({ uid: Number(uid) }).limit(200).get()
+  return ok(res.data.map((r) => r.moment_id))
+}
+
+/* 关注/取消关注 */
+async function followUser(data) {
+  const { uid, target_uid } = data
+  if (!uid || !target_uid) return fail('缺少参数')
+  if (Number(uid) === Number(target_uid)) return fail('不能关注自己')
+  await ensureCollection('follows')
+  const existed = (await db.collection('follows').where({ uid: Number(uid), target_uid: Number(target_uid) }).limit(1).get()).data[0]
+  let followed = false
+  if (existed) {
+    await db.collection('follows').where({ _id: existed._id }).remove()
+  } else {
+    await db.collection('follows').add({ uid: Number(uid), target_uid: Number(target_uid), created_at: new Date().toLocaleString('zh-CN', { hour12: false }) })
+    followed = true
+  }
+  return ok({ followed })
+}
+
+/* 我关注的人 (uid→用户信息) */
+async function myFollowList(data) {
+  const { uid, type } = data
+  if (!uid) return ok([])
+  await ensureCollection('follows')
+  let rels
+  if (type === 'fans') {
+    rels = (await db.collection('follows').where({ target_uid: Number(uid) }).limit(200).get()).data // 关注我的人
+  } else {
+    rels = (await db.collection('follows').where({ uid: Number(uid) }).limit(200).get()).data // 我关注的人
+  }
+  const uids = rels.map((r) => (type === 'fans' ? r.uid : r.target_uid))
+  if (!uids.length) return ok([])
+  const users = (await db.collection('users').where({ uid: _.in(uids) }).limit(50).get()).data
+  return ok(users.map((u) => ({ uid: u.uid, nickname: u.nickname, avatar: u.avatar, dao_code: u.dao_code })))
+}
+
+/* 个人主页: 用户信息 + 动态 + 关注/粉丝数 */
+async function userProfile(data) {
+  const { uid, viewer_uid } = data
+  if (!uid) return fail('缺少用户')
+  const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+  if (!u) return fail('用户不存在')
+  await ensureCollection('follows')
+  await ensureCollection('moment_likes')
+  const [moments, follows, fans, likedMe] = await Promise.all([
+    db.collection('moments').where({ user_id: Number(uid) }).orderBy('id', 'desc').limit(50).get(),
+    db.collection('follows').where({ uid: Number(uid) }).count(),
+    db.collection('follows').where({ target_uid: Number(uid) }).count(),
+    db.collection('moment_likes').where({ uid: Number(uid) }).limit(100).get(),
+  ])
+  // 是否已关注
+  let is_followed = false
+  if (viewer_uid) {
+    is_followed = !!(await db.collection('follows').where({ uid: Number(viewer_uid), target_uid: Number(uid) }).limit(1).get()).data.length
+  }
+  return ok({
+    user: { uid: u.uid, nickname: u.nickname, avatar: u.avatar, dao_code: u.dao_code, bio: u.bio || '' },
+    moments: moments.data,
+    follow_count: follows.total || 0,
+    fan_count: fans.total || 0,
+    liked_me: likedMe.data.length, // 收到的点赞数
+    is_followed,
+  })
+}
+
 async function deleteOwnMoment(data) {
   const { user_id, _id } = data
   if (user_id === undefined || !_id) return fail('缺少参数')
@@ -1987,6 +2095,11 @@ const ROUTES = {
   'moments.list': listMoments,
   'moments.publish': publishMoment,
   'moments.deleteOwn': deleteOwnMoment,
+  'moments.like': toggleMomentLike,
+  'moments.myLikes': myLikes,
+  'user.follow': followUser,
+  'user.followList': myFollowList,
+  'user.profile': userProfile,
   'comments.list': listComments,
   'comments.add': addComment,
   'live.list': listLiveStreams,

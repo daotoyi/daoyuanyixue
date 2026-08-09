@@ -186,6 +186,14 @@
      }
     },
     {
+     "path": "user/profile",
+     "style": {
+      "navigationBarTitleText": "个人主页",
+      "navigationBarBackgroundColor": "#FFFCF5",
+      "navigationBarTextStyle": "black"
+     }
+    },
+    {
      "path": "user/assets",
      "style": {
       "navigationBarTitleText": "我的资产",

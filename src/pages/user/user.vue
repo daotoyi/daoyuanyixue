@@ -18,7 +18,7 @@
           <view v-else class="user-avatar avatar-fallback">
             <text>{{ userInfo.nickname ? userInfo.nickname[0] : '客' }}</text>
           </view>
-          <view class="avatar-edit" v-if="isLoggedIn"><text>✎</text></view>
+          <view class="avatar-edit" v-if="isLoggedIn" @tap.stop="editProfile()"><text>✎</text></view>
         </view>
         <view class="user-meta">
           <template v-if="isLoggedIn">
@@ -301,6 +301,11 @@ function copyDaoCode() {
 }
 
 function openProfile() {
+  // 头像点击 → 个人主页 (含我的动态/关注/粉丝/收到的赞)
+  uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + (userInfo.value.uid || 0) })
+}
+
+function editProfile() {
   profileForm.value = { nickname: userInfo.value.nickname || '', avatar: userInfo.value.avatar || '' }
   showProfile.value = true
 }

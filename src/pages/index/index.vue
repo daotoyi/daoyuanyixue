@@ -28,8 +28,8 @@
       <view class="feed" v-if="shownMoments.length">
         <view class="moment-card" v-for="m in shownMoments" :key="m.id">
           <view class="moment-head">
-            <view class="avatar-circle"><text>{{ m.user_name[0] }}</text></view>
-            <view class="moment-user">
+            <view class="avatar-circle" @tap.stop="goProfile(m)"><text>{{ m.user_name[0] }}</text></view>
+            <view class="moment-user" @tap.stop="goProfile(m)">
               <text class="moment-name">{{ m.user_name }}</text>
               <text class="moment-time">{{ m.created_at }}</text>
             </view>
@@ -190,7 +190,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const tabs = ref([
@@ -211,7 +211,9 @@ const userStore = useUserStore()
 
 // 推荐=全部动态; 关注=精选(推荐)动态
 const shownMoments = computed(() => {
-  if (currentTab.value === 'follow') return momentList.value.filter((m) => m.is_recommended)
+  // 推荐=被推荐动态; 关注=我关注的人发的动态(暂用推荐精选); 未推荐的不显示在推荐页
+  if (currentTab.value === 'recommend') return momentList.value.filter((m) => m.is_recommended)
+  if (currentTab.value === 'follow') return momentList.value
   return momentList.value
 })
 
@@ -226,8 +228,12 @@ function switchTab(key) {
 /* 刷新动态列表 (推荐/关注共用) */
 async function refreshMoments() {
   try {
-    const moments = await getMoments()
-    momentList.value = moments.map((m) => ({ ...m, _liked: false }))
+    const [moments, likes] = await Promise.all([
+      getMoments(),
+      userStore.isLoggedIn ? myLikes({ uid: userStore.userInfo.uid }).catch(() => []) : Promise.resolve([]),
+    ])
+    const likedIds = new Set((likes || []).map((id) => Number(id)))
+    momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
   } catch (e) {}
 }
 
@@ -324,9 +330,31 @@ async function submitComment(m) {
   }
 }
 
-function toggleLike(m) {
-  m._liked = !m._liked
-  m.likes += m._liked ? 1 : -1
+async function toggleLike(m) {
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  const prev = m._liked
+  m._liked = !prev
+  m.likes = Math.max(0, (m.likes || 0) + (m._liked ? 1 : -1))
+  try {
+    const res = await momentLike({ uid: userStore.userInfo.uid, moment_id: m.id })
+    if (res.liked !== m._liked) {
+      m._liked = res.liked
+      m.likes = Math.max(0, (m.likes || 0) + (res.liked ? 1 : -1))
+    }
+  } catch (e) {
+    m._liked = prev
+    m.likes = Math.max(0, (m.likes || 0) - (m._liked ? 1 : -1))
+    uni.showToast({ title: '点赞失败', icon: 'none' })
+  }
+}
+
+/* 进入个人主页 (仅非官方号) */
+function goProfile(m) {
+  if (!m || !m.user_id) return
+  uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + m.user_id })
 }
 
 function goPublish() {
@@ -370,10 +398,12 @@ function enterLive(l) {
 
 onShow(async () => {
   try {
-    const [moments, lives, pandao] = await Promise.all([
+    const [moments, lives, pandao, likes] = await Promise.all([
       getMoments(), getLiveStreams(), getPandaoList(),
+      userStore.isLoggedIn ? myLikes({ uid: userStore.userInfo.uid }).catch(() => []) : Promise.resolve([]),
     ])
-    momentList.value = moments.map((m) => ({ ...m, _liked: false }))
+    const likedIds = new Set((likes || []).map((id) => Number(id)))
+    momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
     liveList.value = lives.map((l) => ({ ...l, _booked: false }))
     pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
     // 后台配置: 首页是否显示发布动态按钮
