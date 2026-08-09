@@ -194,7 +194,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 // 默认只显示 推荐 + 盘道; 关注/直播 由后台首页管理开关控制 (默认隐藏)
@@ -205,6 +205,7 @@ const tabs = ref([
 
 const currentTab = ref('recommend')
 const momentList = ref([])
+const followUids = ref([]) // 我关注的用户 uid 列表 (关注页过滤用)
 const liveList = ref([])
 const pandaoList = ref([])
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
@@ -214,9 +215,12 @@ const userStore = useUserStore()
 
 // 推荐=全部动态; 关注=精选(推荐)动态
 const shownMoments = computed(() => {
-  // 推荐=被推荐动态; 关注=我关注的人发的动态(暂用推荐精选); 未推荐的不显示在推荐页
+  // 推荐=被推荐动态; 关注=我关注的人发的动态; 未推荐的不显示在推荐页
   if (currentTab.value === 'recommend') return momentList.value.filter((m) => m.is_recommended)
-  if (currentTab.value === 'follow') return momentList.value
+  if (currentTab.value === 'follow') {
+    // 只显示我关注的人 (user_id) 发的动态
+    return momentList.value.filter((m) => followUids.value.includes(Number(m.user_id)))
+  }
   return momentList.value
 })
 
@@ -417,6 +421,15 @@ onShow(async () => {
     // 当前 tab 被隐藏时切回推荐
     if (!tabs.value.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
+
+  // ①.5 我的关注列表 (关注页只显示关注的人)
+  followUids.value = []
+  if (userStore.isLoggedIn) {
+    try {
+      const fl = await followList({ uid: userStore.userInfo.uid, type: 'follow' })
+      followUids.value = (fl || []).map((u) => Number(u.uid))
+    } catch (e) { /* 忽略 */ }
+  }
 
   // ② 盘道活动: 独立加载 (任一接口失败不影响盘道展示)
   try {

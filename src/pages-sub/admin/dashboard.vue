@@ -81,7 +81,7 @@
           </view>
           <view class="settings-card">
             <view class="settings-desc">
-              <text class="sd-title">首页展示配置</text>
+              <text class="sd-title">首页显示</text>
               <text class="sd-text">控制小程序首页功能入口的显示/隐藏</text>
             </view>
             <view class="f-row">
@@ -91,15 +91,15 @@
               </view>
             </view>
             <view class="f-row">
-              <text class="f-label">直播入口</text>
+              <text class="f-label">关注账号</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
+                <switch :checked="homeCfg.show_follow" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
-              <text class="f-label">关注</text>
+              <text class="f-label">直播入口</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_follow" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
+                <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
