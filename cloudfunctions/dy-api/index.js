@@ -157,9 +157,97 @@ async function deleteOwnMoment(data) {
   return ok({ deleted: true })
 }
 
+/* 微信小程序 access_token (缓存 110 分钟) */
+let _wxToken = { value: '', expires: 0 }
+async function getWxAccessToken() {
+  if (_wxToken.value && Date.now() < _wxToken.expires) return _wxToken.value
+  const c = require('./config.local')
+  const appid = c.WXPAY_APPID || 'wx3ec1337aae9ace3c'
+  const secret = c.WX_APPSECRET || ''
+  if (!secret) return ''
+  const https = require('https')
+  const url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appid}&secret=${secret}`
+  const token = await new Promise((resolve) => {
+    https.get(url, (res) => {
+      let d = ''
+      res.on('data', (chunk) => (d += chunk))
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d)
+          resolve(j.access_token || '')
+        } catch (e) { resolve('') }
+      })
+    }).on('error', () => resolve(''))
+  })
+  if (token) { _wxToken.value = token; _wxToken.expires = Date.now() + 110 * 60 * 1000 }
+  return token
+}
+
+/**
+ * 文本内容安全检测 (msgSecCheck, HTTP access_token 方案)
+ * 返回 { hit: true } 表示命中违规; { hit: false } 表示安全; 抛错表示接口异常
+ */
+async function secCheckText(content) {
+  const text = String(content || '').slice(0, 2500)
+  if (!text) return { hit: false }
+  // 优先 openapi (微信原生云环境可用)
+  try {
+    if (_wxCloud) {
+      const sec = await _wxCloud.openapi.security.msgSecCheck({ content: text })
+      if (sec && sec.errCode === 0) return { hit: false }
+      if (sec && sec.errCode !== 0) return { hit: true }
+    }
+  } catch (e) { /* 落到 HTTP 方案 */ }
+  // HTTP 方案
+  const token = await getWxAccessToken()
+  if (!token) return { hit: false } // 无 AppSecret 时放行 (不阻塞)
+  const https = require('https')
+  const body = JSON.stringify({ content: text })
+  const result = await new Promise((resolve) => {
+    const req = https.request(`https://api.weixin.qq.com/wxa/msg_sec_check?access_token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let d = ''
+      res.on('data', (chunk) => (d += chunk))
+      res.on('end', () => {
+        try { resolve(JSON.parse(d)) } catch (e) { resolve({}) }
+      })
+    })
+    req.on('error', () => resolve({}))
+    req.write(body)
+    req.end()
+  })
+  if (result && (result.errcode === 87014 || result.result && result.result.suggest === 'risky')) return { hit: true }
+  return { hit: false }
+}
+
+/* 确保集合存在 (首次访问自动创建, 避免 ResourceNotFound) */
+let _ensuring = {}
+async function ensureCollection(name) {
+  if (!name) return
+  if (_ensuring[name]) return _ensuring[name]
+  _ensuring[name] = (async () => {
+    try {
+      // 尝试读一次, 不存在则创建
+      await db.collection(name).limit(1).get()
+    } catch (e) {
+      if (e && (e.code === 'DATABASE_COLLECTION_NOT_EXIST' || /not exist/i.test(e.message || ''))) {
+        try { await db.createCollection(name) } catch (e2) { /* 并发创建可能已存在 */ }
+      }
+    }
+  })()
+  try {
+    await _ensuring[name]
+  } finally {
+    delete _ensuring[name]
+  }
+}
+
 async function listComments(data) {
   const momentId = data.moment_id
   if (!momentId) return fail('缺少动态 ID')
+  await ensureCollection('comments')
   const res = await db.collection('comments').where({ moment_id: Number(momentId) }).orderBy('created_at', 'asc').limit(200).get()
   return ok(res.data)
 }
@@ -167,7 +255,19 @@ async function listComments(data) {
 async function addComment(data) {
   const { moment_id, content, user_id, user_name } = data
   if (!moment_id || !content) return fail('缺少参数')
+  await ensureCollection('comments')
+  // 内容安全检查 (评论也是发布场景, 提审要求任意发布生效)
+  try {
+    const sec = await secCheckText(String(content))
+    if (sec && sec.hit) {
+      return fail('评论内容含违规信息')
+    }
+  } catch (e) {
+    console.error('[dy-api] 评论安全检查失败:', e.message || e)
+  }
+  const commentId = Date.now()
   const doc = {
+    id: commentId,
     moment_id: Number(moment_id),
     user_id: user_id || 0,
     user_name: user_name || '道友',
@@ -177,17 +277,29 @@ async function addComment(data) {
   await db.collection('comments').add(doc)
   // 动态评论数 +1
   await db.collection('moments').where({ id: Number(moment_id) }).update({ comments: db.command.inc(1) }).catch(() => {})
-  return ok({ id: doc.id, created_at: doc.created_at })
+  return ok({ id: commentId, created_at: doc.created_at })
 }
 
 async function publishMoment(data) {
+  const content = String(data.content || '')
+  // 内容安全检查 (提审要求: 任意发布场景生效; HTTP access_token 方案 + openapi 兜底)
+  try {
+    const sec = await secCheckText(content)
+    if (sec && sec.hit) {
+      // 命中违规: 仅提示"内容含违规信息"
+      return fail('发布内容含违规信息，请修改后重试')
+    }
+  } catch (e) {
+    // 接口异常不阻塞发布 (保证可用性)
+    console.error('[dy-api] 内容安全检查失败:', e.message || e)
+  }
   const momentId = Date.now()
   const doc = {
     id: momentId,
     user_id: data.user_id || 0,
     user_name: data.user_name || '道友',
     avatar: data.avatar || '',
-    content: data.content,
+    content,
     images: data.images || [],
     likes: 0,
     comments: 0,
@@ -195,7 +307,7 @@ async function publishMoment(data) {
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   await db.collection('moments').add(doc)
-  return ok({ ...doc, id: Date.now() })
+  return ok({ ...doc })
 }
 
 /* ============ 直播 ============ */
@@ -694,6 +806,20 @@ async function aiAsk(data) {
 /* 获取当前调用者 OPENID: 微信云开发环境用 wx-server-sdk 的 getWXContext
    (@cloudbase/node-sdk 没有该方法, 之前调 app.getWXContext() 抛错导致走 jscode2session 兜底) */
 let _wxCloud = null
+/* 探测 openapi 可用性 (调试用) */
+async function probeOpenapi() {
+  try {
+    if (!_wxCloud) {
+      _wxCloud = require('wx-server-sdk')
+      _wxCloud.init({ env: _wxCloud.DYNAMIC_CURRENT_ENV })
+    }
+    const r = await _wxCloud.openapi.security.msgSecCheck({ content: '测试内容' })
+    return ok({ openapi: true, result: r })
+  } catch (e) {
+    return ok({ openapi: false, err: e.message || String(e) })
+  }
+}
+
 function getWxOpenId() {
   try {
     if (!_wxCloud) {
@@ -1727,6 +1853,7 @@ const ROUTES = {
   'user.assets': userAssets,
   'user.wechatLogin': wechatLogin,
   'user.wechatCheck': wechatCheck,
+  'app.probeOpenapi': probeOpenapi,
   'user.coupons': myCoupons,
   'user.favorites': myFavorites,
   'user.favorite.toggle': toggleFavorite,
