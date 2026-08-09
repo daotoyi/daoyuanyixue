@@ -261,7 +261,6 @@ const isAdmin = computed(() => userInfo.value.role === 'admin' || userInfo.value
 
 const menuItems = [
   { key: 'invite', label: '邀请有礼', icon: '🎁' },
-  { key: 'gzh', label: '服务号消息通知', icon: '📢' },
   { key: 'cart', label: '购物车', icon: '🛒' },
   { key: 'feedback', label: '意见反馈', icon: '✉' },
   { key: 'about', label: '关于我们', icon: '☯' },
@@ -385,31 +384,11 @@ function copyInviteLink() {
   })
 }
 
-/* 服务号消息通知绑定: 复制绑定链接, 微信内打开完成授权 */
-function onGzhBind() {
-  if (!isLoggedIn.value) return goLogin()
-  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/gzh-bind.html?uid=' + (userInfo.value.uid || 0)
-  uni.setClipboardData({
-    data: link,
-    success: () => {
-      uni.showModal({
-        title: '服务号消息通知',
-        content: '绑定链接已复制：\n' + link + '\n\n请在微信中打开链接完成绑定。绑定后，订单支付成功、发货等消息将通过「真和盛」服务号推送给您。（需先关注服务号）',
-        showCancel: false,
-        confirmText: '知道了',
-      })
-    },
-  })
-}
-
 function onMenu(m) {
   if (!isLoggedIn.value && m.key !== 'about') return goLogin()
   switch (m.key) {
     case 'invite':
       showInvite.value = true
-      break
-    case 'gzh':
-      onGzhBind()
       break
     case 'cart':
       uni.navigateTo({ url: '/pages-sub/cart/cart' })

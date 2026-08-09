@@ -141,6 +141,16 @@
           <text>关注</text>
         </view>
       </view>
+      <view class="pandao-follow pandao-notify">
+        <text class="pf-icon">🔔</text>
+        <view class="pf-info">
+          <text class="pf-title">接收订单/盘道/课程消息通知</text>
+          <text class="pf-desc">绑定「真和盛」服务号，订单支付、盘道活动、课程动态实时推送</text>
+        </view>
+        <view class="pf-btn" @tap="bindGzhNotify">
+          <text>开启通知</text>
+        </view>
+      </view>
       <view class="empty" v-if="!pandaoList.length">
         <text class="empty-icon">☯️</text>
         <text class="empty-tip">暂无盘道活动</text>
@@ -269,6 +279,28 @@ async function bookPandao(pd) {
   } catch (e) {
     uni.showToast({ title: e.message || '报名失败', icon: 'none' })
   }
+}
+
+/* 消息通知绑定: 复制服务号绑定链接, 微信内打开授权 */
+function bindGzhNotify() {
+  const us = useUserStore()
+  if (!us.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/gzh-bind.html?uid=' + (us.userInfo.uid || 0)
+  uni.setClipboardData({
+    data: link,
+    success: () => {
+      uni.showModal({
+        title: '开启消息通知',
+        content: '绑定链接已复制：\n' + link + '\n\n请在微信中打开链接完成绑定。绑定后，订单支付成功、盘道活动、课程动态将通过「真和盛」服务号推送给您。（需先关注服务号）',
+        showCancel: false,
+        confirmText: '知道了',
+      })
+    },
+  })
 }
 
 /* 关注公众号: 复制微信号 zhenhesheng_com 引导微信内搜索关注 */
@@ -777,6 +809,9 @@ onShow(async () => {
 }
 
 /* 盘道关注公众号 */
+.pandao-notify {
+  border: 1rpx solid #d8c9a8;
+}
 .pandao-follow {
   display: flex;
   align-items: center;
