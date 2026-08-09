@@ -2,9 +2,10 @@
   <view class="assets-page">
     <!-- 积分 -->
     <view class="balance-card" v-if="type === 'balance'">
+      <text class="bc-corner">1 积分 = 1 元</text>
       <text class="bc-label">我的积分</text>
       <text class="bc-num">{{ userInfo.balance || '0' }} <text class="bc-unit">积分</text></text>
-      <text class="bc-tip">1 积分 = 1 元抵扣 · AI 提问每次消耗 0.5 积分 · 充值 1 元 = 9.9 积分</text>
+      <text class="bc-tip">充值 1 元获得 1 积分，积分可在结算时抵扣</text>
       <view class="bc-actions">
         <view class="btn-p sm" @click="goRecharge">充值积分</view>
         <view class="btn-p plain sm" @click="goShop">去购物</view>
@@ -83,11 +84,11 @@ function goShop() {
   uni.switchTab({ url: '/pages/shop/shop' })
 }
 
-/* 充值积分: 1元=9.9积分 */
+/* 充值积分: 1元=1积分 */
 function goRecharge() {
   const amounts = [10, 30, 50, 100]
   uni.showActionSheet({
-    itemList: amounts.map((a) => '充 ' + a + ' 元 → ' + (a * 9.9) + ' 积分'),
+    itemList: amounts.map((a) => '充 ' + a + ' 元 → ' + a + ' 积分'),
     success: async (res) => {
       const amt = amounts[res.tapIndex]
       if (!amt) return
@@ -120,6 +121,18 @@ function goRecharge() {
   background: linear-gradient(160deg, #4e3420, #8c5a2b);
   border-radius: 20rpx;
   padding: 60rpx 40rpx;
+  position: relative;
+}
+.bc-corner {
+  position: absolute;
+  top: 24rpx;
+  right: 28rpx;
+  font-size: 20rpx;
+  color: rgba(254, 251, 246, 0.85);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1rpx solid rgba(255, 255, 255, 0.25);
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
 }
 .bc-label {
   font-size: 24rpx;

@@ -1293,8 +1293,8 @@ async function checkUpdate() {
 
 /* ============ 订单 (NoSQL 内存主键: order_no) ============ */
 
-/* 积分充值: 1元 = 9.9 积分, 创建充值订单 → 微信支付 */
-const RECHARGE_RATE = 9.9 // 1元 = 9.9 积分
+/* 积分充值: 1元 = 1 积分, 创建充值订单 → 微信支付 */
+const RECHARGE_RATE = 1 // 1元 = 1 积分
 async function rechargeCreate(data) {
   const { uid, amount } = data
   if (!uid) return fail('请先登录')
@@ -2289,11 +2289,12 @@ async function appPayConfig() {
     return ok({
       show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
       show_balance: payDoc.show_balance !== '0', // 默认显示余额
-      show_publish: homeDoc.show_publish !== '0', // 首页发布动态按钮, 默认显示
-      show_live: homeDoc.show_live !== '0', // 首页直播入口, 默认显示
+      show_publish: homeDoc.show_publish === '1' || homeDoc.show_publish === true || false, // 首页发布动态按钮, 默认隐藏
+      show_live: homeDoc.show_live === '1' || homeDoc.show_live === true || false, // 首页直播入口, 默认隐藏
+      show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_publish: true, show_live: true })
+    return ok({ show_alipay: false, show_balance: true, show_publish: false, show_live: false, show_follow: false })
   }
 }
 
@@ -2534,7 +2535,7 @@ exports.main = async (event = {}) => {
                 await db.collection('orders').where({ order_no: resource.out_trade_no }).update({ appointment_status: '已预约' })
               } catch (e4) {}
             }
-            // 积分充值订单: 支付成功加积分到账 (1元=9.9积分)
+            // 积分充值订单: 支付成功加积分到账 (1元=1积分)
             if (o.order_type === 'recharge' && o.recharge_points) {
               try {
                 const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]

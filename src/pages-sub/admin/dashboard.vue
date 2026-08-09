@@ -96,6 +96,12 @@
                 <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
             </view>
+            <view class="f-row">
+              <text class="f-label">关注tab</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_follow" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
+              </view>
+            </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
               <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
@@ -1039,7 +1045,7 @@ async function loadModule(key) {
 }
 
 /* ===== 首页管理 ===== */
-const homeCfg = ref({ show_publish: true, show_live: true })
+const homeCfg = ref({ show_publish: false, show_live: false, show_follow: false })
 const homePandaoList = ref([])
 const pdStatusOptions = ['即将开始', '进行中', '已结束']
 function pdStatusKey(st) {
@@ -1054,7 +1060,7 @@ async function loadHomeConfig() {
   try {
     const res = await adminSettingsGet({ group: 'home' })
     const cfg = res.configs || {}
-    homeCfg.value = { show_publish: cfg.show_publish !== '0', show_live: cfg.show_live !== '0' }
+    homeCfg.value = { show_publish: cfg.show_publish === '1' || cfg.show_publish === true, show_live: cfg.show_live === '1' || cfg.show_live === true, show_follow: cfg.show_follow === '1' || cfg.show_follow === true }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
   } catch (e) {}
@@ -1062,7 +1068,7 @@ async function loadHomeConfig() {
 
 async function saveHomeConfig() {
   try {
-    await adminSettingsSave({ group: 'home', configs: { show_publish: homeCfg.value.show_publish ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0' } })
+    await adminSettingsSave({ group: 'home', configs: { show_publish: homeCfg.value.show_publish ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })

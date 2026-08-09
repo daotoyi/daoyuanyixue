@@ -129,7 +129,6 @@ const balance = computed(() => userStore.userInfo.balance || '0.00')
 
 const payMethods = ref([
   { key: 'wechat', name: '微信支付', icon: '💚' },
-  { key: 'alipay', name: '支付宝', icon: '🔵' },
   { key: 'balance', name: '余额支付', icon: '💰' },
 ])
 

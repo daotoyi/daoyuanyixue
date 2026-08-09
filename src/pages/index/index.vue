@@ -197,18 +197,17 @@ import { onShow } from '@dcloudio/uni-app'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
+// 默认只显示 推荐 + 盘道; 关注/直播 由后台首页管理开关控制 (默认隐藏)
 const tabs = ref([
   { key: 'recommend', label: '推荐' },
-  { key: 'follow', label: '关注' },
   { key: 'pandao', label: '盘道' },
-  { key: 'live', label: '直播' },
 ])
 
 const currentTab = ref('recommend')
 const momentList = ref([])
 const liveList = ref([])
 const pandaoList = ref([])
-const homeShowPublish = ref(true) // 后台可配置: 首页是否显示发布动态按钮
+const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
 
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
@@ -415,14 +414,17 @@ onShow(async () => {
     momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
     liveList.value = lives.map((l) => ({ ...l, _booked: false }))
     pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
-    // 后台配置: 首页是否显示发布动态按钮
+    // 后台配置: 首页入口显示开关 (发布动态/关注/直播, 默认全隐藏)
     try {
       const cfg = await getPayConfig()
-      homeShowPublish.value = cfg.show_publish !== false
-      // 直播入口后台可隐藏
-      if (cfg.show_live === false) {
-        tabs.value = tabs.value.filter((t) => t.key !== 'live')
-      }
+      homeShowPublish.value = cfg.show_publish === true
+      const want = []
+      if (cfg.show_follow === true) want.push({ key: 'follow', label: '关注' })
+      if (cfg.show_live === true) want.push({ key: 'live', label: '直播' })
+      const has = (k) => tabs.value.some((t) => t.key === k)
+      want.forEach((t) => { if (!has(t.key)) tabs.value.push(t) })
+      // 当前 tab 被隐藏时切回推荐
+      if (!tabs.value.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
     } catch (e) {}
     // 已预约的盘道标记
     const userStore2 = useUserStore()
