@@ -108,6 +108,43 @@
 
     <!-- 盘道频道 (线下排盘道活动) -->
     <scroll-view scroll-y class="feed-scroll" v-else-if="currentTab === 'pandao'">
+      <!-- 盘道活动日历: 本月及下月固定安排 -->
+      <view class="pandao-cal">
+        <view class="cal-head">
+          <view class="cal-title-wrap">
+            <text class="cal-title">📅 盘道活动日历</text>
+            <text class="cal-sub">本月及下月固定安排</text>
+          </view>
+          <view class="cal-tabs">
+            <view class="cal-tab" :class="{ active: calOffset === 0 }" @tap="calOffset = 0">{{ calMonthLabel(0) }}</view>
+            <view class="cal-tab" :class="{ active: calOffset === 1 }" @tap="calOffset = 1">{{ calMonthLabel(1) }}</view>
+          </view>
+        </view>
+
+        <view class="cal-week-head">
+          <text v-for="w in calWeekLabels" :key="w">{{ w }}</text>
+        </view>
+
+        <view class="cal-grid">
+          <view class="cal-cell blank" v-for="(n, i) in calBlank" :key="'b' + i"></view>
+          <view
+            class="cal-cell"
+            :class="[d.cls, { today: d.today }]"
+            v-for="(d, i) in calDays"
+            :key="'d' + i"
+            @tap="calTip(d)"
+          >
+            <text class="cal-day">{{ d.day }}</text>
+            <text class="cal-tag" v-if="d.tag">{{ d.tag }}</text>
+          </view>
+        </view>
+
+        <view class="cal-legend">
+          <view class="lg"><text class="lg-dot dot-online"></text><text class="lg-text">周二 梁坤老师线上《德道经》· 周日 张灃老师线上《古汉字及书法》</text></view>
+          <view class="lg"><text class="lg-dot dot-offline"></text><text class="lg-text">周三 / 周六 线下盘道活动 · 通州总部</text></view>
+        </view>
+      </view>
+
       <view class="pandao-list">
         <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id" @tap="goPandaoDetail(pd)">
           <view class="pandao-head">
@@ -204,6 +241,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import dayjs from 'dayjs'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -230,6 +268,46 @@ const followUids = ref([]) // 我关注的用户 uid 列表 (关注页过滤用)
 const liveList = ref([])
 const pandaoList = ref([])
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
+
+/* ============ 盘道活动日历 (本月/下月, 固定周规则) ============ */
+const calOffset = ref(0) // 0=本月 1=下月
+const calWeekLabels = ['一', '二', '三', '四', '五', '六', '日']
+const calMonthLabel = (off) => dayjs().add(off, 'month').format('YYYY年M月')
+/* 每月 1 号前需要补的空格数 (周一为一周开头) */
+const calBlank = computed(() => {
+  const first = dayjs().add(calOffset.value, 'month').startOf('month')
+  return (first.day() + 6) % 7
+})
+/* 日历天数 + 固定活动标记:
+   周二=梁坤老师线上《德道经》; 周三/周六=线下通州总部盘道; 周日=张灃老师线上《古汉字及书法》 */
+const calDays = computed(() => {
+  const base = dayjs().add(calOffset.value, 'month')
+  const total = base.daysInMonth()
+  const todayStr = dayjs().format('YYYY-MM-DD')
+  const arr = []
+  for (let d = 1; d <= total; d++) {
+    const wd = dayjs(`${base.format('YYYY-MM')}-${String(d).padStart(2, '0')}`).day() // 0=周日
+    let cls = ''
+    let tag = ''
+    let tip = ''
+    if (wd === 2) { cls = 'd-online'; tag = '梁坤'; tip = '周二晚上 · 梁坤老师线上分享《德道经》' }
+    else if (wd === 3 || wd === 6) { cls = 'd-offline'; tag = '线下'; tip = (wd === 3 ? '周三' : '周六') + '白天 · 线下盘道活动（通州总部）' }
+    else if (wd === 0) { cls = 'd-online'; tag = '张灃'; tip = '周日晚上 · 张灃老师线上分享《古汉字及书法》' }
+    const ds = `${base.format('YYYY-MM')}-${String(d).padStart(2, '0')}`
+    arr.push({ day: d, cls, tag, tip, today: ds === todayStr })
+  }
+  return arr
+})
+/* 点击日历格: 展示当天活动详情 */
+function calTip(d) {
+  if (!d.tag) return
+  uni.showModal({
+    title: calMonthLabel(calOffset.value) + ' ' + d.day + '日',
+    content: d.tip,
+    showCancel: false,
+    confirmText: '知道了',
+  })
+}
 
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
@@ -739,6 +817,136 @@ onShow(async () => {
 }
 
 /* 盘道 */
+/* 盘道活动日历板块 */
+.pandao-cal {
+  margin: 20rpx 24rpx 0;
+  padding: 24rpx;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 16rpx;
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cal-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.cal-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #3a2a18;
+}
+.cal-sub {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #a08b6f;
+}
+.cal-tabs {
+  display: flex;
+  gap: 12rpx;
+}
+.cal-tab {
+  padding: 8rpx 20rpx;
+  font-size: 22rpx;
+  color: #857563;
+  background: #f8f3ea;
+  border: 1rpx solid #e6dcca;
+  border-radius: 999rpx;
+}
+.cal-tab.active {
+  color: #fefbf6;
+  background: #8c5a2b;
+  border-color: #8c5a2b;
+}
+.cal-week-head {
+  display: flex;
+  margin-top: 20rpx;
+  padding-bottom: 12rpx;
+  border-bottom: 1rpx solid #efe7d8;
+}
+.cal-week-head text {
+  flex: 1;
+  text-align: center;
+  font-size: 20rpx;
+  color: #a08b6f;
+}
+.cal-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+.cal-cell {
+  width: 14.2857%;
+  height: 92rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10rpx;
+}
+.cal-cell.blank {
+  visibility: hidden;
+}
+.cal-day {
+  font-size: 26rpx;
+  color: #42372c;
+}
+.cal-cell.today .cal-day {
+  color: #c0392b;
+  font-weight: bold;
+}
+.cal-cell.today {
+  background: #fdf1e8;
+}
+.cal-tag {
+  margin-top: 6rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  font-size: 18rpx;
+  color: #fefbf6;
+  line-height: 1.4;
+}
+/* 线上分享 (周二梁坤/周日张灃): 青蓝 */
+.d-online .cal-tag {
+  background: #3f6fae;
+}
+/* 线下通州总部 (周三/周六): 棕金 */
+.d-offline .cal-tag {
+  background: #8c5a2b;
+}
+.cal-legend {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #e6dcca;
+}
+.lg {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+}
+.lg:first-child {
+  margin-top: 0;
+}
+.lg-dot {
+  flex-shrink: 0;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+}
+.dot-online {
+  background: #3f6fae;
+}
+.dot-offline {
+  background: #8c5a2b;
+}
+.lg-text {
+  font-size: 20rpx;
+  color: #8b7355;
+  line-height: 1.5;
+}
 .pandao-list {
   padding: 20rpx 24rpx;
 }

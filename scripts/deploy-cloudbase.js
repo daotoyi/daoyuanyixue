@@ -60,7 +60,7 @@ async function deployH5() {
   log('📦 上传 H5 到 CloudBase 静态托管...')
   try {
     execSync(
-      `npx -y mcporter call cloudbase.manageHosting action=uploadFiles ` +
+      `npx -y mcporter call cloudbase.manageHosting action=upload ` +
       `envId=${ENV_ID} localPath=${distPath} cloudPath=/`,
       { stdio: 'inherit', cwd: ROOT }
     )

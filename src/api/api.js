@@ -223,6 +223,8 @@ export const confirmOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.confirm', { order_no: orderNo })
 export const cancelOrder = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.cancel', data)
+export const deleteOrder = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ deleted: true }))() : _callFunction('order.delete', data)
 
 /* ============ 后台管理 (需 role=admin) ============ */
 

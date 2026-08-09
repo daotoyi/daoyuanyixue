@@ -45,6 +45,9 @@
               <view v-else-if="o.status === '待收货'" class="btn-fill btn-confirm" @tap.stop="doConfirm(o)">
                 <text>确认收货</text>
               </view>
+              <view class="btn-del" @tap.stop="doDelete(o)">
+                <text>删除</text>
+              </view>
             </view>
           </view>
         </view>
@@ -63,7 +66,8 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOrders, payOrder, confirmOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { getOrders, payOrder, confirmOrder, deleteOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { useUserStore } from '../../store/index'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
 const activeStatus = ref('全部')
@@ -132,6 +136,31 @@ async function doConfirm(o) {
   await confirmOrder(o.order_no)
   uni.showToast({ title: '已确认收货', icon: 'success' })
   await loadOrders()
+}
+
+/* 删除订单: 确认后删除 (校验 uid 归属) */
+async function doDelete(o) {
+  const userStore = useUserStore()
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '删除订单',
+    content: `确定删除订单 ${o.order_no} 吗？删除后不可恢复。`,
+    confirmText: '删除',
+    confirmColor: '#b04a45',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await deleteOrder({ uid: userStore.userInfo.uid, order_no: o.order_no })
+        uni.showToast({ title: '订单已删除', icon: 'success' })
+        await loadOrders()
+      } catch (e) {
+        uni.showToast({ title: '删除失败: ' + (e.message || ''), icon: 'none' })
+      }
+    },
+  })
 }
 </script>
 
@@ -278,6 +307,23 @@ async function doConfirm(o) {
 }
 .btn-confirm {
   background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
+/* 删除订单: 细描边弱化, 不喧宾夺主 */
+.btn-del {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  height: 64rpx;
+  padding: 0 30rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid #d8ccb8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-del text {
+  font-size: 24rpx;
+  color: #857563;
+  letter-spacing: 1rpx;
 }
 
 .order-items {

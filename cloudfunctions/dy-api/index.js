@@ -1472,6 +1472,17 @@ async function cancelOrder(data) {
   return ok({ updated: true })
 }
 
+/* 用户端: 删除自己的订单 (校验 uid 归属, 防止删他人订单) */
+async function deleteUserOrder(data) {
+  const { uid, order_no } = data
+  if (!uid) return fail('请先登录')
+  if (!order_no) return fail('缺少订单号')
+  const exist = await db.collection('orders').where({ order_no, uid: Number(uid) }).limit(1).get()
+  if (!exist.data.length) return fail('订单不存在或无权删除')
+  await db.collection('orders').where({ order_no, uid: Number(uid) }).remove()
+  return ok({ deleted: true })
+}
+
 /* ============ 微信支付 (小程序云开发支付 cloudPay) ============
    需先在云开发控制台「微信支付」开通并绑定商户号;
    商户号(非服务商模式可不填)写入 config.local.js WXPAY_MCHID */
@@ -2408,6 +2419,7 @@ const ROUTES = {
   'order.wxpay': wxpayPrepay,
   'order.confirm': confirmOrder,
   'order.cancel': cancelOrder,
+  'order.delete': deleteUserOrder,
   'course.buy': buyCourse,
   'course.mine': myCourses,
   'course.favorite': favoriteCourse,
