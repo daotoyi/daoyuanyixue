@@ -1036,6 +1036,8 @@ async function createOrder(data) {
     address: data.address || {},
     uid: data.uid || 0,
     course_id: data.course_id || 0, // 课程直购标记: 非0=课程订单, 支付成功自动发课
+    session_id: data.session_id || 0, // 盘道预约场次标记: 非0=预约订单
+    order_type: data.order_type || (data.course_id ? 'course' : 'product'), // product/course/appointment
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   const res = await db.collection('orders').add(order)
@@ -1340,6 +1342,88 @@ async function myBookings(data) {
   return ok(res.data)
 }
 
+/* ============ 盘道活动 (线下排盘道) ============ */
+
+/* 默认活动规划: 每周三 / 每周六 通州总部 (无后台场次时使用) */
+const PANDAO_DEFAULTS = [
+  { id: 1, title: '周三盘道 · 通州总部', day: '周三', time: '19:00-21:00', place: '北京市通州区 · 真和盛总部', price: '99.00', desc: '线下排盘道活动，交流命理心得，现场排盘解惑' },
+  { id: 2, title: '周六盘道 · 通州总部', day: '周六', time: '14:00-17:00', place: '北京市通州区 · 真和盛总部', price: '199.00', desc: '周末盘道雅集，深度排盘交流，名额有限' },
+]
+
+/* 盘道活动列表 (后台可覆盖) */
+async function pandaoList(data) {
+  await ensureCollection('pandao_sessions')
+  try {
+    const res = await db.collection('pandao_sessions').orderBy('id', 'asc').limit(50).get()
+    if (res.data && res.data.length) return ok(res.data)
+  } catch (e) { /* 集合不存在用默认 */ }
+  return ok(PANDAO_DEFAULTS)
+}
+
+/* 盘道报名: 创建预约订单 → 走支付流程 */
+async function pandaoBook(data) {
+  const { uid, session_id } = data
+  if (!uid) return fail('请先登录')
+  const sessions = await pandaoList({})
+  const list = Array.isArray(sessions) ? sessions : (sessions.data || [])
+  const session = list.find((s) => s.id === Number(session_id))
+  if (!session) return fail('活动场次不存在')
+  // 创建预约订单 (order_type=appointment)
+  const order_no = `DY${Date.now()}${Math.floor(Math.random() * 1000)}`
+  await db.collection('orders').add({
+    order_no,
+    status: '待付款',
+    total_price: String(session.price),
+    coupon_discount: 0,
+    balance_used: 0,
+    items: [{ id: 'pd' + session.id, name: session.title, price: String(session.price), qty: 1 }],
+    pay_method: 'wechat',
+    address: {},
+    uid: Number(uid),
+    course_id: 0,
+    session_id: Number(session.id),
+    order_type: 'appointment',
+    session_title: session.title,
+    session_time: `${session.day} ${session.time}`,
+    session_place: session.place,
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  })
+  return ok({ order_no, order_type: 'appointment' })
+}
+
+/* 后台: 新增盘道场次 */
+async function adminPandaoCreate(data) {
+  await ensureCollection('pandao_sessions')
+  const max = await db.collection('pandao_sessions').orderBy('id', 'desc').limit(1).get().catch(() => ({ data: [] }))
+  const nextId = max.data && max.data.length ? (max.data[0].id || 0) + 1 : 1
+  const doc = {
+    id: nextId,
+    title: String(data.title || '').slice(0, 50),
+    day: String(data.day || (String(data.time || '').includes('周') ? String(data.time).split(' ')[0] : '周六')).slice(0, 10),
+    time: String(data.time || '').slice(0, 30),
+    place: String(data.place || '').slice(0, 80),
+    price: String(data.price || '0'),
+    desc: String(data.desc || '').slice(0, 200),
+  }
+  if (!doc.title) return fail('请输入活动标题')
+  await db.collection('pandao_sessions').add(doc)
+  return ok({ created: doc })
+}
+
+/* 后台: 删除盘道场次 */
+async function adminPandaoDelete(data) {
+  await db.collection('pandao_sessions').where({ id: Number(data.id) }).remove().catch(() => {})
+  return ok({ deleted: true })
+}
+
+/* 我的盘道预约 (已支付) */
+async function pandaoMine(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('orders').where({ uid: Number(uid), order_type: 'appointment', status: _.neq('待付款') }).orderBy('created_at', 'desc').limit(50).get()
+  return ok(res.data)
+}
+
 /* ============ 后台管理 ============ */
 
 /* 权限体系:
@@ -1439,12 +1523,22 @@ async function adminDashboard() {
 
 async function adminList(data) {
   const collection = data.collection
-  const allow = ['products', 'courses', 'orders', 'users', 'live_streams', 'moments', 'coupons', 'user_courses', 'live_bookings']
+  const allow = ['products', 'courses', 'orders', 'users', 'live_streams', 'moments', 'coupons', 'user_courses', 'live_bookings', 'pandao_sessions']
   if (!allow.includes(collection)) return fail('不允许的集合')
   let query = db.collection(collection)
   let res
-  if (collection === 'orders' && data.status && data.status !== '全部') {
-    res = await query.where({ status: data.status }).orderBy('created_at', 'desc').limit(200).get()
+  if (collection === 'orders' && (data.status && data.status !== '全部' || data.order_type && data.order_type !== '全部')) {
+    const conds = []
+    if (data.status && data.status !== '全部') conds.push({ status: data.status })
+    if (data.order_type && data.order_type !== '全部') {
+      // 商品订单兼容历史数据 (无 order_type 字段 = product)
+      if (data.order_type === 'product') {
+        conds.push(_.or([{ order_type: 'product' }, { order_type: _.exists(false) }]))
+      } else {
+        conds.push({ order_type: data.order_type })
+      }
+    }
+    res = await query.where(conds.length === 1 ? conds[0] : _.and(conds)).orderBy('created_at', 'desc').limit(200).get()
   } else if (data.keyword && collection === 'products') {
     res = await query.limit(200).get()
     return ok(res.data.filter((p) => (p.name || '').includes(data.keyword)))
@@ -1835,7 +1929,7 @@ async function adminRecentOrders(data) {
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
 
-const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay']
+const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home']
 
 async function adminSettingsGet(data) {
   const group = data.group
@@ -1850,14 +1944,20 @@ async function adminSettingsGet(data) {
 /* 用户端公开配置: 支付展示设置 (不含敏感信息) */
 async function appPayConfig() {
   try {
-    const res = await db.collection('settings').where({ group: 'pay' }).limit(1).get()
-    const doc = res.data[0] || {}
+    const [payRes, homeRes] = await Promise.all([
+      db.collection('settings').where({ group: 'pay' }).limit(1).get(),
+      db.collection('settings').where({ group: 'home' }).limit(1).get(),
+    ])
+    const payDoc = payRes.data[0] || {}
+    const homeDoc = homeRes.data[0] || {}
     return ok({
-      show_alipay: doc.show_alipay === '1' || doc.show_alipay === true || false,
-      show_balance: doc.show_balance !== '0', // 默认显示余额
+      show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
+      show_balance: payDoc.show_balance !== '0', // 默认显示余额
+      show_publish: homeDoc.show_publish !== '0', // 首页发布动态按钮, 默认显示
+      show_live: homeDoc.show_live !== '0', // 首页直播入口, 默认显示
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true })
+    return ok({ show_alipay: false, show_balance: true, show_publish: true, show_live: true })
   }
 }
 
@@ -1937,6 +2037,11 @@ const ROUTES = {
   'course.progress': updateCourseProgress,
   'live.book': bookLive,
   'live.myBookings': myBookings,
+  'pandao.list': pandaoList,
+  'pandao.book': pandaoBook,
+  'pandao.mine': pandaoMine,
+  'admin.pandao.create': adminPandaoCreate,
+  'admin.pandao.delete': adminPandaoDelete,
   'admin.dashboard': adminDashboard,
   'admin.list': adminList,
   'admin.products.create': adminProductCreate,
@@ -2075,6 +2180,12 @@ exports.main = async (event = {}) => {
                   })
                 }
               } catch (e3) {}
+            }
+            // 盘道预约订单: 支付成功标记预约完成
+            if (o.order_type === 'appointment' || o.session_id) {
+              try {
+                await db.collection('orders').where({ order_no: resource.out_trade_no }).update({ appointment_status: '已预约' })
+              } catch (e4) {}
             }
           }
         } catch (e) {}

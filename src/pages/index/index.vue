@@ -24,7 +24,7 @@
     </view>
 
     <!-- 推荐 / 关注: 动态流 -->
-    <scroll-view scroll-y class="feed-scroll" v-if="currentTab !== 'live'">
+    <scroll-view scroll-y class="feed-scroll" v-if="currentTab === 'recommend' || currentTab === 'follow'">
       <view class="feed" v-if="shownMoments.length">
         <view class="moment-card" v-for="m in shownMoments" :key="m.id">
           <view class="moment-head">
@@ -99,10 +99,37 @@
         <text class="empty-tip">暂无动态</text>
       </view>
 
-      <!-- 发布动态: 悬浮右下角 -->
-      <view class="fab-publish" @tap="goPublish">
+      <!-- 发布动态: 悬浮右下角 (后台可配置隐藏) -->
+      <view class="fab-publish" v-if="homeShowPublish" @tap="goPublish">
         <text class="fab-icon">✎</text>
         <text class="fab-text">发布动态</text>
+      </view>
+    </scroll-view>
+
+    <!-- 盘道频道 (线下排盘道活动) -->
+    <scroll-view scroll-y class="feed-scroll" v-else-if="currentTab === 'pandao'">
+      <view class="pandao-list">
+        <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id">
+          <view class="pandao-head">
+            <text class="pandao-badge">{{ pd.day }}</text>
+            <view class="pandao-info">
+              <text class="pandao-title">{{ pd.title }}</text>
+              <text class="pandao-time">🕐 {{ pd.day }} {{ pd.time }}</text>
+              <text class="pandao-place">📍 {{ pd.place }}</text>
+              <text class="pandao-desc">{{ pd.desc }}</text>
+            </view>
+          </view>
+          <view class="pandao-foot">
+            <text class="pandao-price">¥{{ pd.price }}</text>
+            <view class="pandao-btn" :class="{ ok: pd._booked }" @tap="bookPandao(pd)">
+              <text>{{ pd._booked ? '已预约' : '报名预约' }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="empty" v-if="!pandaoList.length">
+        <text class="empty-icon">☯️</text>
+        <text class="empty-tip">暂无盘道活动</text>
       </view>
     </scroll-view>
 
@@ -153,18 +180,21 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
-const tabs = [
+const tabs = ref([
   { key: 'recommend', label: '推荐' },
   { key: 'follow', label: '关注' },
+  { key: 'pandao', label: '盘道' },
   { key: 'live', label: '直播' },
-]
+])
 
 const currentTab = ref('recommend')
 const momentList = ref([])
 const liveList = ref([])
+const pandaoList = ref([])
+const homeShowPublish = ref(true) // 后台可配置: 首页是否显示发布动态按钮
 
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
@@ -177,6 +207,28 @@ const shownMoments = computed(() => {
 
 function switchTab(key) {
   currentTab.value = key
+}
+
+/* 盘道报名: 创建预约订单 → 跳结算支付 */
+async function bookPandao(pd) {
+  if (pd._booked) return
+  const userStore = useUserStore()
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录再报名', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  try {
+    const res = await pandaoBook({ uid: userStore.userInfo.uid, session_id: pd.id })
+    if (res && res.order_no) {
+      uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
+      setTimeout(() => {
+        uni.navigateTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
+      }, 800)
+    }
+  } catch (e) {
+    uni.showToast({ title: e.message || '报名失败', icon: 'none' })
+  }
 }
 
 function statusText(s) {
@@ -282,9 +334,32 @@ function enterLive(l) {
 
 onShow(async () => {
   try {
-    const [moments, lives] = await Promise.all([getMoments(), getLiveStreams()])
+    const [moments, lives, pandao] = await Promise.all([
+      getMoments(), getLiveStreams(), getPandaoList(),
+    ])
     momentList.value = moments.map((m) => ({ ...m, _liked: false }))
     liveList.value = lives.map((l) => ({ ...l, _booked: false }))
+    pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
+    // 后台配置: 首页是否显示发布动态按钮
+    try {
+      const cfg = await getPayConfig()
+      homeShowPublish.value = cfg.show_publish !== false
+      // 直播入口后台可隐藏
+      if (cfg.show_live === false) {
+        tabs.value = tabs.value.filter((t) => t.key !== 'live')
+      }
+    } catch (e) {}
+    // 已预约的盘道标记
+    const userStore2 = useUserStore()
+    if (userStore2.isLoggedIn) {
+      try {
+        const pdOrders = await getPandaoMine({ uid: userStore2.userInfo.uid })
+        const booked = new Set(pdOrders.map((o) => o.session_id))
+        pandaoList.value.forEach((p) => {
+          if (booked.has(p.id)) p._booked = true
+        })
+      } catch (e2) {}
+    }
     // 已预约的直播标记
     const userStore = useUserStore()
     if (userStore.isLoggedIn) {
@@ -535,6 +610,81 @@ onShow(async () => {
   font-size: 26rpx;
   color: #fefbf6;
   font-weight: 500;
+}
+
+/* 盘道 */
+.pandao-list {
+  padding: 20rpx 24rpx;
+}
+.pandao-card {
+  background: #fefbf6;
+  border-radius: 16rpx;
+  border: 1rpx solid #efe7d8;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+.pandao-head {
+  display: flex;
+  gap: 20rpx;
+}
+.pandao-badge {
+  flex-shrink: 0;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, #8c5a2b, #b8860b);
+  color: #fff;
+  font-size: 26rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pandao-info {
+  flex: 1;
+}
+.pandao-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #3a2a18;
+  display: block;
+}
+.pandao-time,
+.pandao-place {
+  display: block;
+  font-size: 24rpx;
+  color: #8b7355;
+  margin-top: 8rpx;
+}
+.pandao-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #a08b6f;
+  margin-top: 8rpx;
+  line-height: 1.5;
+}
+.pandao-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f0e8d8;
+}
+.pandao-price {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #c0392b;
+}
+.pandao-btn {
+  background: #8c5a2b;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 12rpx 32rpx;
+  border-radius: 999rpx;
+}
+.pandao-btn.ok {
+  background: #95a5a6;
 }
 
 /* 直播 */

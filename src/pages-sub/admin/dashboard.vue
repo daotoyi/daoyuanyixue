@@ -74,6 +74,62 @@
           </view>
         </view>
 
+        <!-- ===== 首页管理 ===== -->
+        <view v-else-if="activeModule === 'home'" class="module">
+          <view class="module-head">
+            <text class="module-title">首页管理</text>
+          </view>
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">首页展示配置</text>
+              <text class="sd-text">控制小程序首页功能入口的显示/隐藏</text>
+            </view>
+            <view class="f-row">
+              <text class="f-label">发布动态按钮</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_publish" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_publish = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">直播入口</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
+              </view>
+            </view>
+            <view class="settings-actions">
+              <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
+              <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
+            </view>
+          </view>
+
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">盘道活动场次</text>
+              <text class="sd-text">线下排盘道活动（默认每周三/周六通州总部，可增删）</text>
+            </view>
+            <view class="home-pandao-list">
+              <view class="home-pd-row" v-for="pd in homePandaoList" :key="pd.id">
+                <view class="home-pd-info">
+                  <text class="home-pd-title">{{ pd.title }}</text>
+                  <text class="home-pd-meta">{{ pd.day }} {{ pd.time }} · {{ pd.place }} · ¥{{ pd.price }}</text>
+                </view>
+                <text class="op danger" @tap="deletePandaoSession(pd)">删除</text>
+              </view>
+              <view class="home-pd-row" v-if="!homePandaoList.length">
+                <text class="home-pd-meta">暂无自定义场次（使用默认周三/周六）</text>
+              </view>
+            </view>
+            <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="pdForm.title" placeholder="如: 周六盘道 · 通州总部" /></view>
+            <view class="f-row"><text class="f-label">时间</text><input class="f-input" v-model="pdForm.time" placeholder="如: 周六 14:00-17:00" /></view>
+            <view class="f-row"><text class="f-label">地点</text><input class="f-input" v-model="pdForm.place" placeholder="活动地点" /></view>
+            <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="pdForm.price" placeholder="如: 199" /></view>
+            <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
+            <view class="settings-actions">
+              <view class="btn-p sm" @click="addPandaoSession">添加场次</view>
+            </view>
+          </view>
+        </view>
+
         <!-- ===== 商品管理 ===== -->
         <view v-else-if="activeModule === 'products'" class="module cate-module">
           <!-- 左侧分类栏 -->
@@ -203,6 +259,15 @@
         <view v-else-if="activeModule === 'orders'" class="module">
           <view class="module-head">
             <text class="module-title">订单管理（{{ orders.length }}）</text>
+            <view class="filter-pills">
+              <text
+                v-for="s in orderTypeFilterOptions"
+                :key="s.value"
+                class="pill"
+                :class="{ on: orderTypeFilter === s.value }"
+                @tap="orderTypeFilter = s.value; loadOrders()"
+              >{{ s.label }}</text>
+            </view>
             <view class="filter-pills">
               <text
                 v-for="s in orderStatuses"
@@ -722,7 +787,7 @@ import {
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
-  adminSettingsGet, adminSettingsSave,
+  adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   wxmpGetAuthUrl, wxmpListBound, wxmpGetExperienceQr, wxmpUploadCode, wxmpSubmitAudit, wxmpRelease,
@@ -734,6 +799,7 @@ const userStore = useUserStore()
 
 const modules = [
   { key: 'overview', label: '数据概览', icon: '📊' },
+  { key: 'home', label: '首页管理', icon: '🏠' },
   { key: 'products', label: '商品管理', icon: '🛍' },
   { key: 'courses', label: '课程管理', icon: '📚' },
   { key: 'orders', label: '订单管理', icon: '📦' },
@@ -809,6 +875,13 @@ const coupons = ref([])
 const sidebarCollapsed = ref(true)
 const cateCollapsed = ref(false)
 const orderStatuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已取消', '已退款']
+const orderTypeFilterOptions = [
+  { value: '全部', label: '全部类别' },
+  { value: 'product', label: '商品' },
+  { value: 'course', label: '课程' },
+  { value: 'appointment', label: '预约' },
+]
+const orderTypeFilter = ref('全部')
 const orderFilter = ref('全部')
 
 /* ---- 分类布局 (商品/课程) ---- */
@@ -877,7 +950,8 @@ async function loadModule(key) {
       const [s, r] = await Promise.all([adminDashboard(), adminRecentOrders({ limit: 5 })])
       stats.value = s
       recentOrders.value = r
-    } else if (key === 'products') await loadProductCates()
+    } else if (key === 'home') await loadHomeConfig()
+    else if (key === 'products') await loadProductCates()
     else if (key === 'courses') await loadCourseCates()
     else if (key === 'orders') await loadOrders()
     else if (key === 'users') {
@@ -921,8 +995,60 @@ async function loadModule(key) {
   }
 }
 
+/* ===== 首页管理 ===== */
+const homeCfg = ref({ show_publish: true, show_live: true })
+const homePandaoList = ref([])
+const pdForm = ref({ title: '', time: '', place: '', price: '', desc: '' })
+
+async function loadHomeConfig() {
+  try {
+    const res = await adminSettingsGet({ group: 'home' })
+    const cfg = res.configs || {}
+    homeCfg.value = { show_publish: cfg.show_publish !== '0', show_live: cfg.show_live !== '0' }
+    const pd = await adminList({ collection: 'pandao_sessions' })
+    homePandaoList.value = pd || []
+  } catch (e) {}
+}
+
+async function saveHomeConfig() {
+  try {
+    await adminSettingsSave({ group: 'home', configs: { show_publish: homeCfg.value.show_publish ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0' } })
+    uni.showToast({ title: '已保存', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  }
+}
+
+async function addPandaoSession() {
+  const f = pdForm.value
+  if (!f.title.trim()) return uni.showToast({ title: '请输入活动标题', icon: 'none' })
+  try {
+    await adminPandaoCreate({ title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim() })
+    pdForm.value = { title: '', time: '', place: '', price: '', desc: '' }
+    uni.showToast({ title: '已添加', icon: 'success' })
+    await loadHomeConfig()
+  } catch (e) {
+    uni.showToast({ title: e.message || '添加失败', icon: 'none' })
+  }
+}
+
+async function deletePandaoSession(pd) {
+  uni.showModal({
+    title: '删除场次',
+    content: '确认删除「' + pd.title + '」吗？',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await adminPandaoDelete({ id: pd.id })
+        uni.showToast({ title: '已删除', icon: 'success' })
+        await loadHomeConfig()
+      } catch (e) {}
+    },
+  })
+}
+
 async function loadOrders() {
-  orders.value = await adminList({ collection: 'orders', status: orderFilter.value })
+  orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
 }
 
 /* 反馈管理 */
@@ -2237,6 +2363,33 @@ onMounted(async () => {
   background: #8c5a2b;
   color: #fefbf6;
 }
+/* 首页管理 */
+.home-pandao-list {
+  margin-bottom: 20rpx;
+}
+.home-pd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0e8d8;
+}
+.home-pd-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+.home-pd-title {
+  font-size: 26rpx;
+  color: #3a2a18;
+  font-weight: bold;
+}
+.home-pd-meta {
+  font-size: 22rpx;
+  color: #8b7355;
+}
+
 .settings-card {
   background: #fefbf6;
   border-radius: 16rpx;
