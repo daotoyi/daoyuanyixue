@@ -196,12 +196,12 @@ async function bookNow() {
 }
 .pd-share-btn {
   flex-shrink: 0;
-  height: 80rpx;
-  line-height: 80rpx;
-  padding: 0 34rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 44rpx;
   border-radius: 999rpx;
-  background: #f3ead8;
-  color: #6b5a45;
+  background: #dff0d8;
+  color: #4a7a3a;
   font-size: 28rpx;
   border: none;
 }
@@ -217,13 +217,19 @@ async function bookNow() {
   background: #f8f3ea;
 }
 .pd-book-btn {
+  flex: 1;
   background: #8c5a2b;
   color: #fff;
   font-size: 30rpx;
   font-weight: bold;
   text-align: center;
-  padding: 22rpx 0;
+  padding: 28rpx 20rpx;
   border-radius: 999rpx;
+  min-height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 .pd-book-btn.ok {
   background: #95a5a6;
