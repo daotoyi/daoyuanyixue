@@ -29,10 +29,9 @@
             <view class="name-row">
               <text class="user-name">{{ userInfo.nickname }}</text>
               <view class="vip-wrap">
-                <view class="vip-badge" :class="'vip-' + vipLevel">
+                <view class="vip-badge" :class="'vip-' + vipLevel" @tap.stop="showVipTip">
                   <text>VIP{{ vipLevel }}</text>
                 </view>
-                <text class="vip-tip-mini" @tap.stop="showVipTip">等级说明</text>
               </view>
             </view>
             <text class="user-id" @tap.stop="copyDaoCode">道号 · {{ daoCode }}（点按复制）</text>
@@ -599,18 +598,6 @@ onShow(async () => {
 .vip-wrap {
   position: relative;
   margin-left: 16rpx;
-}
-.vip-tip-mini {
-  position: absolute;
-  right: -54rpx;
-  bottom: -22rpx;
-  font-size: 16rpx;
-  color: rgba(254, 251, 246, 0.8);
-  background: rgba(0, 0, 0, 0.28);
-  padding: 0 8rpx;
-  border-radius: 6rpx;
-  line-height: 1.5;
-  white-space: nowrap;
 }
 .vip-0 { background: #857563; }
 .vip-1 { background: linear-gradient(135deg, #a8884c, #8c6d3f); }
