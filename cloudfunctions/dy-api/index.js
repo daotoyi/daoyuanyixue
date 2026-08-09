@@ -1512,6 +1512,8 @@ async function adminPandaoCreate(data) {
     place: String(data.place || '').slice(0, 80),
     price: String(data.price || '0'),
     desc: String(data.desc || '').slice(0, 200),
+    content: String(data.content || '').slice(0, 2000),
+    status: String(data.status || '即将开始'),
   }
   if (!doc.title) return fail('请输入活动标题')
   await db.collection('pandao_sessions').add(doc)
@@ -1522,6 +1524,32 @@ async function adminPandaoCreate(data) {
 async function adminPandaoDelete(data) {
   await db.collection('pandao_sessions').where({ id: Number(data.id) }).remove().catch(() => {})
   return ok({ deleted: true })
+}
+
+/* 后台: 编辑盘道场次 */
+async function adminPandaoUpdate(data) {
+  await ensureCollection('pandao_sessions')
+  const doc = {}
+  if (data.title !== undefined) doc.title = String(data.title).slice(0, 50)
+  if (data.time !== undefined) doc.time = String(data.time).slice(0, 30)
+  if (data.place !== undefined) doc.place = String(data.place).slice(0, 80)
+  if (data.price !== undefined) doc.price = String(data.price)
+  if (data.desc !== undefined) doc.desc = String(data.desc).slice(0, 500)
+  if (data.content !== undefined) doc.content = String(data.content).slice(0, 2000) // 详情页富内容
+  if (data.status !== undefined) doc.status = String(data.status) // 即将开始/已结束/已发布
+  const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).update(doc)
+  return ok({ updated: res.updated })
+}
+
+/* 盘道详情 (单场次完整信息) */
+async function pandaoDetail(data) {
+  await ensureCollection('pandao_sessions')
+  const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).limit(1).get()
+  if (res.data && res.data.length) return ok(res.data[0])
+  // 默认场次
+  const d = PANDAO_DEFAULTS.find((p) => p.id === Number(data.id))
+  if (d) return ok({ ...d, content: d.desc, status: '即将开始' })
+  return fail('场次不存在')
 }
 
 /* 我的盘道预约 (已支付) */
@@ -1639,9 +1667,18 @@ async function adminList(data) {
     const conds = []
     if (data.status && data.status !== '全部') conds.push({ status: data.status })
     if (data.order_type && data.order_type !== '全部') {
-      // 商品订单兼容历史数据 (无 order_type 字段 = product)
+      // 商品订单兼容历史数据: 无 order_type 且无 course_id 才算商品 (课程/预约不算)
       if (data.order_type === 'product') {
-        conds.push(_.or([{ order_type: 'product' }, { order_type: _.exists(false) }]))
+        conds.push(_.or([
+          { order_type: 'product' },
+          _.and([{ order_type: _.exists(false) }, _.or([{ course_id: 0 }, { course_id: _.exists(false) }])]),
+        ]))
+      } else if (data.order_type === 'course') {
+        // 课程订单: 显式 course + 历史无 order_type 但有 course_id 的
+        conds.push(_.or([
+          { order_type: 'course' },
+          _.and([{ order_type: _.exists(false) }, { course_id: _.neq(0) }, { course_id: _.exists(true) }]),
+        ]))
       } else {
         conds.push({ order_type: data.order_type })
       }
@@ -2155,6 +2192,8 @@ const ROUTES = {
   'pandao.mine': pandaoMine,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
+  'admin.pandao.update': adminPandaoUpdate,
+  'pandao.detail': pandaoDetail,
   'admin.dashboard': adminDashboard,
   'admin.list': adminList,
   'admin.products.create': adminProductCreate,

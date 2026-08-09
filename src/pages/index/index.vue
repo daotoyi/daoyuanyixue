@@ -109,7 +109,7 @@
     <!-- 盘道频道 (线下排盘道活动) -->
     <scroll-view scroll-y class="feed-scroll" v-else-if="currentTab === 'pandao'">
       <view class="pandao-list">
-        <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id">
+        <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id" @tap="goPandaoDetail(pd)">
           <view class="pandao-head">
             <text class="pandao-badge">{{ pd.day }}</text>
             <view class="pandao-info">
@@ -121,7 +121,7 @@
           </view>
           <view class="pandao-foot">
             <text class="pandao-price">¥{{ pd.price }}</text>
-            <view class="pandao-btn" :class="{ ok: pd._booked }" @tap="bookPandao(pd)">
+            <view class="pandao-btn" :class="{ ok: pd._booked }" @tap.stop="bookPandao(pd)">
               <text>{{ pd._booked ? '已预约' : '报名预约' }}</text>
             </view>
           </view>
@@ -133,6 +133,10 @@
           <text class="pf-title">关注「真和盛」公众号</text>
           <text class="pf-desc">获取更多道学文章与盘道活动资讯</text>
         </view>
+        <!-- 微信官方关注组件: 同主体+特定场景进入时显示, 点击直达公众号 -->
+        <!-- #ifdef MP-WEIXIN -->
+        <official-account class="pf-official"></official-account>
+        <!-- #endif -->
         <view class="pf-btn" @tap="followGzh">
           <text>关注</text>
         </view>
@@ -235,6 +239,11 @@ async function refreshMoments() {
     const likedIds = new Set((likes || []).map((id) => Number(id)))
     momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
   } catch (e) {}
+}
+
+/* 盘道详情页 */
+function goPandaoDetail(pd) {
+  uni.navigateTo({ url: '/pages-sub/pandao/detail?id=' + pd.id })
 }
 
 /* 盘道报名: 创建预约订单 → 跳结算支付 */

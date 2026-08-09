@@ -110,22 +110,35 @@
             <view class="home-pandao-list">
               <view class="home-pd-row" v-for="pd in homePandaoList" :key="pd.id">
                 <view class="home-pd-info">
-                  <text class="home-pd-title">{{ pd.title }}</text>
+                  <text class="home-pd-title">{{ pd.title }}
+                    <text class="home-pd-status" :class="'st-' + pdStatusKey(pd.status)">{{ pd.status || '即将开始' }}</text>
+                  </text>
                   <text class="home-pd-meta">{{ pd.day }} {{ pd.time }} · {{ pd.place }} · ¥{{ pd.price }}</text>
                 </view>
-                <text class="op danger" @tap="deletePandaoSession(pd)">删除</text>
+                <view class="home-pd-ops">
+                  <text class="op" @tap="editPandaoSession(pd)">编辑</text>
+                  <text class="op danger" @tap="deletePandaoSession(pd)">删除</text>
+                </view>
               </view>
               <view class="home-pd-row" v-if="!homePandaoList.length">
                 <text class="home-pd-meta">暂无自定义场次（使用默认周三/周六）</text>
               </view>
             </view>
+            <view class="pd-form-title">{{ pdForm.id ? '编辑场次 #' + pdForm.id : '新增场次' }}</view>
             <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="pdForm.title" placeholder="如: 周六盘道 · 通州总部" /></view>
             <view class="f-row"><text class="f-label">时间</text><input class="f-input" v-model="pdForm.time" placeholder="如: 周六 14:00-17:00" /></view>
             <view class="f-row"><text class="f-label">地点</text><input class="f-input" v-model="pdForm.place" placeholder="活动地点" /></view>
-            <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="pdForm.price" placeholder="如: 199" /></view>
+            <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="pdForm.price" placeholder="如: 129" /></view>
+            <view class="f-row"><text class="f-label">状态</text>
+              <view class="f-pills wrap">
+                <text v-for="st in pdStatusOptions" :key="st" class="pill" :class="{ on: pdForm.status === st }" @tap="pdForm.status = st">{{ st }}</text>
+              </view>
+            </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
+            <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea" v-model="pdForm.content" placeholder="详情页活动介绍（可换行）" /></view>
             <view class="settings-actions">
-              <view class="btn-p sm" @click="addPandaoSession">添加场次</view>
+              <view class="btn-p plain sm" v-if="pdForm.id" @click="pdForm = emptyPdForm()">取消编辑</view>
+              <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
             </view>
           </view>
         </view>
@@ -787,7 +800,7 @@ import {
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
-  adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete,
+  adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   wxmpGetAuthUrl, wxmpListBound, wxmpGetExperienceQr, wxmpUploadCode, wxmpSubmitAudit, wxmpRelease,
@@ -998,7 +1011,14 @@ async function loadModule(key) {
 /* ===== 首页管理 ===== */
 const homeCfg = ref({ show_publish: true, show_live: true })
 const homePandaoList = ref([])
-const pdForm = ref({ title: '', time: '', place: '', price: '', desc: '' })
+const pdStatusOptions = ['即将开始', '进行中', '已结束']
+function pdStatusKey(st) {
+  return { '即将开始': 'upcoming', '进行中': 'live', '已结束': 'end' }[st] || 'upcoming'
+}
+function emptyPdForm() {
+  return { id: 0, title: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始' }
+}
+const pdForm = ref(emptyPdForm())
 
 async function loadHomeConfig() {
   try {
@@ -1023,12 +1043,31 @@ async function addPandaoSession() {
   const f = pdForm.value
   if (!f.title.trim()) return uni.showToast({ title: '请输入活动标题', icon: 'none' })
   try {
-    await adminPandaoCreate({ title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim() })
-    pdForm.value = { title: '', time: '', place: '', price: '', desc: '' }
-    uni.showToast({ title: '已添加', icon: 'success' })
+    if (f.id) {
+      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status })
+      uni.showToast({ title: '已保存', icon: 'success' })
+    } else {
+      await adminPandaoCreate({ title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status })
+      uni.showToast({ title: '已添加', icon: 'success' })
+    }
+    pdForm.value = emptyPdForm()
     await loadHomeConfig()
   } catch (e) {
-    uni.showToast({ title: e.message || '添加失败', icon: 'none' })
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  }
+}
+
+/* 编辑场次 */
+function editPandaoSession(pd) {
+  pdForm.value = {
+    id: pd.id,
+    title: pd.title || '',
+    time: pd.time || '',
+    place: pd.place || '',
+    price: pd.price || '',
+    desc: pd.desc || '',
+    content: pd.content || '',
+    status: pd.status || '即将开始',
   }
 }
 
@@ -2384,6 +2423,22 @@ onMounted(async () => {
   font-size: 26rpx;
   color: #3a2a18;
   font-weight: bold;
+}
+.home-pd-status {
+  font-size: 20rpx;
+  color: #27ae60;
+  margin-left: 10rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: #e8f5e9;
+}
+.home-pd-status.st-end {
+  color: #95a5a6;
+  background: #f0f0f0;
+}
+.home-pd-status.st-live {
+  color: #c0392b;
+  background: #fdecea;
 }
 .home-pd-meta {
   font-size: 22rpx;

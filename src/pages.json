@@ -97,6 +97,14 @@
    "root": "pages-sub",
    "pages": [
     {
+     "path": "pandao/detail",
+     "style": {
+      "navigationBarTitleText": "盘道详情",
+      "navigationBarBackgroundColor": "#FFFCF5",
+      "navigationBarTextStyle": "black"
+     }
+    },
+    {
      "path": "cart/cart",
      "style": {
       "navigationBarTitleText": "购物车",
