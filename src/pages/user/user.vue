@@ -28,10 +28,12 @@
           <template v-if="isLoggedIn">
             <view class="name-row">
               <text class="user-name">{{ userInfo.nickname }}</text>
-              <view class="vip-badge" :class="'vip-' + vipLevel">
-                <text>VIP{{ vipLevel }}</text>
+              <view class="vip-wrap">
+                <view class="vip-badge" :class="'vip-' + vipLevel">
+                  <text>VIP{{ vipLevel }}</text>
+                </view>
+                <text class="vip-tip-mini" @tap.stop="showVipTip">等级说明</text>
               </view>
-              <text class="vip-tip" @tap.stop="showVipTip">等级说明</text>
             </view>
             <text class="user-id" @tap.stop="copyDaoCode">道号 · {{ daoCode }}（点按复制）</text>
           </template>
@@ -506,8 +508,8 @@ onShow(async () => {
 }
 .home-entry {
   position: absolute;
-  right: 40rpx;
-  bottom: 110rpx;
+  right: 200rpx;
+  top: 44rpx;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -614,6 +616,22 @@ onShow(async () => {
   border-radius: 999rpx;
   font-size: 20rpx;
   color: #4e3420;
+}
+.vip-wrap {
+  position: relative;
+  margin-left: 16rpx;
+}
+.vip-tip-mini {
+  position: absolute;
+  right: -54rpx;
+  bottom: -22rpx;
+  font-size: 16rpx;
+  color: rgba(254, 251, 246, 0.8);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0 8rpx;
+  border-radius: 6rpx;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 .vip-0 { background: #857563; }
 .vip-1 { background: linear-gradient(135deg, #a8884c, #8c6d3f); }
