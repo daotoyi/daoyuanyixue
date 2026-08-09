@@ -375,7 +375,7 @@ import { fullLiuyao } from '../utils/liuyao'
 import { fullLiuren } from '../utils/liuren'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../utils/cities'
-import { aiJiepan, aiAsk } from '../../api/api'
+import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment, payOrder } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -534,7 +534,44 @@ function isLyUnlocked(key) {
   }
 }
 function payLyJiepan() {
-  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  // 付费解锁: 创建 9.9 订单 → 微信支付 → 支付成功后才解锁
+  const us = useUserStore()
+  if (!us.isLoggedIn) {
+    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  uni.showLoading({ title: '创建订单...', mask: true })
+  unlockTool({ uid: us.userInfo.uid, tool: 'liuyao' })
+    .then(async (res) => {
+      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
+      uni.hideLoading()
+      // #ifdef MP-WEIXIN
+      try {
+        const prepay = await wxpayPrepay(res.order_no)
+        if (prepay && prepay.payment) {
+          await wxRequestPayment(prepay.payment)
+          applyLyUnlock() // 支付成功 → 解锁
+        } else {
+          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+        }
+      } catch (e) {
+        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+      }
+      return
+      // #endif
+      // #ifndef MP-WEIXIN
+      await payOrder(res.order_no)
+      applyLyUnlock()
+      // #endif
+    })
+    .catch((e) => {
+      uni.hideLoading()
+      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+    })
+}
+/* 写入六爻解锁状态并刷新界面 (仅支付成功调用) */
+function applyLyUnlock() {
   try {
     const paid = uni.getStorageSync(LY_PAID_KEY) || []
     lyPaidModules.forEach((m) => {
@@ -542,6 +579,10 @@ function payLyJiepan() {
     })
     uni.setStorageSync(LY_PAID_KEY, paid)
     paidTick.value++
+    // 自动加载已展开模块的 AI 解盘内容
+    lyPaidModules.forEach((m) => {
+      if (lyOpenJp.value[m.key] && !lyAiDone.value[m.key]) loadLyAi(m.key)
+    })
     uni.showToast({ title: '解锁成功', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: '解锁失败', icon: 'none' })
@@ -647,7 +688,44 @@ function isLrUnlocked(key) {
   }
 }
 function payLrJiepan() {
-  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  // 付费解锁: 创建 9.9 订单 → 微信支付 → 支付成功后才解锁
+  const us = useUserStore()
+  if (!us.isLoggedIn) {
+    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  uni.showLoading({ title: '创建订单...', mask: true })
+  unlockTool({ uid: us.userInfo.uid, tool: 'liuren' })
+    .then(async (res) => {
+      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
+      uni.hideLoading()
+      // #ifdef MP-WEIXIN
+      try {
+        const prepay = await wxpayPrepay(res.order_no)
+        if (prepay && prepay.payment) {
+          await wxRequestPayment(prepay.payment)
+          applyLrUnlock() // 支付成功 → 解锁
+        } else {
+          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+        }
+      } catch (e) {
+        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+      }
+      return
+      // #endif
+      // #ifndef MP-WEIXIN
+      await payOrder(res.order_no)
+      applyLrUnlock()
+      // #endif
+    })
+    .catch((e) => {
+      uni.hideLoading()
+      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+    })
+}
+/* 写入大六壬解锁状态并刷新界面 (仅支付成功调用) */
+function applyLrUnlock() {
   try {
     const paid = uni.getStorageSync(LR_PAID_KEY) || []
     lrPaidModules.forEach((m) => {
@@ -655,6 +733,10 @@ function payLrJiepan() {
     })
     uni.setStorageSync(LR_PAID_KEY, paid)
     paidTick.value++
+    // 自动加载已展开模块的 AI 解盘内容
+    lrPaidModules.forEach((m) => {
+      if (lrOpenJp.value[m.key] && !lrAiDone.value[m.key]) loadLrAi(m.key)
+    })
     uni.showToast({ title: '解锁成功', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: '解锁失败', icon: 'none' })

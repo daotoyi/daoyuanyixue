@@ -225,6 +225,8 @@ export const cancelOrder = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.cancel', data)
 export const deleteOrder = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ deleted: true }))() : _callFunction('order.delete', data)
+export const unlockTool = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ order_no: `TL${Date.now()}` }))() : _callFunction('tool.unlock', data)
 
 /* ============ 后台管理 (需 role=admin) ============ */
 

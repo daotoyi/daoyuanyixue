@@ -1374,6 +1374,33 @@ async function createOrder(data) {
   return ok({ ...order, _id: res.id })
 }
 
+/* 玄学工具 9.9 付费解锁: 创建工具解锁订单 (支付成功才解锁, 与课程/预约同链路) */
+async function toolUnlock(data) {
+  const { uid, tool } = data // tool: liuyao | liuren
+  if (!uid) return fail('请先登录')
+  if (!['liuyao', 'liuren'].includes(String(tool))) return fail('参数错误')
+  const PRICE = 9.9
+  const names = { liuyao: '六爻 AI 深度解盘', liuren: '大六壬 AI 深度解盘' }
+  const order_no = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`
+  await db.collection('orders').add({
+    order_no,
+    status: '待付款',
+    total_price: String(PRICE),
+    coupon_discount: 0,
+    balance_used: 0,
+    items: [{ id: 'tool_' + tool, name: names[tool], price: String(PRICE), qty: 1 }],
+    pay_method: 'wechat',
+    address: {},
+    uid: Number(uid),
+    course_id: 0,
+    session_id: 0,
+    order_type: 'tool_unlock', // 工具解锁订单
+    tool_type: String(tool), // 解锁的工具
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  })
+  return ok({ order_no, order_type: 'tool_unlock' })
+}
+
 async function listOrders(data) {
   let query = db.collection('orders')
   const conds = []
@@ -2421,6 +2448,7 @@ const ROUTES = {
   'order.cancel': cancelOrder,
   'order.delete': deleteUserOrder,
   'course.buy': buyCourse,
+  'tool.unlock': toolUnlock,
   'course.mine': myCourses,
   'course.favorite': favoriteCourse,
   'course.progress': updateCourseProgress,
@@ -2539,12 +2567,16 @@ exports.main = async (event = {}) => {
         try {
           const o = (await db.collection('orders').where({ order_no: resource.out_trade_no }).limit(1).get()).data[0]
           if (o && o.uid) {
+            // 工具解锁订单: 消息文案不同, 不报虚拟发货
+            const isToolUnlock = o.order_type === 'tool_unlock'
             await db.collection('messages').add({
               id: Date.now() % 1000000,
               uid: o.uid,
               type: 'order',
               title: '订单支付成功',
-              content: '订单 ' + resource.out_trade_no + ' 已支付成功，商家正在加紧备货',
+              content: isToolUnlock
+                ? ((o.items && o.items[0] && o.items[0].name) || '玄学工具') + ' 已解锁，快去查看完整解盘吧'
+                : '订单 ' + resource.out_trade_no + ' 已支付成功，商家正在加紧备货',
               read: false,
               created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
             })
