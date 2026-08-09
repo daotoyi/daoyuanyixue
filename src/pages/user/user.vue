@@ -507,7 +507,7 @@ onShow(async () => {
 .home-entry {
   position: absolute;
   right: 40rpx;
-  bottom: 24rpx;
+  bottom: 110rpx;
   z-index: 5;
   display: flex;
   align-items: center;
