@@ -12,6 +12,10 @@
         <text class="msg-icon">🔔</text>
         <text class="msg-dot" v-if="unreadCount > 0"></text>
       </view>
+      <view class="home-entry" @tap="isLoggedIn ? openProfile() : goLogin()">
+        <text class="home-icon">🏠</text>
+        <text class="home-label">主页</text>
+      </view>
       <view class="user-main">
         <view class="avatar-wrap" @tap="isLoggedIn ? openProfile() : goLogin()">
           <image v-if="userInfo.avatar" class="user-avatar" :src="userInfo.avatar" mode="aspectFill"></image>
@@ -479,6 +483,28 @@ onShow(async () => {
   font-size: 34rpx;
   color: #fefbf6;
 }
+.home-entry {
+  position: absolute;
+  right: 196rpx;
+  top: 44rpx;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 0 20rpx;
+  height: 64rpx;
+  border-radius: 999rpx;
+  background: rgba(254, 251, 246, 0.16);
+  border: 1rpx solid rgba(254, 251, 246, 0.3);
+}
+.home-icon {
+  font-size: 26rpx;
+}
+.home-label {
+  font-size: 24rpx;
+  color: #fefbf6;
+}
+
 .msg-entry {
   position: absolute;
   right: 116rpx;
