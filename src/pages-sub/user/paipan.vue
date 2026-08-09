@@ -709,7 +709,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf, ganRelation, zhiRelation } from '../utils/paipan'
 import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../utils/ziwei'
 import { generateJiepan, summaryJiepan } from '../utils/jiepan'
-import { aiJiepan, aiAsk } from '../../api/api'
+import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -825,7 +825,67 @@ function isQmUnlocked(key) {
   }
 }
 function payQmJiepan() {
-  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  const us = useUserStore()
+  if (!us.isLoggedIn) {
+    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  // #ifndef MP-WEIXIN
+  // H5 端: 余额扣款 9.9 积分
+  uni.showModal({
+    title: '解锁奇门深度解盘',
+    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    confirmText: '确认解锁',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      uni.showLoading({ title: '解锁中...', mask: true })
+      unlockTool({ uid: us.userInfo.uid, tool: 'qimen', pay_method: 'balance' })
+        .then((res) => {
+          uni.hideLoading()
+          if (res && (res.order_no && res.pay_method === 'balance')) {
+            applyQmUnlock()
+          } else {
+            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+          }
+        })
+        .catch((e) => {
+          uni.hideLoading()
+          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+        })
+    },
+  })
+  return
+  // #endif
+  uni.showLoading({ title: '创建订单...', mask: true })
+  unlockTool({ uid: us.userInfo.uid, tool: 'qimen' })
+    .then(async (res) => {
+      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
+      uni.hideLoading()
+      // #ifdef MP-WEIXIN
+      try {
+        const prepay = await wxpayPrepay(res.order_no)
+        if (prepay && prepay.payment) {
+          await wxRequestPayment(prepay.payment)
+          applyQmUnlock() // 支付成功 → 解锁
+        } else {
+          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+        }
+      } catch (e) {
+        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+      }
+      return
+      // #endif
+    })
+    .catch((e) => {
+      uni.hideLoading()
+      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+    })
+}
+/* 写入奇门解锁状态并刷新界面 (仅支付成功调用) */
+function applyQmUnlock() {
   try {
     const paid = uni.getStorageSync(QM_PAID_KEY) || []
     qmPaidModules.forEach((m) => {
@@ -833,6 +893,10 @@ function payQmJiepan() {
     })
     uni.setStorageSync(QM_PAID_KEY, paid)
     paidTick.value++
+    // 自动加载已展开模块的 AI 解盘内容
+    qmPaidModules.forEach((m) => {
+      if (qmOpenJp.value[m.key] && !qmAiDone.value[m.key]) loadAiQimen(m.key)
+    })
     uni.showToast({ title: '解锁成功', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: '解锁失败', icon: 'none' })
@@ -1139,7 +1203,67 @@ function isZwUnlocked(key) {
   }
 }
 function payZwJiepan() {
-  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  const us = useUserStore()
+  if (!us.isLoggedIn) {
+    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  // #ifndef MP-WEIXIN
+  // H5 端: 余额扣款 9.9 积分
+  uni.showModal({
+    title: '解锁紫微深度解盘',
+    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    confirmText: '确认解锁',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      uni.showLoading({ title: '解锁中...', mask: true })
+      unlockTool({ uid: us.userInfo.uid, tool: 'ziwei', pay_method: 'balance' })
+        .then((res) => {
+          uni.hideLoading()
+          if (res && (res.order_no && res.pay_method === 'balance')) {
+            applyZwUnlock()
+          } else {
+            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+          }
+        })
+        .catch((e) => {
+          uni.hideLoading()
+          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+        })
+    },
+  })
+  return
+  // #endif
+  uni.showLoading({ title: '创建订单...', mask: true })
+  unlockTool({ uid: us.userInfo.uid, tool: 'ziwei' })
+    .then(async (res) => {
+      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
+      uni.hideLoading()
+      // #ifdef MP-WEIXIN
+      try {
+        const prepay = await wxpayPrepay(res.order_no)
+        if (prepay && prepay.payment) {
+          await wxRequestPayment(prepay.payment)
+          applyZwUnlock() // 支付成功 → 解锁
+        } else {
+          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+        }
+      } catch (e) {
+        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+      }
+      return
+      // #endif
+    })
+    .catch((e) => {
+      uni.hideLoading()
+      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+    })
+}
+/* 写入紫微解锁状态并刷新界面 (仅支付成功调用) */
+function applyZwUnlock() {
   try {
     const paid = uni.getStorageSync(ZW_PAID_KEY) || []
     zwPaidModules.forEach((m) => {
@@ -1147,6 +1271,10 @@ function payZwJiepan() {
     })
     uni.setStorageSync(ZW_PAID_KEY, paid)
     paidTick.value++
+    // 自动加载已展开模块的 AI 解盘内容
+    zwPaidModules.forEach((m) => {
+      if (zwOpenJp.value[m.key] && !zwAiDone.value[m.key]) loadAiZiwei(m.key)
+    })
     uni.showToast({ title: '解锁成功', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: '解锁失败', icon: 'none' })
@@ -1562,7 +1690,67 @@ function isJpUnlocked(key) {
 }
 
 function payJiepan() {
-  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  const us = useUserStore()
+  if (!us.isLoggedIn) {
+    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  // #ifndef MP-WEIXIN
+  // H5 端: 余额扣款 9.9 积分
+  uni.showModal({
+    title: '解锁四柱深度解盘',
+    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    confirmText: '确认解锁',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      uni.showLoading({ title: '解锁中...', mask: true })
+      unlockTool({ uid: us.userInfo.uid, tool: 'bazi', pay_method: 'balance' })
+        .then((res) => {
+          uni.hideLoading()
+          if (res && (res.order_no && res.pay_method === 'balance')) {
+            applyJpUnlock()
+          } else {
+            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+          }
+        })
+        .catch((e) => {
+          uni.hideLoading()
+          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+        })
+    },
+  })
+  return
+  // #endif
+  uni.showLoading({ title: '创建订单...', mask: true })
+  unlockTool({ uid: us.userInfo.uid, tool: 'bazi' })
+    .then(async (res) => {
+      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
+      uni.hideLoading()
+      // #ifdef MP-WEIXIN
+      try {
+        const prepay = await wxpayPrepay(res.order_no)
+        if (prepay && prepay.payment) {
+          await wxRequestPayment(prepay.payment)
+          applyJpUnlock() // 支付成功 → 解锁
+        } else {
+          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
+        }
+      } catch (e) {
+        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+      }
+      return
+      // #endif
+    })
+    .catch((e) => {
+      uni.hideLoading()
+      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+    })
+}
+/* 写入四柱解锁状态并刷新界面 (仅支付成功调用) */
+function applyJpUnlock() {
   try {
     const paid = uni.getStorageSync(PAID_KEY) || []
     paidModules.forEach((m) => {
@@ -1570,6 +1758,10 @@ function payJiepan() {
     })
     uni.setStorageSync(PAID_KEY, paid)
     paidTick.value++
+    // 自动加载已展开模块的 AI 解盘内容
+    paidModules.forEach((m) => {
+      if (openJp.value[m.key] && !jpAiDone.value[m.key]) loadAiJiepan(m.key)
+    })
     uni.showToast({ title: '解锁成功', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: '解锁失败', icon: 'none' })

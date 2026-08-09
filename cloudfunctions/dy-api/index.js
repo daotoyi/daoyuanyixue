@@ -1378,11 +1378,14 @@ async function createOrder(data) {
    pay_method=balance → 直接扣余额解锁(积分 1:1, H5 端无微信支付能力用余额)
    pay_method=wechat (默认) → 创建 tool_unlock 订单走微信支付, 支付成功回调才解锁 */
 async function toolUnlock(data) {
-  const { uid, tool, pay_method } = data // tool: liuyao | liuren
+  const { uid, tool, pay_method } = data // tool: bazi | qimen | ziwei | liuyao | liuren
   if (!uid) return fail('请先登录')
-  if (!['liuyao', 'liuren'].includes(String(tool))) return fail('参数错误')
+  if (!['bazi', 'qimen', 'ziwei', 'liuyao', 'liuren'].includes(String(tool))) return fail('参数错误')
   const PRICE = 9.9
-  const names = { liuyao: '六爻 AI 深度解盘', liuren: '大六壬 AI 深度解盘' }
+  const names = {
+    bazi: '四柱 AI 深度解盘', qimen: '奇门 AI 深度解盘', ziwei: '紫微 AI 深度解盘',
+    liuyao: '六爻 AI 深度解盘', liuren: '大六壬 AI 深度解盘',
+  }
 
   // 余额扣款解锁 (H5 端)
   if (String(pay_method || '') === 'balance') {
