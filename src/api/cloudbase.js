@@ -152,7 +152,21 @@ export async function getStorage() {
   // #endif
 
   // #ifndef MP-WEIXIN
-  return app.storage()
+  // H5/App: js-sdk storage 封装为统一签名 (与小程序一致: uploadFile(filePath, cloudPath) / getTempFileURL(fileList))
+  const raw = app.storage()
+  return {
+    uploadFile: (filePath, cloudPath) => {
+      return new Promise((resolve, reject) => {
+        raw.uploadFile({ cloudPath, filePath, success: resolve, fail: reject })
+      })
+    },
+    getTempFileURL: (fileList) => {
+      return new Promise((resolve, reject) => {
+        raw.getTempFileURL({ fileList, success: resolve, fail: reject })
+      })
+    },
+    _raw: raw,
+  }
   // #endif
 }
 

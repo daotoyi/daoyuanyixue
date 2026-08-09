@@ -18,7 +18,7 @@
       </view>
       <view class="user-main">
         <view class="avatar-wrap" @tap="isLoggedIn ? openProfile() : goLogin()">
-          <image v-if="userInfo.avatar" class="user-avatar" :src="userInfo.avatar" mode="aspectFill"></image>
+          <image v-if="displayAvatar || userInfo.avatar" class="user-avatar" :src="displayAvatar || userInfo.avatar" mode="aspectFill"></image>
           <view v-else class="user-avatar avatar-fallback">
             <text>{{ userInfo.nickname ? userInfo.nickname[0] : '客' }}</text>
           </view>
@@ -190,6 +190,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
@@ -226,6 +227,7 @@ const vipLevels = [
 ]
 
 const assets = ref({ coupon_count: 0, favorite_count: 0, footprint_count: 0 })
+const displayAvatar = ref("") // cloud:// 头像转可访问 URL (H5 渲染)
 const courseCounts = ref({ purchased: 0, learning: 0, done: 0, fav: 0 })
 const unreadCount = ref(0)
 const showProfile = ref(false)
@@ -421,6 +423,8 @@ function onLogout() {
 
 onShow(async () => {
   if (!isLoggedIn.value) return
+  // cloud:// 头像转可访问 URL (H5 渲染)
+  if (userInfo.value.avatar) displayAvatar.value = await resolveCloudUrl(userInfo.value.avatar)
   try {
     const [a, coupons, favs, foots, unread, vip] = await Promise.all([
       userAssets({ uid: userInfo.value.uid }),

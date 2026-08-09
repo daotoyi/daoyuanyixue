@@ -93,6 +93,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { userProfile, followUser, followList } from '../../api/api'
+import { resolveCloudUrl, resolveCloudList } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -112,6 +113,13 @@ onLoad(async (options) => {
 async function loadProfile() {
   try {
     const res = await userProfile({ uid: targetUid.value, viewer_uid: userStore.userInfo.uid || 0 })
+    // cloud:// 头像转可访问 URL (H5 渲染)
+    if (res && res.user && res.user.avatar) {
+      res.user.avatar = await resolveCloudUrl(res.user.avatar)
+    }
+    if (res && res.moments) {
+      res.moments = await resolveCloudList(res.moments)
+    }
     profile.value = res || {}
     // 收到的点赞: 从点赞记录取动态
     if (res && res.liked_me && res.user) {
@@ -128,7 +136,7 @@ async function switchList(mode) {
   if (mode === 'follow' || mode === 'fans') {
     userList.value = []
     try {
-      userList.value = await followList({ uid: targetUid.value, type: mode })
+      userList.value = await resolveCloudList(await followList({ uid: targetUid.value, type: mode }))
     } catch (e) {}
   }
 }
