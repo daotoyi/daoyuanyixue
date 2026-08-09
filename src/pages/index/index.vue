@@ -405,40 +405,43 @@ function enterLive(l) {
 }
 
 onShow(async () => {
+  // ① 首页入口配置: 独立加载 (失败不影响盘道/动态)
   try {
-    const [moments, lives, pandao, likes] = await Promise.all([
-      getMoments(), getLiveStreams(), getPandaoList(),
+    const cfg = await getPayConfig()
+    homeShowPublish.value = cfg.show_publish === true
+    const want = []
+    if (cfg.show_follow === true) want.push({ key: 'follow', label: '关注' })
+    if (cfg.show_live === true) want.push({ key: 'live', label: '直播' })
+    const has = (k) => tabs.value.some((t) => t.key === k)
+    want.forEach((t) => { if (!has(t.key)) tabs.value.push(t) })
+    // 当前 tab 被隐藏时切回推荐
+    if (!tabs.value.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
+  } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
+
+  // ② 盘道活动: 独立加载 (任一接口失败不影响盘道展示)
+  try {
+    const pandao = await getPandaoList()
+    pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
+    if (userStore.isLoggedIn) {
+      try {
+        const pdOrders = await getPandaoMine({ uid: userStore.userInfo.uid })
+        const booked = new Set(pdOrders.map((o) => o.session_id))
+        pandaoList.value.forEach((p) => { if (booked.has(p.id)) p._booked = true })
+      } catch (e2) {}
+    }
+  } catch (e) { /* 盘道失败不影响其他 */ }
+
+  // ③ 动态流 + 直播: 独立加载
+  try {
+    const [moments, lives, likes] = await Promise.all([
+      getMoments(),
+      getLiveStreams(),
       userStore.isLoggedIn ? myLikes({ uid: userStore.userInfo.uid }).catch(() => []) : Promise.resolve([]),
     ])
     const likedIds = new Set((likes || []).map((id) => Number(id)))
     momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
     liveList.value = lives.map((l) => ({ ...l, _booked: false }))
-    pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
-    // 后台配置: 首页入口显示开关 (发布动态/关注/直播, 默认全隐藏)
-    try {
-      const cfg = await getPayConfig()
-      homeShowPublish.value = cfg.show_publish === true
-      const want = []
-      if (cfg.show_follow === true) want.push({ key: 'follow', label: '关注' })
-      if (cfg.show_live === true) want.push({ key: 'live', label: '直播' })
-      const has = (k) => tabs.value.some((t) => t.key === k)
-      want.forEach((t) => { if (!has(t.key)) tabs.value.push(t) })
-      // 当前 tab 被隐藏时切回推荐
-      if (!tabs.value.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
-    } catch (e) {}
-    // 已预约的盘道标记
-    const userStore2 = useUserStore()
-    if (userStore2.isLoggedIn) {
-      try {
-        const pdOrders = await getPandaoMine({ uid: userStore2.userInfo.uid })
-        const booked = new Set(pdOrders.map((o) => o.session_id))
-        pandaoList.value.forEach((p) => {
-          if (booked.has(p.id)) p._booked = true
-        })
-      } catch (e2) {}
-    }
     // 已预约的直播标记
-    const userStore = useUserStore()
     if (userStore.isLoggedIn) {
       try {
         const bookings = await getMyBookings({ uid: userStore.userInfo.uid })
@@ -446,13 +449,9 @@ onShow(async () => {
         liveList.value.forEach((l) => {
           if (bookedIds.includes(l.id)) l._booked = true
         })
-      } catch (e) {
-        /* 忽略 */
-      }
+      } catch (e) { /* 忽略 */ }
     }
-  } catch (e) {
-    console.error('[Home] load failed', e)
-  }
+  } catch (e) { /* 动态失败不影响盘道 */ }
 })
 </script>
 
