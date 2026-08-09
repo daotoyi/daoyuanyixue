@@ -377,6 +377,25 @@ async function bindGzh(data) {
   return ok({ bound: true, openid })
 }
 
+/* 云存储文件转可访问 URL (服务端 getTempFileURL, H5/后台 image 无法渲染 cloud://) */
+async function appFileUrl(data) {
+  const fileList = Array.isArray(data.fileList)
+    ? data.fileList.filter((f) => typeof f === 'string' && f.startsWith('cloud://'))
+    : []
+  if (!fileList.length) return ok({ list: [] })
+  try {
+    const res = await app.getTempFileURL({ fileList })
+    return ok({
+      list: ((res && res.fileList) || []).map((f) => ({
+        fileID: f.fileID || '',
+        url: f.tempFileURL || '',
+      })),
+    })
+  } catch (e) {
+    return fail('文件地址转换失败: ' + (e.message || ''))
+  }
+}
+
 /* 生成服务号网页授权链接 (用户在小程序外打开, 授权后回调绑定页带 code) */
 async function gzhAuthUrl(data) {
   const c = require('./config.local')
@@ -2351,6 +2370,7 @@ const ROUTES = {
   'user.bindWechatPhone': bindWechatPhone,
   'user.bindGzh': bindGzh,
   'user.gzhAuthUrl': gzhAuthUrl,
+  'app.fileUrl': appFileUrl,
   'user.updateEmail': updateEmail,
   'user.bindWechat': bindWechat,
   'user.unbindAccount': unbindAccount,
