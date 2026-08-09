@@ -19,6 +19,12 @@
     </view>
 
     <view class="pd-book-bar" v-if="session">
+      <!-- #ifdef MP-WEIXIN -->
+      <button class="pd-share-btn" open-type="share"><text>分享</text></button>
+      <!-- #endif -->
+      <!-- #ifndef MP-WEIXIN -->
+      <view class="pd-share-btn" @tap="shareH5"><text>分享</text></view>
+      <!-- #endif -->
       <view class="pd-book-btn" :class="{ ok: session._booked }" @tap="bookNow">
         <text>{{ session._booked ? '已预约' : '报名预约 ¥' + session.price }}</text>
       </view>
@@ -28,7 +34,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getPandaoDetail, pandaoBook, getPandaoMine } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
@@ -39,6 +45,15 @@ function statusKey(st) {
   return { '即将开始': 'upcoming', '进行中': 'live', '已结束': 'end' }[st] || 'upcoming'
 }
 const sessionId = ref(0)
+
+// 微信分享: 分享给好友
+onShareAppMessage(() => {
+  return {
+    title: (session.value ? session.value.title : '盘道活动') + ' · 真和盛',
+    path: '/pages-sub/pandao/detail?id=' + sessionId.value,
+    imageUrl: '',
+  }
+})
 
 onLoad(async (options) => {
   sessionId.value = options.id ? Number(options.id) : 0
@@ -62,6 +77,15 @@ async function loadDetail() {
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
   }
+}
+
+/* H5 分享: 复制链接 */
+function shareH5() {
+  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/#/pages-sub/pandao/detail?id=' + sessionId.value
+  uni.setClipboardData({
+    data: link,
+    success: () => uni.showToast({ title: '链接已复制，可发给好友', icon: 'none' }),
+  })
 }
 
 async function bookNow() {
@@ -164,6 +188,25 @@ async function bookNow() {
   color: #6b5a45;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+.pd-book-bar {
+  display: flex;
+  gap: 20rpx;
+  align-items: center;
+}
+.pd-share-btn {
+  flex-shrink: 0;
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 34rpx;
+  border-radius: 999rpx;
+  background: #f3ead8;
+  color: #6b5a45;
+  font-size: 28rpx;
+  border: none;
+}
+.pd-share-btn::after {
+  border: none;
 }
 .pd-book-bar {
   position: fixed;

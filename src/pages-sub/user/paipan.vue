@@ -774,6 +774,7 @@ const qmAiLoading = ref({ zongping: false, yongshen: false, career: false, wealt
 const qmAiDone = ref({})
 const qmOpenJp = ref({ zongping: true, yongshen: false, career: false, wealth: false, marriage: false })
 const QM_PAID_KEY = 'qimen_paid_v1'
+const paidTick = ref(0) // 解锁后 +1 触发界面刷新
 const qmFreeModules = [
   { key: 'zongping', name: '奇门总评', icon: '☯' },
   { key: 'yongshen', name: '用神方位', icon: '🧭' },
@@ -815,6 +816,7 @@ function unlockQmJp(m) {
   if (qmOpenJp.value[m.key] && isQmUnlocked(m.key) && !qmAiDone.value[m.key]) loadAiQimen(m.key)
 }
 function isQmUnlocked(key) {
+  paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
     const paid = uni.getStorageSync(QM_PAID_KEY) || []
     return paid.includes(key)
@@ -823,25 +825,18 @@ function isQmUnlocked(key) {
   }
 }
 function payQmJiepan() {
-  uni.showModal({
-    title: '深入奇门解盘 · ¥9.9',
-    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
-    confirmText: '确认支付 ¥9.9',
-    cancelText: '取消',
-    success: (res) => {
-      if (!res.confirm) return
-      try {
-        const paid = uni.getStorageSync(QM_PAID_KEY) || []
-        qmPaidModules.forEach((m) => {
-          if (!paid.includes(m.key)) paid.push(m.key)
-        })
-        uni.setStorageSync(QM_PAID_KEY, paid)
-        uni.showToast({ title: '解锁成功', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: '解锁失败', icon: 'none' })
-      }
-    },
-  })
+  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  try {
+    const paid = uni.getStorageSync(QM_PAID_KEY) || []
+    qmPaidModules.forEach((m) => {
+      if (!paid.includes(m.key)) paid.push(m.key)
+    })
+    uni.setStorageSync(QM_PAID_KEY, paid)
+    paidTick.value++
+    uni.showToast({ title: '解锁成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '解锁失败', icon: 'none' })
+  }
 }
 /* 保存当前盘到历史 (八字/奇门/紫微通用) */
 function saveDisk() {
@@ -1144,25 +1139,18 @@ function isZwUnlocked(key) {
   }
 }
 function payZwJiepan() {
-  uni.showModal({
-    title: '深入紫微解盘 · ¥9.9',
-    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
-    confirmText: '确认支付 ¥9.9',
-    cancelText: '取消',
-    success: (res) => {
-      if (!res.confirm) return
-      try {
-        const paid = uni.getStorageSync(ZW_PAID_KEY) || []
-        zwPaidModules.forEach((m) => {
-          if (!paid.includes(m.key)) paid.push(m.key)
-        })
-        uni.setStorageSync(ZW_PAID_KEY, paid)
-        uni.showToast({ title: '解锁成功', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: '解锁失败', icon: 'none' })
-      }
-    },
-  })
+  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  try {
+    const paid = uni.getStorageSync(ZW_PAID_KEY) || []
+    zwPaidModules.forEach((m) => {
+      if (!paid.includes(m.key)) paid.push(m.key)
+    })
+    uni.setStorageSync(ZW_PAID_KEY, paid)
+    paidTick.value++
+    uni.showToast({ title: '解锁成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '解锁失败', icon: 'none' })
+  }
 }
 
 /* 四柱表横向滑动位置 (下方 藏干/纳音/长生/空亡/神煞 表格同步) */
@@ -1564,6 +1552,7 @@ function loadAiJiepan(key) {
 }
 
 function isJpUnlocked(key) {
+  paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
     const paid = uni.getStorageSync(PAID_KEY) || []
     return paid.includes(key)
@@ -1573,33 +1562,18 @@ function isJpUnlocked(key) {
 }
 
 function payJiepan() {
-  uni.showModal({
-    title: '深入解盘 · ¥9.9',
-    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
-    confirmText: '确认支付 ¥9.9',
-    cancelText: '取消',
-    success: (res) => {
-      if (!res.confirm) return
-      try {
-        const paid = uni.getStorageSync(PAID_KEY) || []
-        paidModules.forEach((m) => {
-          if (!paid.includes(m.key)) paid.push(m.key)
-        })
-        uni.setStorageSync(PAID_KEY, paid)
-        uni.showToast({ title: '解锁成功', icon: 'success' })
-        const { createOrder, payOrder } = require('../../api/api')
-        createOrder({
-          items: [{ id: 0, name: '八字深入解盘（事业·财富·婚姻）', price: '9.90', qty: 1, image: '' }],
-          total_price: '9.90',
-          pay_method: 'balance',
-          address: { name: '在线服务', phone: '', detail: '虚拟服务' },
-          uid: userStore.userInfo.uid || 0,
-        }).then((o) => payOrder(o.order_no)).catch(() => {})
-      } catch (e) {
-        uni.showToast({ title: '解锁失败', icon: 'none' })
-      }
-    },
-  })
+  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  try {
+    const paid = uni.getStorageSync(PAID_KEY) || []
+    paidModules.forEach((m) => {
+      if (!paid.includes(m.key)) paid.push(m.key)
+    })
+    uni.setStorageSync(PAID_KEY, paid)
+    paidTick.value++
+    uni.showToast({ title: '解锁成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '解锁失败', icon: 'none' })
+  }
 }
 </script>
 

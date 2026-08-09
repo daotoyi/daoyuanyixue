@@ -484,6 +484,7 @@ const LY_PAID_KEY = 'liuyao_paid_v1'
 const lyData = ref({ zongping: [], career: [], wealth: [], marriage: [] })
 const lyAiLoading = ref({ zongping: false, career: false, wealth: false, marriage: false })
 const lyAiDone = ref({})
+const paidTick = ref(0) // 解锁后 +1 触发界面刷新
 const lyOpenJp = ref({ zongping: true, career: false, wealth: false, marriage: false })
 const lyFreeModules = [
   { key: 'zongping', name: '卦象总评', icon: '☯' },
@@ -524,6 +525,7 @@ function unlockLyJp(m) {
   if (lyOpenJp.value[m.key] && isLyUnlocked(m.key) && !lyAiDone.value[m.key]) loadLyAi(m.key)
 }
 function isLyUnlocked(key) {
+  paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
     const paid = uni.getStorageSync(LY_PAID_KEY) || []
     return paid.includes(key)
@@ -532,25 +534,18 @@ function isLyUnlocked(key) {
   }
 }
 function payLyJiepan() {
-  uni.showModal({
-    title: '深入六爻解盘 · ¥9.9',
-    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
-    confirmText: '确认支付 ¥9.9',
-    cancelText: '取消',
-    success: (res) => {
-      if (!res.confirm) return
-      try {
-        const paid = uni.getStorageSync(LY_PAID_KEY) || []
-        lyPaidModules.forEach((m) => {
-          if (!paid.includes(m.key)) paid.push(m.key)
-        })
-        uni.setStorageSync(LY_PAID_KEY, paid)
-        uni.showToast({ title: '解锁成功', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: '解锁失败', icon: 'none' })
-      }
-    },
-  })
+  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  try {
+    const paid = uni.getStorageSync(LY_PAID_KEY) || []
+    lyPaidModules.forEach((m) => {
+      if (!paid.includes(m.key)) paid.push(m.key)
+    })
+    uni.setStorageSync(LY_PAID_KEY, paid)
+    paidTick.value++
+    uni.showToast({ title: '解锁成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '解锁失败', icon: 'none' })
+  }
 }
 function saveLiuyao() {
   saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value)
@@ -643,6 +638,7 @@ function unlockLrJp(m) {
   if (lrOpenJp.value[m.key] && isLrUnlocked(m.key) && !lrAiDone.value[m.key]) loadLrAi(m.key)
 }
 function isLrUnlocked(key) {
+  paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
     const paid = uni.getStorageSync(LR_PAID_KEY) || []
     return paid.includes(key)
@@ -651,25 +647,18 @@ function isLrUnlocked(key) {
   }
 }
 function payLrJiepan() {
-  uni.showModal({
-    title: '深入六壬解盘 · ¥9.9',
-    content: '解锁事业、财富、婚姻三大深度解析（一次购买永久解锁）。\n当前为演示支付环境。',
-    confirmText: '确认支付 ¥9.9',
-    cancelText: '取消',
-    success: (res) => {
-      if (!res.confirm) return
-      try {
-        const paid = uni.getStorageSync(LR_PAID_KEY) || []
-        lrPaidModules.forEach((m) => {
-          if (!paid.includes(m.key)) paid.push(m.key)
-        })
-        uni.setStorageSync(LR_PAID_KEY, paid)
-        uni.showToast({ title: '解锁成功', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: '解锁失败', icon: 'none' })
-      }
-    },
-  })
+  // 立即解锁 (演示支付): 点击直接生效 + 强制刷新界面
+  try {
+    const paid = uni.getStorageSync(LR_PAID_KEY) || []
+    lrPaidModules.forEach((m) => {
+      if (!paid.includes(m.key)) paid.push(m.key)
+    })
+    uni.setStorageSync(LR_PAID_KEY, paid)
+    paidTick.value++
+    uni.showToast({ title: '解锁成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '解锁失败', icon: 'none' })
+  }
 }
 function saveLiuren() {
   saveHistory('liuren', `大六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
