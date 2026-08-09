@@ -1017,7 +1017,8 @@ async function loadModule(key) {
         try {
           const storage = await getStorage()
           if (storage && storage.getTempFileURL) {
-            const rels = cloudUids.map((u) => String(u.avatar).replace(/^cloud:\/\/[^/]+\//, ''))
+            // 传完整 fileID (cloud://...), js-sdk getTempFileURL 需要完整路径
+            const rels = cloudUids.map((u) => String(u.avatar))
             // 兼容两种 SDK 签名: js-sdk 用 {fileList}, 小程序用数组
             const tr = await (async () => {
               // 小程序封装: 1参数传数组; js-sdk(H5): 传 {fileList}
