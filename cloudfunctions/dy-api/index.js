@@ -538,6 +538,12 @@ async function updateProfile(data) {
   if (data.nickname !== undefined && String(data.nickname).trim()) doc.nickname = String(data.nickname).trim().slice(0, 20)
   if (data.avatar !== undefined) doc.avatar = data.avatar
   await db.collection('users').where({ uid: Number(uid) }).update(doc)
+  // 昵称变更: 同步更新该用户所有动态/评论上的昵称
+  if (doc.nickname) {
+    const uidN = Number(uid)
+    await db.collection('moments').where({ user_id: uidN }).update({ user_name: doc.nickname }).catch(() => {})
+    await db.collection('comments').where({ user_id: uidN }).update({ user_name: doc.nickname }).catch(() => {})
+  }
   return ok({ updated: true })
 }
 
