@@ -135,8 +135,9 @@ function addCart() {
 
 function buyNow() {
   if (!product.value) return
-  addToCart(product.value, qty.value)
-  uni.navigateTo({ url: '/pages-sub/checkout/checkout' })
+  // 立即购买: 只结算当前商品, 不带购物车遗留的已选商品
+  const p = product.value
+  uni.navigateTo({ url: '/pages-sub/checkout/checkout?buy_now=' + p.id + '&qty=' + qty.value })
 }
 </script>
 

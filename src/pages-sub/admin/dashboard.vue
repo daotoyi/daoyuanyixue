@@ -233,6 +233,7 @@
                 <text class="op" v-if="o.status === '待付款'" @tap="payForOrder(o)">代收款</text>
                 <text class="op" v-if="o.status === '待发货'" @tap="openShip(o)">发货</text>
                 <text class="op danger" v-if="o.status !== '已退款' && o.status !== '已完成' && userRole !== 'staff'" @tap="refundOrder(o)">退款</text>
+                <text class="op danger" v-if="userRole === 'admin'" @tap="deleteOrder(o)">删除</text>
               </view>
             </view>
           </view>
@@ -407,7 +408,15 @@
             <view class="f-row" v-for="f in currentSettingsTab.fields" :key="f.key">
               <text class="f-label">{{ f.label }}</text>
               <view class="f-input-wrap">
+                <switch
+                  v-if="f.type === 'switch'"
+                  :checked="settingsForm[f.key] === '1' || settingsForm[f.key] === true"
+                  color="#8c5a2b"
+                  style="transform: scale(0.85)"
+                  @change="settingsForm[f.key] = $event.detail.value ? '1' : '0'"
+                />
                 <input
+                  v-else
                   class="f-input"
                   :password="!!f.secret"
                   v-model="settingsForm[f.key]"
@@ -710,7 +719,7 @@ const stCls = (v) => ST_CLS[v] || v
 import { ref, computed, onMounted } from 'vue'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
-  adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund,
+  adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave,
@@ -1454,6 +1463,23 @@ async function shipOrder(o) {
   await loadOrders()
 }
 
+async function deleteOrder(o) {
+  uni.showModal({
+    title: '删除订单',
+    content: '确认删除订单 ' + o.order_no + ' 吗？删除后不可恢复！',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await adminOrderDelete({ order_no: o.order_no })
+        uni.showToast({ title: '已删除', icon: 'success' })
+        await loadOrders()
+      } catch (e) {
+        uni.showToast({ title: e.message || '删除失败', icon: 'none' })
+      }
+    },
+  })
+}
+
 async function refundOrder(o) {
   uni.showModal({
     title: '退款',
@@ -1650,6 +1676,13 @@ const settingsTabs = [
       { key: 'app_id', label: 'AppID' },
       { key: 'app_secret', label: 'AppSecret', secret: true },
       { key: 'env_id', label: '云开发环境 ID', placeholder: 'zhenhesheng-xxxxxx' },
+    ],
+  },
+  {
+    group: 'pay', label: '支付设置', desc: '结算支付方式展示开关',
+    fields: [
+      { key: 'show_alipay', label: '显示支付宝', type: 'switch', desc: '开启后结算页显示支付宝选项（默认隐藏）' },
+      { key: 'show_balance', label: '显示余额支付', type: 'switch', desc: '开启后结算页显示余额抵扣（默认显示）' },
     ],
   },
   {

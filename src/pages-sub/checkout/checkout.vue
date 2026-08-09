@@ -110,7 +110,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment, getCourse } from '../../api/api'
+import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment, getCourse, getProduct, getPayConfig } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -127,11 +127,34 @@ const submitting = ref(false)
 
 const balance = computed(() => userStore.userInfo.balance || '0.00')
 
-const payMethods = [
+const payMethods = ref([
   { key: 'wechat', name: '微信支付', icon: '💚' },
   { key: 'alipay', name: '支付宝', icon: '🔵' },
   { key: 'balance', name: '余额支付', icon: '💰' },
-]
+])
+
+// 按后台配置过滤支付方式 (支付宝默认隐藏)
+async function loadPayConfig() {
+  try {
+    const cfg = await getPayConfig()
+    const list = [
+      { key: 'wechat', name: '微信支付', icon: '💚' },
+      { key: 'balance', name: '余额支付', icon: '💰' },
+    ]
+    if (cfg.show_alipay) list.push({ key: 'alipay', name: '支付宝', icon: '🔵' })
+    if (cfg.show_balance === false) {
+      payMethods.value = list.filter((m) => m.key !== 'balance')
+    } else {
+      payMethods.value = list
+    }
+    if (!payMethods.value.some((m) => m.key === payMethod.value)) payMethod.value = 'wechat'
+  } catch (e) {
+    payMethods.value = [
+      { key: 'wechat', name: '微信支付', icon: '💚' },
+      { key: 'balance', name: '余额支付', icon: '💰' },
+    ]
+  }
+}
 
 const subTotal = computed(() =>
   items.value.reduce((s, i) => s + parseFloat(i.price) * i.qty, 0)
@@ -172,11 +195,27 @@ onLoad(async (options) => {
         courseId.value = Number(c.id)
       }
     } catch (e) {}
+  } else if (options && options.buy_now) {
+    // 立即购买: 只结算当前商品, 不带购物车遗留
+    try {
+      const p = await getProduct(options.buy_now)
+      if (p) {
+        const q = parseInt(options.qty) || 1
+        items.value = [{
+          id: p.id,
+          name: p.name,
+          price: String(p.price),
+          qty: q,
+          image: (p.images && p.images[0]) || '',
+        }]
+      }
+    } catch (e) {}
   } else {
     const { items: list } = getSelectedItems()
     items.value = list
   }
   loadCoupons()
+  loadPayConfig()
 })
 
 async function loadCoupons() {
@@ -268,7 +307,16 @@ async function submitOrder() {
     }
     // #endif
     // #ifndef MP-WEIXIN
-    // 模拟支付成功
+    // 非小程序端: 课程/实物订单无真实支付, 引导去小程序支付 (避免"假支付成功"误解)
+    if (courseId.value) {
+      submitting.value = false
+      uni.showToast({ title: '请在小程序内完成微信支付', icon: 'none' })
+      setTimeout(() => {
+        uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
+      }, 800)
+      return
+    }
+    // 实物商品 H5: 演示支付成功 (仅测试环境)
     await payOrder(order.order_no)
     clearSelected()
     uni.showToast({ title: '支付成功', icon: 'success' })

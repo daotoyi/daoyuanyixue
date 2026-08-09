@@ -174,10 +174,11 @@ async function getWxAccessToken() {
       res.on('end', () => {
         try {
           const j = JSON.parse(d)
+          if (!j.access_token) console.log('[dy-api] token 失败:', JSON.stringify(j))
           resolve(j.access_token || '')
         } catch (e) { resolve('') }
       })
-    }).on('error', () => resolve(''))
+    }).on('error', (e) => { console.log('[dy-api] token 网络错误:', e.message); resolve('') })
   })
   if (token) { _wxToken.value = token; _wxToken.expires = Date.now() + 110 * 60 * 1000 }
   return token
@@ -200,6 +201,7 @@ async function secCheckText(content) {
   } catch (e) { /* 落到 HTTP 方案 */ }
   // HTTP 方案
   const token = await getWxAccessToken()
+  console.log('[dy-api] secCheck token:', token ? token.slice(0, 8) + '...' : 'EMPTY')
   if (!token) return { hit: false } // 无 AppSecret 时放行 (不阻塞)
   const https = require('https')
   const body = JSON.stringify({ content: text })
@@ -806,6 +808,30 @@ async function aiAsk(data) {
 /* 获取当前调用者 OPENID: 微信云开发环境用 wx-server-sdk 的 getWXContext
    (@cloudbase/node-sdk 没有该方法, 之前调 app.getWXContext() 抛错导致走 jscode2session 兜底) */
 let _wxCloud = null
+/* 探测出口 IP + token (调试用) */
+async function probeIp() {
+  try {
+    const https = require('https')
+    const ip = await new Promise((resolve) => {
+      https.get('https://myip.ipip.net', (res) => {
+        let d = ''
+        res.on('data', (c) => (d += c))
+        res.on('end', () => resolve(d))
+      }).on('error', () => resolve(''))
+    })
+    // 顺带测 access_token
+    const tokenRaw = await new Promise((resolve) => {
+      const c = require('./config.local')
+      https.get('https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' + c.WXPAY_APPID + '&secret=' + c.WX_APPSECRET, (res) => {
+        let d = ''
+        res.on('data', (chunk) => (d += chunk))
+        res.on('end', () => resolve(d))
+      }).on('error', (e) => resolve('net-err:' + e.message))
+    })
+    return ok({ ip, tokenRaw: String(tokenRaw).slice(0, 200) })
+  } catch (e) { return ok({ ip: '', err: e.message }) }
+}
+
 /* 探测 openapi 可用性 (调试用) */
 async function probeOpenapi() {
   try {
@@ -1326,6 +1352,7 @@ async function myBookings(data) {
 const STAFF_ROUTES = [
   'admin.orders.ship',
   'admin.orders.refund',
+  'admin.orders.delete',
   'admin.categories.list',
   'admin.categories.create',
   'admin.categories.update',
@@ -1572,6 +1599,14 @@ async function adminOrderRefund(data) {
   return ok({ updated: true })
 }
 
+async function adminOrderDelete(data) {
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  // 仅超级管理员 (STAFF_ROUTES 不含本操作, manager/staff 自动被拒)
+  const res = await db.collection('orders').where({ order_no }).remove()
+  return ok({ deleted: true, count: res.deleted || 0 })
+}
+
 async function adminUserCreate(data) {
   // 仅超级管理员可调用 (requireStaffAllowed: 不在 STAFF_ROUTES, staff/manager 会被拒)
   const { phone, nickname, role } = data
@@ -1800,7 +1835,7 @@ async function adminRecentOrders(data) {
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
 
-const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live']
+const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay']
 
 async function adminSettingsGet(data) {
   const group = data.group
@@ -1810,6 +1845,20 @@ async function adminSettingsGet(data) {
   if (!doc) return ok({ group, configs: {} })
   const { _id, group: g, ...configs } = doc
   return ok({ group, configs })
+}
+
+/* 用户端公开配置: 支付展示设置 (不含敏感信息) */
+async function appPayConfig() {
+  try {
+    const res = await db.collection('settings').where({ group: 'pay' }).limit(1).get()
+    const doc = res.data[0] || {}
+    return ok({
+      show_alipay: doc.show_alipay === '1' || doc.show_alipay === true || false,
+      show_balance: doc.show_balance !== '0', // 默认显示余额
+    })
+  } catch (e) {
+    return ok({ show_alipay: false, show_balance: true })
+  }
 }
 
 async function adminSettingsSave(data) {
@@ -1854,6 +1903,8 @@ const ROUTES = {
   'user.wechatLogin': wechatLogin,
   'user.wechatCheck': wechatCheck,
   'app.probeOpenapi': probeOpenapi,
+  'app.probeIp': probeIp,
+  'app.payConfig': appPayConfig,
   'user.coupons': myCoupons,
   'user.favorites': myFavorites,
   'user.favorite.toggle': toggleFavorite,
@@ -1895,6 +1946,7 @@ const ROUTES = {
   'admin.courses.update': adminCourseUpdate,
   'admin.orders.ship': adminOrderShip,
   'admin.orders.refund': adminOrderRefund,
+  'admin.orders.delete': adminOrderDelete,
   'admin.users.create': adminUserCreate,
   'admin.users.update': adminUserUpdate,
   'admin.lives.create': adminLiveCreate,
@@ -1969,7 +2021,18 @@ exports.main = async (event = {}) => {
     try {
       const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body
       const wxpay = require('./wxpay-v3')
-      const { resource } = wxpay.handleNotify(event.headers || {}, raw)
+      const { resource, eventType } = wxpay.handleNotify(event.headers || {}, raw)
+      // 仅支付成功事件才更新订单/发课 (防止支付失败/取消/退款等事件误解锁)
+      if (eventType !== 'TRANSACTION.SUCCESS' && eventType !== 'TRANSACTION.REFUND') {
+        return { code: 'SUCCESS', message: '忽略非支付成功事件' }
+      }
+      if (eventType === 'TRANSACTION.REFUND') {
+        // 退款成功: 订单标记已退款
+        if (resource && resource.out_trade_no) {
+          await db.collection('orders').where({ order_no: resource.out_trade_no }).update({ status: '已退款', refund_time: new Date().toLocaleString('zh-CN', { hour12: false }) })
+        }
+        return { code: 'SUCCESS', message: '退款已处理' }
+      }
       if (resource && resource.out_trade_no) {
         await db.collection('orders').where({ order_no: resource.out_trade_no }).update({
           status: '待发货',
