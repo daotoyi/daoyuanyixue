@@ -11,10 +11,13 @@
 
 ## CloudBase 环境
 
-- envId: `zhenhesheng-d6gkez7p221305432`
+- envId: **`cloud1-d8gs2k9m311f7272f`** (Source=CloudBase 独立环境, 非微信小程序原生云环境 → cloudPay 不可用, 微信登录可正常拿 OPENID)
 - 区域: `ap-shanghai`
-- 静态域名: `zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com`
-- 云存储CDN: `7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la`
+- 静态域名: `cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com`
+- 云函数网关: `https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api` (完整域名含 -1464523137, 短域名会 INVALID_ENV)
+- 云存储CDN: `636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la`
+- 微信小程序 AppID: **`wx3ec1337aae9ace3c`** (旧 wxe4eea58de8107961 已改)
+- 支付: 微信支付 API v3 直连 (商户号 1116271440, 证书 /Users/wenhua/cert/1116271440_20260808_cert/, wxpay-v3.js 零依赖实现, cloud1 不可用 cloudPay)
 
 ## 环境能力
 
@@ -27,6 +30,10 @@
 
 - CloudBase MCP 通过 mcporter 调用: `npx -y mcporter call cloudbase.<tool> ...`
 - 配置文件: `config/mcporter.json`
+- **云函数部署**: manageFunctions action=updateFunctionCode envId=... functionName=dy-api **functionRootPath=cloudfunctions/dy-api 绝对路径** (localPath 无效)
+- **H5 部署**: manageHosting action=**upload** envId=... localPath=dist/build/h5 cloudPath=/ (uploadFiles 已废弃会误报成功)
+- **认证**: 设备码 auth PENDING→READY 需用户在浏览器打开 tcb.cloud.tencent.com/dev#/cli-auth?user_code=xxx 授权
+- **铁律教训 (08-09)**: 云函数新增路由后**必须重新部署 dy-api**, 否则前端调用失败 = "功能没实现"
 
 ## 版本管理 (Git)
 

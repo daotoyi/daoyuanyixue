@@ -375,7 +375,7 @@ import { fullLiuyao } from '../utils/liuyao'
 import { fullLiuren } from '../utils/liuren'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../utils/cities'
-import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment, payOrder } from '../../api/api'
+import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -534,13 +534,40 @@ function isLyUnlocked(key) {
   }
 }
 function payLyJiepan() {
-  // 付费解锁: 创建 9.9 订单 → 微信支付 → 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
+  // #ifndef MP-WEIXIN
+  // H5 端: 余额扣款 9.9 积分
+  uni.showModal({
+    title: '解锁六爻深度解盘',
+    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    confirmText: '确认解锁',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      uni.showLoading({ title: '解锁中...', mask: true })
+      unlockTool({ uid: us.userInfo.uid, tool: 'liuyao', pay_method: 'balance' })
+        .then((res) => {
+          uni.hideLoading()
+          if (res && (res.unlocked === true || (res.order_no && res.pay_method === 'balance'))) {
+            applyLyUnlock()
+          } else {
+            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+          }
+        })
+        .catch((e) => {
+          uni.hideLoading()
+          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+        })
+    },
+  })
+  return
+  // #endif
   uni.showLoading({ title: '创建订单...', mask: true })
   unlockTool({ uid: us.userInfo.uid, tool: 'liuyao' })
     .then(async (res) => {
@@ -559,10 +586,6 @@ function payLyJiepan() {
         uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
       }
       return
-      // #endif
-      // #ifndef MP-WEIXIN
-      await payOrder(res.order_no)
-      applyLyUnlock()
       // #endif
     })
     .catch((e) => {
@@ -688,13 +711,40 @@ function isLrUnlocked(key) {
   }
 }
 function payLrJiepan() {
-  // 付费解锁: 创建 9.9 订单 → 微信支付 → 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
+  // #ifndef MP-WEIXIN
+  // H5 端: 余额扣款 9.9 积分
+  uni.showModal({
+    title: '解锁大六壬深度解盘',
+    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    confirmText: '确认解锁',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      uni.showLoading({ title: '解锁中...', mask: true })
+      unlockTool({ uid: us.userInfo.uid, tool: 'liuren', pay_method: 'balance' })
+        .then((res) => {
+          uni.hideLoading()
+          if (res && (res.unlocked === true || (res.order_no && res.pay_method === 'balance'))) {
+            applyLrUnlock()
+          } else {
+            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+          }
+        })
+        .catch((e) => {
+          uni.hideLoading()
+          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
+        })
+    },
+  })
+  return
+  // #endif
   uni.showLoading({ title: '创建订单...', mask: true })
   unlockTool({ uid: us.userInfo.uid, tool: 'liuren' })
     .then(async (res) => {
@@ -713,10 +763,6 @@ function payLrJiepan() {
         uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
       }
       return
-      // #endif
-      // #ifndef MP-WEIXIN
-      await payOrder(res.order_no)
-      applyLrUnlock()
       // #endif
     })
     .catch((e) => {

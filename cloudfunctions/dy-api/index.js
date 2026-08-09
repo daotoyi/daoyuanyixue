@@ -1374,13 +1374,46 @@ async function createOrder(data) {
   return ok({ ...order, _id: res.id })
 }
 
-/* 玄学工具 9.9 付费解锁: 创建工具解锁订单 (支付成功才解锁, 与课程/预约同链路) */
+/* 玄学工具 9.9 付费解锁:
+   pay_method=balance → 直接扣余额解锁(积分 1:1, H5 端无微信支付能力用余额)
+   pay_method=wechat (默认) → 创建 tool_unlock 订单走微信支付, 支付成功回调才解锁 */
 async function toolUnlock(data) {
-  const { uid, tool } = data // tool: liuyao | liuren
+  const { uid, tool, pay_method } = data // tool: liuyao | liuren
   if (!uid) return fail('请先登录')
   if (!['liuyao', 'liuren'].includes(String(tool))) return fail('参数错误')
   const PRICE = 9.9
   const names = { liuyao: '六爻 AI 深度解盘', liuren: '大六壬 AI 深度解盘' }
+
+  // 余额扣款解锁 (H5 端)
+  if (String(pay_method || '') === 'balance') {
+    const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+    const bal = Number((u && u.balance) || 0) || 0
+    if (bal < PRICE) return fail('余额不足，解锁需 9.9 积分，请先充值')
+    const newBal = Math.round((bal - PRICE) * 100) / 100
+    await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
+    // 记一笔工具解锁订单 (已支付状态)
+    const order_no = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`
+    await db.collection('orders').add({
+      order_no,
+      status: '已完成',
+      total_price: String(PRICE),
+      coupon_discount: 0,
+      balance_used: PRICE,
+      items: [{ id: 'tool_' + tool, name: names[tool], price: String(PRICE), qty: 1 }],
+      pay_method: '余额',
+      address: {},
+      uid: Number(uid),
+      course_id: 0,
+      session_id: 0,
+      order_type: 'tool_unlock',
+      tool_type: String(tool),
+      pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    })
+    return ok({ order_no, order_type: 'tool_unlock', pay_method: 'balance', balance: String(newBal) })
+  }
+
+  // 微信支付订单
   const order_no = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`
   await db.collection('orders').add({
     order_no,
