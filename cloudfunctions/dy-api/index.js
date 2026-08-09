@@ -515,6 +515,16 @@ async function addComment(data) {
 
 async function publishMoment(data) {
   const content = String(data.content || '')
+  // 发布者真实昵称: 优先查用户表 (不信任前端传的 user_name)
+  let realName = String(data.user_name || '').slice(0, 30)
+  const uid = Number(data.user_id) || 0
+  if (uid) {
+    try {
+      const u = (await db.collection('users').where({ uid }).limit(1).get()).data[0]
+      if (u && u.nickname) realName = String(u.nickname).slice(0, 30)
+    } catch (e) {}
+  }
+  data.user_name = realName
   // 内容安全检查 (提审要求: 任意发布场景生效; HTTP access_token 方案 + openapi 兜底)
   try {
     const sec = await secCheckText(content)

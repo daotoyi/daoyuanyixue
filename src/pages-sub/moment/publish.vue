@@ -37,6 +37,7 @@
 <script setup>
 import { ref } from 'vue'
 import { publishMoment } from '../../api/api'
+import { useUserStore } from '../../store/index'
 
 const content = ref('')
 const images = ref([])
@@ -62,10 +63,17 @@ async function doPublish() {
   }
   publishing.value = true
   try {
+    const us = useUserStore()
+    if (!us.isLoggedIn) {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+      return
+    }
     await publishMoment({
       content: content.value.trim(),
       images: images.value,
-      user_name: '我',
+      user_id: us.userInfo.uid || 0,
+      user_name: us.userInfo.nickname || '道友',
     })
     uni.showToast({ title: '发布成功', icon: 'success' })
     setTimeout(() => uni.navigateBack(), 600)
