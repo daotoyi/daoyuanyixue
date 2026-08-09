@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>真和盛 · 服务号消息绑定</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+    background: linear-gradient(160deg, #fdf6e8 0%, #f8ecd6 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+  .card {
+    background: #fffdf8;
+    border-radius: 20px;
+    border: 1px solid #efe0c0;
+    box-shadow: 0 8px 30px rgba(120, 90, 40, 0.12);
+    padding: 48px 36px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+  .icon { font-size: 64px; margin-bottom: 16px; }
+  .title { font-size: 22px; font-weight: bold; color: #3a2a18; margin-bottom: 10px; }
+  .desc { font-size: 14px; color: #8b7355; line-height: 1.7; margin-bottom: 28px; }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px 0;
+    border-radius: 999px;
+    background: #c0392b;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+  }
+  .btn:disabled { opacity: 0.6; }
+  .tip { font-size: 12px; color: #a8957a; margin-top: 16px; line-height: 1.6; }
+  .steps { text-align: left; background: #faf3e3; border-radius: 12px; padding: 16px 18px; margin-bottom: 24px; }
+  .steps li { font-size: 13px; color: #6b5a45; line-height: 2; list-style: none; counter-increment: s; }
+  .steps li::before { content: counter(s); display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; background: #c0392b; color: #fff; border-radius: 50%; font-size: 12px; margin-right: 8px; }
+  .steps { counter-reset: s; }
+  .ok-icon { font-size: 56px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="loading">
+      <div class="icon">📢</div>
+      <div class="title">真和盛 · 服务号消息绑定</div>
+      <div class="desc">绑定后，订单支付成功、发货等消息将同步推送到「真和盛」服务号</div>
+      <div class="steps">
+        <li>点击下方按钮，跳转服务号授权</li>
+        <li>微信中确认授权（自动完成，无感）</li>
+        <li>回到本页显示绑定成功</li>
+      </div>
+      <button class="btn" id="authBtn">开始绑定</button>
+      <div class="tip">* 请先在微信中打开本页面（微信内授权才有效）</div>
+    </div>
+    <div id="success" style="display:none;">
+      <div class="ok-icon">✅</div>
+      <div class="title">绑定成功</div>
+      <div class="desc">已开启服务号消息推送。后续订单支付成功、发货通知将通过「真和盛」服务号推送给您。</div>
+    </div>
+    <div id="error" style="display:none;">
+      <div class="ok-icon">⚠️</div>
+      <div class="title" id="errTitle">绑定失败</div>
+      <div class="desc" id="errMsg"></div>
+    </div>
+  </div>
+
+<script>
+  var API = 'https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api';
+  var q = new URLSearchParams(location.search);
+  var uid = q.get('uid') || '';
+
+  function callApi(action, data) {
+    return fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, data: data || {} }),
+    }).then(function (r) { return r.json(); });
+  }
+
+  var code = q.get('code');
+  var state = q.get('state');
+
+  if (code && state === 'bind') {
+    // 授权回调: 用 code 换 openid 绑定
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+    callApi('user.bindGzh', { uid: uid, code: code }).then(function (res) {
+      if (res.code !== 0 || !res.data || !res.data.bound) {
+        document.getElementById('success').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('errMsg').textContent = (res && res.msg) || '绑定失败，请重试';
+      } else {
+        document.getElementById('success').style.display = 'block';
+      }
+    }).catch(function (e) {
+      document.getElementById('success').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('errMsg').textContent = '网络异常：' + e.message;
+    });
+  } else {
+    // 首次进入: 拿授权链接
+    var btn = document.getElementById('authBtn');
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      btn.textContent = '跳转中...';
+      callApi('user.gzhAuthUrl', { uid: uid }).then(function (res) {
+        if (res.code === 0 && res.data && res.data.url) {
+          location.href = res.data.url;
+        } else {
+          btn.disabled = false;
+          btn.textContent = '开始绑定';
+          document.getElementById('errMsg').textContent = (res && res.msg) || '服务号未配置，请联系管理员';
+          document.getElementById('error').style.display = 'block';
+        }
+      }).catch(function (e) {
+        btn.disabled = false;
+        btn.textContent = '开始绑定';
+        document.getElementById('errMsg').textContent = '网络异常：' + e.message;
+        document.getElementById('error').style.display = 'block';
+      });
+    });
+  }
+</script>
+</body>
+</html>

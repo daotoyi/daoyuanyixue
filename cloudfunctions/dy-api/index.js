@@ -265,6 +265,129 @@ async function deleteOwnMoment(data) {
   return ok({ deleted: true })
 }
 
+/* ===== 服务号 (公众号) 消息同步 ===== */
+let _gzhToken = { value: '', expires: 0 }
+
+/* 服务号 access_token (缓存 110 分钟) */
+async function getGzhAccessToken() {
+  if (_gzhToken.value && Date.now() < _gzhToken.expires) return _gzhToken.value
+  const c = require('./config.local')
+  const appid = c.GZH_APPID || ''
+  const secret = c.GZH_SECRET || ''
+  if (!appid || !secret) return ''
+  const https = require('https')
+  const token = await new Promise((resolve) => {
+    https.get(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appid}&secret=${secret}`, (res) => {
+      let d = ''
+      res.on('data', (chunk) => (d += chunk))
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d)
+          if (j.access_token) {
+            _gzhToken.value = j.access_token
+            _gzhToken.expires = Date.now() + 6600000
+            resolve(j.access_token)
+          } else {
+            console.error('[dy-api] 服务号 token 失败:', JSON.stringify(j))
+            resolve('')
+          }
+        } catch (e) { resolve('') }
+      })
+    }).on('error', (e) => { console.error('[dy-api] 服务号 token 网络错误:', e.message); resolve('') })
+  })
+  return token
+}
+
+/* 发送服务号消息: 用户必须已关注服务号并绑定 gzh_openid
+ * 优先一次性订阅消息(subscribe/send, 用户需先授权订阅), 无模板则退模板消息(template/send)
+ * @param {number} uid 小程序用户 uid
+ * @param {string} title 标题
+ * @param {string} content 内容
+ * @param {string} page 点击跳转小程序页面 (可选)
+ */
+async function sendGzhMsg(uid, title, content, page) {
+  try {
+    const c = require('./config.local')
+    const templateId = c.GZH_TEMPLATE_ORDER || ''
+    if (!templateId) return { sent: false, reason: '未配置模板ID' }
+    // 查用户服务号 openid
+    const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+    const gzhOpenid = (u && u.gzh_openid) || ''
+    if (!gzhOpenid) return { sent: false, reason: '用户未绑定服务号' }
+    const token = await getGzhAccessToken()
+    if (!token) return { sent: false, reason: '服务号token获取失败' }
+    const https = require('https')
+    const body = JSON.stringify({
+      touser: gzhOpenid,
+      template_id: templateId,
+      page: page || 'pages/index/index',
+      data: {
+        thing1: { value: String(title).slice(0, 20) },
+        thing2: { value: String(content).slice(0, 20) },
+      },
+    })
+    const res = await new Promise((resolve) => {
+      const req = https.request({
+        host: 'api.weixin.qq.com',
+        path: `/cgi-bin/message/subscribe/send?access_token=${token}`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, (r) => {
+        let d = ''
+        r.on('data', (chunk) => (d += chunk))
+        r.on('end', () => resolve(d))
+      })
+      req.on('error', (e) => resolve('net-err:' + e.message))
+      req.write(body)
+      req.end()
+    })
+    let j = {}
+    try { j = JSON.parse(res) } catch (e) {}
+    if (j.errcode === 0) return { sent: true }
+    console.error('[dy-api] 服务号消息发送失败:', res)
+    return { sent: false, errcode: j.errcode, msg: j.errmsg }
+  } catch (e) {
+    console.error('[dy-api] sendGzhMsg 异常:', e.message)
+    return { sent: false, error: e.message }
+  }
+}
+
+/* 绑定服务号 openid: 服务号网页授权 code → 换 openid → 绑定到小程序用户 */
+async function bindGzh(data) {
+  const { uid, code } = data
+  if (!uid) return fail('请先登录')
+  if (!code) return fail('缺少授权 code')
+  const c = require('./config.local')
+  if (!c.GZH_APPID || !c.GZH_SECRET) return fail('服务号未配置')
+  const https = require('https')
+  const openid = await new Promise((resolve) => {
+    https.get(`https://api.weixin.qq.com/sns/oauth2/access_token?appid=${c.GZH_APPID}&secret=${c.GZH_SECRET}&code=${code}&grant_type=authorization_code`, (res) => {
+      let d = ''
+      res.on('data', (chunk) => (d += chunk))
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d)
+          resolve(j.openid || '')
+        } catch (e) { resolve('') }
+      })
+    }).on('error', () => resolve(''))
+  })
+  if (!openid) return fail('授权失败，请重新打开绑定页')
+  await db.collection('users').where({ uid: Number(uid) }).update({ gzh_openid: openid })
+  return ok({ bound: true, openid })
+}
+
+/* 生成服务号网页授权链接 (用户在小程序外打开, 授权后回调绑定页带 code) */
+async function gzhAuthUrl(data) {
+  const c = require('./config.local')
+  if (!c.GZH_APPID) return fail('服务号未配置')
+  const { uid } = data
+  const redirect = encodeURIComponent(`https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/gzh-bind.html?uid=${uid}`)
+  return ok({
+    url: `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${c.GZH_APPID}&redirect_uri=${redirect}&response_type=code&scope=snsapi_base&state=bind#wechat_redirect`,
+  })
+}
+
 /* 微信小程序 access_token (缓存 110 分钟) */
 let _wxToken = { value: '', expires: 0 }
 async function getWxAccessToken() {
@@ -1880,6 +2003,8 @@ async function adminOrderShip(data) {
         read: false,
         created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       })
+      // 服务号消息同步
+      try { await sendGzhMsg(o.data[0].uid, '订单已发货', '订单 ' + data.order_no + ' 已发出') } catch (e2) {}
       // 实体商品订单: 自动上报微信发货信息 (推送物流数据, 免人工录入)
       if (!o.data[0].course_id) {
         try {
@@ -2212,6 +2337,8 @@ const ROUTES = {
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,
   'user.bindWechatPhone': bindWechatPhone,
+  'user.bindGzh': bindGzh,
+  'user.gzhAuthUrl': gzhAuthUrl,
   'user.updateEmail': updateEmail,
   'user.bindWechat': bindWechat,
   'user.unbindAccount': unbindAccount,

@@ -323,6 +323,24 @@
             <text class="module-title">用户管理（{{ usersFiltered.length }}）</text>
             <view class="btn-p sm" v-if="userRole === 'admin'" @click="showCreateUser = true">＋ 新建员工/管理员</view>
           </view>
+          <view class="user-stats">
+            <view class="us-item">
+              <text class="us-num">{{ userStats.admin }}</text>
+              <text class="us-label">管理员</text>
+            </view>
+            <view class="us-item">
+              <text class="us-num">{{ userStats.staff }}</text>
+              <text class="us-label">员工</text>
+            </view>
+            <view class="us-item">
+              <text class="us-num">{{ userStats.user }}</text>
+              <text class="us-label">用户</text>
+            </view>
+            <view class="us-item">
+              <text class="us-num">{{ userStats.total }}</text>
+              <text class="us-label">全部</text>
+            </view>
+          </view>
           <view class="table">
             <view class="tr th users-row">
               <text class="td w-avatar-cell">头像</text>
@@ -864,6 +882,18 @@ const usersFiltered = computed(() => {
     if (roleFilter.value !== '全部' && (u.role || 'user') !== roleFilter.value) return false
     return true
   })
+})
+
+/* 用户统计: 管理员(admin+manager) / 员工(staff) / 用户(user) */
+const userStats = computed(() => {
+  let admin = 0, staff = 0, user = 0
+  users.value.forEach((u) => {
+    const r = u.role || 'user'
+    if (r === 'admin' || r === 'manager') admin++
+    else if (r === 'staff') staff++
+    else user++
+  })
+  return { admin, staff, user, total: users.value.length }
 })
 
 function vipFilterMenu() {
@@ -2280,6 +2310,32 @@ onMounted(async () => {
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
+/* 用户统计条 */
+.user-stats {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 16rpx;
+}
+.us-item {
+  flex: 1;
+  background: #fdf6ea;
+  border: 1rpx solid #f0e3c8;
+  border-radius: 12rpx;
+  padding: 14rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+.us-num {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #3a2a18;
+}
+.us-label {
+  font-size: 22rpx;
+  color: #8b7355;
+}
 .users-row { min-width: 1720rpx; }
 .w-remark { flex: 1.2; min-width: 240rpx; padding: 0 10rpx; font-size: 22rpx; color: #6b5a45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-tag {
