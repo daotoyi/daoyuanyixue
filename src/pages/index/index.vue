@@ -127,6 +127,16 @@
           </view>
         </view>
       </view>
+      <view class="pandao-follow">
+        <text class="pf-icon">📢</text>
+        <view class="pf-info">
+          <text class="pf-title">关注「真和盛」公众号</text>
+          <text class="pf-desc">获取更多道学文章与盘道活动资讯</text>
+        </view>
+        <view class="pf-btn" @tap="followGzh">
+          <text>关注</text>
+        </view>
+      </view>
       <view class="empty" v-if="!pandaoList.length">
         <text class="empty-icon">☯️</text>
         <text class="empty-tip">暂无盘道活动</text>
@@ -207,6 +217,18 @@ const shownMoments = computed(() => {
 
 function switchTab(key) {
   currentTab.value = key
+  // 切到动态类 tab 时刷新数据 (后台推荐/审核后立即生效)
+  if (key === 'recommend' || key === 'follow') {
+    refreshMoments()
+  }
+}
+
+/* 刷新动态列表 (推荐/关注共用) */
+async function refreshMoments() {
+  try {
+    const moments = await getMoments()
+    momentList.value = moments.map((m) => ({ ...m, _liked: false }))
+  } catch (e) {}
 }
 
 /* 盘道报名: 创建预约订单 → 跳结算支付 */
@@ -229,6 +251,20 @@ async function bookPandao(pd) {
   } catch (e) {
     uni.showToast({ title: e.message || '报名失败', icon: 'none' })
   }
+}
+
+/* 关注公众号: 复制微信号 zhenhesheng_com 引导微信内搜索关注 */
+function followGzh() {
+  uni.setClipboardData({
+    data: 'zhenhesheng_com',
+    success: () => {
+      uni.showModal({
+        title: '关注「真和盛」公众号',
+        content: '微信号已复制：zhenhesheng_com\n请打开微信 → 搜索公众号「真和盛」或微信号 zhenhesheng_com 关注',
+        showCancel: false,
+      })
+    },
+  })
 }
 
 function statusText(s) {
@@ -685,6 +721,44 @@ onShow(async () => {
 }
 .pandao-btn.ok {
   background: #95a5a6;
+}
+
+/* 盘道关注公众号 */
+.pandao-follow {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: linear-gradient(135deg, #fdf6e8, #f8ecd6);
+  border: 1rpx solid #efe0c0;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-top: 20rpx;
+}
+.pf-icon {
+  font-size: 40rpx;
+}
+.pf-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+.pf-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #3a2a18;
+}
+.pf-desc {
+  font-size: 22rpx;
+  color: #8b7355;
+}
+.pf-btn {
+  background: #c0392b;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 12rpx 30rpx;
+  border-radius: 999rpx;
+  flex-shrink: 0;
 }
 
 /* 直播 */

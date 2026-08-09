@@ -85,7 +85,7 @@
               <text class="sd-text">控制小程序首页功能入口的显示/隐藏</text>
             </view>
             <view class="f-row">
-              <text class="f-label">发布动态按钮</text>
+              <text class="f-label">发布动态</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.show_publish" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_publish = $event.detail.value" />
               </view>
