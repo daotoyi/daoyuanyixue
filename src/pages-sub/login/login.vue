@@ -58,6 +58,12 @@
         <view class="wx-auth-row">
           <input class="wx-nick-input" type="nickname" v-model="wxNickname" placeholder="点击自动填入微信昵称" />
         </view>
+        <view class="wx-auth-row">
+          <button class="wx-phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
+            <text class="wx-phone-icon">📱</text>
+            <text>{{ wxPhoneBound ? '已绑定手机号：' + wxPhoneMask : '绑定手机号（选填）' }}</text>
+          </button>
+        </view>
         <view class="wx-auth-actions">
           <view class="btn-p plain wx-auth-btn" @click="showWxAuth = false">取消</view>
           <view class="btn-p wx-auth-btn" @click="doWxLogin">微信登录</view>
@@ -72,7 +78,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { login, register, wechatLogin, wechatCheck } from '../../api/api'
+import { login, register, wechatLogin, wechatCheck, bindWechatPhone } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { useUserStore } from '../../store/index'
 
@@ -86,8 +92,32 @@ const errorMsg = ref('')
 // 小程序微信授权头像昵称 (chooseAvatar 官方方案)
 const wxAvatar = ref('')
 const wxNickname = ref('')
+const wxPhone = ref('') // 微信授权手机号 (待绑定)
+const wxPhoneBound = ref(false)
+const wxPhoneMask = ref('')
 function onChooseAvatar(e) {
   if (e && e.detail && e.detail.avatarUrl) wxAvatar.value = e.detail.avatarUrl
+}
+
+/* 微信一键登录面板: 绑定手机号 (getPhoneNumber → code → 后端换手机号) */
+async function onGetPhoneNumber(e) {
+  if (!e || !e.detail || !e.detail.code) {
+    uni.showToast({ title: '未授权手机号', icon: 'none' })
+    return
+  }
+  try {
+    const res = await bindWechatPhone({ code: e.detail.code })
+    if (res && res.phone) {
+      wxPhone.value = res.phone
+      wxPhoneBound.value = true
+      wxPhoneMask.value = res.phone.slice(0, 3) + '****' + res.phone.slice(7)
+      uni.showToast({ title: '手机号绑定成功', icon: 'success' })
+    } else {
+      uni.showToast({ title: (res && res.msg) || '绑定失败', icon: 'none' })
+    }
+  } catch (err) {
+    uni.showToast({ title: err.message || '绑定失败', icon: 'none' })
+  }
 }
 
 // 邀请链接自动填充: ?invite=道号
@@ -173,7 +203,7 @@ async function doWxLogin() {
     }
     const codeRes = await new Promise((resolve) => wx.login({ success: resolve, fail: resolve }))
     if (!codeRes || !codeRes.code) throw new Error('微信登录失败，请重试')
-    const user = await wechatLogin({ code: codeRes.code, nickname: profile.nickname, avatar: profile.avatar })
+    const user = await wechatLogin({ code: codeRes.code, nickname: profile.nickname, avatar: profile.avatar, phone: wxPhone.value || undefined })
     saveUser(user)
     showWxAuth.value = false
     uni.showToast({ title: '微信登录成功', icon: 'success' })
@@ -400,6 +430,25 @@ async function submit() {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
   font-size: 44rpx;
+}
+.wx-phone-btn {
+  flex: 1;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: #42372c;
+  background: #f6efe3;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  border: 1rpx dashed #c8b99a;
+}
+.wx-phone-btn::after {
+  border: none;
+}
+.wx-phone-icon {
+  font-size: 28rpx;
 }
 .wx-nick-input {
   flex: 1;

@@ -46,8 +46,8 @@
     <!-- 资产展示 -->
     <view class="asset-card">
       <view class="asset-item" @tap="goAssets('balance')">
-        <text class="asset-num">¥{{ userInfo.balance || '0.00' }}</text>
-        <text class="asset-label">余额</text>
+        <text class="asset-num">{{ userInfo.balance || '0' }}</text>
+        <text class="asset-label">积分</text>
       </view>
       <view class="asset-divider"></view>
       <view class="asset-item" @tap="goAssets('coupon')">

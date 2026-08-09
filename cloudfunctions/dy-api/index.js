@@ -870,7 +870,7 @@ async function aiAsk(data) {
     const u = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
     const user = u.data[0]
     const bal = Number(user && user.balance) || 0
-    if (bal < 0.5) return fail('余额不足，AI 提问每次需 0.5 元，请先充值')
+    if (bal < 0.5) return fail('积分不足，AI 提问每次需 0.5 积分，请先充值积分')
     const newBal = Math.round((bal - 0.5) * 100) / 100
     await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
     // 记录提问流水
@@ -992,7 +992,7 @@ async function wechatLogin(data) {
   // 微信一键登录 (小程序)
   // 接管模式: 云开发直接提供 OPENID (wx-server-sdk getWXContext), 无需 code/secret
   // 非接管模式兜底: jscode2session (需环境变量 WX_APPID / WX_SECRET)
-  const { code, nickname, avatar } = data
+  const { code, nickname, avatar, phone } = data
   let openid = getWxOpenId()
   if (!openid) {
     // 兜底: 用 code 换 openid
@@ -1032,7 +1032,7 @@ async function wechatLogin(data) {
       dao_code: daoCode,
       nickname: nickname || '微信道友',
       avatar: avatar || '',
-      phone: '',
+      phone: phone || '',
       password: '',
       openid,
       vip_level: 0,
@@ -1042,11 +1042,12 @@ async function wechatLogin(data) {
       created_at: new Date().toISOString().slice(0, 10),
     }
     await db.collection('users').add(user)
-  } else if (nickname || avatar) {
-    // 老用户: 微信登录时同步更新头像昵称
+  } else if (nickname || avatar || phone) {
+    // 老用户: 微信登录时同步更新头像昵称/手机号
     const upd = {}
     if (nickname) upd.nickname = String(nickname).slice(0, 30)
     if (avatar) upd.avatar = String(avatar)
+    if (phone) upd.phone = String(phone)
     await db.collection('users').where({ openid }).update(upd)
     user = { ...user, ...upd }
   }
@@ -1055,6 +1056,37 @@ async function wechatLogin(data) {
 }
 
 /* ---- 修改密码 / 检查更新 ---- */
+
+/* 微信 getPhoneNumber 绑定手机号: code → access_token → phonenumber.getPhoneNumber */
+async function bindWechatPhone(data) {
+  const { code } = data
+  if (!code) return fail('缺少授权码')
+  const token = await getWxAccessToken()
+  if (!token) return fail('获取凭证失败，请检查 AppSecret / IP 白名单')
+  const https = require('https')
+  const body = JSON.stringify({ code })
+  const phoneRes = await new Promise((resolve) => {
+    const req = https.request(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let d = ''
+      res.on('data', (c) => (d += c))
+      res.on('end', () => { try { resolve(JSON.parse(d)) } catch (e) { resolve({}) } })
+    })
+    req.on('error', () => resolve({}))
+    req.write(body)
+    req.end()
+  })
+  const phone = phoneRes && phoneRes.phone_info && phoneRes.phone_info.purePhoneNumber
+  if (!phone) return fail((phoneRes && phoneRes.errmsg) || '获取手机号失败')
+  // 绑定: 若手机号已被其他账号占用则失败
+  const dup = (await db.collection('users').where({ phone }).limit(1).get()).data[0]
+  if (dup && dup.openid !== getWxOpenId()) return fail('该手机号已被其他账号绑定')
+  if (dup && dup.openid === getWxOpenId()) return ok({ phone }) // 已绑过
+  await db.collection('users').where({ openid: getWxOpenId() }).update({ phone })
+  return ok({ phone })
+}
 
 async function updatePhone(data) {
   const { uid, phone, password } = data
@@ -1137,6 +1169,34 @@ async function checkUpdate() {
 }
 
 /* ============ 订单 (NoSQL 内存主键: order_no) ============ */
+
+/* 积分充值: 1元 = 9.9 积分, 创建充值订单 → 微信支付 */
+const RECHARGE_RATE = 9.9 // 1元 = 9.9 积分
+async function rechargeCreate(data) {
+  const { uid, amount } = data
+  if (!uid) return fail('请先登录')
+  const amt = Number(amount)
+  if (!amt || amt <= 0 || amt > 10000) return fail('充值金额不正确')
+  const points = Math.round(amt * RECHARGE_RATE * 100) / 100 // 到分
+  const order_no = `RC${Date.now()}${Math.floor(Math.random() * 1000)}`
+  await db.collection('orders').add({
+    order_no,
+    status: '待付款',
+    total_price: String(amt),
+    coupon_discount: 0,
+    balance_used: 0,
+    items: [{ id: 'recharge', name: `积分充值 ${points} 积分`, price: String(amt), qty: 1 }],
+    pay_method: 'wechat',
+    address: {},
+    uid: Number(uid),
+    course_id: 0,
+    session_id: 0,
+    order_type: 'recharge',
+    recharge_points: points, // 到账积分
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  })
+  return ok({ order_no, points })
+}
 
 async function createOrder(data) {
   const order = {
@@ -2151,6 +2211,7 @@ const ROUTES = {
   'user.register': register,
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,
+  'user.bindWechatPhone': bindWechatPhone,
   'user.updateEmail': updateEmail,
   'user.bindWechat': bindWechat,
   'user.unbindAccount': unbindAccount,
@@ -2181,6 +2242,7 @@ const ROUTES = {
   'app.checkUpdate': checkUpdate,
   'admin.logistics.list': listLogistics,
   'order.create': createOrder,
+  'recharge.create': rechargeCreate,
   'order.list': listOrders,
   'order.detail': getOrder,
   'order.pay': payOrder,
@@ -2344,6 +2406,15 @@ exports.main = async (event = {}) => {
               try {
                 await db.collection('orders').where({ order_no: resource.out_trade_no }).update({ appointment_status: '已预约' })
               } catch (e4) {}
+            }
+            // 积分充值订单: 支付成功加积分到账 (1元=9.9积分)
+            if (o.order_type === 'recharge' && o.recharge_points) {
+              try {
+                const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
+                const bal = Number((u && u.balance) || 0) || 0
+                const newBal = Math.round((bal + Number(o.recharge_points)) * 100) / 100
+                await db.collection('users').where({ uid: Number(o.uid) }).update({ balance: String(newBal) })
+              } catch (e5) {}
             }
           }
         } catch (e) {}

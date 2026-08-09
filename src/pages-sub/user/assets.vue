@@ -1,11 +1,14 @@
 <template>
   <view class="assets-page">
-    <!-- 余额 -->
+    <!-- 积分 -->
     <view class="balance-card" v-if="type === 'balance'">
-      <text class="bc-label">账户余额</text>
-      <text class="bc-num">¥{{ userInfo.balance || '0.00' }}</text>
-      <text class="bc-tip">余额可在结算时抵扣商品金额</text>
-      <view class="btn-p sm" @click="goShop">去购物</view>
+      <text class="bc-label">我的积分</text>
+      <text class="bc-num">{{ userInfo.balance || '0' }} <text class="bc-unit">积分</text></text>
+      <text class="bc-tip">1 积分 = 1 元抵扣 · AI 提问每次消耗 0.5 积分 · 充值 1 元 = 9.9 积分</text>
+      <view class="bc-actions">
+        <view class="btn-p sm" @click="goRecharge">充值积分</view>
+        <view class="btn-p plain sm" @click="goShop">去购物</view>
+      </view>
     </view>
 
     <!-- 优惠券 -->
@@ -44,7 +47,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getMyCoupons, getMyFavorites, getMyFootprints } from '../../api/api'
+import { getMyCoupons, getMyFavorites, getMyFootprints, rechargeCreate } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -79,6 +82,27 @@ function goProduct(id) {
 function goShop() {
   uni.switchTab({ url: '/pages/shop/shop' })
 }
+
+/* 充值积分: 1元=9.9积分 */
+function goRecharge() {
+  const amounts = [10, 30, 50, 100]
+  uni.showActionSheet({
+    itemList: amounts.map((a) => '充 ' + a + ' 元 → ' + (a * 9.9) + ' 积分'),
+    success: async (res) => {
+      const amt = amounts[res.tapIndex]
+      if (!amt) return
+      try {
+        const r = await rechargeCreate({ uid: userStore.userInfo.uid, amount: amt })
+        if (r && r.order_no) {
+          uni.showToast({ title: '充值订单已创建，请完成支付', icon: 'none' })
+          setTimeout(() => uni.redirectTo({ url: '/pages-sub/order/detail?order_no=' + r.order_no }), 800)
+        }
+      } catch (e) {
+        uni.showToast({ title: e.message || '创建失败', icon: 'none' })
+      }
+    },
+  })
+}
 </script>
 
 <style lang="scss" scoped>
@@ -106,6 +130,19 @@ function goShop() {
   font-weight: 500;
   color: #857563;
   margin: 16rpx 0;
+}
+.bc-unit {
+  font-size: 30rpx;
+  color: rgba(254, 251, 246, 0.8);
+  margin-left: 8rpx;
+}
+.bc-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 30rpx;
+}
+.bc-actions .btn-p {
+  margin: 0;
 }
 .bc-tip {
   font-size: 22rpx;
