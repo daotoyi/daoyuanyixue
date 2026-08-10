@@ -49,8 +49,8 @@ async function doLogin() {
   loading.value = true
   try {
     const user = await login({ phone: phone.value, password: password.value })
-    if (user.role !== 'admin') {
-      errMsg.value = '该账号不是管理员'
+    if (user.role !== 'admin' && user.role !== 'manager') {
+      errMsg.value = user.role === 'staff' ? '员工账号无后台登录权限' : '该账号不是管理员'
       return
     }
     userStore.setToken('admin-token-' + user.uid)
@@ -61,7 +61,7 @@ async function doLogin() {
       vip_level: user.vip_level || 0,
       balance: user.balance || '0.00',
       invite_code: user.invite_code || '',
-      role: 'admin',
+      role: user.role === 'manager' ? 'manager' : 'admin',
     })
     uni.showToast({ title: '登录成功', icon: 'success' })
     setTimeout(() => {

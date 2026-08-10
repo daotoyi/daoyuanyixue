@@ -64,8 +64,12 @@
               <text class="act-num">{{ m.comments }}</text>
             </view>
             <view class="act act-share">
-              <text class="act-icon">↗</text>
-              <text class="act-num">分享</text>
+              <!-- #ifdef MP-WEIXIN -->
+              <button class="share-btn-plain" open-type="share" :data-id="m.id" :data-title="m.content"><text class="act-icon">↗</text><text class="act-num">分享</text></button>
+              <!-- #endif -->
+              <!-- #ifndef MP-WEIXIN -->
+              <view class="share-btn-plain" @tap="shareMoment(m)"><text class="act-icon">↗</text><text class="act-num">分享</text></view>
+              <!-- #endif -->
             </view>
           </view>
 
@@ -240,7 +244,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -413,6 +417,28 @@ function statusText(s) {
 function previewImage(urls, index) {
   uni.previewImage({ urls, current: index })
 }
+
+/* 动态分享: 记录当前要分享的动态, 供 onShareAppMessage 读取 */
+let shareMomentId = 0
+let shareMomentText = ''
+/* H5 分享: 复制动态链接 */
+function shareMoment(m) {
+  if (!m || !m.id) return uni.showToast({ title: '分享内容暂不可用', icon: 'none' })
+  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/#/pages/index/index?moment=' + m.id
+  uni.setClipboardData({
+    data: link,
+    success: () => uni.showToast({ title: '动态链接已复制，可发给好友', icon: 'none' }),
+  })
+}
+/* 小程序分享: 点击 open-type=share 触发, 从按钮 data 取动态信息 */
+onShareAppMessage((e) => {
+  const id = Number((e && e.target && e.target.dataset && e.target.dataset.id) || shareMomentId || 0)
+  const title = (e && e.target && e.target.dataset && e.target.dataset.title) || shareMomentText || ''
+  return {
+    title: title ? (title.length > 30 ? title.slice(0, 30) + '…' : title) + ' · 道元易学' : '道元易学 · 观天道明人事',
+    path: '/pages/index/index?moment=' + id,
+  }
+})
 
 function deleteMoment(m) {
   const userStore = useUserStore()
@@ -748,6 +774,20 @@ onShow(async () => {
 .act-share {
   margin-left: auto;
   margin-right: 0;
+}
+/* 分享按钮 (button 元素需去掉默认样式) */
+.share-btn-plain {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  border: none;
+  line-height: 1.2;
+  font-size: inherit;
+}
+.share-btn-plain::after {
+  border: none;
 }
 
 .moment-del {

@@ -854,14 +854,19 @@ const modules = [
   { key: 'feedbacks', label: '反馈管理', icon: '💬' },
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
-// 员工权限: 仅概览/商品/课程/订单/直播
+// 员工权限: 仅概览/商品/课程/订单/直播 (注意: 员工不能登录后台, 此配置保留以防历史会话)
 const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'lives']
+// 管理员(manager)权限: 概览/首页管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
+const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'coupons', 'lives', 'moments', 'feedbacks']
 const userRole = computed(() => userStore.userInfo.role || 'user')
 /* 课程管理权限: 超管(admin)/管理员(manager)可管理, 员工(staff)只能查看 */
 const canManageCourses = computed(() => ['admin', 'manager'].includes(userRole.value))
 const visibleModules = computed(() => {
-  if (userRole.value === 'staff' || userRole.value === 'manager') {
+  if (userRole.value === 'staff') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))
+  }
+  if (userRole.value === 'manager') {
+    return modules.filter((m) => MANAGER_MODULES.includes(m.key))
   }
   return modules
 })
@@ -1260,16 +1265,18 @@ const showAssignId = ref(false)
 const showCreateUser = ref(false)
 const createForm = ref({ phone: '', nickname: '', password: '123456', role: 'staff' })
 const assignForm = ref({ uid: null, dao_code: '', role: 'user', nickname: '' })
-/* 编辑弹窗角色: 超级管理员(仅超管可任命)/管理员/受限管理员/员工 */
+/* 编辑弹窗角色: 超级管理员(仅超管可任命)/管理员/内部员工/普通用户(超管可降级) */
 const editRoleOptions = [
   { value: 'admin', label: '超级管理员' },
   { value: 'manager', label: '管理员' },
   { value: 'staff', label: '内部员工' },
+  { value: 'user', label: '普通用户' },
 ]
 /* 新建员工/管理员角色 */
 const createRoleOptions = [
   { value: 'staff', label: '内部员工' },
-  { value: 'admin', label: '管理员' },
+  { value: 'manager', label: '管理员' },
+  { value: 'admin', label: '超级管理员' },
 ]
 
 const assignMode = ref('edit') // 'edit' | 'assign'

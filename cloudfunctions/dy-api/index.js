@@ -1678,6 +1678,13 @@ async function buyCourse(data) {
 async function myCourses(data) {
   const { uid } = data
   if (!uid) return ok([])
+  // 内部角色 (超管/管理员/员工) 免费看全部课程
+  const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+  const role = u && u.role
+  if (role === 'admin' || role === 'manager' || role === 'staff') {
+    const all = await db.collection('courses').limit(200).get()
+    return ok(all.data.map((c) => ({ ...c, progress: 100, _status: '学习中', _favorited: false, _owned: true })))
+  }
   const rels = await db.collection('user_courses').where({ uid }).limit(200).get()
   const list = []
   for (const rel of rels.data) {
@@ -1889,24 +1896,35 @@ const STAFF_ROUTES = [
   'admin.dashboard',
 ]
 
-// 管理员(manager)额外权限: 课程管理 (员工 staff 无此权限)
+// 管理员(manager)额外权限: 课程管理 + 首页管理/优惠券/动态/反馈 (员工 staff 无此权限)
 const MANAGER_ROUTES = [
   'admin.courses.create',
   'admin.courses.update',
   'admin.courses.delete',
+  'admin.settings.get',
+  'admin.settings.save',
+  'admin.coupons.create',
+  'admin.coupons.update',
+  'admin.coupons.delete',
+  'admin.moments.audit',
+  'admin.moments.delete',
+  'admin.feedbacks.list',
+  'admin.feedbacks.reply',
+  'admin.feedbacks.delete',
 ]
 
 // 员工允许查询的集合
 const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'categories', 'course_categories']
 
+/* 后台管理员校验: 仅 admin(超管) / manager(管理员) 可登录后台 */
 async function requireAdmin(data) {
   const role = data.opRole || data.role
   const uid = data.opUid || data.uid
-  if (role === 'admin' || role === 'staff' || role === 'manager') return true
+  if (role === 'admin' || role === 'manager') return true
   const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
   if (user && user.data[0]) {
     const r = user.data[0].role
-    if (r === 'admin' || r === 'staff') return true
+    if (r === 'admin' || r === 'manager') return true
   }
   return false
 }
@@ -2153,7 +2171,8 @@ async function adminOrderDelete(data) {
 async function adminUserCreate(data) {
   // 仅超级管理员可调用 (requireStaffAllowed: 不在 STAFF_ROUTES, staff/manager 会被拒)
   const { phone, nickname, role } = data
-  const targetRole = role === 'admin' ? 'admin' : 'staff'
+  // 支持创建: admin(超管, 仅超管)/manager(管理员)/staff(员工)
+  const targetRole = ['admin', 'manager', 'staff'].includes(role) ? role : 'staff'
   if (!phone || !/^1\d{10}$/.test(String(phone))) return fail('请输入正确的手机号')
   if (!nickname) return fail('请输入昵称')
   const exists = await db.collection('users').where({ phone: String(phone) }).limit(1).get()
