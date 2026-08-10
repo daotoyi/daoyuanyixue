@@ -23,7 +23,15 @@
         <view class="rec-main">
           <view class="rec-top">
             <text class="rec-time">{{ rec.time }}</text>
-            <text class="rec-gz" v-if="rec.type === 'bazi' && rec.gzText">{{ splitGzText(rec.gzText) }}</text>
+            <!-- 四柱: 天干一行/地支一行 + 五行色 -->
+            <view class="rec-gz-bazi" v-if="rec.type === 'bazi' && rec.gzText">
+              <view class="hz-line">
+                <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
+              </view>
+              <view class="hz-line">
+                <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
+              </view>
+            </view>
             <text class="rec-gz" v-else>{{ rec.gzText }}</text>
           </view>
           <text class="rec-label">{{ rec.label }}</text>
@@ -41,6 +49,24 @@
     <view class="rec-foot" v-if="shownList.length">
       <text class="rec-clear" @tap="confirmClear">清空{{ filter === 'all' ? '全部' : '' }}记录</text>
     </view>
+
+    <!-- 编辑备注弹窗 (placeholder 灰字, 点击自动清除) -->
+    <view class="rec-mask" v-if="showEditModal" @tap="showEditModal = false"><view class="rec-sheet" @tap.stop>
+      <view class="edit-sheet">
+        <view class="sheet-title">编辑备注</view>
+        <input
+          class="edit-remark-input"
+          v-model="editRemarkInput"
+          placeholder="修改这条排盘记录的备注信息"
+          placeholder-class="edit-remark-ph"
+          maxlength="50"
+        />
+        <view class="edit-sheet-ops">
+          <view class="edit-btn edit-cancel" @tap="showEditModal = false"><text>取消</text></view>
+          <view class="edit-btn edit-confirm" @tap="confirmEditRemark"><text>保存</text></view>
+        </view>
+      </view>
+    </view></view>
   </view>
 </template>
 
@@ -95,10 +121,18 @@ const shownList = computed(() => {
   return src.filter((r) => r.type === filter.value)
 })
 
-/* 四柱干支 → 压缩单行 (记录列表两行天干/地支效果, 显示为 甲子 丙寅 戊辰 庚午) */
-function splitGzText(gzText) {
-  return (gzText || '').replace(/([\u4e00-\u9fff]{2})/g, '$1 ').trim()
+/* 四柱干支 → 天干/地支两组 (记录列表两行显示) */
+function splitBaziGz(gzText) {
+  const chars = (gzText || '').split('').filter((c) => /[\u4e00-\u9fff]/.test(c))
+  const gans = [], zhis = []
+  chars.forEach((c, i) => (i % 2 === 0 ? gans : zhis).push(c))
+  return { gans, zhis }
 }
+/* 五行色 */
+const WX_CLS = { '木': 'wood', '火': 'fire', '土': 'earth', '金': 'metal', '水': 'water' }
+const wxCls = (v) => WX_CLS[v] || v
+const WX_OF_GAN = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' }
+const WX_OF_ZHI = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' }
 
 onShow(() => {
   try {
@@ -134,24 +168,24 @@ function openRecord(rec) {
   uni.navigateTo({ url: `/pages-sub/user/paipan?tool=${tool}` })
 }
 
-/* 编辑备注 (点击 ✏️ 弹窗修改) */
+/* 编辑备注 (点击 ✏️ 弹窗修改, 自定义弹窗: placeholder 灰字, 点击自动清除) */
+const showEditModal = ref(false)
+const editRemarkInput = ref('')
+let _editRec = null
 function editRemark(rec) {
-  uni.showModal({
-    title: '编辑备注',
-    content: '修改这条排盘记录的备注信息',
-    editable: true,
-    placeholderText: '输入备注…',
-    confirmText: '保存',
-    confirmColor: '#8c5a2b',
-    success: (r) => {
-      if (!r.confirm) return
-      rec.remark = (r.content || '').trim()
-      try {
-        uni.setStorageSync(HISTORY_KEY, list.value)
-        uni.showToast({ title: '备注已更新', icon: 'success' })
-      } catch (e) { /* 忽略 */ }
-    },
-  })
+  _editRec = rec
+  editRemarkInput.value = rec.remark || ''
+  showEditModal.value = true
+}
+function confirmEditRemark() {
+  if (!_editRec) return
+  _editRec.remark = editRemarkInput.value.trim()
+  try {
+    uni.setStorageSync(HISTORY_KEY, list.value)
+    uni.showToast({ title: '备注已更新', icon: 'success' })
+  } catch (e) { /* 忽略 */ }
+  showEditModal.value = false
+  _editRec = null
 }
 
 function removeRecord(rec) {
@@ -354,4 +388,79 @@ function confirmClear() {
   padding: 12rpx 40rpx;
   background: #fdf1f0;
 }
+/* 四柱干支两行 (天干一行/地支一行, 五行色) */
+.rec-gz-bazi {
+  display: flex;
+  flex-direction: column;
+}
+.hz-line {
+  display: flex;
+  gap: 18rpx;
+  line-height: 1.5;
+}
+.hz-char {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+/* 五行色 */
+.wx-wood { color: #2e7d32; }
+.wx-fire { color: #c62828; }
+.wx-earth { color: #8d6e3f; }
+.wx-metal { color: #b8860b; }
+.wx-water { color: #1565c0; }
+/* 编辑备注弹窗 */
+.rec-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rec-sheet {
+  width: 620rpx;
+  background: #fefbf6;
+  border-radius: 20rpx;
+}
+.edit-sheet {
+  padding: 30rpx 30rpx 40rpx;
+}
+.sheet-title {
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #42372c;
+  margin-bottom: 24rpx;
+}
+.edit-remark-input {
+  height: 88rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  color: #42372c;
+}
+.edit-remark-ph {
+  color: #b3a595; /* 灰字占位符, 点击自动清除 */
+}
+.edit-sheet-ops {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 30rpx;
+}
+.edit-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.edit-btn text { font-size: 28rpx; }
+.edit-cancel { background: #f1e7d3; }
+.edit-cancel text { color: #8c5a2b; }
+.edit-confirm { background: linear-gradient(135deg, #b04a45, #8c3228); }
+.edit-confirm text { color: #fefbf6; }
 </style>
