@@ -21,6 +21,15 @@
       <view v-if="['bazi', 'qimen', 'ziwei'].includes(activeTool)" class="tool-panel">
         <view class="tp-title">输入出生时间，排出四柱 / 奇门 / 紫微</view>
 
+        <!-- 性别 (放在输入方式上方) -->
+        <view class="tp-row">
+          <text class="tp-label">性别</text>
+          <view class="tp-gender">
+            <text class="tg" :class="{ on: form.bazi.gender === '男' }" @tap="form.bazi.gender = '男'">元男</text>
+            <text class="tg" :class="{ on: form.bazi.gender === '女' }" @tap="form.bazi.gender = '女'">元女</text>
+          </view>
+        </view>
+
         <!-- 输入方式 -->
         <view class="tp-row">
           <text class="tp-label">输入方式</text>
@@ -94,14 +103,12 @@
           <view class="tp-tip">可点击文字手动输入干支，或点右侧下拉滚动选择</view>
         </template>
 
-        <view class="tp-row">
-          <text class="tp-label">性别</text>
-          <view class="tp-gender">
-            <text class="tg" :class="{ on: form.bazi.gender === '男' }" @tap="form.bazi.gender = '男'">元男</text>
-            <text class="tg" :class="{ on: form.bazi.gender === '女' }" @tap="form.bazi.gender = '女'">元女</text>
-          </view>
+        <!-- 当前时间起局: 选中则以当下时间起局, 忽略上方输入的时间 -->
+        <view class="tp-row tp-now-row">
+          <text class="tp-label">当前时间</text>
+          <switch :checked="form.bazi.useNow" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.useNow = e.detail.value)" />
+          <text class="tp-save-tip">开启后以当前时间起局（忽略上方时间）</text>
         </view>
-
 
         <!-- 奇门专用: 起局方式 + 排盘方式 -->
         <template v-if="activeTool === 'qimen'">
@@ -466,6 +473,7 @@ const form = ref({
     gz: [0, 0, 0, 0],
     shichen: 6,
     gender: '男',
+    useNow: false, // 当前时间起局 (默认不选)
     trueSolar: false,
     saveHistory: false,
     province: 0,
@@ -918,6 +926,24 @@ function saveHistoryRecord(result, qm, zw, label, gzText) {
 function runPaipan() {
   const f = form.value.bazi
   const gender = f.gender
+  // 当前时间起局: 用当下日期+时辰, 覆盖上方输入的时间
+  if (f.useNow) {
+    const now = new Date()
+    const p2 = (n) => String(n).padStart(2, '0')
+    f.date = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
+    // 时辰: 按当前小时归入十二时辰 (子时 23:00-次日1:00 跨天)
+    const hourNow = now.getHours() + now.getMinutes() / 60
+    let idx = 0
+    if (hourNow >= 23 || hourNow < 1) {
+      idx = 0 // 子时
+    } else {
+      for (let i = 1; i < SHICHEN.length; i++) {
+        if (hourNow >= SHICHEN[i].from && hourNow < SHICHEN[i].to) { idx = i; break }
+      }
+    }
+    f.shichen = idx
+    f.mode = 'solar'
+  }
   const hour = resolveShichenHour()
   let result = null
   let birthYear = 1990
@@ -1327,9 +1353,14 @@ function runLiuren() {
   text-align: center;
 }
 .tp-pickers-inline.tp-4 .tp-picker {
-  font-size: 22rpx;
-  padding: 10rpx 4rpx;
+  flex: 1;
+  height: 76rpx; /* 与阳历选项框等高 */
   min-width: 0;
+  padding: 0 4rpx;
+  font-size: 22rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: center;
 }
 /* 四柱: 一排 4 个转盘 */
 .tp-gz-grid {
