@@ -951,7 +951,7 @@ function saveDisk() {
     _saveRec = isQm
       ? {
           ts: Date.now(),
-          time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+          time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
           label: `奇门 ${data.value.qimen.ju} · ${data.value.qimen.paiPan === 'feipan' ? '飞盘' : '转盘'}${qmContent.value ? ' · ' + qmContent.value : ''}`,
           gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
           type: 'qimen',
@@ -961,7 +961,7 @@ function saveDisk() {
       : isZw
         ? {
             ts: Date.now(),
-            time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+            time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
             label: `紫微 命宫在${zwGongName(data.value.ziwei.mingGong)} · ${data.value.ziwei.ju}局`,
             gzText: `紫微在${ZHI[data.value.ziwei.ziweiGong]} · ${data.value.ziwei.qiYun}岁起运`,
             type: 'ziwei',
@@ -970,7 +970,7 @@ function saveDisk() {
           }
         : {
             ts: Date.now(),
-            time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+            time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
             label: `八字 ${data.value.bazi.ganZhi.join(' ')}`,
             gzText: data.value.bazi.ganZhi.join(' '),
             type: 'bazi',

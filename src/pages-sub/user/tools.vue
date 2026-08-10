@@ -859,7 +859,7 @@ function saveHistory(type, label, gzText, data, remark = '') {
     const p = (n) => String(n).padStart(2, '0')
     list.unshift({
       ts: Date.now(),
-      time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
+      time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
       label, gzText, type, remark,
       data: { [type]: data },
     })
@@ -918,7 +918,7 @@ function resolveShichenHour() {
 const HISTORY_KEY = 'paipan_history'
 function fmtTime(d) {
   const p = (n) => String(n).padStart(2, '0')
-  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 function saveHistoryRecord(result, qm, zw, label, gzText, remark = '') {
   try {
