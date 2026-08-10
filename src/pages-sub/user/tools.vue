@@ -44,7 +44,7 @@
           </view>
         </view>
 
-        <!-- 阳历输入: 日期 + 时辰 转盘 (时辰显示具体时间段), 真太阳时(省市区) -->
+        <!-- 阳历输入: 日期 + 具体时刻(几点几分), 真太阳时(省市区) -->
         <template v-if="form.bazi.mode === 'solar'">
           <view class="tp-row">
             <text class="tp-label">阳历日期</text>
@@ -52,11 +52,12 @@
               <picker mode="date" :value="form.bazi.date" @change="(e) => (form.bazi.date = e.detail.value)">
                 <view class="tp-picker">{{ form.bazi.date }}</view>
               </picker>
-              <picker mode="selector" :range="solarShichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
-                <view class="tp-picker">{{ solarShichenLabels[form.bazi.shichen] }}</view>
+              <picker mode="time" :value="form.bazi.time" @change="(e) => (form.bazi.time = e.detail.value)">
+                <view class="tp-picker">{{ form.bazi.time }}</view>
               </picker>
             </view>
           </view>
+          <view class="tp-tip">选择具体出生时刻（几点几分），自动归入对应时辰排盘</view>
         </template>
 
         <!-- 农历输入: 年月日一行3框 + 时辰一行1框 (每框更宽, 字体与阳历一致) -->
@@ -402,11 +403,6 @@ const tools = [
 const activeTool = ref('bazi')
 
 const shichenLabels = SHICHEN.map((s) => s.zhi + '时')
-/* 阳历模式时辰标签: 具体时间段 (如 "23:00-01:00"), 不用"子时"等阴历写法 */
-const solarShichenLabels = SHICHEN.map((s) => {
-  const p2 = (n) => String(n).padStart(2, '0')
-  return `${p2(s.from)}:00-${p2(s.to)}:00`
-})
 const wxOrder = ['木', '火', '土', '金', '水']
 const lunarDays = Array.from({ length: 30 }, (_, i) => '初' + ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'][i])
 
@@ -477,6 +473,7 @@ const form = ref({
   bazi: {
     mode: 'solar',
     date: '1990-01-01',
+    time: '12:30', // 阳历具体时刻 (几点几分)
     lunarYear: 1990,
     lunarMonth: 0,
     lunarDay: 0,
@@ -886,10 +883,17 @@ const solarDiffText = computed(() => {
   return `出生地 ${place}（东经${loc.lng}° 北纬${loc.lat}°）：${ts.desc}`
 })
 
-/* 计算排盘时的实际时辰 (含真太阳时修正, 按省市县经纬度) */
+/* 计算排盘时的实际时辰 (阳历: 按具体时刻; 农历: 按时辰; 含真太阳时修正, 按省市县经纬度) */
 function resolveShichenHour() {
   const f = form.value.bazi
-  let hour = SHICHEN[f.shichen].from
+  let hour
+  if (f.mode === 'solar' && f.time) {
+    // 阳历: 具体时刻 几点几分 → 小数小时 (如 12:30 → 12.5)
+    const [hh, mm] = f.time.split(':').map(Number)
+    hour = hh + (mm || 0) / 60
+  } else {
+    hour = SHICHEN[f.shichen].from
+  }
   if (f.trueSolar) {
     let date
     if (f.mode === 'solar') {
@@ -941,6 +945,7 @@ function runPaipan() {
     const now = new Date()
     const p2 = (n) => String(n).padStart(2, '0')
     f.date = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
+    f.time = `${p2(now.getHours())}:${p2(now.getMinutes())}` // 具体时刻
     // 时辰: 按当前小时归入十二时辰 (子时 23:00-次日1:00 跨天)
     const hourNow = now.getHours() + now.getMinutes() / 60
     let idx = 0
@@ -988,7 +993,7 @@ function runPaipan() {
   const [ly, lm, ld] = solarDate.split('-').map(Number)
   const lunarInfo = solarToLunar(ly, lm, ld)
   result.solarText = f.mode === 'solar'
-    ? `阳历 ${solarDate} ${solarShichenLabels[f.shichen] || ''}`
+    ? `阳历 ${solarDate} ${f.time || ''}`
     : `阳历 ${solarDate}`
   result.lunarText = `${lunarInfo.ganZhi}年 ${lunarInfo.monthName}${lunarInfo.dayName}`
   if (f.trueSolar) result.solarText += `（真太阳时 ${hour}时）`
@@ -1002,7 +1007,7 @@ function runPaipan() {
     const gzText = result.pillars.map((p) => p.name).join(' ')
     const label = f.mode === 'gz'
       ? `四柱 ${gzText}`
-      : `${f.mode === 'solar' ? '阳历' : '农历'} ${solarDate} ${f.mode === 'solar' ? solarShichenLabels[f.shichen] : shichenLabels[f.shichen]}`
+      : `${f.mode === 'solar' ? '阳历' : '农历'} ${solarDate} ${f.mode === 'solar' ? (f.time || '') : shichenLabels[f.shichen]}`
     saveHistoryRecord(result, qm, zw, label, gzText)
   }
 
