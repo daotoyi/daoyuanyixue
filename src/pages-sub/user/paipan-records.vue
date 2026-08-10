@@ -21,20 +21,20 @@
       <view class="rec-item" v-for="(rec, i) in shownList" :key="i" @tap="openRecord(rec)">
         <view class="rec-icon">{{ TOOL_ICON[rec.type] || '📜' }}</view>
         <view class="rec-main">
-          <view class="rec-top">
-            <text class="rec-time">{{ rec.time }}</text>
-            <!-- 四柱: 天干一行/地支一行 + 五行色 -->
-            <view class="rec-gz-bazi" v-if="rec.type === 'bazi' && rec.gzText">
-              <view class="hz-line">
-                <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
-              </view>
-              <view class="hz-line">
-                <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
-              </view>
+          <!-- 干支 (四柱: 天干一行/地支一行 + 五行色; 其他: 纯文本) -->
+          <view class="rec-gz-bazi" v-if="rec.type === 'bazi' && rec.gzText">
+            <view class="hz-line">
+              <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
             </view>
-            <text class="rec-gz" v-else>{{ rec.gzText }}</text>
+            <view class="hz-line">
+              <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
+            </view>
           </view>
+          <text class="rec-gz" v-else>{{ rec.gzText }}</text>
           <text class="rec-label">{{ rec.label }}</text>
+          <!-- 时间在最下面 -->
+          <text class="rec-time">{{ rec.time }}</text>
+          <!-- 备注信息放在最下面 -->
           <view class="rec-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
         </view>
         <view class="rec-ops">
@@ -309,6 +309,8 @@ function confirmClear() {
   flex-wrap: wrap;
 }
 .rec-time {
+  display: block;
+  margin-top: 10rpx;
   font-size: 20rpx;
   color: #b3a595;
   flex-shrink: 0;
