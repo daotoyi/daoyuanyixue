@@ -273,7 +273,7 @@
       </view>
 
 
-      <!-- ===== 大六壬 (完整排盘) ===== -->
+      <!-- ===== 六壬 (完整排盘) ===== -->
       <view v-else-if="activeTool === 'liuren'" class="tool-panel">
         <view class="tp-title">输入日期时辰，排出四课三传天地盘</view>
         <view class="tp-row">
@@ -397,7 +397,7 @@ const tools = [
   { key: 'bazi', label: '四柱八字', icon: '☯️' },
   { key: 'qimen', label: '奇门遁甲', icon: '🧭' },
   { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
-  { key: 'liuren', label: '大六壬', icon: '🌀' },
+  { key: 'liuren', label: '六壬', icon: '🌀' },
   { key: 'liuyao', label: '六爻', icon: '🪙' },
 ]
 const activeTool = ref('bazi')
@@ -674,7 +674,7 @@ function askLyAI() {
   })
 }
 
-/* ===== 大六壬 AI 解盘 (仿八字) ===== */
+/* ===== 六壬 AI 解盘 (仿八字) ===== */
 const LR_PAID_KEY = 'liuren_paid_v1'
 const lrData = ref({ zongping: [], career: [], wealth: [], marriage: [] })
 const lrAiLoading = ref({ zongping: false, career: false, wealth: false, marriage: false })
@@ -736,7 +736,7 @@ function payLrJiepan() {
   // #ifndef MP-WEIXIN
   // H5 端: 余额扣款 9.9 积分
   uni.showModal({
-    title: '解锁大六壬深度解盘',
+    title: '解锁六壬深度解盘',
     content: '将从积分余额扣除 9.9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
@@ -785,7 +785,7 @@ function payLrJiepan() {
       uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
     })
 }
-/* 写入大六壬解锁状态并刷新界面 (仅支付成功调用) */
+/* 写入六壬解锁状态并刷新界面 (仅支付成功调用) */
 function applyLrUnlock() {
   try {
     const paid = uni.getStorageSync(LR_PAID_KEY) || []
@@ -804,10 +804,10 @@ function applyLrUnlock() {
   }
 }
 function saveLiuren() {
-  saveHistory('liuren', `大六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
+  saveHistory('liuren', `六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
 }
 
-/* ===== 大六壬 AI 智能问答 (¥0.5/次, 参考八字) ===== */
+/* ===== 六壬 AI 智能问答 (¥0.5/次, 参考八字) ===== */
 const lrAIQuestion = ref('')
 const lrAIAnswer = ref([])
 const lrAIAsking = ref(false)
@@ -832,7 +832,7 @@ function askLrAI() {
       lrAIAsking.value = true
       lrAIErr.value = ''
       const lr = lrFull.value
-      const ctx = `大六壬：${lr.dayGanZhi}日，月将${lr.yueJiang}，占时${lr.shichen}时，旬首${lr.xunShou}，空亡${lr.kong}。四课：${lr.ke.map((k) => `${k.name}${k.di}上${k.shang}`).join('，')}。三传：${lr.chuan.map((c) => `${c.name}${c.zhi}`).join('→')}`
+      const ctx = `六壬：${lr.dayGanZhi}日，月将${lr.yueJiang}，占时${lr.shichen}时，旬首${lr.xunShou}，空亡${lr.kong}。四课：${lr.ke.map((k) => `${k.name}${k.di}上${k.shang}`).join('，')}。三传：${lr.chuan.map((c) => `${c.name}${c.zhi}`).join('→')}`
       aiAsk({ uid: userStore.userInfo.uid, question: q, context: ctx })
         .then((res2) => {
           if (res2 && res2.content && res2.content.length) {
@@ -850,8 +850,8 @@ function askLrAI() {
     },
   })
 }
-/* 通用保存 (六爻/大六壬) */
-function saveHistory(type, label, gzText, data) {
+/* 通用保存 (六爻/六壬) */
+function saveHistory(type, label, gzText, data, remark = '') {
   try {
     let list = uni.getStorageSync('paipan_history') || []
     if (!Array.isArray(list)) list = []
@@ -860,7 +860,7 @@ function saveHistory(type, label, gzText, data) {
     list.unshift({
       ts: Date.now(),
       time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
-      label, gzText, type,
+      label, gzText, type, remark,
       data: { [type]: data },
     })
     if (list.length > 20) list = list.slice(0, 20)
@@ -920,15 +920,19 @@ function fmtTime(d) {
   const p = (n) => String(n).padStart(2, '0')
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
-function saveHistoryRecord(result, qm, zw, label, gzText) {
+function saveHistoryRecord(result, qm, zw, label, gzText, remark = '') {
   try {
     let list = uni.getStorageSync(HISTORY_KEY) || []
     if (!Array.isArray(list)) list = []
+    // type: 当前工具 (bazi/qimen/ziwei) 用于历史按工具区分
+    const t = activeTool.value === 'qimen' ? 'qimen' : activeTool.value === 'ziwei' ? 'ziwei' : 'bazi'
     list.unshift({
       ts: Date.now(),
       time: fmtTime(new Date()),
       label,
       gzText,
+      type: t,
+      remark,
       data: { bazi: result, qimen: qm, ziwei: zw },
     })
     if (list.length > 20) list = list.slice(0, 20)
@@ -1025,7 +1029,7 @@ function runPaipan() {
 onLoad((options) => {
   const t = options && options.tool
   if (t && tools.some((x) => x.key === t)) activeTool.value = t
-  // 恢复保存的六爻/大六壬盘 (从结果页历史跳转)
+  // 恢复保存的六爻/六壬盘 (从结果页历史跳转)
   try {
     const lyRestore = uni.getStorageSync('liuyao_restore')
     if (lyRestore && activeTool.value === 'liuyao') {
@@ -1328,7 +1332,7 @@ function runLiuren() {
   color: #857563;
 }
 
-/* 大六壬 */
+/* 六壬 */
 .lr-result {
   margin-top: 30rpx;
 }
@@ -2032,7 +2036,7 @@ function runLiuren() {
   margin-bottom: 16rpx;
 }
 
-/* ===== 大六壬完整盘 ===== */
+/* ===== 六壬完整盘 ===== */
 .lr-result { margin-top: 30rpx; }
 .lr-meta {
   background: #f8f3ea;
@@ -2091,7 +2095,7 @@ function runLiuren() {
 .lr-jiang { margin-top: 2rpx; font-size: 18rpx; color: #6e7f5a; }
 .lr-di { margin-top: 2rpx; font-size: 20rpx; color: #b3a595; }
 
-/* 保存按钮 (填充色, 六爻/大六壬共用) */
+/* 保存按钮 (填充色, 六爻/六壬共用) */
 .qm-save {
   display: flex;
   align-items: center;
@@ -2102,7 +2106,7 @@ function runLiuren() {
   margin-top: 20rpx;
 }
 .qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
-/* AI 智能问答 (六爻/大六壬, 参考八字) */
+/* AI 智能问答 (六爻/六壬, 参考八字) */
 .qm-c-ph { color: #b3a595; }
 .ai-q-row { display: flex; gap: 14rpx; align-items: center; }
 .ai-q-input {

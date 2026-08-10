@@ -299,23 +299,37 @@
 
       <view class="pp-tip">※ 以节气为界排盘，真太阳时按出生地经度修正，流月供学习参考</view>
 
-      <!-- 排盘历史弹窗 -->
+      <!-- 排盘历史弹窗 (按当前工具筛选: 奇门/紫微/四柱分开) -->
       <view class="pp-mask" v-if="showHistory" @tap="showHistory = false"><view class="pp-sheet" @tap.stop>
         <view class="hist-sheet">
-          <view class="sheet-title">排盘历史</view>
-          <view class="hist-list" v-if="historyList.length">
-            <view class="hist-item" v-for="(rec, i) in historyList" :key="i">
+          <view class="sheet-title">排盘历史 · {{ tab === 'qimen' ? '奇门' : tab === 'ziwei' ? '紫微' : '四柱' }}</view>
+          <view class="hist-list" v-if="curHistoryList.length">
+            <view class="hist-item" v-for="(rec, i) in curHistoryList" :key="i">
               <view class="hist-main" @tap="useHistory(rec)">
                 <view class="hist-top">
                   <text class="hist-time">{{ rec.time }}</text>
-                  <text class="hist-gz">{{ rec.gzText }}</text>
+                  <text class="hist-tag" v-if="rec.type">{{ TOOL_ICON[rec.type] || '' }} {{ TOOL_NAME[rec.type] || '' }}</text>
                 </view>
+                <!-- 四柱: 天干地支分两行 + 五行色; 其他: 纯文本 -->
+                <view class="hist-gz" v-if="rec.type === 'bazi' && rec.gzText">
+                  <view class="hz-line">
+                    <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
+                  </view>
+                  <view class="hz-line">
+                    <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
+                  </view>
+                </view>
+                <text class="hist-gz" v-else>{{ rec.gzText }}</text>
                 <text class="hist-label">{{ rec.label }}</text>
+                <view class="hist-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
               </view>
-              <view class="hist-del" @tap="removeHistory(i)"><text>✕</text></view>
+              <view class="hist-ops">
+                <text class="hist-edit" @tap="editHistoryRemark(rec)"><text>✏️</text></text>
+                <text class="hist-del" @tap="removeHistory(rec)"><text>✕</text></text>
+              </view>
             </view>
           </view>
-          <view class="hist-empty" v-else><text>暂无保存的排盘\n在排盘页开启「保存排盘」后自动存档</text></view>
+          <view class="hist-empty" v-else><text>暂无保存的{{ tab === 'qimen' ? '奇门' : tab === 'ziwei' ? '紫微' : '四柱' }}排盘\n在排盘结果页点「保存此盘」可手动保存</text></view>
         </view>
       </view></view>
 
@@ -906,13 +920,11 @@ function applyQmUnlock() {
     uni.showToast({ title: '解锁失败', icon: 'none' })
   }
 }
-/* 保存当前盘到历史 (八字/奇门/紫微通用) */
+/* 保存当前盘到历史 (八字/奇门/紫微通用) - 弹窗输入备注 */
 function saveDisk() {
   try {
     const isQm = tab.value === 'qimen'
     const isZw = tab.value === 'ziwei'
-    let list = uni.getStorageSync(HISTORY_KEY) || []
-    if (!Array.isArray(list)) list = []
     const now = new Date()
     const p = (n) => String(n).padStart(2, '0')
     const rec = isQm
@@ -921,6 +933,8 @@ function saveDisk() {
           time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
           label: `奇门 ${data.value.qimen.ju} · ${data.value.qimen.paiPan === 'feipan' ? '飞盘' : '转盘'}${qmContent.value ? ' · ' + qmContent.value : ''}`,
           gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
+          type: 'qimen',
+          remark: '',
           data: data.value,
         }
       : isZw
@@ -929,6 +943,8 @@ function saveDisk() {
             time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
             label: `紫微 命宫在${zwGongName(data.value.ziwei.mingGong)} · ${data.value.ziwei.ju}局`,
             gzText: `紫微在${ZHI[data.value.ziwei.ziweiGong]} · ${data.value.ziwei.qiYun}岁起运`,
+            type: 'ziwei',
+            remark: '',
             data: data.value,
           }
         : {
@@ -936,12 +952,29 @@ function saveDisk() {
             time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
             label: `八字 ${data.value.bazi.ganZhi.join(' ')}`,
             gzText: data.value.bazi.ganZhi.join(' '),
+            type: 'bazi',
+            remark: '',
             data: data.value,
           }
-    list.unshift(rec)
-    if (list.length > 20) list = list.slice(0, 20)
-    uni.setStorageSync(HISTORY_KEY, list)
-    uni.showToast({ title: '已保存到历史', icon: 'success' })
+    // 弹窗输入备注 (editable 模式支持输入框)
+    uni.showModal({
+      title: '保存此盘',
+      content: '可输入备注信息（可选），便于之后识别这个盘',
+      editable: true,
+      placeholderText: '例如：给某人的盘 / 考试前 / 2026 流年问事…',
+      confirmText: '保存',
+      confirmColor: '#8c5a2b',
+      success: (r) => {
+        if (!r.confirm) return
+        rec.remark = (r.content || '').trim()
+        let list = uni.getStorageSync(HISTORY_KEY) || []
+        if (!Array.isArray(list)) list = []
+        list.unshift(rec)
+        if (list.length > 20) list = list.slice(0, 20)
+        uni.setStorageSync(HISTORY_KEY, list)
+        uni.showToast({ title: '已保存到历史', icon: 'success' })
+      },
+    })
   } catch (e) {
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
@@ -1527,6 +1560,35 @@ function applyData(d) {
 }
 
 /* ===== 排盘历史 ===== */
+/* 工具图标/名称 (结果页 + 我的页共用) */
+const TOOL_ICON = { bazi: '☯', qimen: '🧭', ziwei: '🌟', liuren: '🌀', liuyao: '🪙' }
+const TOOL_NAME = { bazi: '四柱八字', qimen: '奇门遁甲', ziwei: '紫微斗数', liuren: '六壬', liuyao: '六爻' }
+/* 旧记录兼容: 无 type 时从 data 推断工具 */
+function inferRecType(rec) {
+  if (rec.type) return rec.type
+  const d = rec.data || {}
+  if (d.qimen && d.qimen.palaces) return 'qimen'
+  if (d.ziwei && d.ziwei.mingGong !== undefined) return 'ziwei'
+  if (d.bazi && d.bazi.pillars) return 'bazi'
+  return ''
+}
+/* 四柱干支 → 天干/地支两组 (历史记录两行显示) */
+function splitBaziGz(gzText) {
+  const chars = (gzText || '').split('').filter((c) => /[\u4e00-\u9fff]/.test(c))
+  const gans = [], zhis = []
+  chars.forEach((c, i) => (i % 2 === 0 ? gans : zhis).push(c))
+  return { gans, zhis }
+}
+const WX_OF_GAN = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' }
+const WX_OF_ZHI = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' }
+/* 当前 tab 的历史记录 (四柱/奇门/紫微分开显示) */
+const curHistoryList = computed(() => {
+  const t = tab.value === 'qimen' ? 'qimen' : tab.value === 'ziwei' ? 'ziwei' : 'bazi'
+  return historyList.value.filter((rec) => {
+    const rt = inferRecType(rec)
+    return rt === t
+  })
+})
 function loadHistory() {
   try {
     historyList.value = uni.getStorageSync(HISTORY_KEY) || []
@@ -1541,7 +1603,7 @@ function openHistory() {
 }
 function useHistory(rec) {
   if (!rec || !rec.data) return
-  // 六爻/大六壬盘 → 跳回工具页恢复
+  // 六爻/六壬盘 → 跳回工具页恢复
   if (rec.type === 'liuyao' || rec.type === 'liuren') {
     try {
       uni.setStorageSync(rec.type === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[rec.type])
@@ -1551,14 +1613,37 @@ function useHistory(rec) {
     return
   }
   applyData(rec.data)
+  // 修复: 点击历史后切换到对应工具 tab (奇门/紫微/四柱)
+  const rt = inferRecType(rec)
+  if (rt === 'qimen' || rt === 'ziwei') tab.value = rt
   showHistory.value = false
   uni.showToast({ title: '已加载历史排盘', icon: 'none' })
 }
-function removeHistory(i) {
-  historyList.value.splice(i, 1)
+function removeHistory(rec) {
+  const idx = historyList.value.findIndex((r) => r === rec || (r.ts === rec.ts && r.gzText === rec.gzText))
+  if (idx >= 0) historyList.value.splice(idx, 1)
   try {
     uni.setStorageSync(HISTORY_KEY, historyList.value)
   } catch (e) { /* 忽略 */ }
+}
+/* 编辑备注 (点击 ✏️ 弹窗修改) */
+function editHistoryRemark(rec) {
+  uni.showModal({
+    title: '编辑备注',
+    content: '修改这条排盘记录的备注信息',
+    editable: true,
+    placeholderText: '输入备注…',
+    confirmText: '保存',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      rec.remark = (r.content || '').trim()
+      try {
+        uni.setStorageSync(HISTORY_KEY, historyList.value)
+        uni.showToast({ title: '备注已更新', icon: 'success' })
+      } catch (e) { /* 忽略 */ }
+    },
+  })
 }
 
 function shishenName(ganIdx) {
@@ -2058,6 +2143,26 @@ function applyJpUnlock() {
 }
 .hist-del text { font-size: 22rpx; color: #b04a45; }
 .hist-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
+/* 工具标签 */
+.hist-tag { font-size: 20rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; }
+/* 历史操作按钮组 */
+.hist-ops { display: flex; flex-direction: column; gap: 10rpx; margin-left: 12rpx; flex-shrink: 0; }
+.hist-edit {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #f0f4ee;
+  border: 1rpx solid #d8e4d4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hist-edit text { font-size: 22rpx; color: #4e7d43; }
+/* 四柱干支两行 (天干一行/地支一行, 五行色) */
+.hz-line { display: flex; gap: 18rpx; line-height: 1.5; }
+.hz-char { font-size: 30rpx; font-weight: 600; }
+/* 备注 */
+.hist-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 
 /* 五行色 */
 .wx-wood { color: #2e7d32; }

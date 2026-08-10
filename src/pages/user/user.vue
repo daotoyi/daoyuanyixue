@@ -108,6 +108,12 @@
           <text class="entry-label">{{ t.label }}</text>
         </view>
       </view>
+      <!-- 排盘记录: 显示所有玄学工具的排盘记录 -->
+      <view class="pp-record-entry" @tap="goPaipanRecords">
+        <text class="pp-record-icon">📜</text>
+        <text class="pp-record-label">排盘记录</text>
+        <text class="pp-record-more">›</text>
+      </view>
     </view>
 
     <!-- 功能菜单 -->
@@ -254,7 +260,7 @@ const toolEntries = [
   { key: 'bazi', label: '四柱八字', icon: '☯' },
   { key: 'qimen', label: '奇门遁甲', icon: '🧭' },
   { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
-  { key: 'liuren', label: '大六壬', icon: '🌀' },
+  { key: 'liuren', label: '六壬', icon: '🌀' },
   { key: 'liuyao', label: '六爻', icon: '🪙' },
 ]
 
@@ -292,6 +298,10 @@ function goMyCourse(tab) {
 
 function goTools(tool) {
   uni.navigateTo({ url: `/pages-sub/user/tools?tool=${tool || ''}` })
+}
+
+function goPaipanRecords() {
+  uni.navigateTo({ url: `/pages-sub/user/paipan-records` })
 }
 
 function goAssets(type) {
@@ -742,6 +752,19 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
 }
+/* 排盘记录入口 (玄学工具面板底部) */
+.pp-record-entry {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+  padding: 22rpx 16rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+}
+.pp-record-icon { font-size: 36rpx; margin-right: 14rpx; }
+.pp-record-label { flex: 1; font-size: 26rpx; color: #42372c; font-weight: 500; }
+.pp-record-more { font-size: 30rpx; color: #b3a595; }
 .course-entry .entry-item {
   padding: 6rpx 0;
 }

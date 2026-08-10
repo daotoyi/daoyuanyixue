@@ -288,6 +288,14 @@
       "navigationBarBackgroundColor": "#FFFCF5",
       "navigationBarTextStyle": "black"
      }
+    },
+    {
+     "path": "user/paipan-records",
+     "style": {
+      "navigationBarTitleText": "排盘记录",
+      "navigationBarBackgroundColor": "#FFFCF5",
+      "navigationBarTextStyle": "black"
+     }
     }
    ]
   }
