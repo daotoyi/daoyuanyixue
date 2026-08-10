@@ -565,7 +565,7 @@ async function publishMoment(data) {
     images: data.images || [],
     likes: 0,
     comments: 0,
-    is_recommended: false,
+    is_recommended: true, // 所有用户发布的动态默认推荐
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   await db.collection('moments').add(doc)
