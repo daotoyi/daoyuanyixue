@@ -44,7 +44,7 @@
           </view>
         </view>
 
-        <!-- 阳历输入: 日期 + 时辰 转盘, 真太阳时(省市区) -->
+        <!-- 阳历输入: 日期 + 时辰 转盘 (时辰显示具体时间段), 真太阳时(省市区) -->
         <template v-if="form.bazi.mode === 'solar'">
           <view class="tp-row">
             <text class="tp-label">阳历日期</text>
@@ -52,8 +52,8 @@
               <picker mode="date" :value="form.bazi.date" @change="(e) => (form.bazi.date = e.detail.value)">
                 <view class="tp-picker">{{ form.bazi.date }}</view>
               </picker>
-              <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
-                <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
+              <picker mode="selector" :range="solarShichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
+                <view class="tp-picker">{{ solarShichenLabels[form.bazi.shichen] }}</view>
               </picker>
             </view>
           </view>
@@ -402,6 +402,11 @@ const tools = [
 const activeTool = ref('bazi')
 
 const shichenLabels = SHICHEN.map((s) => s.zhi + '时')
+/* 阳历模式时辰标签: 具体时间段 (如 "23:00-01:00"), 不用"子时"等阴历写法 */
+const solarShichenLabels = SHICHEN.map((s) => {
+  const p2 = (n) => String(n).padStart(2, '0')
+  return `${p2(s.from)}:00-${p2(s.to)}:00`
+})
 const wxOrder = ['木', '火', '土', '金', '水']
 const lunarDays = Array.from({ length: 30 }, (_, i) => '初' + ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'][i])
 
@@ -982,7 +987,9 @@ function runPaipan() {
 
   const [ly, lm, ld] = solarDate.split('-').map(Number)
   const lunarInfo = solarToLunar(ly, lm, ld)
-  result.solarText = `阳历 ${solarDate}`
+  result.solarText = f.mode === 'solar'
+    ? `阳历 ${solarDate} ${solarShichenLabels[f.shichen] || ''}`
+    : `阳历 ${solarDate}`
   result.lunarText = `${lunarInfo.ganZhi}年 ${lunarInfo.monthName}${lunarInfo.dayName}`
   if (f.trueSolar) result.solarText += `（真太阳时 ${hour}时）`
 
@@ -995,7 +1002,7 @@ function runPaipan() {
     const gzText = result.pillars.map((p) => p.name).join(' ')
     const label = f.mode === 'gz'
       ? `四柱 ${gzText}`
-      : `${f.mode === 'solar' ? '阳历' : '农历'} ${solarDate} ${shichenLabels[f.shichen]}`
+      : `${f.mode === 'solar' ? '阳历' : '农历'} ${solarDate} ${f.mode === 'solar' ? solarShichenLabels[f.shichen] : shichenLabels[f.shichen]}`
     saveHistoryRecord(result, qm, zw, label, gzText)
   }
 
