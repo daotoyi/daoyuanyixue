@@ -818,8 +818,9 @@ function unlockQmJp(m) {
 function isQmUnlocked(key) {
   paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
-    const paid = uni.getStorageSync(QM_PAID_KEY) || []
-    return paid.includes(key)
+    const map = readPaidMap(QM_PAID_KEY)
+    const arr = map[diskKeyQimen()] || []
+    return arr.includes(key)
   } catch (e) {
     return false
   }
@@ -884,14 +885,17 @@ function payQmJiepan() {
       uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
     })
 }
-/* 写入奇门解锁状态并刷新界面 (仅支付成功调用) */
+/* 写入奇门解锁状态并刷新界面 (仅支付成功调用, 按盘绑定: 每个盘单独收费) */
 function applyQmUnlock() {
   try {
-    const paid = uni.getStorageSync(QM_PAID_KEY) || []
+    const map = readPaidMap(QM_PAID_KEY)
+    const dk = diskKeyQimen()
+    const arr = map[dk] || []
     qmPaidModules.forEach((m) => {
-      if (!paid.includes(m.key)) paid.push(m.key)
+      if (!arr.includes(m.key)) arr.push(m.key)
     })
-    uni.setStorageSync(QM_PAID_KEY, paid)
+    map[dk] = arr
+    uni.setStorageSync(QM_PAID_KEY, map)
     paidTick.value++
     // 自动加载已展开模块的 AI 解盘内容
     qmPaidModules.forEach((m) => {
@@ -1195,9 +1199,11 @@ function unlockZwJp(m) {
   if (zwOpenJp.value[m.key] && isZwUnlocked(m.key) && !zwAiDone.value[m.key]) loadAiZiwei(m.key)
 }
 function isZwUnlocked(key) {
+  paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
-    const paid = uni.getStorageSync(ZW_PAID_KEY) || []
-    return paid.includes(key)
+    const map = readPaidMap(ZW_PAID_KEY)
+    const arr = map[diskKeyZiwei()] || []
+    return arr.includes(key)
   } catch (e) {
     return false
   }
@@ -1262,14 +1268,17 @@ function payZwJiepan() {
       uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
     })
 }
-/* 写入紫微解锁状态并刷新界面 (仅支付成功调用) */
+/* 写入紫微解锁状态并刷新界面 (仅支付成功调用, 按盘绑定: 每个盘单独收费) */
 function applyZwUnlock() {
   try {
-    const paid = uni.getStorageSync(ZW_PAID_KEY) || []
+    const map = readPaidMap(ZW_PAID_KEY)
+    const dk = diskKeyZiwei()
+    const arr = map[dk] || []
     zwPaidModules.forEach((m) => {
-      if (!paid.includes(m.key)) paid.push(m.key)
+      if (!arr.includes(m.key)) arr.push(m.key)
     })
-    uni.setStorageSync(ZW_PAID_KEY, paid)
+    map[dk] = arr
+    uni.setStorageSync(ZW_PAID_KEY, map)
     paidTick.value++
     // 自动加载已展开模块的 AI 解盘内容
     zwPaidModules.forEach((m) => {
@@ -1452,6 +1461,30 @@ const paidModules = [
   { key: 'marriage', name: '婚姻感情', icon: '💞' },
 ]
 const PAID_KEY = 'jiepan_paid_v1'
+
+/* 盘唯一标识: 换盘后解锁记录不通用, 每个盘单独收费 */
+function diskKeyBazi() {
+  try { return 'bazi:' + (data.value.bazi.ganZhi || []).join(' ') } catch (e) { return 'bazi:?' }
+}
+function diskKeyQimen() {
+  try {
+    const q = data.value.qimen
+    return 'qimen:' + q.ju + '|' + q.xunName + q.xunShouQi + '|' + (data.value.bazi.ganZhi || []).join(' ')
+  } catch (e) { return 'qimen:?' }
+}
+function diskKeyZiwei() {
+  try {
+    const z = data.value.ziwei
+    return 'ziwei:' + z.ju + '|' + z.mingGong + '|' + (data.value.bazi.ganZhi || []).join(' ')
+  } catch (e) { return 'ziwei:?' }
+}
+/* 读解锁记录: { diskKey: [moduleKeys] } */
+function readPaidMap(key) {
+  try {
+    const m = uni.getStorageSync(key) || {}
+    return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}
+  } catch (e) { return {} }
+}
 
 onLoad((options) => {
   try {
@@ -1682,8 +1715,9 @@ function loadAiJiepan(key) {
 function isJpUnlocked(key) {
   paidTick.value // 建立响应式依赖: 解锁后强制刷新
   try {
-    const paid = uni.getStorageSync(PAID_KEY) || []
-    return paid.includes(key)
+    const map = readPaidMap(PAID_KEY)
+    const arr = map[diskKeyBazi()] || []
+    return arr.includes(key)
   } catch (e) {
     return false
   }
@@ -1749,14 +1783,17 @@ function payJiepan() {
       uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
     })
 }
-/* 写入四柱解锁状态并刷新界面 (仅支付成功调用) */
+/* 写入四柱解锁状态并刷新界面 (仅支付成功调用, 按盘绑定: 每个盘单独收费) */
 function applyJpUnlock() {
   try {
-    const paid = uni.getStorageSync(PAID_KEY) || []
+    const map = readPaidMap(PAID_KEY)
+    const dk = diskKeyBazi()
+    const arr = map[dk] || []
     paidModules.forEach((m) => {
-      if (!paid.includes(m.key)) paid.push(m.key)
+      if (!arr.includes(m.key)) arr.push(m.key)
     })
-    uni.setStorageSync(PAID_KEY, paid)
+    map[dk] = arr
+    uni.setStorageSync(PAID_KEY, map)
     paidTick.value++
     // 自动加载已展开模块的 AI 解盘内容
     paidModules.forEach((m) => {

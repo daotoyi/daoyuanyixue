@@ -1954,7 +1954,8 @@ function clearSettingsSecret(f) {
 }
 
 onMounted(async () => {
-  if (!userStore.isLoggedIn || (userStore.userInfo.role !== 'admin' && userStore.userInfo.role !== 'staff')) {
+  // 仅超级管理员(admin)/管理员(manager)可访问后台; 员工(staff)/普通用户(user)拒绝
+  if (!userStore.isLoggedIn || (userStore.userInfo.role !== 'admin' && userStore.userInfo.role !== 'manager')) {
     uni.redirectTo({ url: '/pages-sub/admin/login' })
     return
   }

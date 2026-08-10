@@ -59,11 +59,11 @@
           </view>
         </template>
 
-        <!-- 农历输入: 年月日时 一行4转盘 -->
+        <!-- 农历输入: 年月日一行3框 + 时辰一行1框 (每框更宽, 字体与阳历一致) -->
         <template v-else-if="form.bazi.mode === 'lunar'">
           <view class="tp-row">
             <text class="tp-label">农历时间</text>
-            <view class="tp-pickers-inline tp-4">
+            <view class="tp-pickers-inline tp-3">
               <picker mode="selector" :range="lunarYearLabels" @change="(e) => (form.bazi.lunarYear = 1900 + Number(e.detail.value))">
                 <view class="tp-picker">{{ form.bazi.lunarYear }}年</view>
               </picker>
@@ -73,6 +73,11 @@
               <picker mode="selector" :range="lunarDays" @change="(e) => (form.bazi.lunarDay = e.detail.value)">
                 <view class="tp-picker">{{ lunarDays[form.bazi.lunarDay] }}</view>
               </picker>
+            </view>
+          </view>
+          <view class="tp-row">
+            <text class="tp-label">农历时辰</text>
+            <view class="tp-pickers-inline">
               <picker mode="selector" :range="shichenLabels" @change="(e) => (form.bazi.shichen = e.detail.value)">
                 <view class="tp-picker">{{ shichenLabels[form.bazi.shichen] }}</view>
               </picker>
@@ -1352,12 +1357,12 @@ function runLiuren() {
   flex: 1;
   text-align: center;
 }
-.tp-pickers-inline.tp-4 .tp-picker {
+.tp-pickers-inline.tp-3 .tp-picker {
   flex: 1;
   height: 76rpx; /* 与阳历选项框等高 */
   min-width: 0;
-  padding: 0 4rpx;
-  font-size: 22rpx;
+  padding: 0 10rpx;
+  font-size: 26rpx; /* 与阳历时间框字体一致 */
   white-space: nowrap;
   overflow: hidden;
   text-align: center;

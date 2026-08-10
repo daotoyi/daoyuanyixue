@@ -1003,8 +1003,21 @@ async function aiJiepan(data) {
     })
     const text = res && res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content
     if (!text) return fail('AI 解盘失败：' + ((res && res.error && res.error.message) || '未知错误'))
-    // 拆分为段落
+    // 拆分为段落 + 去除 markdown 语法 (纯文本展示)
     const paras = text.split(/\n+/).map((s) => s.trim()).filter(Boolean)
+      .map((p) =>
+        p
+          .replace(/^#{1,6}\s*/, '')
+          .replace(/^[-*+]\s+/, '')
+          .replace(/^\d+[.、)]\s*/, '')
+          .replace(/\*\*/g, '')
+          .replace(/\*/g, '')
+          .replace(/`/g, '')
+          .replace(/^>+\s?/, '')
+          .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+          .trim()
+      )
+      .filter(Boolean)
     return ok({ module, content: paras })
   } catch (e) {
     return fail('AI 解盘失败：' + (e.message || '网络错误'))
@@ -1062,6 +1075,8 @@ async function aiAsk(data) {
           .replace(/\*\*/g, '')
           .replace(/\*/g, '')
           .replace(/`/g, '')
+          .replace(/^>+\s?/, '')
+          .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
           .trim()
       )
       .filter(Boolean)
