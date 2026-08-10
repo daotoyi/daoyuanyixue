@@ -18,7 +18,7 @@
       </view>
       <view class="user-main">
         <view class="avatar-wrap" @tap="isLoggedIn ? openProfile() : goLogin()">
-          <image v-if="displayAvatar || userInfo.avatar" class="user-avatar" :src="displayAvatar || userInfo.avatar" mode="aspectFill"></image>
+          <image v-if="displayAvatar" class="user-avatar" :src="displayAvatar" mode="aspectFill"></image>
           <view v-else class="user-avatar avatar-fallback">
             <text>{{ userInfo.nickname ? userInfo.nickname[0] : '客' }}</text>
           </view>
@@ -192,7 +192,7 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
-import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip } from '../../api/api'
+import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { APP_FULL_VERSION } from '../../version'
 
@@ -423,6 +423,13 @@ function onLogout() {
 
 onShow(async () => {
   if (!isLoggedIn.value) return
+  // 从后端刷新最新用户信息 (头像以服务端为准, 避免本地缓存 cloud:// 头像 H5 渲染失败)
+  try {
+    const fresh = await userProfile({ uid: userInfo.value.uid })
+    if (fresh && fresh.user && fresh.user.avatar) {
+      userStore.setUserInfo({ avatar: fresh.user.avatar })
+    }
+  } catch (e) { /* 忽略, 用本地缓存 */ }
   // cloud:// 头像转可访问 URL (H5 渲染)
   if (userInfo.value.avatar) displayAvatar.value = await resolveCloudUrl(userInfo.value.avatar)
   try {

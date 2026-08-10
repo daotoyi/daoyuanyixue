@@ -5,7 +5,7 @@
       <view class="banner-title">道元易学</view>
       <view class="banner-sub">观天道 · 明人事 · 致中和</view>
       <view class="banner-seal">
-        <image class="seal-img" src="/static/logo.png" mode="aspectFit"></image>
+        <image class="seal-img" :src="logoUrl" mode="aspectFit"></image>
       </view>
     </view>
 
@@ -315,6 +315,16 @@ function calTip(d) {
 
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
+
+/* logo 绝对路径 (H5 需运行时 origin, 避免 Vite publicPath=./ 编译成相对路径导致 image 背景 none 不渲染) */
+const logoUrl = computed(() => {
+  // #ifdef H5
+  return (typeof window !== 'undefined' ? window.location.origin : '') + '/static/logo.png'
+  // #endif
+  // #ifndef H5
+  return '/static/logo.png'
+  // #endif
+})
 
 // 推荐=全部动态; 关注=精选(推荐)动态
 const shownMoments = computed(() => {

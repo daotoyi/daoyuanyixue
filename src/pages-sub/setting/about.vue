@@ -1,7 +1,7 @@
 <template>
   <view class="about-page">
     <view class="about-head">
-      <view class="about-seal"><image class="about-seal-img" src="/static/logo.png" mode="aspectFit"></image></view>
+      <view class="about-seal"><image class="about-seal-img" :src="logoUrl" mode="aspectFit"></image></view>
       <text class="about-name">道元易学</text>
       <text class="about-slogan">观天道 · 明人事 · 致中和</text>
       <text class="about-version">{{ APP_FULL_VERSION }}</text>
@@ -21,7 +21,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
+
+/* logo 绝对路径 (H5 需运行时 origin, 避免 Vite publicPath=./ 编译成相对路径导致 image 背景 none 不渲染) */
+const logoUrl = computed(() => {
+  // #ifdef H5
+  return (typeof window !== 'undefined' ? window.location.origin : '') + '/static/logo.png'
+  // #endif
+  // #ifndef H5
+  return '/static/logo.png'
+  // #endif
+})
 </script>
 
 <style lang="scss" scoped>

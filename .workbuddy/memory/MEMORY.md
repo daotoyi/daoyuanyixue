@@ -45,6 +45,7 @@
 - **远程仓库 (已推送)**: https://github.com/daotoyi/daoyuanyixue (HTTPS 推送, keychain 存有 PAT 凭证; SSH 不通)
 - 推送命令: git push origin main; 拉取: git pull origin main
 - 云端备份: ✅ GitHub 已同步
+- **推送失败处理 (2026-08-10 用户约定)**: GitHub 推送若网络不通(常见 443 超时), **先本地 commit 完成版本管理**, 后续网络恢复时再 push; 用户可能因切换网速/关闭 VPN 导致网络波动, 不要因 push 失败而卡住或反复重试, 本地提交成功即算完成, 提示用户稍后重推即可
 
 ## 用户约定
 
