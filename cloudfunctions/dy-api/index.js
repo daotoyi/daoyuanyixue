@@ -1929,7 +1929,7 @@ const MANAGER_ROUTES = [
 ]
 
 // 员工允许查询的集合
-const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'categories', 'course_categories']
+const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'categories', 'course_categories', 'coupons', 'moments', 'feedbacks']
 
 /* 后台管理员校验: 仅 admin(超管) / manager(管理员) 可登录后台 */
 async function requireAdmin(data) {
@@ -1954,12 +1954,12 @@ async function requireStaffAllowed(action, data) {
     : (user && user.data[0] ? user.data[0].role : '')
   // 超管全部放行
   if (realRole === 'admin') return true
-  if (realRole !== 'staff' && realRole !== 'manager') return false
-  // 员工: 白名单接口
-  if (STAFF_ROUTES.includes(action)) return true
-  // 管理员(manager): 额外课程管理权限
-  if (realRole === 'manager' && MANAGER_ROUTES.includes(action)) return true
-  // admin.list: 仅允许指定集合
+  // 员工(staff): 无后台访问权限 (需求: 仅超管/管理员可访问后台)
+  if (realRole === 'staff') return false
+  if (realRole !== 'manager') return false
+  // 管理员(manager): 课程管理 + 首页管理/优惠券/动态/反馈
+  if (MANAGER_ROUTES.includes(action)) return true
+  // admin.list: 仅管理员允许指定集合
   if (action === 'admin.list' && data.collection && STAFF_COLLECTIONS.includes(data.collection)) return true
   return false
 }
