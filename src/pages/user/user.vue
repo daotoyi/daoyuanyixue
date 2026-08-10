@@ -102,18 +102,20 @@
         <text class="panel-title">玄学工具</text>
         <text class="panel-more">更多工具 ›</text>
       </view>
-      <view class="order-entry tool-entry">
-        <view class="entry-item" v-for="t in toolEntries" :key="t.key" @tap="goTools(t.key)">
-          <text class="entry-icon">{{ t.icon }}</text>
-          <text class="entry-label">{{ t.label }}</text>
+      <!-- 玄学工具横向滑动 (含排盘记录) -->
+      <scroll-view scroll-x class="tool-scroll" :show-scrollbar="false">
+        <view class="order-entry tool-entry">
+          <view class="entry-item" v-for="t in toolEntries" :key="t.key" @tap="goTools(t.key)">
+            <text class="entry-icon">{{ t.icon }}</text>
+            <text class="entry-label">{{ t.label }}</text>
+          </view>
+          <!-- 排盘记录: 与其他工具一行, 可左右滑动 -->
+          <view class="entry-item" @tap="goPaipanRecords">
+            <text class="entry-icon">📜</text>
+            <text class="entry-label">排盘记录</text>
+          </view>
         </view>
-      </view>
-      <!-- 排盘记录: 显示所有玄学工具的排盘记录 -->
-      <view class="pp-record-entry" @tap="goPaipanRecords">
-        <text class="pp-record-icon">📜</text>
-        <text class="pp-record-label">排盘记录</text>
-        <text class="pp-record-more">›</text>
-      </view>
+      </scroll-view>
     </view>
 
     <!-- 功能菜单 -->
@@ -752,19 +754,23 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
 }
-/* 排盘记录入口 (玄学工具面板底部) */
-.pp-record-entry {
-  display: flex;
-  align-items: center;
-  margin-top: 10rpx;
-  padding: 22rpx 16rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
-  border-radius: 12rpx;
+/* 玄学工具横向滑动 (排盘记录与其他工具一行) */
+.tool-scroll {
+  white-space: nowrap;
 }
-.pp-record-icon { font-size: 36rpx; margin-right: 14rpx; }
-.pp-record-label { flex: 1; font-size: 26rpx; color: #42372c; font-weight: 500; }
-.pp-record-more { font-size: 30rpx; color: #b3a595; }
+.tool-scroll .order-entry {
+  display: inline-flex;
+  padding-right: 20rpx;
+  white-space: nowrap;
+}
+.tool-scroll .entry-item {
+  width: 130rpx;
+  flex: none;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
 .course-entry .entry-item {
   padding: 6rpx 0;
 }

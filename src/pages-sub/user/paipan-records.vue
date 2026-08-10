@@ -29,7 +29,10 @@
           <text class="rec-label">{{ rec.label }}</text>
           <view class="rec-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
         </view>
-        <view class="rec-del" @tap.stop="removeRecord(rec)"><text>✕</text></view>
+        <view class="rec-ops">
+          <view class="rec-op-btn rec-edit" @tap.stop="editRemark(rec)"><text>✏️</text></view>
+          <view class="rec-op-btn rec-del" @tap.stop="removeRecord(rec)"><text>✕</text></view>
+        </view>
       </view>
     </view>
     <view class="rec-empty" v-else><text>暂无排盘记录\n在排盘结果页点「保存此盘」保存排盘</text></view>
@@ -60,15 +63,23 @@ const filters = [
 const filter = ref('all')
 const list = ref([])
 
-/* 旧记录兼容: 无 type 时从 data 推断 */
+/* 旧记录兼容: 无 type 时从 label/data 推断工具
+   注意: saveDisk/saveHistoryRecord 存的是完整盘 {bazi,qimen,ziwei} 三份都在,
+   data 结构无法区分工具, 必须优先用 label 前缀判断! */
 function inferRecType(rec) {
   if (rec.type) return rec.type
+  const label = rec.label || ''
   const d = rec.data || {}
-  if (d.qimen && d.qimen.palaces) return 'qimen'
-  if (d.ziwei && d.ziwei.mingGong !== undefined) return 'ziwei'
-  if (d.bazi && d.bazi.pillars) return 'bazi'
+  if (label.includes('奇门')) return 'qimen'
+  if (label.includes('紫微')) return 'ziwei'
+  if (label.includes('八字') || label.includes('四柱')) return 'bazi'
+  if (label.includes('六爻')) return 'liuyao'
+  if (label.includes('六壬')) return 'liuren'
   if (d.liuyao) return 'liuyao'
   if (d.liuren) return 'liuren'
+  if (d.bazi && d.bazi.pillars && !d.qimen) return 'bazi'
+  if (d.qimen && d.qimen.palaces && !d.bazi) return 'qimen'
+  if (d.ziwei && d.ziwei.mingGong !== undefined && !d.bazi) return 'ziwei'
   return ''
 }
 /* 补全 type (旧记录) 并返回 */
@@ -121,6 +132,26 @@ function openRecord(rec) {
   }
   const tool = rec.type === 'qimen' || rec.type === 'ziwei' ? rec.type : 'bazi'
   uni.navigateTo({ url: `/pages-sub/user/paipan?tool=${tool}` })
+}
+
+/* 编辑备注 (点击 ✏️ 弹窗修改) */
+function editRemark(rec) {
+  uni.showModal({
+    title: '编辑备注',
+    content: '修改这条排盘记录的备注信息',
+    editable: true,
+    placeholderText: '输入备注…',
+    confirmText: '保存',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      rec.remark = (r.content || '').trim()
+      try {
+        uni.setStorageSync(HISTORY_KEY, list.value)
+        uni.showToast({ title: '备注已更新', icon: 'success' })
+      } catch (e) { /* 忽略 */ }
+    },
+  })
 }
 
 function removeRecord(rec) {
@@ -271,17 +302,32 @@ function confirmClear() {
   padding: 6rpx 12rpx;
   word-break: break-all;
 }
-.rec-del {
+.rec-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+.rec-op-btn {
   width: 56rpx;
   height: 56rpx;
-  margin-left: 12rpx;
   border-radius: 50%;
-  background: #fdf1f0;
-  border: 1rpx solid #efd8d4;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+}
+.rec-edit {
+  background: #f0f4ee;
+  border: 1rpx solid #d8e4d4;
+}
+.rec-edit text {
+  font-size: 22rpx;
+  color: #4e7d43;
+}
+.rec-del {
+  background: #fdf1f0;
+  border: 1rpx solid #efd8d4;
 }
 .rec-del text {
   font-size: 22rpx;

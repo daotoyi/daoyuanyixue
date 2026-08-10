@@ -29,6 +29,58 @@
       </view>
     </view>
 
+    <!-- 排盘历史弹窗 (独立于 tab body, 四柱/奇门/紫微共用, 按当前工具筛选) -->
+    <view class="pp-mask" v-if="showHistory" @tap="showHistory = false"><view class="pp-sheet" @tap.stop>
+      <view class="hist-sheet">
+        <view class="sheet-title">排盘历史 · {{ tab === 'qimen' ? '奇门' : tab === 'ziwei' ? '紫微' : '四柱' }}</view>
+        <view class="hist-list" v-if="curHistoryList.length">
+          <view class="hist-item" v-for="(rec, i) in curHistoryList" :key="i">
+            <view class="hist-main" @tap="useHistory(rec)">
+              <view class="hist-top">
+                <text class="hist-time">{{ rec.time }}</text>
+                <text class="hist-tag" v-if="rec.type">{{ TOOL_ICON[rec.type] || '' }} {{ TOOL_NAME[rec.type] || '' }}</text>
+              </view>
+              <!-- 四柱: 天干地支分两行 + 五行色; 其他: 纯文本 -->
+              <view class="hist-gz" v-if="rec.type === 'bazi' && rec.gzText">
+                <view class="hz-line">
+                  <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
+                </view>
+                <view class="hz-line">
+                  <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
+                </view>
+              </view>
+              <text class="hist-gz" v-else>{{ rec.gzText }}</text>
+              <text class="hist-label">{{ rec.label }}</text>
+              <view class="hist-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
+            </view>
+            <view class="hist-ops">
+              <text class="hist-edit" @tap="editHistoryRemark(rec)"><text>✏️</text></text>
+              <text class="hist-del" @tap="removeHistory(rec)"><text>✕</text></text>
+            </view>
+          </view>
+        </view>
+        <view class="hist-empty" v-else><text>暂无保存的{{ tab === 'qimen' ? '奇门' : tab === 'ziwei' ? '紫微' : '四柱' }}排盘\n在排盘结果页点「保存此盘」可手动保存</text></view>
+      </view>
+    </view></view>
+
+    <!-- 保存此盘备注弹窗 (占位符灰色, 点击输入自动清除) -->
+    <view class="pp-mask" v-if="showSaveModal" @tap="showSaveModal = false"><view class="pp-sheet" @tap.stop>
+      <view class="save-sheet">
+        <view class="sheet-title">保存此盘</view>
+        <input
+          class="save-remark-input"
+          v-model="saveRemarkInput"
+          placeholder="可输入备注信息，便于之后识别这个盘"
+          placeholder-class="save-remark-ph"
+          maxlength="50"
+        />
+        <view class="save-sheet-ops">
+          <view class="save-btn save-cancel" @tap="showSaveModal = false"><text>取消</text></view>
+          <view class="save-btn save-confirm" @tap="confirmSaveDisk"><text>保存</text></view>
+        </view>
+      </view>
+    </view></view>
+
     <!-- ===== 四柱八字 ===== -->
     <view v-if="tab === 'bazi'" class="pp-body">
       <!-- 四柱表: 最左列 天干/地支 行标签 + 选中大运/流年/流月联动列 (从左到右: 流时/流日/流月/流年/大运/四柱), 列多可左右滑动, 下方表格同步滚动 -->
@@ -298,40 +350,6 @@
       </view>
 
       <view class="pp-tip">※ 以节气为界排盘，真太阳时按出生地经度修正，流月供学习参考</view>
-
-      <!-- 排盘历史弹窗 (按当前工具筛选: 奇门/紫微/四柱分开) -->
-      <view class="pp-mask" v-if="showHistory" @tap="showHistory = false"><view class="pp-sheet" @tap.stop>
-        <view class="hist-sheet">
-          <view class="sheet-title">排盘历史 · {{ tab === 'qimen' ? '奇门' : tab === 'ziwei' ? '紫微' : '四柱' }}</view>
-          <view class="hist-list" v-if="curHistoryList.length">
-            <view class="hist-item" v-for="(rec, i) in curHistoryList" :key="i">
-              <view class="hist-main" @tap="useHistory(rec)">
-                <view class="hist-top">
-                  <text class="hist-time">{{ rec.time }}</text>
-                  <text class="hist-tag" v-if="rec.type">{{ TOOL_ICON[rec.type] || '' }} {{ TOOL_NAME[rec.type] || '' }}</text>
-                </view>
-                <!-- 四柱: 天干地支分两行 + 五行色; 其他: 纯文本 -->
-                <view class="hist-gz" v-if="rec.type === 'bazi' && rec.gzText">
-                  <view class="hz-line">
-                    <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
-                  </view>
-                  <view class="hz-line">
-                    <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
-                  </view>
-                </view>
-                <text class="hist-gz" v-else>{{ rec.gzText }}</text>
-                <text class="hist-label">{{ rec.label }}</text>
-                <view class="hist-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
-              </view>
-              <view class="hist-ops">
-                <text class="hist-edit" @tap="editHistoryRemark(rec)"><text>✏️</text></text>
-                <text class="hist-del" @tap="removeHistory(rec)"><text>✕</text></text>
-              </view>
-            </view>
-          </view>
-          <view class="hist-empty" v-else><text>暂无保存的{{ tab === 'qimen' ? '奇门' : tab === 'ziwei' ? '紫微' : '四柱' }}排盘\n在排盘结果页点「保存此盘」可手动保存</text></view>
-        </view>
-      </view></view>
 
       <!-- ===== AI 解盘 ===== -->
       <view class="pp-block jp-section">
@@ -920,14 +938,17 @@ function applyQmUnlock() {
     uni.showToast({ title: '解锁失败', icon: 'none' })
   }
 }
-/* 保存当前盘到历史 (八字/奇门/紫微通用) - 弹窗输入备注 */
+/* 保存当前盘到历史 (八字/奇门/紫微通用) - 自定义弹窗输入备注 (占位符灰色, 点击自动清除) */
+const showSaveModal = ref(false)
+const saveRemarkInput = ref('')
+let _saveRec = null
 function saveDisk() {
   try {
     const isQm = tab.value === 'qimen'
     const isZw = tab.value === 'ziwei'
     const now = new Date()
     const p = (n) => String(n).padStart(2, '0')
-    const rec = isQm
+    _saveRec = isQm
       ? {
           ts: Date.now(),
           time: `${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
@@ -956,28 +977,25 @@ function saveDisk() {
             remark: '',
             data: data.value,
           }
-    // 弹窗输入备注 (editable 模式支持输入框)
-    uni.showModal({
-      title: '保存此盘',
-      content: '可输入备注信息（可选），便于之后识别这个盘',
-      editable: true,
-      placeholderText: '例如：给某人的盘 / 考试前 / 2026 流年问事…',
-      confirmText: '保存',
-      confirmColor: '#8c5a2b',
-      success: (r) => {
-        if (!r.confirm) return
-        rec.remark = (r.content || '').trim()
-        let list = uni.getStorageSync(HISTORY_KEY) || []
-        if (!Array.isArray(list)) list = []
-        list.unshift(rec)
-        if (list.length > 20) list = list.slice(0, 20)
-        uni.setStorageSync(HISTORY_KEY, list)
-        uni.showToast({ title: '已保存到历史', icon: 'success' })
-      },
-    })
+    saveRemarkInput.value = ''
+    showSaveModal.value = true
   } catch (e) {
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
+}
+function confirmSaveDisk() {
+  if (!_saveRec) return
+  _saveRec.remark = saveRemarkInput.value.trim()
+  try {
+    let list = uni.getStorageSync(HISTORY_KEY) || []
+    if (!Array.isArray(list)) list = []
+    list.unshift(_saveRec)
+    if (list.length > 20) list = list.slice(0, 20)
+    uni.setStorageSync(HISTORY_KEY, list)
+  } catch (e) { /* 忽略 */ }
+  showSaveModal.value = false
+  _saveRec = null
+  uni.showToast({ title: '已保存到历史', icon: 'success' })
 }
 
 /* AI 智能问答 (¥0.5/次, 从余额扣款) */
@@ -1563,13 +1581,23 @@ function applyData(d) {
 /* 工具图标/名称 (结果页 + 我的页共用) */
 const TOOL_ICON = { bazi: '☯', qimen: '🧭', ziwei: '🌟', liuren: '🌀', liuyao: '🪙' }
 const TOOL_NAME = { bazi: '四柱八字', qimen: '奇门遁甲', ziwei: '紫微斗数', liuren: '六壬', liuyao: '六爻' }
-/* 旧记录兼容: 无 type 时从 data 推断工具 */
+/* 旧记录兼容: 无 type 时从 label/data 推断工具
+   注意: saveDisk/saveHistoryRecord 存的是完整盘 {bazi,qimen,ziwei} 三份都在,
+   data 结构无法区分工具, 必须优先用 label 前缀判断! */
 function inferRecType(rec) {
   if (rec.type) return rec.type
+  const label = rec.label || ''
   const d = rec.data || {}
-  if (d.qimen && d.qimen.palaces) return 'qimen'
-  if (d.ziwei && d.ziwei.mingGong !== undefined) return 'ziwei'
-  if (d.bazi && d.bazi.pillars) return 'bazi'
+  if (label.includes('奇门')) return 'qimen'
+  if (label.includes('紫微')) return 'ziwei'
+  if (label.includes('八字') || label.includes('四柱')) return 'bazi'
+  if (label.includes('六爻')) return 'liuyao'
+  if (label.includes('六壬')) return 'liuren'
+  if (d.liuyao) return 'liuyao'
+  if (d.liuren) return 'liuren'
+  if (d.bazi && d.bazi.pillars && !d.qimen) return 'bazi'
+  if (d.qimen && d.qimen.palaces && !d.bazi) return 'qimen'
+  if (d.ziwei && d.ziwei.mingGong !== undefined && !d.bazi) return 'ziwei'
   return ''
 }
 /* 四柱干支 → 天干/地支两组 (历史记录两行显示) */
@@ -2163,6 +2191,38 @@ function applyJpUnlock() {
 .hz-char { font-size: 30rpx; font-weight: 600; }
 /* 备注 */
 .hist-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
+/* 保存此盘备注弹窗 */
+.save-sheet { padding: 30rpx 30rpx 40rpx; }
+.save-remark-input {
+  height: 88rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  color: #42372c;
+}
+.save-remark-ph {
+  color: #b3a595; /* 灰色占位符 */
+}
+.save-sheet-ops {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 30rpx;
+}
+.save-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.save-btn text { font-size: 28rpx; }
+.save-cancel { background: #f1e7d3; }
+.save-cancel text { color: #8c5a2b; }
+.save-confirm { background: linear-gradient(135deg, #b04a45, #8c3228); }
+.save-confirm text { color: #fefbf6; }
 
 /* 五行色 */
 .wx-wood { color: #2e7d32; }
