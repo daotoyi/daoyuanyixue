@@ -645,7 +645,7 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(201, 169, 106, 0.12);
+  background: #f6ead3; /* 实心米金底, 让深色 logo 可见 (原半透明在深棕 banner 上看不见) */
 }
 .seal-img {
   width: 72rpx;

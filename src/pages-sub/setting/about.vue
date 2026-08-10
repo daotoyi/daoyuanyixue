@@ -43,7 +43,7 @@ import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(196, 164, 132, 0.12);
+  background: #f6ead3; /* 实心米金底, 让深色 logo 可见 (原半透明在深棕背景上看不见) */
   margin-bottom: 26rpx;
 }
 .about-seal-img {
