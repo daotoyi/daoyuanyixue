@@ -16,11 +16,24 @@
       </view>
     </view>
 
+    <!-- 批量删除操作条 -->
+    <view class="batch-bar">
+      <text v-if="!batchMode" class="batch-enter" @tap="enterBatch">☑ 批量删除</text>
+      <template v-else>
+        <text class="batch-act" @tap="toggleAll">全选</text>
+        <text class="batch-act batch-del" @tap="batchDelete">删除所选（{{ selected.length }}）</text>
+        <text class="batch-act" @tap="exitBatch">取消</text>
+      </template>
+    </view>
+
     <!-- 订单列表 -->
     <scroll-view scroll-y class="order-scroll">
       <view class="order-list" v-if="orders.length">
         <view class="order-card" v-for="o in orders" :key="o._id || o.order_no" @tap="goDetail(o.order_no)">
           <view class="order-head">
+            <view class="card-check" v-if="batchMode" @tap.stop="toggleSel(o)">
+              <text :class="{ on: isSel(o) }">{{ isSel(o) ? '✓' : '' }}</text>
+            </view>
             <text class="order-no">订单号 {{ o.order_no }}</text>
             <text class="order-status" :class="'st-' + stCls(o.status)">{{ o.status }}</text>
           </view>
@@ -81,9 +94,10 @@ onShow(async () => {
   await loadOrders()
 })
 
-// 一次拉全部订单, 统计各状态数量
+// 一次拉全部订单, 统计各状态数量 (必须传 uid, 只拉自己的订单)
 async function loadOrders() {
-  allOrders.value = await getOrders({ status: '全部' })
+  const uid = useUserStore().userInfo.uid
+  allOrders.value = await getOrders({ status: '全部', uid })
 }
 
 const counts = computed(() => {
@@ -136,6 +150,60 @@ async function doConfirm(o) {
   await confirmOrder(o.order_no)
   uni.showToast({ title: '已确认收货', icon: 'success' })
   await loadOrders()
+}
+
+/* ===== 批量删除 ===== */
+const batchMode = ref(false)
+const selected = ref([])
+const isSel = (o) => selected.value.includes(o._id || o.order_no)
+function toggleSel(o) {
+  const k = o._id || o.order_no
+  const i = selected.value.indexOf(k)
+  if (i >= 0) selected.value.splice(i, 1)
+  else selected.value.push(k)
+}
+function enterBatch() {
+  batchMode.value = true
+}
+function exitBatch() {
+  batchMode.value = false
+  selected.value = []
+}
+function toggleAll() {
+  const keys = orders.value.map((o) => o._id || o.order_no)
+  const allSel = keys.length && keys.every((k) => selected.value.includes(k))
+  if (allSel) selected.value = []
+  else selected.value = [...new Set([...selected.value, ...keys])]
+}
+async function batchDelete() {
+  if (!selected.value.length) {
+    uni.showToast({ title: '请先勾选订单', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '批量删除',
+    content: `确定删除选中的 ${selected.value.length} 个订单吗？删除后不可恢复。`,
+    confirmText: '删除',
+    confirmColor: '#b04a45',
+    success: async (res) => {
+      if (!res.confirm) return
+      const uid = useUserStore().userInfo.uid
+      let okc = 0
+      let failc = 0
+      for (const o of orders.value) {
+        if (!isSel(o)) continue
+        try {
+          await deleteOrder({ uid, order_no: o.order_no })
+          okc++
+        } catch (e) {
+          failc++
+        }
+      }
+      uni.showToast({ title: failc ? `已删除${okc}个，${failc}个失败` : `已删除${okc}个订单`, icon: 'none' })
+      exitBatch()
+      await loadOrders()
+    },
+  })
 }
 
 /* 删除订单: 确认后删除 (校验 uid 归属) */
@@ -272,6 +340,60 @@ async function doDelete(o) {
   align-items: center;
   padding-bottom: 16rpx;
   border-bottom: 1rpx solid #efe7d8;
+}
+/* 批量删除操作条 */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 30rpx;
+  padding: 14rpx 30rpx;
+  background: #f1e7d3;
+  border-bottom: 1rpx solid #e5d5b8;
+}
+.batch-enter {
+  font-size: 24rpx;
+  color: #8c5a2b;
+  padding: 8rpx 24rpx;
+  border: 1rpx solid #d9c39a;
+  border-radius: 999rpx;
+  background: #fefbf6;
+}
+.batch-act {
+  font-size: 24rpx;
+  color: #8c5a2b;
+}
+.batch-act.batch-del {
+  color: #b04a45;
+  font-weight: 600;
+}
+/* 勾选框 */
+.card-check {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #d9c39a;
+  background: #fefbf6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+}
+.card-check text {
+  font-size: 24rpx;
+  color: #fefbf6;
+}
+.card-check text.on {
+  color: #fff;
+}
+.card-check text.on {
+  background: #8c5a2b;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .order-no {
   font-size: 22rpx;

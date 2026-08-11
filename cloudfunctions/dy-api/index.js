@@ -1453,16 +1453,14 @@ async function toolUnlock(data) {
 }
 
 async function listOrders(data) {
+  // 必须传 uid, 只返回自己的订单 (防止订单列表泄露/误删他人订单)
+  if (!data.uid) return ok([])
   let query = db.collection('orders')
   const conds = []
-  if (data.uid) conds.push({ uid: data.uid })
+  conds.push({ uid: data.uid })
   if (data.status && data.status !== '全部') conds.push({ status: data.status })
   let res
-  if (conds.length) {
-    res = await query.where(_.and(conds)).orderBy('created_at', 'desc').limit(50).get()
-  } else {
-    res = await query.orderBy('created_at', 'desc').limit(50).get()
-  }
+  res = await query.where(_.and(conds)).orderBy('created_at', 'desc').limit(50).get()
   return ok(res.data)
 }
 
