@@ -164,7 +164,6 @@
           <view class="settings-card">
             <view class="settings-desc">
               <text class="sd-title">固定活动设置</text>
-              <text class="sd-text">固定每周几由某老师授课，前台日历本月与下月统一在该周几生效</text>
             </view>
             <view class="home-pandao-list">
               <view class="home-pd-row" v-for="(fp, i) in homePandaoFixed" :key="i">
@@ -1108,11 +1107,17 @@ function addFixedPandao() {
   })
   fpForm.value = { weekday: 3, name: '', time: '', teacher: '', type: 'offline' }
 }
-function toggleFixedPandao(i) {
+async function toggleFixedPandao(i) {
   const fp = homePandaoFixed.value[i]
   if (!fp) return
   fp.enabled = fp.enabled === false ? true : false
-  uni.showToast({ title: fp.enabled ? '已恢复固定' : '已取消固定，点击保存配置生效', icon: 'none' })
+  uni.showToast({ title: fp.enabled ? '已恢复固定' : '已取消固定', icon: 'none' })
+  // 取消/恢复固定立即保存, 前台日历与图例马上生效
+  try {
+    await adminSettingsSave({ group: 'pandao', configs: { fixed: homePandaoFixed.value } })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败，请点保存配置', icon: 'none' })
+  }
 }
 function removeFixedPandao(i) {
   homePandaoFixed.value.splice(i, 1)
