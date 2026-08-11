@@ -8,7 +8,7 @@
       </view>
       <view class="ph-info">
         <text class="ph-name">{{ profile.user ? profile.user.nickname : '...' }}</text>
-        <text class="ph-dao" v-if="profile.user && profile.user.dao_code">道号 · {{ profile.user.dao_code }}</text>
+        <text class="ph-dao" v-if="profile.user && (profile.user.dao_code || profile.user.invite_code)">道号 · {{ profile.user.dao_code || profile.user.invite_code }}</text>
         <text class="ph-bio" v-if="profile.user && profile.user.bio">{{ profile.user.bio }}</text>
       </view>
       <view class="ph-follow-btn" v-if="profile.user && isSelf === false" :class="{ followed: profile.is_followed }" @tap="toggleFollow">
