@@ -37,7 +37,7 @@
           <view class="hist-item" v-for="(rec, i) in curHistoryList" :key="i">
             <view class="hist-main" @tap="useHistory(rec)">
               <view class="hist-top">
-                <text class="hist-time">{{ rec.time }}</text>
+                <text class="hist-time">{{ fmtRecTime(rec) }}</text>
                 <text class="hist-tag" v-if="rec.type">{{ TOOL_ICON[rec.type] || '' }} {{ TOOL_NAME[rec.type] || '' }}</text>
               </view>
               <!-- 四柱: 天干地支分两行 + 五行色; 其他: 纯文本 -->
@@ -1606,6 +1606,16 @@ function splitBaziGz(gzText) {
   const gans = [], zhis = []
   chars.forEach((c, i) => (i % 2 === 0 ? gans : zhis).push(c))
   return { gans, zhis }
+}
+/* 记录时间格式化: 旧记录(MM-DD HH:mm)用 ts 补上年份 → YYYY-MM-DD HH:mm 统一 */
+function fmtRecTime(rec) {
+  const t = (rec && rec.time) || ''
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t // 已含年份
+  if (/^\d{2}-\d{2}/.test(t) && rec.ts) {
+    const y = new Date(rec.ts).getFullYear()
+    return `${y}-${t}`
+  }
+  return t
 }
 const WX_OF_GAN = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' }
 const WX_OF_ZHI = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' }

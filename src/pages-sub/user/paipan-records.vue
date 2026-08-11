@@ -33,7 +33,7 @@
           <text class="rec-gz" v-else>{{ rec.gzText }}</text>
           <text class="rec-label">{{ rec.label }}</text>
           <!-- 时间在最下面 -->
-          <text class="rec-time">{{ rec.time }}</text>
+          <text class="rec-time">{{ fmtRecTime(rec) }}</text>
           <!-- 备注信息放在最下面 -->
           <view class="rec-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
         </view>
@@ -113,6 +113,17 @@ function normalize(rec) {
   const t = inferRecType(rec)
   if (t && !rec.type) rec.type = t
   return rec
+}
+
+/* 记录时间格式化: 旧记录(MM-DD HH:mm)用 ts 补上年份 → YYYY-MM-DD HH:mm 统一 */
+function fmtRecTime(rec) {
+  const t = (rec && rec.time) || ''
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t // 已含年份
+  if (/^\d{2}-\d{2}/.test(t) && rec.ts) {
+    const y = new Date(rec.ts).getFullYear()
+    return `${y}-${t}`
+  }
+  return t
 }
 
 const shownList = computed(() => {
