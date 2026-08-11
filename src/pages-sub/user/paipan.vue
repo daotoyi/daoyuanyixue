@@ -341,6 +341,21 @@
         <view class="pp-tip2">※ 列出盘面所有干支（四柱 + 所选大运/流年/流月/流日/流时）两两之间的作用关系：天干五合/冲克，地支六冲/六合/三刑/相破/六害/暗合；重复关系不重复列出</view>
       </view>
 
+      <!-- 八字格局 (月令取格: 透干优先) -->
+      <view class="pp-block" v-if="data.bazi.geju">
+        <view class="pp-block-head">八字格局</view>
+        <view class="pp-gj-box">
+          <view class="pp-gj-main">
+            <text class="pp-gj-name">{{ data.bazi.geju.name }}</text>
+            <text class="pp-gj-tag">{{ data.bazi.geju.strong }} · 日主{{ GAN_WX[data.bazi.pillars[2].g] }}</text>
+          </view>
+          <view class="pp-gj-row"><text class="pp-gj-label">月令</text><text class="pp-gj-val">{{ data.bazi.geju.monthZhi }}（藏干 {{ data.bazi.geju.monthCanggan }}）</text></view>
+          <view class="pp-gj-row"><text class="pp-gj-label">透干</text><text class="pp-gj-val">{{ data.bazi.geju.touGan }}</text></view>
+          <view class="pp-gj-row"><text class="pp-gj-label">喜用</text><text class="pp-gj-val">{{ data.bazi.geju.xiyong }}</text></view>
+          <view class="pp-tip2">※ {{ data.bazi.geju.desc }}</view>
+        </view>
+      </view>
+
       <!-- 当前流年 -->
       <view class="pp-block">
         <view class="pp-block-head">流年 · {{ curYear }}年</view>
@@ -348,6 +363,27 @@
           <text class="pp-ln-name" :class="'wx-' + wxCls(GAN_WX[GAN.indexOf(data.bazi.liunian.gan)])">{{ data.bazi.liunian.name }}</text>
           <text class="pp-ln-ss">{{ data.bazi.liunian.ganShishen }}</text>
           <text class="pp-ln-wx">纳音 {{ NAYIN[((GAN.indexOf(data.bazi.liunian.gan) * 12) + ZHI.indexOf(data.bazi.liunian.zhi)) % 60] }}</text>
+        </view>
+      </view>
+
+      <!-- 袁天罡称骨 (流年与 AI 解盘之间) -->
+      <view class="pp-block" v-if="data.bazi.chengGu">
+        <view class="pp-block-head">袁天罡称骨</view>
+        <view class="pp-cg-box">
+          <view class="pp-cg-main">
+            <text class="pp-cg-weight">{{ data.bazi.chengGu.totalText }}</text>
+            <text class="pp-cg-sub">{{ data.bazi.chengGu.yearText }} · 骨重合计</text>
+          </view>
+          <view class="pp-cg-detail">
+            <view class="pp-cg-item" v-for="(it, i) in data.bazi.chengGu.detail" :key="i">
+              <text class="pp-cg-d-label">{{ it.label }}</text>
+              <text class="pp-cg-d-val">{{ it.val || '—' }}</text>
+            </view>
+          </view>
+          <view class="pp-cg-duanyu" v-if="data.bazi.chengGu.duanyu">
+            <text class="pp-cg-duanyu-text">{{ data.bazi.chengGu.duanyu }}</text>
+          </view>
+          <view class="pp-tip2">※ 袁天罡称骨为唐代相术，按出生年干支、农历月日与时辰折算骨重，断语供传统文化学习参考</view>
         </view>
       </view>
 
@@ -740,7 +776,7 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf, ganRelation, zhiRelation } from '../utils/paipan'
+import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf, ganRelation, zhiRelation, baziGeju, chengGu } from '../utils/paipan'
 import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../utils/ziwei'
 import { generateJiepan, summaryJiepan } from '../utils/jiepan'
 import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment } from '../../api/api'
@@ -1564,6 +1600,9 @@ function applyData(d) {
     if (!p.changsheng) p.changsheng = changShengOf(dayGan, p.z)
   })
   if (!d.bazi.ganZhi) d.bazi.ganZhi = d.bazi.pillars.map((p) => p.name)
+  // 八字格局 + 袁天罡称骨 (历史盘无 birth 时称骨不可用)
+  d.bazi.geju = baziGeju(d.bazi)
+  d.bazi.chengGu = d.bazi.birth && !d.bazi.birth.gzOnly ? chengGu(d.bazi.birth, d.bazi) : null
   dyOpen.value = -1
   dyYears.value = []
   lnYear.value = null
@@ -2131,6 +2170,30 @@ function applyJpUnlock() {
 .pp-ln-name { font-size: 40rpx; font-weight: 600; color: #f0e6cd; }
 .pp-ln-ss { margin-left: 20rpx; font-size: 22rpx; color: #c4a484; }
 .pp-ln-wx { margin-left: auto; font-size: 20rpx; color: rgba(240, 230, 205, 0.6); }
+
+/* 八字格局 */
+.pp-gj-box { background: #f8f3ea; border-radius: 12rpx; padding: 20rpx 24rpx; }
+.pp-gj-main { display: flex; align-items: center; gap: 16rpx; margin-bottom: 12rpx; }
+.pp-gj-name { font-size: 40rpx; font-weight: 700; color: #8c5a2b; }
+.pp-gj-tag { font-size: 22rpx; color: #b04a45; background: #f5e6d8; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.pp-gj-row { display: flex; align-items: flex-start; padding: 8rpx 0; border-bottom: 1rpx dashed #e8ddca; }
+.pp-gj-row:last-of-type { border-bottom: none; }
+.pp-gj-label { flex-shrink: 0; width: 90rpx; font-size: 22rpx; color: #8c5a2b; font-weight: 500; }
+.pp-gj-val { flex: 1; font-size: 24rpx; color: #42372c; line-height: 1.5; }
+
+/* 袁天罡称骨 */
+.pp-cg-box { background: #f8f3ea; border-radius: 12rpx; padding: 20rpx 24rpx; }
+.pp-cg-main { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
+.pp-cg-weight { font-size: 48rpx; font-weight: 700; color: #8c5a2b; }
+.pp-cg-sub { font-size: 22rpx; color: #b3a595; }
+.pp-cg-detail { display: flex; background: #fff; border-radius: 10rpx; padding: 12rpx 0; margin-bottom: 12rpx; }
+.pp-cg-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; border-right: 1rpx solid #efe7d8; }
+.pp-cg-item:last-child { border-right: none; }
+.pp-cg-d-label { font-size: 20rpx; color: #b3a595; }
+.pp-cg-d-val { font-size: 26rpx; color: #42372c; font-weight: 500; }
+.pp-cg-duanyu { background: #fff8ef; border-left: 6rpx solid #c9a36a; border-radius: 8rpx; padding: 16rpx 18rpx; }
+.pp-cg-duanyu-text { font-size: 26rpx; color: #6b4a2a; line-height: 1.7; }
+
 .pp-tip { font-size: 20rpx; color: #b3a595; margin-top: 10rpx; }
 .pp-tip2 { font-size: 20rpx; color: #b3a595; margin-top: 12rpx; line-height: 1.5; }
 .pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }

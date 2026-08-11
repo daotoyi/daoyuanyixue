@@ -1240,6 +1240,10 @@ function runPaipan() {
     : `阳历 ${solarDate}`
   result.lunarText = `${lunarInfo.ganZhi}年 ${lunarInfo.monthName}${lunarInfo.dayName}`
   if (f.trueSolar) result.solarText += `（真太阳时 ${hour}时）`
+  // 称骨所需出生信息: 农历年月日 + 时辰 (solar 模式已转农历, gz 模式无农历日期置空)
+  result.birth = f.mode === 'gz'
+    ? { lunarYear: 0, lunarMonth: 0, lunarDay: 0, isLeap: false, shichen: f.shichen, gzOnly: true }
+    : { lunarYear: lunarInfo.lunarYear, lunarMonth: lunarInfo.month, lunarDay: lunarInfo.day, isLeap: lunarInfo.isLeap, shichen: f.shichen }
 
   // 奇门 (完整排盘: 起局/排盘方式) + 紫微 (三合完整排盘, 共用同一时间)
   const qm = fullQimen(ly, lm, ld, hour, { qiJu: form.value.qimen.qiJu, paiPan: form.value.qimen.paiPan })
