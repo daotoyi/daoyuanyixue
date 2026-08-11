@@ -2411,7 +2411,7 @@ async function adminRecentOrders(data) {
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
 
-const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home']
+const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home', 'pandao']
 
 async function adminSettingsGet(data) {
   const group = data.group
@@ -2423,15 +2423,25 @@ async function adminSettingsGet(data) {
   return ok({ group, configs })
 }
 
+/* 固定盘道活动默认规则 (后台未配置时生效): 周二梁坤线上德道经 / 周三六线下通州 / 周日张灃线上 */
+const DEFAULT_PANDAO_FIXED = [
+  { weekday: 2, name: '线上《德道经》', teacher: '梁坤老师', type: 'online' },
+  { weekday: 3, name: '线下盘道 · 通州总部', teacher: '昊辰老师', type: 'offline' },
+  { weekday: 6, name: '线下盘道 · 通州总部', teacher: '昊辰老师', type: 'offline' },
+  { weekday: 0, name: '线上《古汉字及书法》', teacher: '张灃老师', type: 'online' },
+]
+
 /* 用户端公开配置: 支付展示设置 (不含敏感信息) */
 async function appPayConfig() {
   try {
-    const [payRes, homeRes] = await Promise.all([
+    const [payRes, homeRes, pandaoRes] = await Promise.all([
       db.collection('settings').where({ group: 'pay' }).limit(1).get(),
       db.collection('settings').where({ group: 'home' }).limit(1).get(),
+      db.collection('settings').where({ group: 'pandao' }).limit(1).get(),
     ])
     const payDoc = payRes.data[0] || {}
     const homeDoc = homeRes.data[0] || {}
+    const pandaoDoc = pandaoRes.data[0] || {}
     return ok({
       show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
       show_balance: payDoc.show_balance !== '0', // 默认显示余额
@@ -2440,9 +2450,10 @@ async function appPayConfig() {
       show_pandao: homeDoc.show_pandao !== '0', // 首页盘道tab, 默认显示
       show_live: homeDoc.show_live === '1' || homeDoc.show_live === true || false, // 首页直播入口, 默认隐藏
       show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
+      pandao_fixed: Array.isArray(pandaoDoc.fixed) && pandaoDoc.fixed.length ? pandaoDoc.fixed : DEFAULT_PANDAO_FIXED, // 固定盘道活动(周几+老师)
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED })
   }
 }
 

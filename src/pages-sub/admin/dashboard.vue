@@ -159,6 +159,47 @@
               <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
             </view>
           </view>
+
+          <!-- 固定盘道活动: 周几 + 老师, 前台本月/下月统一生效 -->
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">固定盘道活动</text>
+              <text class="sd-text">固定每周几由某老师授课，前台日历本月与下月统一在该周几生效</text>
+            </view>
+            <view class="home-pandao-list">
+              <view class="home-pd-row" v-for="(fp, i) in homePandaoFixed" :key="i">
+                <view class="home-pd-info">
+                  <text class="home-pd-title">{{ fp.weekday !== undefined ? '周' + ['日','一','二','三','四','五','六'][fp.weekday] + ' ' : '' }}{{ fp.name }}</text>
+                  <text class="home-pd-meta">{{ fp.teacher || '未设老师' }} · {{ fp.type === 'online' ? '线上' : '线下' }}</text>
+                </view>
+                <view class="home-pd-ops">
+                  <text class="op danger" @tap="removeFixedPandao(i)">删除</text>
+                </view>
+              </view>
+              <view class="home-pd-row" v-if="!homePandaoFixed.length">
+                <text class="home-pd-meta">未设置固定活动（默认：周二梁坤线上 / 周三六线下通州 / 周日张灃线上）</text>
+              </view>
+            </view>
+            <view class="pd-form-title">新增固定活动</view>
+            <view class="f-row">
+              <text class="f-label">周几</text>
+              <picker mode="selector" :range="fixedPandaoWeekLabels" @change="(e) => (fpForm.weekday = Number(e.detail.value))">
+                <view class="f-input">{{ fixedPandaoWeekLabels[fpForm.weekday] }}</view>
+              </picker>
+            </view>
+            <view class="f-row"><text class="f-label">名称</text><input class="f-input" v-model="fpForm.name" placeholder="如: 线下盘道 · 通州总部" /></view>
+            <view class="f-row"><text class="f-label">老师</text><input class="f-input" v-model="fpForm.teacher" placeholder="如: 昊辰老师" /></view>
+            <view class="f-row"><text class="f-label">类型</text>
+              <view class="f-pills">
+                <text class="pill" :class="{ on: fpForm.type === 'online' }" @tap="fpForm.type = 'online'">线上</text>
+                <text class="pill" :class="{ on: fpForm.type === 'offline' }" @tap="fpForm.type = 'offline'">线下</text>
+              </view>
+            </view>
+            <view class="settings-actions">
+              <view class="btn-p sm" @click="addFixedPandao">添加固定活动</view>
+              <view class="btn-p plain sm" @click="saveFixedPandao">保存配置</view>
+            </view>
+          </view>
         </view>
 
         <!-- ===== 商品管理 ===== -->
@@ -1047,6 +1088,34 @@ async function loadModule(key) {
 /* ===== 首页管理 ===== */
 const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false })
 const homePandaoList = ref([])
+/* 固定盘道活动: 周几 + 老师, 前台日历本月/下月统一生效 */
+const homePandaoFixed = ref([])
+const fixedPandaoWeekLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const fpForm = ref({ weekday: 3, name: '', teacher: '', type: 'offline' })
+function addFixedPandao() {
+  if (!fpForm.value.name.trim()) {
+    uni.showToast({ title: '请输入活动名称', icon: 'none' })
+    return
+  }
+  homePandaoFixed.value.push({
+    weekday: Number(fpForm.value.weekday),
+    name: fpForm.value.name.trim(),
+    teacher: fpForm.value.teacher.trim() || '讲师',
+    type: fpForm.value.type,
+  })
+  fpForm.value = { weekday: 3, name: '', teacher: '', type: 'offline' }
+}
+function removeFixedPandao(i) {
+  homePandaoFixed.value.splice(i, 1)
+}
+async function saveFixedPandao() {
+  try {
+    await adminSettingsSave({ group: 'pandao', configs: { fixed: homePandaoFixed.value } })
+    uni.showToast({ title: '已保存，前台本月/下月生效', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  }
+}
 const pdStatusOptions = ['即将开始', '进行中', '已结束']
 function pdStatusKey(st) {
   return { '即将开始': 'upcoming', '进行中': 'live', '已结束': 'end' }[st] || 'upcoming'
@@ -1063,6 +1132,9 @@ async function loadHomeConfig() {
     homeCfg.value = { show_recommend: cfg.show_recommend !== '0' && cfg.show_recommend !== false, show_publish: cfg.show_publish === '1' || cfg.show_publish === true, show_pandao: cfg.show_pandao !== '0' && cfg.show_pandao !== false, show_live: cfg.show_live === '1' || cfg.show_live === true, show_follow: cfg.show_follow === '1' || cfg.show_follow === true }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
+    // 固定盘道活动配置
+    const pf = await adminSettingsGet({ group: 'pandao' })
+    homePandaoFixed.value = Array.isArray(pf.configs.fixed) ? pf.configs.fixed : []
   } catch (e) {}
 }
 

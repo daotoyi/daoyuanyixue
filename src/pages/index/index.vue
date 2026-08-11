@@ -144,8 +144,10 @@
         </view>
 
         <view class="cal-legend">
-          <view class="lg"><text class="lg-dot dot-online"></text><text class="lg-text">周二 梁坤老师线上《德道经》· 周日 张灃老师线上《古汉字及书法》</text></view>
-          <view class="lg"><text class="lg-dot dot-offline"></text><text class="lg-text">周三 / 周六 线下盘道活动 · 通州总部</text></view>
+          <view class="lg" v-for="(r, i) in calLegend" :key="i">
+            <text class="lg-dot" :class="r.type === 'online' ? 'dot-online' : 'dot-offline'"></text>
+            <text class="lg-text">周{{ '日一二三四五六'[r.weekday] }} {{ r.name }}{{ r.teacher ? ' · ' + r.teacher : '' }}{{ r.type === 'online' ? '（线上）' : '（线下）' }}</text>
+          </view>
         </view>
       </view>
 
@@ -283,21 +285,33 @@ const calBlank = computed(() => {
   const first = dayjs().add(calOffset.value, 'month').startOf('month')
   return (first.day() + 6) % 7
 })
-/* 日历天数 + 固定活动标记:
-   周二=梁坤老师线上《德道经》; 周三/周六=线下通州总部盘道; 周日=张灃老师线上《古汉字及书法》 */
+/* 固定盘道活动配置 (后台可配: 周几+老师; 默认周二梁坤线上/周三六线下/周日张灃线上) */
+const pandaoFixed = ref([])
+/* 日历图例 (按配置动态) */
+const calLegend = computed(() => {
+  const rules = pandaoFixed.value.length ? pandaoFixed.value : []
+  // 按周几排序展示
+  return [...rules].sort((a, b) => Number(a.weekday) - Number(b.weekday))
+})
+/* 日历天数 + 固定活动标记 (本月/下月统一按后台配置的周几生效) */
 const calDays = computed(() => {
   const base = dayjs().add(calOffset.value, 'month')
   const total = base.daysInMonth()
   const todayStr = dayjs().format('YYYY-MM-DD')
+  const rules = pandaoFixed.value.length ? pandaoFixed.value : []
   const arr = []
   for (let d = 1; d <= total; d++) {
     const wd = dayjs(`${base.format('YYYY-MM')}-${String(d).padStart(2, '0')}`).day() // 0=周日
     let cls = ''
     let tag = ''
     let tip = ''
-    if (wd === 2) { cls = 'd-online'; tag = '梁坤'; tip = '周二晚上 · 梁坤老师线上分享《德道经》' }
-    else if (wd === 3 || wd === 6) { cls = 'd-offline'; tag = '线下'; tip = (wd === 3 ? '周三' : '周六') + '白天 · 线下盘道活动（通州总部）' }
-    else if (wd === 0) { cls = 'd-online'; tag = '张灃'; tip = '周日晚上 · 张灃老师线上分享《古汉字及书法》' }
+    const hit = rules.filter((r) => Number(r.weekday) === wd)
+    if (hit.length) {
+      const r = hit[0]
+      cls = r.type === 'online' ? 'd-online' : 'd-offline'
+      tag = r.type === 'online' ? (r.teacher ? r.teacher.replace(/老师$/, '') : '线上') : '线下'
+      tip = `周${'日一二三四五六'[wd]} · ${r.name}${r.teacher ? ' · ' + r.teacher + '授课' : ''}（${r.type === 'online' ? '线上' : '线下'}）`
+    }
     const ds = `${base.format('YYYY-MM')}-${String(d).padStart(2, '0')}`
     arr.push({ day: d, cls, tag, tip, today: ds === todayStr })
   }
@@ -608,6 +622,7 @@ onShow(async () => {
     const cfg = await getPayConfig()
     homeShowPublish.value = cfg.show_publish === true
     buildTabs(cfg)
+    if (Array.isArray(cfg.pandao_fixed) && cfg.pandao_fixed.length) pandaoFixed.value = cfg.pandao_fixed
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
 
   // ①.5 我的关注列表 (关注页只显示关注的人)
