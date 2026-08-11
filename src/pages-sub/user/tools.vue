@@ -445,6 +445,24 @@
           <view class="th-empty" v-else><text>暂无保存的{{ toolHistType === 'liuyao' ? '六爻' : '六壬' }}排盘\n排盘后点「保存此卦/保存此课」可保存</text></view>
         </view>
       </view></view>
+
+      <!-- 保存此盘备注弹窗 (六爻/六壬, 同奇门/紫微) -->
+      <view class="tp-mask" v-if="showToolSaveModal" @tap="showToolSaveModal = false"><view class="tp-sheet" @tap.stop>
+        <view class="ts-save-sheet">
+          <view class="sheet-title">保存此盘</view>
+          <input
+            class="ts-save-input"
+            v-model="toolSaveRemarkInput"
+            placeholder="可输入备注信息，便于之后识别这个盘"
+            placeholder-class="ts-save-ph"
+            maxlength="50"
+          />
+          <view class="ts-save-ops">
+            <view class="ts-save-btn ts-cancel" @tap="showToolSaveModal = false"><text>取消</text></view>
+            <view class="ts-save-btn ts-confirm" @tap="confirmToolSave"><text>保存</text></view>
+          </view>
+        </view>
+      </view></view>
     </view>
   </view>
 </template>
@@ -699,8 +717,24 @@ function applyLyUnlock() {
     uni.showToast({ title: '解锁失败', icon: 'none' })
   }
 }
+/* 保存此盘弹窗 (六爻/六壬共用, 同奇门/紫微: 输入备注后保存) */
+const showToolSaveModal = ref(false)
+const toolSaveRemarkInput = ref('')
+let _pendingSave = null
 function saveLiuyao() {
-  saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value, '', (form.value.liuyao.eventText || '').trim())
+  if (!lyFull.value) {
+    uni.showToast({ title: '请先摇卦', icon: 'none' })
+    return
+  }
+  _pendingSave = {
+    type: 'liuyao',
+    label: `六爻 ${lyFull.value.name}`,
+    gzText: `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`,
+    data: lyFull.value,
+    evt: (form.value.liuyao.eventText || '').trim(),
+  }
+  toolSaveRemarkInput.value = ''
+  showToolSaveModal.value = true
 }
 
 /* ===== 六爻 AI 智能问答 (¥0.5/次, 参考八字) ===== */
@@ -877,7 +911,27 @@ function applyLrUnlock() {
   }
 }
 function saveLiuren() {
-  saveHistory('liuren', `六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value, '', (form.value.liuren.eventText || '').trim())
+  if (!lrFull.value) {
+    uni.showToast({ title: '请先排盘', icon: 'none' })
+    return
+  }
+  _pendingSave = {
+    type: 'liuren',
+    label: `六壬 ${lrFull.value.dayGanZhi}日`,
+    gzText: `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`,
+    data: lrFull.value,
+    evt: (form.value.liuren.eventText || '').trim(),
+  }
+  toolSaveRemarkInput.value = ''
+  showToolSaveModal.value = true
+}
+
+/* 确认保存 (弹窗点保存) */
+function confirmToolSave() {
+  if (!_pendingSave) return
+  saveHistory(_pendingSave.type, _pendingSave.label, _pendingSave.gzText, _pendingSave.data, toolSaveRemarkInput.value.trim(), _pendingSave.evt)
+  showToolSaveModal.value = false
+  _pendingSave = null
 }
 
 /* ===== 六壬 AI 智能问答 (¥0.5/次, 参考八字) ===== */
@@ -2375,6 +2429,33 @@ function runLiuren() {
 .th-del { background: #fdf1f0; border: 1rpx solid #efd8d4; }
 .th-del text { color: #b04a45; }
 .th-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
+/* 保存此盘弹窗 (六爻/六壬备注) */
+.sheet-title { text-align: center; font-size: 30rpx; font-weight: 500; color: #42372c; margin-bottom: 24rpx; }
+.ts-save-sheet { padding: 30rpx 30rpx 40rpx; }
+.ts-save-input {
+  height: 88rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  color: #42372c;
+}
+.ts-save-ph { color: #b3a595; }
+.ts-save-ops { display: flex; gap: 20rpx; margin-top: 30rpx; }
+.ts-save-btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ts-save-btn text { font-size: 28rpx; }
+.ts-cancel { background: #f1e7d3; }
+.ts-cancel text { color: #8c5a2b; }
+.ts-confirm { background: linear-gradient(135deg, #b04a45, #8c3228); }
+.ts-confirm text { color: #fefbf6; }
 .qm-save {
   display: flex;
   align-items: center;
