@@ -376,6 +376,7 @@ async function bookPandao(pd) {
   try {
     const res = await pandaoBook({ uid: userStore.userInfo.uid, session_id: pd.id })
     if (res && res.order_no) {
+      pd._booked = true // 已报名预约 → 立即显示"已预约"浅绿色
       uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
       setTimeout(() => {
         uni.navigateTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
@@ -1105,7 +1106,8 @@ onShow(async () => {
   border-radius: 999rpx;
 }
 .pandao-btn.ok {
-  background: #95a5a6;
+  background: #b7e3b8; /* 已预约: 浅绿色 */
+  color: #2e7d32;
 }
 
 /* 盘道关注公众号 */
