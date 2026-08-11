@@ -17,7 +17,7 @@
       <text class="section-label">添加图片（最多 9 张）</text>
       <view class="img-grid">
         <view class="img-cell" v-for="(img, i) in images" :key="i">
-          <image class="img-preview" :src="img" mode="aspectFill"></image>
+          <image class="img-preview" :src="img.url || img.local" mode="aspectFill"></image>
           <view class="img-remove" @tap="removeImage(i)">×</view>
         </view>
         <view class="img-add" v-if="images.length < 9" @tap="chooseImage">
@@ -37,17 +37,42 @@
 <script setup>
 import { ref } from 'vue'
 import { publishMoment } from '../../api/api'
+import { getStorage } from '../../api/cloudbase'
+import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
 const content = ref('')
-const images = ref([])
+const images = ref([]) // { fileID, local, url } 云存储上传
 const publishing = ref(false)
 
+/* 选择图片并上传云存储 (避免本地临时路径入库导致图片失效/空白) */
 function chooseImage() {
   uni.chooseImage({
     count: 9 - images.value.length,
-    success: (res) => {
-      images.value = images.value.concat(res.tempFilePaths)
+    sizeType: ['compressed'],
+    success: async (res) => {
+      uni.showLoading({ title: '上传中...' })
+      const pending = res.tempFilePaths.map((p) => ({ fileID: '', local: p, url: '' }))
+      images.value = images.value.concat(pending)
+      try {
+        const us = useUserStore()
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        for (const item of pending) {
+          const cloudPath = `moments/u${us.userInfo.uid || 0}_${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`
+          const upRes = await storage.uploadFile(item.local, cloudPath)
+          const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+          if (!fileID) throw new Error('上传失败')
+          item.fileID = String(fileID)
+          item.url = await resolveCloudUrl(item.fileID)
+        }
+      } catch (e) {
+        uni.showToast({ title: e.message || '图片上传失败', icon: 'none' })
+        // 上传失败的项移除 (避免发布无效路径)
+        images.value = images.value.filter((x) => x.fileID)
+      } finally {
+        uni.hideLoading()
+      }
     },
   })
 }
@@ -61,6 +86,11 @@ async function doPublish() {
     uni.showToast({ title: '说点什么再发布吧', icon: 'none' })
     return
   }
+  const fileIDs = images.value.map((x) => x.fileID).filter(Boolean)
+  if (images.value.length && !fileIDs.length) {
+    uni.showToast({ title: '图片上传未完成，请重试', icon: 'none' })
+    return
+  }
   publishing.value = true
   try {
     const us = useUserStore()
@@ -71,7 +101,7 @@ async function doPublish() {
     }
     await publishMoment({
       content: content.value.trim(),
-      images: images.value,
+      images: fileIDs,
       user_id: us.userInfo.uid || 0,
       user_name: us.userInfo.nickname || '道友',
     })

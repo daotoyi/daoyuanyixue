@@ -42,13 +42,13 @@
 
           <view class="moment-content">{{ m.content }}</view>
 
-          <view class="moment-images" v-if="m.images.length">
+          <view class="moment-images" v-if="validImages(m).length">
             <view
               class="moment-img-wrap"
-              :class="'img-' + m.images.length"
-              v-for="(img, i) in m.images"
+              :class="'img-' + validImages(m).length"
+              v-for="(img, i) in validImages(m)"
               :key="i"
-              @tap="previewImage(m.images, i)"
+              @tap="previewImages(m, i)"
             >
               <image class="moment-img" :src="img" mode="aspectFill"></image>
             </view>
@@ -246,7 +246,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList, fileUrl } from '../../api/api'
+import { isCloudFile } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
 // tab 顺序固定: 推荐 → 关注 → 盘道 → 直播 (显示与否由后台首页管理开关控制)
@@ -353,7 +354,8 @@ async function refreshMoments() {
       userStore.isLoggedIn ? myLikes({ uid: userStore.userInfo.uid }).catch(() => []) : Promise.resolve([]),
     ])
     const likedIds = new Set((likes || []).map((id) => Number(id)))
-    momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
+    const converted = await convertMomentImages(moments)
+    momentList.value = converted.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
   } catch (e) {}
 }
 
@@ -426,6 +428,40 @@ function statusText(s) {
 
 function previewImage(urls, index) {
   uni.previewImage({ urls, current: index })
+}
+
+/* 动态图片: 过滤无效路径 (wxfile:// 等本地临时路径, 已过期/跨端不可访问, 不渲染避免空白块) */
+const isInvalidImg = (src) => !src || typeof src !== 'string' || src.startsWith('wxfile://') || src.startsWith('file://')
+function validImages(m) {
+  return (m.images || []).filter((src) => !isInvalidImg(src))
+}
+function previewImages(m, i) {
+  const imgs = validImages(m)
+  uni.previewImage({ urls: imgs, current: imgs[i] })
+}
+
+/* 动态图片 cloud:// → 可访问 URL (H5/App 端; 小程序原生渲染无需转换) */
+async function convertMomentImages(moments) {
+  // #ifdef MP-WEIXIN
+  return moments
+  // #endif
+  // #ifndef MP-WEIXIN
+  if (!Array.isArray(moments)) return moments
+  const need = []
+  moments.forEach((m) => (m.images || []).forEach((src) => { if (isCloudFile(src)) need.push(src) }))
+  if (!need.length) return moments
+  try {
+    const res = await fileUrl({ fileList: [...new Set(need)] })
+    const map = {}
+    ;((res && res.list) || []).forEach((f) => { if (f.url && f.fileID) map[f.fileID] = f.url })
+    return moments.map((m) => {
+      if (!(m.images || []).length) return m
+      return { ...m, images: m.images.map((src) => map[src] || src) }
+    })
+  } catch (e) {
+    return moments
+  }
+  // #endif
 }
 
 /* 动态分享: 记录当前要分享的动态, 供 onShareAppMessage 读取 */
@@ -603,7 +639,8 @@ onShow(async () => {
       userStore.isLoggedIn ? myLikes({ uid: userStore.userInfo.uid }).catch(() => []) : Promise.resolve([]),
     ])
     const likedIds = new Set((likes || []).map((id) => Number(id)))
-    momentList.value = moments.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
+    const converted = await convertMomentImages(moments)
+    momentList.value = converted.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
     liveList.value = lives.map((l) => ({ ...l, _booked: false }))
     // 已预约的直播标记
     if (userStore.isLoggedIn) {
