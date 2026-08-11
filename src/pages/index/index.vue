@@ -260,7 +260,7 @@ function buildTabs(cfg) {
   const arr = []
   if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐' })
   if (cfg.show_follow === true) arr.push({ key: 'follow', label: '关注' })
-  arr.push({ key: 'pandao', label: '盘道' }) // 盘道始终显示
+  if (cfg.show_pandao !== false) arr.push({ key: 'pandao', label: '盘道' }) // 盘道默认显示, 后台可关
   if (cfg.show_live === true) arr.push({ key: 'live', label: '直播' })
   tabs.value = arr
   if (!arr.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
