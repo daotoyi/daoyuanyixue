@@ -196,6 +196,17 @@
           <text class="tp-title">三枚铜钱，心中默念所问之事，一键起卦</text>
           <view class="tp-hist-btn" @tap="openToolHistory('liuyao')"><text>📜 历史</text></view>
         </view>
+        <!-- 预测事件 (同奇门) -->
+        <view class="tp-row">
+          <text class="tp-label">预测事件</text>
+          <input
+            class="tp-event-input"
+            v-model="form.liuyao.eventText"
+            placeholder="输入所测之事（如：明天面试能否成功）"
+            placeholder-class="tp-event-ph"
+            maxlength="40"
+          />
+        </view>
         <view class="btn-fill btn-pp" @tap="runLiuyao"><text>摇卦</text></view>
         <view class="ly-result" v-if="lyFull">
           <!-- 卦名 + 变卦 -->
@@ -305,6 +316,17 @@
             </picker>
           </view>
         </view>
+        <!-- 预测事件 (同奇门) -->
+        <view class="tp-row">
+          <text class="tp-label">预测事件</text>
+          <input
+            class="tp-event-input"
+            v-model="form.liuren.eventText"
+            placeholder="输入所测之事（如：明天出行宜忌）"
+            placeholder-class="tp-event-ph"
+            maxlength="40"
+          />
+        </view>
         <view class="btn-fill btn-pp" @tap="runLiuren"><text>开始排盘</text></view>
         <view class="lr-result" v-if="lrFull">
           <!-- 元信息 -->
@@ -405,6 +427,7 @@
                 </view>
                 <text class="th-gz">{{ rec.gzText }}</text>
                 <text class="th-label">{{ rec.label }}</text>
+                <view class="th-event" v-if="rec.eventText">🔮 {{ rec.eventText }}</view>
                 <view class="th-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
               </view>
               <view class="th-ops">
@@ -530,7 +553,8 @@ const form = ref({
     city: 0,
     district: 0,
   },
-  liuren: { date: '2026-08-05', shichen: 6 },
+  liuren: { date: '2026-08-05', shichen: 6, eventText: '' },
+  liuyao: { eventText: '' },
   qimen: { qiJu: 'chaibu', paiPan: 'zhuanpan' },
 })
 
@@ -670,7 +694,7 @@ function applyLyUnlock() {
   }
 }
 function saveLiuyao() {
-  saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value)
+  saveHistory('liuyao', `六爻 ${lyFull.value.name}`, `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`, lyFull.value, '', (form.value.liuyao.eventText || '').trim())
 }
 
 /* ===== 六爻 AI 智能问答 (¥0.5/次, 参考八字) ===== */
@@ -847,7 +871,7 @@ function applyLrUnlock() {
   }
 }
 function saveLiuren() {
-  saveHistory('liuren', `六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value)
+  saveHistory('liuren', `六壬 ${lrFull.value.dayGanZhi}日`, `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`, lrFull.value, '', (form.value.liuren.eventText || '').trim())
 }
 
 /* ===== 六壬 AI 智能问答 (¥0.5/次, 参考八字) ===== */
@@ -894,7 +918,7 @@ function askLrAI() {
   })
 }
 /* 通用保存 (六爻/六壬) */
-function saveHistory(type, label, gzText, data, remark = '') {
+function saveHistory(type, label, gzText, data, remark = '', eventText = '') {
   try {
     let list = uni.getStorageSync('paipan_history') || []
     if (!Array.isArray(list)) list = []
@@ -903,7 +927,7 @@ function saveHistory(type, label, gzText, data, remark = '') {
     list.unshift({
       ts: Date.now(),
       time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
-      label, gzText, type, remark,
+      label, gzText, type, remark, eventText,
       data: { [type]: data },
     })
     if (list.length > 20) list = list.slice(0, 20)
@@ -2296,6 +2320,7 @@ function runLiuren() {
 .th-gz { display: block; font-size: 26rpx; font-weight: 600; color: #8c5a2b; margin-top: 6rpx; word-break: break-all; }
 .th-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
 .th-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
+.th-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 .th-ops {
   display: flex;
   flex-direction: column;
