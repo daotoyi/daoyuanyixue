@@ -19,7 +19,10 @@
     <view class="tool-body">
       <!-- ===== 四柱/奇门/紫微 共用出生时间输入 ===== -->
       <view v-if="['bazi', 'qimen', 'ziwei'].includes(activeTool)" class="tool-panel">
-        <view class="tp-title">输入出生时间，排出四柱 / 奇门 / 紫微</view>
+        <view class="tp-title-row">
+          <text class="tp-title">输入出生时间，排出四柱 / 奇门 / 紫微</text>
+          <view class="tp-hist-btn" @tap="openToolHistory(activeTool)"><text>📜 历史</text></view>
+        </view>
 
         <!-- 性别 (放在输入方式上方) -->
         <view class="tp-row">
@@ -421,18 +424,27 @@
         </view>
       </view>
 
-      <!-- 六爻/六壬 历史弹窗 (同结果页历史功能) -->
+      <!-- 排盘历史弹窗 (四柱/奇门/紫微/六爻/六壬 共用, 按当前工具筛选) -->
       <view class="tp-mask" v-if="showToolHistory" @tap="showToolHistory = false"><view class="tp-sheet" @tap.stop>
         <view class="th-sheet">
-          <view class="sheet-title">排盘历史 · {{ toolHistType === 'liuyao' ? '六爻' : '六壬' }}</view>
+          <view class="sheet-title">排盘历史 · {{ TOOL_NAME[toolHistType] || toolHistType }}</view>
           <view class="th-list" v-if="toolHistoryList.length">
             <view class="th-item" v-for="(rec, i) in toolHistoryList" :key="i">
               <view class="th-main" @tap="useToolHistory(rec)">
                 <view class="th-top">
                   <text class="th-time">{{ fmtRecTime(rec) }}</text>
                 </view>
-                <text class="th-gz">{{ rec.gzText }}</text>
-                <text class="th-label">{{ rec.label }}</text>
+                <!-- 四柱: 天干一行/地支一行 + 五行色; 其他: 纯文本 -->
+                <view class="th-gz-bazi" v-if="rec.type === 'bazi' && rec.gzText">
+                  <view class="hz-line">
+                    <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).gans" :key="'g' + ci" :class="'wx-' + wxCls(WX_OF_GAN[ch])">{{ ch }}</text>
+                  </view>
+                  <view class="hz-line">
+                    <text class="hz-char" v-for="(ch, ci) in splitBaziGz(rec.gzText).zhis" :key="'z' + ci" :class="'wx-' + wxCls(WX_OF_ZHI[ch])">{{ ch }}</text>
+                  </view>
+                </view>
+                <text class="th-gz" v-else>{{ rec.gzText }}</text>
+                <text class="th-label" v-if="rec.type !== 'bazi'">{{ rec.label }}</text>
                 <view class="th-event" v-if="rec.eventText">🔮 {{ rec.eventText }}</view>
                 <view class="th-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
               </view>
@@ -442,7 +454,7 @@
               </view>
             </view>
           </view>
-          <view class="th-empty" v-else><text>暂无保存的{{ toolHistType === 'liuyao' ? '六爻' : '六壬' }}排盘\n排盘后点「保存此卦/保存此课」可保存</text></view>
+          <view class="th-empty" v-else><text>暂无保存的{{ TOOL_NAME[toolHistType] || toolHistType }}排盘\n排盘后点「保存此盘」可保存</text></view>
         </view>
       </view></view>
 
@@ -998,10 +1010,22 @@ function saveHistory(type, label, gzText, data, remark = '', eventText = '') {
   }
 }
 
-/* ===== 六爻/六壬 历史弹窗 (同结果页历史功能) ===== */
+/* ===== 排盘历史弹窗 (四柱/奇门/紫微/六爻/六壬 共用) ===== */
 const showToolHistory = ref(false)
-const toolHistType = ref('liuyao')
+const toolHistType = ref('bazi')
 const toolHistoryList = ref([])
+const TOOL_NAME = { bazi: '四柱', qimen: '奇门', ziwei: '紫微', liuren: '六壬', liuyao: '六爻' }
+/* 四柱干支 → 天干/地支两组 (历史两行显示) */
+function splitBaziGz(gzText) {
+  const chars = (gzText || '').split('').filter((c) => /[\u4e00-\u9fff]/.test(c))
+  const gans = [], zhis = []
+  chars.forEach((c, i) => (i % 2 === 0 ? gans : zhis).push(c))
+  return { gans, zhis }
+}
+const WX_CLS = { '木': 'wood', '火': 'fire', '土': 'earth', '金': 'metal', '水': 'water' }
+const wxCls = (v) => WX_CLS[v] || v
+const WX_OF_GAN = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' }
+const WX_OF_ZHI = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' }
 /* 记录时间格式化: 旧记录(MM-DD HH:mm)用 ts 补上年份 */
 function fmtRecTime(rec) {
   const t = (rec && rec.time) || ''
@@ -1024,13 +1048,29 @@ function openToolHistory(type) {
 }
 function useToolHistory(rec) {
   if (!rec || !rec.data || !rec.data[toolHistType.value]) return
+  showToolHistory.value = false
+  const t = toolHistType.value
+  // 四柱/奇门/紫微: 写 paipan_data 跳结果页对应 tab (同排盘记录页)
+  if (t === 'bazi' || t === 'qimen' || t === 'ziwei') {
+    const data = rec.data
+    try {
+      if (data.bazi && !data.bazi.ganZhi && data.bazi.pillars) {
+        data.bazi.ganZhi = data.bazi.pillars.map((p) => p.name)
+      }
+      uni.setStorageSync('paipan_data', data)
+    } catch (e) {
+      uni.showToast({ title: '加载失败', icon: 'none' })
+      return
+    }
+    uni.navigateTo({ url: `/pages-sub/user/paipan?tool=${t}` })
+    return
+  }
+  // 六爻/六壬: 恢复本页盘面
   try {
-    uni.setStorageSync(toolHistType.value === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[toolHistType.value])
-    // 立即恢复盘面
-    if (toolHistType.value === 'liuyao') lyFull.value = rec.data.liuyao
+    uni.setStorageSync(t === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[t])
+    if (t === 'liuyao') lyFull.value = rec.data.liuyao
     else lrFull.value = rec.data.liuren
   } catch (e) { /* 忽略 */ }
-  showToolHistory.value = false
   uni.showToast({ title: '已加载历史排盘', icon: 'none' })
 }
 function removeToolHistory(rec) {
@@ -2405,6 +2445,15 @@ function runLiuren() {
 }
 .th-time { font-size: 20rpx; color: #b3a595; }
 .th-gz { display: block; font-size: 26rpx; font-weight: 600; color: #8c5a2b; margin-top: 6rpx; word-break: break-all; }
+/* 四柱两行 (天干/地支 + 五行色) */
+.th-gz-bazi { display: flex; flex-direction: column; margin-top: 4rpx; }
+.th-gz-bazi .hz-line { display: flex; gap: 18rpx; line-height: 1.5; }
+.th-gz-bazi .hz-char { font-size: 30rpx; font-weight: 600; }
+.wx-wood { color: #2e7d32; }
+.wx-fire { color: #c62828; }
+.wx-earth { color: #8d6e3f; }
+.wx-metal { color: #b8860b; }
+.wx-water { color: #1565c0; }
 .th-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
 .th-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 .th-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }

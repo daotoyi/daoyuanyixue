@@ -54,4 +54,13 @@
 - **版本迭代 (2026-08-07 13:30 用户最新要求)**: **每次提交都升小版本** — 每次改动完成提交前先 `node scripts/bump-version.js && node scripts/gen-version.js` (patch+1), 再构建提交推送; 当前 v1.10.6
 - **构建策略 (2026-08-07 18:25 用户约定)**: 每次迭代**同步构建 H5 + 小程序并部署**; **APP(APK) 单独提需求才构建**, 不随每次迭代自动构建
 
+## APP(APK) 构建流程 (2026-08-11 确立)
+
+- mobile/ 是 **Capacitor** 工程 (capacitor.config.json: appId=cn.codebuddy.zhs.workbuddy, appName=道元易学, webDir=../dist/build/h5)
+- 三步: ①`node scripts/bump-version.js`(自动更新 build.gradle 版本) → ②`npx cap sync android` → ③`cd mobile/android && ./gradlew assembleRelease`
+- 产物: mobile/android/app/build/outputs/apk/release/app-release.apk; 签名 daoyuan.keystore/daoyuan2026 (在 mobile/android/app/ 下)
+- **发布**: APK 复制为 daoyuan-v1.XX.XX.apk + scripts/download-page/index.html → dist/build/h5/apk/ + download/ → 上传静态托管 (文件名由 bump-version.js 自动更新)
+- 下载地址: https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/apk/daoyuan-v1.11.65.apk (下载页 /download/)
+- ⚠️ 上传前需 CloudBase 认证: 设备码 auth start_auth → 用户浏览器授权 → status READY; 会话过期需重新授权
+
 
