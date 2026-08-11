@@ -433,7 +433,7 @@
               <text class="td w-time">{{ m.created_at || '-' }}</text>
               <text class="td w-status" :class="m.is_recommended ? 'on' : 'off'">{{ m.is_recommended ? '已推荐' : '未推荐' }}</text>
               <view class="td w-ops ops">
-                <text class="op" @tap="auditMoment(m)">{{ m.is_recommended ? '取消推荐' : '推荐' }}</text>
+                <text class="op op-fixed" @tap="auditMoment(m)">{{ m.is_recommended ? '取消推荐' : '推荐' }}</text>
                 <text class="op danger" @tap="deleteMoment(m)">删除</text>
               </view>
             </view>
@@ -2369,6 +2369,11 @@ onMounted(async () => {
   padding: 4rpx 10rpx;
   white-space: nowrap;
   flex-shrink: 0;
+}
+/* 推荐/取消推荐: 固定宽度, 保证后面的"删除"不受文字长度影响而上下对齐 */
+.op-fixed {
+  width: 150rpx;
+  text-align: center;
 }
 .op.danger {
   color: #b04a45;
