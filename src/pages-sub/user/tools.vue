@@ -305,14 +305,20 @@
           <text class="tp-title">输入日期时辰，排出四课三传天地盘</text>
           <view class="tp-hist-btn" @tap="openToolHistory('liuren')"><text>📜 历史</text></view>
         </view>
+        <!-- 当前时间起盘: 默认开启, 用当下日期+时刻 -->
+        <view class="tp-row tp-now-row">
+          <text class="tp-label">当前时间</text>
+          <switch :checked="form.liuren.useNow" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.liuren.useNow = e.detail.value)" />
+          <text class="tp-save-tip">开启后以当前日期时刻起盘（默认开启）</text>
+        </view>
         <view class="tp-row">
-          <text class="tp-label">日期时辰</text>
+          <text class="tp-label">日期时刻</text>
           <view class="tp-pickers-inline">
             <picker mode="date" :value="form.liuren.date" @change="(e) => (form.liuren.date = e.detail.value)">
               <view class="tp-picker">{{ form.liuren.date }}</view>
             </picker>
-            <picker mode="selector" :range="shichenLabels" @change="(e) => (form.liuren.shichen = e.detail.value)">
-              <view class="tp-picker">{{ shichenLabels[form.liuren.shichen] }}</view>
+            <picker mode="time" :value="form.liuren.time" @change="(e) => (form.liuren.time = e.detail.value)">
+              <view class="tp-picker">{{ form.liuren.time }}</view>
             </picker>
           </view>
         </view>
@@ -553,7 +559,7 @@ const form = ref({
     city: 0,
     district: 0,
   },
-  liuren: { date: '2026-08-05', shichen: 6, eventText: '' },
+  liuren: { date: '2026-08-05', time: '13:30', useNow: true, shichen: 6, eventText: '' },
   liuyao: { eventText: '' },
   qimen: { qiJu: 'chaibu', paiPan: 'zhuanpan' },
 })
@@ -1193,10 +1199,37 @@ function runLiuyao() {
   lyFull.value = fullLiuyao(dp.g)
 }
 
+/* 具体时刻(几点几分) → 时辰序 (0子..11亥, 含子时跨天) */
+function timeToShichenIdx(t) {
+  const [hh, mm] = (t || '12:30').split(':').map(Number)
+  const hour = hh + (mm || 0) / 60
+  if (hour >= 23 || hour < 1) return 0 // 子时
+  for (let i = 1; i < SHICHEN.length; i++) {
+    if (hour >= SHICHEN[i].from && hour < SHICHEN[i].to) return i
+  }
+  return 0
+}
+
 function runLiuren() {
-  const [y, m, d] = form.value.liuren.date.split('-').map(Number)
+  const f = form.value.liuren
+  const now = new Date()
+  const p2 = (n) => String(n).padStart(2, '0')
+  let dateStr = f.date
+  let timeStr = f.time || '12:30'
+  if (f.useNow) {
+    // 当前时间起盘: 用当下日期 + 具体时刻
+    dateStr = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
+    timeStr = `${p2(now.getHours())}:${p2(now.getMinutes())}`
+  }
+  const [y, m, d] = dateStr.split('-').map(Number)
   const lunar = solarToLunar(y, m, d)
-  lrFull.value = fullLiuren(y, m, d, form.value.liuren.shichen, lunar.month)
+  const scIdx = timeToShichenIdx(timeStr)
+  lrFull.value = fullLiuren(y, m, d, scIdx, lunar.month)
+  // 同步回表单 (当前时间时刷新日期/时刻显示)
+  if (f.useNow) {
+    f.date = dateStr
+    f.time = timeStr
+  }
 }
 </script>
 
