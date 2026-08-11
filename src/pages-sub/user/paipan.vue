@@ -50,7 +50,9 @@
                 </view>
               </view>
               <text class="hist-gz" v-else>{{ rec.gzText }}</text>
-              <text class="hist-label">{{ rec.label }}</text>
+              <text class="hist-label" v-if="rec.type !== 'bazi'">{{ rec.label }}</text>
+              <!-- 奇门预测事件: 另起一行 -->
+              <view class="hist-event" v-if="rec.eventText">🔮 {{ rec.eventText }}</view>
               <view class="hist-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
             </view>
             <view class="hist-ops">
@@ -956,6 +958,7 @@ function saveDisk() {
           gzText: `${data.value.qimen.xunName}${data.value.qimen.xunShouQi} ${data.value.qimen.zhiFu} ${data.value.qimen.zhiShi}`,
           type: 'qimen',
           remark: '',
+          eventText: data.value.qimen && data.value.qimen.eventText ? String(data.value.qimen.eventText).trim() : '',
           data: data.value,
         }
       : isZw
@@ -2201,6 +2204,8 @@ function applyJpUnlock() {
 .hz-char { font-size: 30rpx; font-weight: 600; }
 /* 备注 */
 .hist-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
+/* 奇门预测事件 (另起一行) */
+.hist-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 /* 保存此盘备注弹窗 */
 .save-sheet { padding: 30rpx 30rpx 40rpx; }
 .save-remark-input {

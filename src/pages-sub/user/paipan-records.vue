@@ -31,7 +31,10 @@
             </view>
           </view>
           <text class="rec-gz" v-else>{{ rec.gzText }}</text>
-          <text class="rec-label">{{ rec.label }}</text>
+          <!-- 八字描述行不显示 (只显示干支两行); 其他工具显示 label -->
+          <text class="rec-label" v-if="rec.type !== 'bazi'">{{ rec.label }}</text>
+          <!-- 奇门预测事件: 另起一行显示 -->
+          <view class="rec-event" v-if="rec.eventText">🔮 {{ rec.eventText }}</view>
           <!-- 时间在最下面 -->
           <text class="rec-time">{{ fmtRecTime(rec) }}</text>
           <!-- 备注信息放在最下面 -->
@@ -345,6 +348,17 @@ function confirmClear() {
   font-size: 22rpx;
   color: #4e7d43;
   background: #f0f4ee;
+  border-radius: 8rpx;
+  padding: 6rpx 12rpx;
+  word-break: break-all;
+}
+/* 奇门预测事件 (另起一行) */
+.rec-event {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8c5a2b;
+  background: #f1e7d3;
   border-radius: 8rpx;
   padding: 6rpx 12rpx;
   word-break: break-all;

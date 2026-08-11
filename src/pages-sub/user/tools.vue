@@ -116,6 +116,18 @@
           <text class="tp-save-tip">开启后以当前时间起局（忽略上方时间）</text>
         </view>
 
+        <!-- 奇门 + 当前时间: 弹出预测事件输入框 -->
+        <view class="tp-row" v-if="activeTool === 'qimen' && form.bazi.useNow">
+          <text class="tp-label">预测事件</text>
+          <input
+            class="tp-event-input"
+            v-model="form.bazi.eventText"
+            placeholder="输入所测之事（如：明天面试能否成功）"
+            placeholder-class="tp-event-ph"
+            maxlength="40"
+          />
+        </view>
+
         <!-- 奇门专用: 起局方式 + 排盘方式 -->
         <template v-if="activeTool === 'qimen'">
           <view class="tp-row">
@@ -180,7 +192,10 @@
 
       <!-- ===== 六爻 (完整排盘) ===== -->
       <view v-else-if="activeTool === 'liuyao'" class="tool-panel">
-        <view class="tp-title">三枚铜钱，心中默念所问之事，一键起卦</view>
+        <view class="tp-title-row">
+          <text class="tp-title">三枚铜钱，心中默念所问之事，一键起卦</text>
+          <view class="tp-hist-btn" @tap="openToolHistory('liuyao')"><text>📜 历史</text></view>
+        </view>
         <view class="btn-fill btn-pp" @tap="runLiuyao"><text>摇卦</text></view>
         <view class="ly-result" v-if="lyFull">
           <!-- 卦名 + 变卦 -->
@@ -275,7 +290,10 @@
 
       <!-- ===== 六壬 (完整排盘) ===== -->
       <view v-else-if="activeTool === 'liuren'" class="tool-panel">
-        <view class="tp-title">输入日期时辰，排出四课三传天地盘</view>
+        <view class="tp-title-row">
+          <text class="tp-title">输入日期时辰，排出四课三传天地盘</text>
+          <view class="tp-hist-btn" @tap="openToolHistory('liuren')"><text>📜 历史</text></view>
+        </view>
         <view class="tp-row">
           <text class="tp-label">日期时辰</text>
           <view class="tp-pickers-inline">
@@ -374,6 +392,30 @@
           <view class="qm-save" @tap="saveLiuren"><text>💾 保存此课</text></view>
         </view>
       </view>
+
+      <!-- 六爻/六壬 历史弹窗 (同结果页历史功能) -->
+      <view class="tp-mask" v-if="showToolHistory" @tap="showToolHistory = false"><view class="tp-sheet" @tap.stop>
+        <view class="th-sheet">
+          <view class="sheet-title">排盘历史 · {{ toolHistType === 'liuyao' ? '六爻' : '六壬' }}</view>
+          <view class="th-list" v-if="toolHistoryList.length">
+            <view class="th-item" v-for="(rec, i) in toolHistoryList" :key="i">
+              <view class="th-main" @tap="useToolHistory(rec)">
+                <view class="th-top">
+                  <text class="th-time">{{ fmtRecTime(rec) }}</text>
+                </view>
+                <text class="th-gz">{{ rec.gzText }}</text>
+                <text class="th-label">{{ rec.label }}</text>
+                <view class="th-remark" v-if="rec.remark">📝 {{ rec.remark }}</view>
+              </view>
+              <view class="th-ops">
+                <view class="th-op th-edit" @tap="editToolHistoryRemark(rec)"><text>✏️</text></view>
+                <view class="th-op th-del" @tap="removeToolHistory(rec)"><text>✕</text></view>
+              </view>
+            </view>
+          </view>
+          <view class="th-empty" v-else><text>暂无保存的{{ toolHistType === 'liuyao' ? '六爻' : '六壬' }}排盘\n排盘后点「保存此卦/保存此课」可保存</text></view>
+        </view>
+      </view></view>
     </view>
   </view>
 </template>
@@ -481,6 +523,7 @@ const form = ref({
     shichen: 6,
     gender: '男',
     useNow: false, // 当前时间起局 (默认不选)
+    eventText: '', // 奇门预测事件 (当前时间起局时可选)
     trueSolar: false,
     saveHistory: false,
     province: 0,
@@ -871,6 +914,75 @@ function saveHistory(type, label, gzText, data, remark = '') {
   }
 }
 
+/* ===== 六爻/六壬 历史弹窗 (同结果页历史功能) ===== */
+const showToolHistory = ref(false)
+const toolHistType = ref('liuyao')
+const toolHistoryList = ref([])
+/* 记录时间格式化: 旧记录(MM-DD HH:mm)用 ts 补上年份 */
+function fmtRecTime(rec) {
+  const t = (rec && rec.time) || ''
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t
+  if (/^\d{2}-\d{2}/.test(t) && rec.ts) {
+    const y = new Date(rec.ts).getFullYear()
+    return `${y}-${t}`
+  }
+  return t
+}
+function openToolHistory(type) {
+  toolHistType.value = type
+  try {
+    const list = uni.getStorageSync('paipan_history') || []
+    toolHistoryList.value = Array.isArray(list) ? list.filter((r) => (r.type || '') === type) : []
+  } catch (e) {
+    toolHistoryList.value = []
+  }
+  showToolHistory.value = true
+}
+function useToolHistory(rec) {
+  if (!rec || !rec.data || !rec.data[toolHistType.value]) return
+  try {
+    uni.setStorageSync(toolHistType.value === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[toolHistType.value])
+    // 立即恢复盘面
+    if (toolHistType.value === 'liuyao') lyFull.value = rec.data.liuyao
+    else lrFull.value = rec.data.liuren
+  } catch (e) { /* 忽略 */ }
+  showToolHistory.value = false
+  uni.showToast({ title: '已加载历史排盘', icon: 'none' })
+}
+function removeToolHistory(rec) {
+  const idx = toolHistoryList.value.findIndex((r) => r === rec || (r.ts === rec.ts && r.gzText === rec.gzText))
+  if (idx < 0) return
+  toolHistoryList.value.splice(idx, 1)
+  try {
+    // 从完整列表同步删除
+    const list = uni.getStorageSync('paipan_history') || []
+    if (Array.isArray(list)) {
+      const li = list.findIndex((r) => r === rec || (r.ts === rec.ts && r.gzText === rec.gzText))
+      if (li >= 0) list.splice(li, 1)
+      uni.setStorageSync('paipan_history', list)
+    }
+  } catch (e) { /* 忽略 */ }
+}
+function editToolHistoryRemark(rec) {
+  uni.showModal({
+    title: '编辑备注',
+    content: '修改这条排盘记录的备注信息',
+    editable: true,
+    placeholderText: '输入备注…',
+    confirmText: '保存',
+    confirmColor: '#8c5a2b',
+    success: (r) => {
+      if (!r.confirm) return
+      rec.remark = (r.content || '').trim()
+      try {
+        const list = uni.getStorageSync('paipan_history') || []
+        if (Array.isArray(list)) uni.setStorageSync('paipan_history', list)
+        uni.showToast({ title: '备注已更新', icon: 'success' })
+      } catch (e) { /* 忽略 */ }
+    },
+  })
+}
+
 /* 真太阳时修正说明 (省/市/县 经纬度) */
 const solarDiffText = computed(() => {
   if (!form.value.bazi.trueSolar) return ''
@@ -926,6 +1038,8 @@ function saveHistoryRecord(result, qm, zw, label, gzText, remark = '') {
     if (!Array.isArray(list)) list = []
     // type: 当前工具 (bazi/qimen/ziwei) 用于历史按工具区分
     const t = activeTool.value === 'qimen' ? 'qimen' : activeTool.value === 'ziwei' ? 'ziwei' : 'bazi'
+    // 奇门预测事件 (与备注分开存, 记录显示时另起一行)
+    const evt = t === 'qimen' && qm && qm.eventText ? String(qm.eventText).trim() : ''
     list.unshift({
       ts: Date.now(),
       time: fmtTime(new Date()),
@@ -933,6 +1047,7 @@ function saveHistoryRecord(result, qm, zw, label, gzText, remark = '') {
       gzText,
       type: t,
       remark,
+      eventText: evt,
       data: { bazi: result, qimen: qm, ziwei: zw },
     })
     if (list.length > 20) list = list.slice(0, 20)
@@ -1005,6 +1120,9 @@ function runPaipan() {
   // 奇门 (完整排盘: 起局/排盘方式) + 紫微 (三合完整排盘, 共用同一时间)
   const qm = fullQimen(ly, lm, ld, hour, { qiJu: form.value.qimen.qiJu, paiPan: form.value.qimen.paiPan })
   const zw = fullZiwei(lunarInfo, form.value.bazi.shichen, gender, birthYear)
+  // 奇门预测事件 (当前时间起局时输入的所测之事)
+  const eventText = activeTool.value === 'qimen' ? (f.eventText || '').trim() : ''
+  if (eventText) qm.eventText = eventText
 
   // 保存排盘历史
   if (f.saveHistory) {
@@ -1012,7 +1130,7 @@ function runPaipan() {
     const label = f.mode === 'gz'
       ? `四柱 ${gzText}`
       : `${f.mode === 'solar' ? '阳历' : '农历'} ${solarDate} ${f.mode === 'solar' ? (f.time || '') : shichenLabels[f.shichen]}`
-    saveHistoryRecord(result, qm, zw, label, gzText)
+    saveHistoryRecord(result, qm, zw, label, gzText, eventText)
   }
 
   try {
@@ -1125,6 +1243,20 @@ function runLiuren() {
   font-size: 20rpx;
   color: #b3a595;
   flex: 1;
+}
+/* 奇门预测事件输入框 */
+.tp-event-input {
+  flex: 1;
+  height: 76rpx;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: #42372c;
+}
+.tp-event-ph {
+  color: #b3a595;
 }
 .tp-picker {
   flex: 1;
@@ -2096,6 +2228,95 @@ function runLiuren() {
 .lr-di { margin-top: 2rpx; font-size: 20rpx; color: #b3a595; }
 
 /* 保存按钮 (填充色, 六爻/六壬共用) */
+/* 六爻/六壬 历史弹窗 */
+.tp-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+  margin-bottom: 20rpx;
+}
+.tp-title-row .tp-title {
+  flex: 1;
+  margin-bottom: 0;
+}
+.tp-hist-btn {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #8c5a2b;
+  background: #f1e7d3;
+  border: 1rpx solid #e5d5b8;
+  border-radius: 999rpx;
+  padding: 8rpx 22rpx;
+}
+.tp-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tp-sheet {
+  width: 640rpx;
+  max-height: 74vh;
+  background: #fefbf6;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+.th-sheet {
+  padding: 30rpx 30rpx 60rpx;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.th-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+.th-item {
+  display: flex;
+  align-items: center;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+}
+.th-main {
+  flex: 1;
+  min-width: 0;
+}
+.th-top {
+  display: flex;
+  align-items: baseline;
+  gap: 14rpx;
+}
+.th-time { font-size: 20rpx; color: #b3a595; }
+.th-gz { display: block; font-size: 26rpx; font-weight: 600; color: #8c5a2b; margin-top: 6rpx; word-break: break-all; }
+.th-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
+.th-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
+.th-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+.th-op {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.th-op text { font-size: 22rpx; }
+.th-edit { background: #f0f4ee; border: 1rpx solid #d8e4d4; }
+.th-edit text { color: #4e7d43; }
+.th-del { background: #fdf1f0; border: 1rpx solid #efd8d4; }
+.th-del text { color: #b04a45; }
+.th-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
 .qm-save {
   display: flex;
   align-items: center;
