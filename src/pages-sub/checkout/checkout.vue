@@ -62,7 +62,8 @@
     <view class="card">
       <view class="card-head"><text class="card-title">支付方式</text></view>
       <view class="pay-item" v-for="p in payMethods" :key="p.key" @tap="payMethod = p.key">
-        <text class="pay-icon">{{ p.icon }}</text>
+        <image v-if="p.key === 'wechat'" class="pay-icon-img" :src="p.img" mode="aspectFit"></image>
+        <text v-else class="pay-icon">{{ p.icon }}</text>
         <text class="pay-name">{{ p.name }}</text>
         <view class="pay-check" :class="{ on: payMethod === p.key }">
           <text v-if="payMethod === p.key">✓</text>
@@ -127,8 +128,14 @@ const submitting = ref(false)
 
 const balance = computed(() => userStore.userInfo.balance || '0.00')
 
+// 支付方式名: 小程序=微信支付(真实); H5/APP=模拟支付(无法真实微信支付)
+let wechatPayName = '微信支付'
+// #ifndef MP-WEIXIN
+wechatPayName = '模拟支付'
+// #endif
+
 const payMethods = ref([
-  { key: 'wechat', name: '微信支付', icon: '💚' },
+  { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
   { key: 'balance', name: '余额支付', icon: '💰' },
 ])
 
@@ -137,7 +144,7 @@ async function loadPayConfig() {
   try {
     const cfg = await getPayConfig()
     const list = [
-      { key: 'wechat', name: '微信支付', icon: '💚' },
+      { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
       { key: 'balance', name: '余额支付', icon: '💰' },
     ]
     if (cfg.show_alipay) list.push({ key: 'alipay', name: '支付宝', icon: '🔵' })
@@ -149,7 +156,7 @@ async function loadPayConfig() {
     if (!payMethods.value.some((m) => m.key === payMethod.value)) payMethod.value = 'wechat'
   } catch (e) {
     payMethods.value = [
-      { key: 'wechat', name: '微信支付', icon: '💚' },
+      { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
       { key: 'balance', name: '余额支付', icon: '💰' },
     ]
   }
@@ -484,6 +491,13 @@ async function submitOrder() {
 .pay-icon {
   font-size: 36rpx;
   margin-right: 20rpx;
+}
+/* 微信支付 logo 图标 (替代 emoji 绿心) */
+.pay-icon-img {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
 }
 .pay-name {
   flex: 1;

@@ -79,11 +79,18 @@ const statusTip = computed(() => ({
   已退款: '退款已原路退回',
 })[order.value?.status] || '')
 
-const payName = computed(() => ({
-  wechat: '微信支付',
-  alipay: '支付宝',
-  balance: '余额支付',
-})[order.value?.pay_method] || '模拟支付')
+// 支付方式名: 小程序=微信支付; H5/APP=模拟支付
+const payName = computed(() => {
+  const m = {
+    wechat: '微信支付',
+    alipay: '支付宝',
+    balance: '余额支付',
+  }
+  // #ifndef MP-WEIXIN
+  m.wechat = '模拟支付'
+  // #endif
+  return m[order.value?.pay_method] || '模拟支付'
+})
 
 onLoad(async (options) => {
   orderNo.value = options.order_no
