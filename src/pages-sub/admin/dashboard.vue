@@ -160,34 +160,35 @@
             </view>
           </view>
 
-          <!-- 固定盘道活动: 周几 + 老师, 前台本月/下月统一生效 -->
+          <!-- 固定活动设置: 星期 + 时间 + 老师, 前台本月/下月统一生效 -->
           <view class="settings-card">
             <view class="settings-desc">
-              <text class="sd-title">固定盘道活动</text>
+              <text class="sd-title">固定活动设置</text>
               <text class="sd-text">固定每周几由某老师授课，前台日历本月与下月统一在该周几生效</text>
             </view>
             <view class="home-pandao-list">
               <view class="home-pd-row" v-for="(fp, i) in homePandaoFixed" :key="i">
                 <view class="home-pd-info">
-                  <text class="home-pd-title">{{ fp.weekday !== undefined ? '周' + ['日','一','二','三','四','五','六'][fp.weekday] + ' ' : '' }}{{ fp.name }}</text>
-                  <text class="home-pd-meta">{{ fp.teacher || '未设老师' }} · {{ fp.type === 'online' ? '线上' : '线下' }}</text>
+                  <text class="home-pd-title">{{ fp.weekday !== undefined ? '星期' + ['日','一','二','三','四','五','六'][fp.weekday] + ' ' : '' }}{{ fp.name }}<text v-if="fp.enabled === false" class="home-pd-status st-end">（已取消）</text></text>
                 </view>
                 <view class="home-pd-ops">
+                  <text class="op" @tap="toggleFixedPandao(i)">{{ fp.enabled === false ? '恢复固定' : '取消固定' }}</text>
                   <text class="op danger" @tap="removeFixedPandao(i)">删除</text>
                 </view>
               </view>
               <view class="home-pd-row" v-if="!homePandaoFixed.length">
-                <text class="home-pd-meta">未设置固定活动（默认：周二梁坤线上 / 周三六线下通州 / 周日张灃线上）</text>
+                <text class="home-pd-meta">未设置固定活动</text>
               </view>
             </view>
             <view class="pd-form-title">新增固定活动</view>
             <view class="f-row">
-              <text class="f-label">周几</text>
+              <text class="f-label">星期</text>
               <picker mode="selector" :range="fixedPandaoWeekLabels" @change="(e) => (fpForm.weekday = Number(e.detail.value))">
                 <view class="f-input">{{ fixedPandaoWeekLabels[fpForm.weekday] }}</view>
               </picker>
             </view>
             <view class="f-row"><text class="f-label">名称</text><input class="f-input" v-model="fpForm.name" placeholder="如: 线下盘道 · 通州总部" /></view>
+            <view class="f-row"><text class="f-label">时间</text><input class="f-input" v-model="fpForm.time" placeholder="如: 14:00-17:00（可不填）" /></view>
             <view class="f-row"><text class="f-label">老师</text><input class="f-input" v-model="fpForm.teacher" placeholder="如: 昊辰老师" /></view>
             <view class="f-row"><text class="f-label">类型</text>
               <view class="f-pills">
@@ -1088,10 +1089,10 @@ async function loadModule(key) {
 /* ===== 首页管理 ===== */
 const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false })
 const homePandaoList = ref([])
-/* 固定盘道活动: 周几 + 老师, 前台日历本月/下月统一生效 */
+/* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
-const fixedPandaoWeekLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-const fpForm = ref({ weekday: 3, name: '', teacher: '', type: 'offline' })
+const fixedPandaoWeekLabels = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+const fpForm = ref({ weekday: 3, name: '', time: '', teacher: '', type: 'offline' })
 function addFixedPandao() {
   if (!fpForm.value.name.trim()) {
     uni.showToast({ title: '请输入活动名称', icon: 'none' })
@@ -1100,10 +1101,18 @@ function addFixedPandao() {
   homePandaoFixed.value.push({
     weekday: Number(fpForm.value.weekday),
     name: fpForm.value.name.trim(),
+    time: fpForm.value.time.trim(),
     teacher: fpForm.value.teacher.trim() || '讲师',
     type: fpForm.value.type,
+    enabled: true,
   })
-  fpForm.value = { weekday: 3, name: '', teacher: '', type: 'offline' }
+  fpForm.value = { weekday: 3, name: '', time: '', teacher: '', type: 'offline' }
+}
+function toggleFixedPandao(i) {
+  const fp = homePandaoFixed.value[i]
+  if (!fp) return
+  fp.enabled = fp.enabled === false ? true : false
+  uni.showToast({ title: fp.enabled ? '已恢复固定' : '已取消固定，点击保存配置生效', icon: 'none' })
 }
 function removeFixedPandao(i) {
   homePandaoFixed.value.splice(i, 1)

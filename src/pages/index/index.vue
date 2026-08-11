@@ -146,7 +146,7 @@
         <view class="cal-legend">
           <view class="lg" v-for="(r, i) in calLegend" :key="i">
             <text class="lg-dot" :class="r.type === 'online' ? 'dot-online' : 'dot-offline'"></text>
-            <text class="lg-text">周{{ '日一二三四五六'[r.weekday] }} {{ r.name }}{{ r.teacher ? ' · ' + r.teacher : '' }}{{ r.type === 'online' ? '（线上）' : '（线下）' }}</text>
+            <text class="lg-text">星期{{ '日一二三四五六'[r.weekday] }} {{ r.name }}{{ r.time ? ' ' + r.time : '' }}{{ r.teacher ? ' · ' + r.teacher : '' }}{{ r.type === 'online' ? '（线上）' : '（线下）' }}</text>
           </view>
         </view>
       </view>
@@ -287,9 +287,9 @@ const calBlank = computed(() => {
 })
 /* 固定盘道活动配置 (后台可配: 周几+老师; 默认周二梁坤线上/周三六线下/周日张灃线上) */
 const pandaoFixed = ref([])
-/* 日历图例 (按配置动态) */
+/* 日历图例 (按配置动态, 已取消固定的不显示) */
 const calLegend = computed(() => {
-  const rules = pandaoFixed.value.length ? pandaoFixed.value : []
+  const rules = pandaoFixed.value.filter((r) => r.enabled !== false)
   // 按周几排序展示
   return [...rules].sort((a, b) => Number(a.weekday) - Number(b.weekday))
 })
@@ -298,7 +298,7 @@ const calDays = computed(() => {
   const base = dayjs().add(calOffset.value, 'month')
   const total = base.daysInMonth()
   const todayStr = dayjs().format('YYYY-MM-DD')
-  const rules = pandaoFixed.value.length ? pandaoFixed.value : []
+  const rules = pandaoFixed.value.filter((r) => r.enabled !== false)
   const arr = []
   for (let d = 1; d <= total; d++) {
     const wd = dayjs(`${base.format('YYYY-MM')}-${String(d).padStart(2, '0')}`).day() // 0=周日
@@ -310,7 +310,7 @@ const calDays = computed(() => {
       const r = hit[0]
       cls = r.type === 'online' ? 'd-online' : 'd-offline'
       tag = r.type === 'online' ? (r.teacher ? r.teacher.replace(/老师$/, '') : '线上') : '线下'
-      tip = `周${'日一二三四五六'[wd]} · ${r.name}${r.teacher ? ' · ' + r.teacher + '授课' : ''}（${r.type === 'online' ? '线上' : '线下'}）`
+      tip = `星期${'日一二三四五六'[wd]} · ${r.name}${r.time ? ' ' + r.time : ''}${r.teacher ? ' · ' + r.teacher + '授课' : ''}（${r.type === 'online' ? '线上' : '线下'}）`
     }
     const ds = `${base.format('YYYY-MM')}-${String(d).padStart(2, '0')}`
     arr.push({ day: d, cls, tag, tip, today: ds === todayStr })
