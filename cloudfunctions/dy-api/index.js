@@ -781,6 +781,7 @@ async function submitFeedback(data) {
     dao_code: data.dao_code || '',
     contact: contact || '',
     content: String(content).trim().slice(0, 500),
+    images: Array.isArray(data.images) ? data.images.slice(0, 3).map((s) => String(s)) : [],
     status: '待处理',
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }

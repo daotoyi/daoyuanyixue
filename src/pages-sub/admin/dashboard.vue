@@ -319,11 +319,11 @@
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
               </view>
-              <view class="td w-ops ops">
-                <text class="op" v-if="o.status === '待付款'" @tap="payForOrder(o)">代收款</text>
-                <text class="op" v-if="o.status === '待发货'" @tap="openShip(o)">发货</text>
-                <text class="op danger" v-if="o.status !== '已退款' && o.status !== '已完成' && userRole !== 'staff'" @tap="refundOrder(o)">退款</text>
-                <text class="op danger" v-if="userRole === 'admin'" @tap="deleteOrder(o)">删除</text>
+              <view class="td w-ops w-ops-4 ops">
+                <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
+                <text class="op op-col" :class="{ hide: o.status !== '待发货' }" @tap="openShip(o)">发货</text>
+                <text class="op op-col danger" :class="{ hide: o.status === '已退款' || o.status === '已完成' || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
+                <text class="op op-col danger" :class="{ hide: userRole !== 'admin' }" @tap="deleteOrder(o)">删除</text>
               </view>
             </view>
           </view>
@@ -482,7 +482,12 @@
             </view>
             <view class="tr" v-for="f in feedbacks" :key="f.id">
               <text class="td w-no ellipsis">{{ f.nickname || ('UID ' + f.uid) }} {{ f.dao_code ? '(' + f.dao_code + ')' : '' }}</text>
-              <text class="td w-name ellipsis">{{ f.content }}</text>
+              <view class="td w-name">
+                <text class="ellipsis">{{ f.content }}</text>
+                <view class="fb-imgs" v-if="f._imgs && f._imgs.length">
+                  <image class="fb-thumb" v-for="(src, si) in f._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewFbImg(f, si)"></image>
+                </view>
+              </view>
               <text class="td w-time">{{ f.created_at }}</text>
               <text class="td w-status" :class="f.status === '待处理' ? 'st-wait' : 'st-done'">{{ f.status }}</text>
               <view class="td w-ops ops">
@@ -837,7 +842,7 @@ import {
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { getStorage } from '../../api/cloudbase'
-import { resolveCloudList } from '../../utils/avatar'
+import { resolveCloudList, resolveCloudUrl } from '../../utils/avatar'
 
 const userStore = useUserStore()
 
@@ -1122,11 +1127,22 @@ const replyForm = ref({ id: null, reply: '' })
 
 async function loadFeedbacks() {
   feedbacks.value = await adminFeedbacksList()
+  // 反馈图片 cloud:// → 可访问 URL (H5 渲染)
+  for (const f of feedbacks.value) {
+    if (f.images && f.images.length) {
+      f._imgs = await Promise.all(f.images.map((src) => resolveCloudUrl(src)))
+    }
+  }
 }
 
 function openFeedbackReply(f) {
   replyForm.value = { id: f.id, reply: f.reply || '' }
   showFeedbackReply.value = true
+}
+
+/* 预览反馈图片 */
+function previewFbImg(f, i) {
+  uni.previewImage({ urls: f._imgs, current: f._imgs[i] })
 }
 
 async function saveFeedbackReply() {
@@ -2363,6 +2379,19 @@ onMounted(async () => {
   border-radius: 8rpx;
   background: #faf3e9;
 }
+/* 反馈图片缩略图 */
+.fb-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 10rpx;
+}
+.fb-thumb {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 8rpx;
+  background: #faf3e9;
+}
 .op {
   font-size: 22rpx;
   color: #8c5a2b;
@@ -2374,6 +2403,18 @@ onMounted(async () => {
 .op-fixed {
   width: 150rpx;
   text-align: center;
+}
+/* 订单操作: 固定 4 列, 未显示的操作用 visibility 占位, 同一操作各行动画对齐 */
+.w-ops-4 {
+  width: 470rpx;
+}
+.op-col {
+  width: 108rpx;
+  text-align: center;
+}
+.op-col.hide {
+  visibility: hidden;
+  pointer-events: none;
 }
 .op.danger {
   color: #b04a45;

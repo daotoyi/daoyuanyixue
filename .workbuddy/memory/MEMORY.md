@@ -34,6 +34,7 @@
 - **H5 部署**: manageHosting action=**upload** envId=... localPath=dist/build/h5 cloudPath=/ (uploadFiles 已废弃会误报成功)
 - **认证**: 设备码 auth PENDING→READY 需用户在浏览器打开 tcb.cloud.tencent.com/dev#/cli-auth?user_code=xxx 授权
 - **铁律教训 (08-09)**: 云函数新增路由后**必须重新部署 dy-api**, 否则前端调用失败 = "功能没实现"
+- **写库坑 (08-11)**: writeNoSqlDatabaseContent action=update 的 update 参数是**整体替换语义**(非 $set), 改单个字段必须带上全部字段(如 settings home 组: group/show_follow/show_publish/show_live), 否则其他字段被清空导致功能被误关
 
 ## 版本管理 (Git)
 
