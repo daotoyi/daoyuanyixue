@@ -99,12 +99,14 @@
           <view class="pp-row">
             <view class="pp-cell pp-label">天干</view>
             <view class="pp-cell pp-gan" v-for="(c, i) in columns" :key="'g' + i">
+              <text class="pp-wx-icon">{{ WX_ICON[GAN_WX[c.g]] }}</text>
               <text :class="'wx-' + wxCls(GAN_WX[c.g])">{{ GAN[c.g] }}</text>
             </view>
           </view>
           <view class="pp-row">
             <view class="pp-cell pp-label">地支</view>
             <view class="pp-cell pp-zhi" v-for="(c, i) in columns" :key="'z' + i">
+              <text class="pp-wx-icon">{{ WX_ICON[ZHI_WX[c.z]] }}</text>
               <text :class="'wx-' + wxCls(ZHI_WX[c.z])">{{ ZHI[c.z] }}</text>
             </view>
           </view>
@@ -322,7 +324,9 @@
           <text class="pp-rel-kind">天干</text>
           <view class="pp-rel-list">
             <text class="pp-rel-chip" v-for="(r, i) in ganRelations" :key="'g' + i">
-              <text class="pp-rel-name">{{ r.a }}·{{ r.b }}</text>
+              <text class="pp-rel-name" :class="'wx-' + wxCls(GAN_WX[r.a])">{{ r.a }}</text>
+              <text class="pp-rel-sym">·</text>
+              <text class="pp-rel-name" :class="'wx-' + wxCls(GAN_WX[r.b])">{{ r.b }}</text>
               <text class="pp-rel-desc hit">{{ r.rel }}</text>
               <text class="pp-rel-src">{{ r.la }}↔{{ r.lb }}</text>
             </text>
@@ -332,7 +336,9 @@
           <text class="pp-rel-kind">地支</text>
           <view class="pp-rel-list">
             <text class="pp-rel-chip" v-for="(r, i) in zhiRelations" :key="'z' + i">
-              <text class="pp-rel-name">{{ r.a }}·{{ r.b }}</text>
+              <text class="pp-rel-name" :class="'wx-' + wxCls(ZHI_WX[r.a])">{{ r.a }}</text>
+              <text class="pp-rel-sym">·</text>
+              <text class="pp-rel-name" :class="'wx-' + wxCls(ZHI_WX[r.b])">{{ r.b }}</text>
               <text class="pp-rel-desc hit">{{ r.rel }}</text>
               <text class="pp-rel-src">{{ r.la }}↔{{ r.lb }}</text>
             </text>
@@ -781,6 +787,8 @@ const tabs = [
 ]
 const tab = ref('bazi')
 const wxOrder = ['木', '火', '土', '金', '水']
+/* 五行小图标 (天干地支旁展示) */
+const WX_ICON = { '木': '🪵', '火': '🔥', '土': '⛰️', '金': '⚔️', '水': '💧' }
 
 const data = ref(null)
 
@@ -2082,6 +2090,9 @@ function applyJpUnlock() {
   font-size: 42rpx;
   font-weight: 600;
 }
+/* 五行小图标 (干支旁) */
+.pp-wx-icon { font-size: 20rpx !important; font-weight: 400 !important; margin-right: 2rpx; }
+.pp-gan, .pp-zhi { display: flex; align-items: center; justify-content: center; }
 .pp-ss { font-size: 22rpx; color: #8c5a2b; }
 
 /* 表格化板块 (藏干/星运/自坐/空亡/神煞): 与四柱表同款框线, 去周边留白 */
@@ -2193,6 +2204,7 @@ function applyJpUnlock() {
 .pp-rel-list { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; min-width: 0; }
 .pp-rel-chip { display: flex; align-items: baseline; background: #f8f3ea; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
 .pp-rel-name { font-size: 22rpx; color: #42372c; font-weight: 500; }
+.pp-rel-sym { font-size: 20rpx; color: #b3a595; }
 .pp-rel-desc { font-size: 22rpx; color: #c9a9a9; }
 .pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
 .pp-rel-src { font-size: 18rpx; color: #b3a595; }
@@ -2203,6 +2215,7 @@ function applyJpUnlock() {
 .pp-rel-list { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; min-width: 0; }
 .pp-rel-chip { display: flex; align-items: baseline; background: #f8f3ea; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
 .pp-rel-name { font-size: 22rpx; color: #42372c; font-weight: 500; }
+.pp-rel-sym { font-size: 20rpx; color: #b3a595; }
 .pp-rel-desc { font-size: 22rpx; color: #c9a9a9; }
 .pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
 .pp-rel-src { font-size: 18rpx; color: #b3a595; }
