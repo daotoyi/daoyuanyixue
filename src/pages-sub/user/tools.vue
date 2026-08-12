@@ -111,6 +111,31 @@
           <view class="tp-tip">可点击文字手动输入干支，或点右侧下拉滚动选择</view>
         </template>
 
+        <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
+        <template v-if="form.bazi.mode === 'solar' || form.bazi.mode === 'lunar'">
+          <view class="tp-row">
+            <text class="tp-label">真太阳时</text>
+            <switch :checked="form.bazi.trueSolar" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
+          </view>
+          <template v-if="form.bazi.trueSolar">
+            <view class="tp-row">
+              <text class="tp-label">出生地</text>
+              <view class="tp-pickers-inline">
+                <picker mode="selector" :range="provinceNames" @change="onProvinceChange">
+                  <view class="tp-picker">{{ provinceNames[form.bazi.province] }}</view>
+                </picker>
+                <picker mode="selector" :range="cityNames" @change="(e) => (form.bazi.city = e.detail.value)">
+                  <view class="tp-picker">{{ cityNames[form.bazi.city] }}</view>
+                </picker>
+                <picker mode="selector" :range="districtNames" @change="(e) => (form.bazi.district = e.detail.value)">
+                  <view class="tp-picker">{{ districtNames[form.bazi.district] }}</view>
+                </picker>
+              </view>
+            </view>
+            <view class="tp-tip" v-if="solarDiffText">{{ solarDiffText }}</view>
+          </template>
+        </template>
+
         <!-- 当前时间起局: 仅奇门保留 (紫微/八字用出生时间排盘) -->
         <view class="tp-row tp-now-row" v-if="activeTool === 'qimen'">
           <text class="tp-label">当前时间</text>
@@ -156,31 +181,6 @@
               >{{ p.label }}</text>
             </view>
           </view>
-        </template>
-
-        <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
-        <template v-if="form.bazi.mode === 'solar' || form.bazi.mode === 'lunar'">
-          <view class="tp-row">
-            <text class="tp-label">真太阳时</text>
-            <switch :checked="form.bazi.trueSolar" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
-          </view>
-          <template v-if="form.bazi.trueSolar">
-            <view class="tp-row">
-              <text class="tp-label">出生地</text>
-              <view class="tp-pickers-inline">
-                <picker mode="selector" :range="provinceNames" @change="onProvinceChange">
-                  <view class="tp-picker">{{ provinceNames[form.bazi.province] }}</view>
-                </picker>
-                <picker mode="selector" :range="cityNames" @change="(e) => (form.bazi.city = e.detail.value)">
-                  <view class="tp-picker">{{ cityNames[form.bazi.city] }}</view>
-                </picker>
-                <picker mode="selector" :range="districtNames" @change="(e) => (form.bazi.district = e.detail.value)">
-                  <view class="tp-picker">{{ districtNames[form.bazi.district] }}</view>
-                </picker>
-              </view>
-            </view>
-            <view class="tp-tip" v-if="solarDiffText">{{ solarDiffText }}</view>
-          </template>
         </template>
 
         <view class="tp-row">

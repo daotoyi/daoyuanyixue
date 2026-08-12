@@ -259,7 +259,7 @@ const courseEntries = [
 ]
 
 const toolEntries = [
-  { key: 'bazi', label: '四柱八字', icon: '☯' },
+  { key: 'bazi', label: '四柱八字', icon: '☯️' },
   { key: 'qimen', label: '奇门遁甲', icon: '🧭' },
   { key: 'ziwei', label: '紫微斗数', icon: '🌟' },
   { key: 'liuren', label: '六壬', icon: '🌀' },
@@ -737,6 +737,7 @@ onShow(async () => {
 }
 .entry-icon {
   font-size: 44rpx;
+  line-height: 1.2;
 }
 .entry-label {
   margin-top: 10rpx;
