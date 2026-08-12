@@ -1862,27 +1862,34 @@ async function pandaoCancel(data) {
   return ok({ refunded: false, message: '预约已取消' })
 }
 
-/* 预约订单余额支付 (H5 端无微信支付能力, 用积分余额真实扣款; 小程序端仍走微信支付) */
+/* 订单余额支付 (H5 端无微信支付能力, 用积分余额真实扣款; 支持商品/课程/预约等所有订单) */
 async function orderPayBalance(data) {
   const { order_no, uid } = data
   if (!order_no || !uid) return fail('参数错误')
   const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
   if (!order) return fail('订单不存在')
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
-  if (order.order_type !== 'appointment') return fail('仅预约订单支持余额支付')
   const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
   const bal = Number((u && u.balance) || 0) || 0
   const price = Number(order.total_price) || 0
-  if (bal < price) return fail(`余额不足（需 ${price} 积分），请充值或在小程序内微信支付`)
+  if (bal < price) return fail(`余额不足（需 ${price} 积分），请先充值`)
   const newBal = Math.round((bal - price) * 100) / 100
   await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
+  // 支付成功: 预约/虚拟商品标记已完成, 实体商品标记待发货
+  const nextStatus = order.order_type === 'appointment' || order.order_type === 'course' || order.order_type === 'tool_unlock' ? '已完成' : '待发货'
   await db.collection('orders').where({ order_no }).update({
-    status: '已完成',
+    status: nextStatus,
     pay_method: '余额',
     balance_used: price,
     pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
-  return ok({ order_no, balance: String(newBal), message: '预约支付成功' })
+  // 课程支付成功自动发课
+  if (order.order_type === 'course' && order.course_id) {
+    try {
+      await buyCourse({ uid: Number(uid), course_id: order.course_id })
+    } catch (e) {}
+  }
+  return ok({ order_no, balance: String(newBal), message: '支付成功' })
 }
 /* 支付宝支付下单 (预约订单等): 需在后台配置支付宝商户 (appid/私钥), 未配置返回明确提示 */
 async function alipayPrepay(data) {

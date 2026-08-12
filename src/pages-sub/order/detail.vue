@@ -42,17 +42,22 @@
       <view class="row"><text class="rk">下单时间</text><text class="rv">{{ order.created_at }}</text></view>
     </view>
 
-    <!-- 支付方式选择 (预约订单待付款时显示; 微信默认, 支付宝默认隐藏) -->
-    <view class="pay-methods" v-if="order.status === '待付款' && order.order_type === 'appointment'">
+    <!-- 支付方式选择 (待付款订单; 微信/余额/支付宝三选一, 支付宝默认隐藏且受后台开关控制) -->
+    <view class="pay-methods" v-if="order.status === '待付款'">
       <view class="pm-title">选择支付方式</view>
       <view class="pm-item" :class="{ on: selectedPay === 'wechat' }" @tap="selectedPay = 'wechat'">
         <view class="pm-icon pm-wx"><text>微</text></view>
         <text class="pm-name">微信支付</text>
         <text class="pm-check" :class="{ on: selectedPay === 'wechat' }">{{ selectedPay === 'wechat' ? '✓' : '' }}</text>
       </view>
-      <!-- 支付宝: 默认隐藏, 点击"更多支付方式"展开 -->
-      <view class="pm-more" v-if="!showAlipay" @tap="showAlipay = true"><text>更多支付方式 ▾</text></view>
-      <view class="pm-item" :class="{ on: selectedPay === 'alipay' }" v-if="showAlipay" @tap="selectedPay = 'alipay'">
+      <view class="pm-item" :class="{ on: selectedPay === 'balance' }" @tap="selectedPay = 'balance'">
+        <view class="pm-icon pm-balance"><text>积</text></view>
+        <text class="pm-name">余额支付（积分）</text>
+        <text class="pm-check" :class="{ on: selectedPay === 'balance' }">{{ selectedPay === 'balance' ? '✓' : '' }}</text>
+      </view>
+      <!-- 支付宝: 默认隐藏, 后台开启"显示支付宝"后可用 -->
+      <view class="pm-more" v-if="alipayEnabled && !showAlipay" @tap="showAlipay = true"><text>更多支付方式 ▾</text></view>
+      <view class="pm-item" :class="{ on: selectedPay === 'alipay' }" v-if="alipayEnabled && showAlipay" @tap="selectedPay = 'alipay'">
         <view class="pm-icon pm-alipay"><text>支</text></view>
         <text class="pm-name">支付宝</text>
         <text class="pm-check" :class="{ on: selectedPay === 'alipay' }">{{ selectedPay === 'alipay' ? '✓' : '' }}</text>
@@ -83,15 +88,34 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, payOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, orderPayBalance, alipayPrepay } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, orderPayBalance, alipayPrepay, getPayConfig } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const order = ref(null)
 const orderNo = ref(null)
 
-/* 支付方式选择: 微信默认; 支付宝默认隐藏 */
-const selectedPay = ref('wechat')
+/* 支付方式选择: 微信/余额/支付宝 三选一; 默认小程序=微信, H5/其他=余额; 支付宝默认隐藏(后台开关) */
+const selectedPay = ref('balance')
+// #ifdef MP-WEIXIN
+selectedPay.value = 'wechat'
+// #endif
 const showAlipay = ref(false)
+const alipayEnabled = ref(false)
+
+onLoad(async (options) => {
+  orderNo.value = options.order_no
+  await Promise.all([load(), loadPayConfig()])
+})
+
+/* 读取后台支付配置 (显示支付宝开关) */
+async function loadPayConfig() {
+  try {
+    const cfg = await getPayConfig()
+    alipayEnabled.value = !!(cfg && cfg.show_alipay === true)
+  } catch (e) {
+    alipayEnabled.value = false
+  }
+}
 
 const statusTip = computed(() => ({
   待付款: '订单尚未支付，请尽快完成付款',
@@ -101,23 +125,15 @@ const statusTip = computed(() => ({
   已退款: '退款已原路退回',
 })[order.value?.status] || '')
 
-// 支付方式名: 小程序=微信支付; H5/APP=模拟支付 (预约订单 H5 用积分余额真实支付)
+// 支付方式名: 微信支付 / 余额支付 / 支付宝
 const payName = computed(() => {
   const m = {
     wechat: '微信支付',
     alipay: '支付宝',
     balance: '余额支付',
+    余额: '余额支付',
   }
-  // #ifndef MP-WEIXIN
-  m.wechat = '模拟支付'
-  if (order.value && order.value.order_type === 'appointment') return '积分余额支付'
-  // #endif
-  return m[order.value?.pay_method] || '模拟支付'
-})
-
-onLoad(async (options) => {
-  orderNo.value = options.order_no
-  await load()
+  return m[order.value?.pay_method] || '微信支付'
 })
 
 async function load() {
@@ -153,7 +169,20 @@ async function doPay() {
     return
   }
 
-  // 微信小程序: 真实微信支付; 其他端: 演示支付
+  // 余额支付 (积分真实扣款, 支持所有订单类型)
+  if (selectedPay.value === 'balance') {
+    try {
+      const userStore = useUserStore()
+      await orderPayBalance({ order_no: orderNo.value, uid: userStore.userInfo.uid })
+      uni.showToast({ title: '支付成功', icon: 'success' })
+    } catch (e) {
+      uni.showToast({ title: (e && e.message) || '支付失败', icon: 'none' })
+    }
+    await load()
+    return
+  }
+
+  // 微信支付
   // #ifdef MP-WEIXIN
   try {
     const prepay = await wxpayPrepay(orderNo.value)
@@ -170,21 +199,13 @@ async function doPay() {
   return
   // #endif
   // #ifndef MP-WEIXIN
-  // 预约订单 (盘道): H5 无微信支付能力, 用积分余额真实扣款, 不走模拟支付
-  if (order.value && order.value.order_type === 'appointment') {
-    try {
-      const userStore = useUserStore()
-      await orderPayBalance({ order_no: orderNo.value, uid: userStore.userInfo.uid })
-      uni.showToast({ title: '预约支付成功', icon: 'success' })
-    } catch (e) {
-      uni.showToast({ title: (e && e.message) || '支付失败', icon: 'none' })
-    }
-    await load()
-    return
-  }
-  await payOrder(orderNo.value)
-  uni.showToast({ title: '支付成功', icon: 'success' })
-  await load()
+  // H5/App 无 JSAPI 微信支付能力: 明确引导, 不再静默走其他支付
+  uni.showModal({
+    title: '微信支付',
+    content: '微信支付请在微信小程序中完成；当前端请选择「余额支付」或「支付宝」。',
+    showCancel: false,
+  })
+  return
   // #endif
 }
 
@@ -376,6 +397,10 @@ function goShop() {
 /* 支付宝: 品牌蓝 + "支"字 */
 .pm-alipay {
   background: linear-gradient(135deg, #1677ff, #0a5fd6);
+}
+/* 余额支付: 金色 + "积"字 */
+.pm-balance {
+  background: linear-gradient(135deg, #d4a24c, #b8860b);
 }
 .pm-name {
   flex: 1;

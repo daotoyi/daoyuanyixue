@@ -1999,10 +1999,17 @@ const settingsTabs = [
     ],
   },
   {
+    group: 'wxmp', label: '小程序接管', desc: '微信第三方平台扫码授权（上传开发版 / 体验码 / 提审 / 发布）', fields: [],
+  },
+  {
     group: 'pay', label: '支付设置', desc: '结算支付方式展示开关',
     fields: [
       { key: 'show_alipay', label: '显示支付宝', type: 'switch', desc: '开启后结算页显示支付宝选项（默认隐藏）' },
       { key: 'show_balance', label: '显示余额支付', type: 'switch', desc: '开启后结算页显示余额抵扣（默认显示）' },
+      { key: 'alipay_appid', label: '支付宝 AppID', secret: true, placeholder: '支付宝开放平台应用 APPID' },
+      { key: 'alipay_private_key', label: '支付宝应用私钥', secret: true, placeholder: '应用私钥（PKCS8）' },
+      { key: 'alipay_public_key', label: '支付宝公钥', secret: true, placeholder: '支付宝平台公钥（验签）' },
+      { key: 'alipay_notify_host', label: '回调域名', placeholder: '如 cloud1-xxxx.ap-shanghai.app.tcloudbase.com' },
     ],
   },
   {
@@ -2014,9 +2021,6 @@ const settingsTabs = [
       { key: 'pull_url', label: '拉流地址' },
       { key: 'license_url', label: 'License 地址', secret: true },
     ],
-  },
-  {
-    group: 'wxmp', label: '小程序接管', desc: '微信第三方平台扫码授权（上传开发版 / 体验码 / 提审 / 发布）', fields: [],
   },
 ]
 

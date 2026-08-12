@@ -180,7 +180,7 @@ function goDetail(orderNo) {
 }
 
 async function doPay(o) {
-  // 微信小程序: 真实微信支付; 其他端: 演示支付
+  // 微信小程序: 真实微信支付; 其他端: 进入订单详情选择支付方式(余额/支付宝, 无模拟支付)
   // #ifdef MP-WEIXIN
   try {
     const prepay = await wxpayPrepay(o.order_no)
@@ -197,9 +197,7 @@ async function doPay(o) {
   return
   // #endif
   // #ifndef MP-WEIXIN
-  await payOrder(o.order_no)
-  uni.showToast({ title: '支付成功', icon: 'success' })
-  await loadOrders()
+  uni.navigateTo({ url: `/pages-sub/order/detail?order_no=${o.order_no}` })
   // #endif
 }
 
