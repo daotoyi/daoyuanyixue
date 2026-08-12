@@ -193,15 +193,17 @@ export async function getStorage() {
       } catch (e) {
         console.warn('[CloudBase] blob 读取失败, 按原值上传', e)
       }
-      // 3) PUT 直传 COS
-      const headers = {}
-      if (meta.authorization) headers.authorization = meta.authorization
-      if (meta.token) headers['x-cos-security-token'] = meta.token
-      if (meta.cosFileId) headers['x-cos-meta-fileid'] = meta.cosFileId
-      const resp = await fetch(meta.url, { method: 'PUT', headers, body })
+      // 3) POST multipart/form-data 直传 (与 @cloudbase/node-sdk uploadFile 一致: Signature/x-cos-security-token/x-cos-meta-fileid/key/file)
+      const formData = new FormData()
+      if (meta.authorization) formData.append('Signature', meta.authorization)
+      if (meta.token) formData.append('x-cos-security-token', meta.token)
+      if (meta.cosFileId) formData.append('x-cos-meta-fileid', meta.cosFileId)
+      formData.append('key', cloudPath)
+      formData.append('file', body, cloudPath.split('/').pop() || 'upload.bin')
+      const resp = await fetch(meta.url, { method: 'POST', body: formData })
       if (!resp.ok) {
         let msg = '上传失败 HTTP ' + resp.status
-        try { msg = msg + ' ' + (await resp.text()).slice(0, 80) } catch (e2) {}
+        try { msg = msg + ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
         throw new Error(msg)
       }
       return { fileID: meta.fileId || meta.cosFileId }

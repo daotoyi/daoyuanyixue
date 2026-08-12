@@ -1632,7 +1632,7 @@ function uploadProductImg() {
 function uploadErrMsg(e) {
   const raw = e && (e.message || e.msg || e.error || e.code || (typeof e === 'string' ? e : ''));
   console.error('[upload-fail]', e);
-  return raw ? String(raw).slice(0, 40) : '上传失败';
+  return raw ? String(raw).slice(0, 180) : '上传失败';
 }
 
 /* 课程视频上传 (云存储) */
