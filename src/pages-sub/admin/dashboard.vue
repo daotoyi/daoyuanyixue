@@ -171,6 +171,7 @@
                   <text class="home-pd-title">{{ fp.weekday !== undefined ? '星期' + ['日','一','二','三','四','五','六'][fp.weekday] + ' ' : '' }}{{ fp.name }}<text v-if="fp.enabled === false" class="home-pd-status st-end">（已取消）</text></text>
                 </view>
                 <view class="home-pd-ops">
+                  <text class="op" @tap="editFixedPandao(i)">编辑</text>
                   <text class="op" @tap="toggleFixedPandao(i)">{{ fp.enabled === false ? '恢复固定' : '取消固定' }}</text>
                   <text class="op danger" @tap="removeFixedPandao(i)">删除</text>
                 </view>
@@ -179,7 +180,7 @@
                 <text class="home-pd-meta">未设置固定活动</text>
               </view>
             </view>
-            <view class="pd-form-title">新增固定活动</view>
+            <view class="pd-form-title">{{ fpForm._idx >= 0 ? '编辑固定活动' : '新增固定活动' }}</view>
             <view class="f-row">
               <text class="f-label">星期</text>
               <picker mode="selector" :range="fixedPandaoWeekLabels" @change="(e) => (fpForm.weekday = Number(e.detail.value))">
@@ -196,8 +197,8 @@
               </view>
             </view>
             <view class="settings-actions">
-              <view class="btn-p sm" @click="addFixedPandao">添加固定活动</view>
-              <view class="btn-p plain sm" @click="saveFixedPandao">保存配置</view>
+              <view class="btn-p plain sm" v-if="fpForm._idx >= 0" @click="cancelEditFixedPandao">取消编辑</view>
+              <view class="btn-p sm" @click="addFixedPandao">{{ fpForm._idx >= 0 ? '保存修改' : '添加固定活动' }}</view>
             </view>
           </view>
         </view>
@@ -1091,21 +1092,40 @@ const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
 const fixedPandaoWeekLabels = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-const fpForm = ref({ weekday: 3, name: '', time: '', teacher: '', type: 'offline' })
-function addFixedPandao() {
+const fpForm = ref({ _idx: -1, weekday: 3, name: '', time: '', teacher: '', type: 'offline' })
+function editFixedPandao(i) {
+  const fp = homePandaoFixed.value[i]
+  if (!fp) return
+  fpForm.value = { _idx: i, weekday: Number(fp.weekday) || 3, name: fp.name || '', time: fp.time || '', teacher: fp.teacher || '', type: fp.type || 'offline' }
+}
+function cancelEditFixedPandao() {
+  fpForm.value = { _idx: -1, weekday: 3, name: '', time: '', teacher: '', type: 'offline' }
+}
+/* 新增或保存修改固定活动 (立即保存生效) */
+async function addFixedPandao() {
   if (!fpForm.value.name.trim()) {
     uni.showToast({ title: '请输入活动名称', icon: 'none' })
     return
   }
-  homePandaoFixed.value.push({
+  const data = {
     weekday: Number(fpForm.value.weekday),
     name: fpForm.value.name.trim(),
     time: fpForm.value.time.trim(),
     teacher: fpForm.value.teacher.trim() || '讲师',
     type: fpForm.value.type,
-    enabled: true,
-  })
-  fpForm.value = { weekday: 3, name: '', time: '', teacher: '', type: 'offline' }
+  }
+  if (fpForm.value._idx >= 0) {
+    homePandaoFixed.value[fpForm.value._idx] = { ...homePandaoFixed.value[fpForm.value._idx], ...data }
+  } else {
+    homePandaoFixed.value.push({ ...data, enabled: true })
+  }
+  cancelEditFixedPandao()
+  try {
+    await adminSettingsSave({ group: 'pandao', configs: { fixed: homePandaoFixed.value } })
+    uni.showToast({ title: '已保存，前台本月/下月生效', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败，请重试', icon: 'none' })
+  }
 }
 async function toggleFixedPandao(i) {
   const fp = homePandaoFixed.value[i]
