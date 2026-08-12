@@ -129,6 +129,16 @@ onLoad((options) => {
 })
 
 
+/* 登录成功跳转: 有上一页则返回, 无(直接打开/刷新登录页)则回首页 */
+function goAfterLogin() {
+  const pages = getCurrentPages()
+  if (pages.length > 1) {
+    uni.navigateBack()
+  } else {
+    uni.reLaunch({ url: '/pages/index/index' })
+  }
+}
+
 function saveUser(user) {
   userStore.setToken('demo-token-' + user.uid)
   userStore.setUserInfo({
@@ -207,7 +217,7 @@ async function doWxLogin() {
     saveUser(user)
     showWxAuth.value = false
     uni.showToast({ title: '微信登录成功', icon: 'success' })
-    setTimeout(() => uni.navigateBack(), 600)
+    setTimeout(() => goAfterLogin(), 600)
   } catch (e) {
     errorMsg.value = e.message || '微信登录失败'
   } finally {
@@ -251,7 +261,7 @@ async function submit() {
       role: user.role || 'user',
     })
     uni.showToast({ title: mode.value === 'login' ? '登录成功' : '注册成功', icon: 'success' })
-    setTimeout(() => uni.navigateBack(), 600)
+    setTimeout(() => goAfterLogin(), 600)
   } catch (e) {
     errorMsg.value = e.message || '操作失败'
   } finally {
