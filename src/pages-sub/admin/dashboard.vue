@@ -1386,7 +1386,7 @@ async function wxmpUp(m) {
         await wxmpUploadCode({ appid: m.appid, user_version: '2.0.0', user_desc: '道元易学 v2.0.0' })
         uni.showToast({ title: '已上传开发版', icon: 'success' })
       } catch (e) {
-        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       }
     },
   })
@@ -1591,7 +1591,7 @@ function uploadCourseCover() {
         courseForm.value.cover = url
         uni.showToast({ title: '封面已上传', icon: 'success' })
       } catch (e) {
-        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       } finally {
         uni.hideLoading()
       }
@@ -1620,12 +1620,19 @@ function uploadProductImg() {
         productForm.value.imagesText = arr.join(',')
         uni.showToast({ title: '已上传', icon: 'success' })
       } catch (e) {
-        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       } finally {
         uni.hideLoading()
       }
     },
   })
+}
+
+/* 上传错误信息: 显示完整错误便于排查 */
+function uploadErrMsg(e) {
+  const raw = e && (e.message || e.msg || e.error || e.code || (typeof e === 'string' ? e : ''));
+  console.error('[upload-fail]', e);
+  return raw ? String(raw).slice(0, 40) : '上传失败';
 }
 
 /* 课程视频上传 (云存储) */
@@ -1648,7 +1655,7 @@ function uploadCourseVideo() {
         courseForm.value.video = url
         uni.showToast({ title: '视频已上传', icon: 'success' })
       } catch (e) {
-        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       } finally {
         uni.hideLoading()
       }
@@ -1693,7 +1700,7 @@ function uploadEpisodeVideo(i) {
         if (!courseForm.value.episodes[i].title) courseForm.value.episodes[i].title = `第${i + 1}集`
         uni.showToast({ title: '已上传', icon: 'success' })
       } catch (e) {
-        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       } finally {
         uni.hideLoading()
       }

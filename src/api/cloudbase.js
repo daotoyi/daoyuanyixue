@@ -166,7 +166,21 @@ export async function getStorage() {
     })
   }
   return {
-    uploadFile: (filePath, cloudPath) => wrap((done, fail) => app.uploadFile({ cloudPath, filePath, success: done, fail })),
+    uploadFile: async (filePath, cloudPath) => {
+      let file = filePath
+      // #ifdef H5
+      // H5 端 uni.chooseVideo/chooseImage 的 tempFilePath 是 blob: URL, js-sdk 需 File/Blob 对象 → 转 File
+      try {
+        if (typeof fetch === 'function' && typeof Blob !== 'undefined' && typeof File !== 'undefined' && typeof filePath === 'string' && filePath.indexOf('blob:') === 0) {
+          const blob = await fetch(filePath).then((r) => r.blob())
+          file = new File([blob], cloudPath.split('/').pop() || 'upload.bin', { type: blob.type || 'application/octet-stream' })
+        }
+      } catch (e) {
+        console.warn('[CloudBase] blob→File 转换失败, 按原路径上传', e)
+      }
+      // #endif
+      return wrap((done, fail) => app.uploadFile({ cloudPath, filePath: file, success: done, fail }))
+    },
     getTempFileURL: (fileList) => wrap((done, fail) => app.getTempFileURL({ fileList, success: done, fail })),
     _raw: app,
   }
