@@ -27,6 +27,9 @@
       <view class="ls-btn" v-if="index < episodes.length - 1" @tap="go(index + 1)">下一课 ›</view>
     </view>
   </view>
+  <view class="ls-page ls-empty" v-else-if="loaded">
+    <text>课程不存在或已下架</text>
+  </view>
   <view class="ls-page ls-loading" v-else>
     <text>加载中...</text>
   </view>
@@ -39,6 +42,7 @@ import { getCourse } from '../../api/api'
 
 const course = ref(null)
 const index = ref(0)
+const loaded = ref(false)
 const lesson = computed(() => {
   const eps = Array.isArray(course.value && course.value.episodes) ? course.value.episodes : []
   return eps[index.value] || null
@@ -49,7 +53,7 @@ const courseTitle = computed(() => (course.value && course.value.title) || '')
 onLoad(async (options) => {
   index.value = Number(options.index) || 0
   try {
-    course.value = await getCourse({ id: Number(options.course_id) })
+    course.value = await getCourse(Number(options.course_id))
     if (!course.value) {
       uni.showToast({ title: '课程不存在', icon: 'none' })
     } else {
@@ -58,6 +62,7 @@ onLoad(async (options) => {
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
   }
+  loaded.value = true
 })
 
 function go(i) {
