@@ -199,6 +199,16 @@ export const wxpayPrepay = (orderNo) =>
 export const wxpayH5 = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ h5_url: '' }))() : _callFunction('pay.wxpayH5', { order_no: orderNo })
 
+/* ============ 收货地址 ============ */
+export const getAddresses = (params) =>
+  __USE_MOCK__ ? _fromMock(() => [])() : _callFunction('address.list', params)
+
+export const addAddress = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ ...data, _id: 'mock' }))() : _callFunction('address.add', data)
+
+export const deleteAddress = (id) =>
+  __USE_MOCK__ ? _fromMock(() => ({ deleted: true }))() : _callFunction('address.delete', { id })
+
 /* 拉起微信支付 (仅小程序端, 由调用方判断平台) */
 export function wxRequestPayment(payment) {
   return new Promise((resolve, reject) => {

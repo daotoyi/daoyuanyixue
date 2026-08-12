@@ -99,6 +99,51 @@
         <view class="btn-p plain sm" @click="applyCoupon(null)">不使用优惠券</view>
       </view>
     </view></view>
+
+    <!-- 收货地址选择弹窗 -->
+    <view class="pp-mask" v-if="showAddr" @tap="showAddr = false"><view class="pp-sheet" @tap.stop>
+      <view class="addr-sheet">
+        <view class="sheet-head">
+          <text class="sheet-title">选择收货地址</text>
+          <text class="addr-add-btn" @tap="openAddrForm">＋ 新增地址</text>
+        </view>
+        <view class="addr-list" v-if="addrList.length">
+          <view
+            class="addr-item"
+            :class="{ on: address && address._id === a._id }"
+            v-for="a in addrList"
+            :key="a._id"
+            @tap="pickAddress(a)"
+          >
+            <view class="addr-item-top">
+              <text class="addr-name">{{ a.name }}</text>
+              <text class="addr-phone">{{ a.phone }}</text>
+              <text class="addr-default" v-if="a.is_default">默认</text>
+              <text class="addr-del" @tap.stop="removeAddr(a)">删除</text>
+            </view>
+            <text class="addr-detail">{{ a.detail }}</text>
+            <view class="addr-check" :class="{ on: address && address._id === a._id }">
+              <text v-if="address && address._id === a._id">✓</text>
+            </view>
+          </view>
+        </view>
+        <view class="addr-none" v-else>
+          <text>暂无收货地址，请点击右上角新增</text>
+        </view>
+      </view>
+    </view></view>
+
+    <!-- 新增地址弹窗 -->
+    <view class="pp-mask" v-if="showAddrForm" @tap="showAddrForm = false"><view class="pp-sheet" @tap.stop>
+      <view class="addr-sheet">
+        <view class="sheet-head"><text class="sheet-title">新增收货地址</text></view>
+        <view class="af-row"><text class="af-label">姓名</text><input class="f-input" v-model="addrForm.name" placeholder="收货人姓名" /></view>
+        <view class="af-row"><text class="af-label">手机号</text><input class="f-input" v-model="addrForm.phone" type="number" maxlength="11" placeholder="收货人手机号" /></view>
+        <view class="af-row" style="align-items: flex-start"><text class="af-label">详细地址</text><textarea class="f-textarea" v-model="addrForm.detail" placeholder="省市区 + 详细地址" /></view>
+        <view class="af-row"><text class="af-label">设为默认</text><switch :checked="addrForm.is_default" color="#8c5a2b" style="transform: scale(0.8)" @change="addrForm.is_default = $event.detail.value" /></view>
+        <view class="btn-p" style="margin-top: 20rpx" @tap="saveAddress" :class="{ disabled: savingAddr }">{{ savingAddr ? '保存中...' : '保存地址' }}</view>
+      </view>
+    </view></view>
   </view>
 </template>
 
@@ -106,7 +151,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxpayH5, wxRequestPayment, getCourse, getProduct, getPayConfig } from '../../api/api'
+import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxpayH5, wxRequestPayment, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -114,6 +159,11 @@ const userStore = useUserStore()
 const items = ref([])
 const courseId = ref(0) // 课程直购: 非0表示本次结算为课程
 const address = ref(null)
+const addrList = ref([])
+const showAddr = ref(false)
+const showAddrForm = ref(false)
+const addrForm = ref({ name: '', phone: '', detail: '', is_default: false })
+const savingAddr = ref(false)
 const coupons = ref([])
 const selectedCoupon = ref(null)
 const balanceUsed = ref(false)
@@ -214,6 +264,7 @@ onLoad(async (options) => {
   }
   loadCoupons()
   loadPayConfig()
+  loadAddresses()
 })
 
 async function loadCoupons() {
@@ -227,13 +278,80 @@ async function loadCoupons() {
   }
 }
 
+/* 地址: 加载用户已记录地址 */
+async function loadAddresses() {
+  try {
+    if (!userStore.userInfo.uid) return
+    addrList.value = await getAddresses({ uid: userStore.userInfo.uid })
+    // 未选择过地址时自动带上默认地址
+    if (!address.value && addrList.value.length) {
+      const def = addrList.value.find((a) => a.is_default) || addrList.value[0]
+      address.value = { ...def, is_default: def.is_default === true }
+    }
+  } catch (e) {
+    addrList.value = []
+  }
+}
+
+/* 点击收货地址: 有地址弹选择列表, 无地址直接弹录入 */
 function chooseAddress() {
-  uni.showToast({ title: '演示环境：使用默认地址', icon: 'none' })
-  address.value = {
-    name: '昊辰',
-    phone: '13800138001',
-    detail: '北京市朝阳区 · 真和盛文化工作室',
-    is_default: true,
+  if (!userStore.userInfo.uid) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  if (addrList.value.length) {
+    showAddr.value = true
+  } else {
+    openAddrForm()
+  }
+}
+
+/* 选择地址 */
+function pickAddress(a) {
+  address.value = { ...a, is_default: a.is_default === true }
+  showAddr.value = false
+}
+
+/* 打开新增地址表单 */
+function openAddrForm() {
+  showAddr.value = false
+  addrForm.value = { name: '', phone: '', detail: '', is_default: addrList.value.length === 0 }
+  showAddrForm.value = true
+}
+
+/* 保存新增地址 */
+async function saveAddress() {
+  if (savingAddr.value) return
+  const f = addrForm.value
+  if (!f.name.trim() || !f.phone.trim() || !f.detail.trim()) {
+    uni.showToast({ title: '请完整填写收货信息', icon: 'none' })
+    return
+  }
+  savingAddr.value = true
+  try {
+    const saved = await addAddress({ uid: userStore.userInfo.uid, name: f.name.trim(), phone: f.phone.trim(), detail: f.detail.trim(), is_default: f.is_default })
+    showAddrForm.value = false
+    await loadAddresses()
+    const cur = addrList.value.find((a) => a._id === saved._id)
+    if (cur) address.value = { ...cur, is_default: cur.is_default === true }
+    uni.showToast({ title: '地址已保存', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  } finally {
+    savingAddr.value = false
+  }
+}
+
+/* 删除地址 */
+async function removeAddr(a) {
+  try {
+    await deleteAddress(a._id)
+    addrList.value = addrList.value.filter((x) => x._id !== a._id)
+    if (address.value && address.value._id === a._id) address.value = null
+    uni.showToast({ title: '已删除', icon: 'none' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '删除失败', icon: 'none' })
   }
 }
 
@@ -646,6 +764,117 @@ async function submitOrder() {
   .checkout-page {
     max-width: 1320px;
   }
+}
+
+/* ===== 收货地址弹窗 ===== */
+.addr-sheet {
+  padding: 30rpx;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+.addr-add-btn {
+  font-size: 26rpx;
+  color: #8c5a2b;
+}
+.addr-list {
+  max-height: 560rpx;
+  overflow-y: auto;
+}
+.addr-item {
+  position: relative;
+  background: #f8f3ea;
+  border: 1rpx solid #efe7d8;
+  border-radius: 12rpx;
+  padding: 20rpx 80rpx 20rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+.addr-item.on {
+  border-color: #8c5a2b;
+  background: #f5ecdb;
+}
+.addr-item-top {
+  display: flex;
+  align-items: center;
+}
+.addr-name {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #42372c;
+  margin-right: 16rpx;
+}
+.addr-phone {
+  font-size: 24rpx;
+  color: #8a7a67;
+  flex: 1;
+}
+.addr-default {
+  font-size: 20rpx;
+  color: #b04a45;
+  border: 1rpx solid #d9a29e;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-right: 16rpx;
+}
+.addr-del {
+  font-size: 22rpx;
+  color: #b3a595;
+}
+.addr-check {
+  position: absolute;
+  right: 20rpx;
+  bottom: 20rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #d9c39a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #fff;
+}
+.addr-check.on {
+  background: #8c5a2b;
+  border-color: #8c5a2b;
+}
+.addr-none {
+  padding: 60rpx 0;
+  text-align: center;
+  color: #b3a595;
+  font-size: 26rpx;
+}
+.af-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+.af-label {
+  width: 140rpx;
+  font-size: 26rpx;
+  color: #42372c;
+  flex-shrink: 0;
+}
+.af-row .f-input,
+.af-row .f-textarea {
+  flex: 1;
+  background: #f8f3ea;
+  border-radius: 10rpx;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+}
+.af-row .f-input {
+  height: 72rpx;
+}
+.af-row .f-textarea {
+  height: 140rpx;
+  padding: 14rpx 20rpx;
+}
+.btn-p.disabled {
+  opacity: 0.6;
 }
 
 </style>

@@ -49,7 +49,6 @@
         <view class="lesson" v-for="(ep, i) in outlineList" :key="i" @tap="openLesson(i)">
           <view class="lesson-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
           <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
-          <text class="lesson-tag" :class="{ free: ep.free !== false }">{{ ep.free !== false ? '免费' : '付费' }}</text>
           <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
         </view>
         <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
@@ -323,18 +322,6 @@ function startLearn() {
   margin-left: 16rpx;
   font-size: 26rpx;
   color: #42372c;
-}
-.lesson-tag {
-  font-size: 20rpx;
-  color: #b04a45;
-  border: 1rpx solid #d9a29e;
-  border-radius: 6rpx;
-  padding: 2rpx 10rpx;
-  margin-right: 12rpx;
-}
-.lesson-tag.free {
-  color: #3d7a4e;
-  border-color: #9cc3a7;
 }
 .lesson-lock {
   font-size: 26rpx;

@@ -1615,6 +1615,54 @@ async function wxpayPrepay(data) {
   return ok({ payment, order_no })
 }
 
+/* ============ 收货地址 ============ */
+
+/* 地址列表 (按默认优先) */
+async function listAddresses(data) {
+  const uid = Number(data.uid)
+  if (!uid) return ok([])
+  const res = await db.collection('addresses').where({ uid }).orderBy('is_default', 'desc').orderBy('created_at', 'desc').limit(50).get()
+  return ok(res.data || [])
+}
+
+/* 新增地址 (第一条自动设为默认) */
+async function addAddress(data) {
+  const uid = Number(data.uid)
+  const name = String(data.name || '').trim()
+  const phone = String(data.phone || '').trim()
+  const detail = String(data.detail || '').trim()
+  if (!uid) return fail('请先登录')
+  if (!name || !phone || !detail) return fail('请完整填写收货信息')
+  // 第一条地址自动设为默认
+  let first = true
+  try {
+    const cnt = await db.collection('addresses').where({ uid }).count()
+    first = !(cnt && cnt.total)
+  } catch (e) {}
+  const isDefault = data.is_default === true || first
+  const doc = {
+    uid,
+    name,
+    phone,
+    detail,
+    is_default: isDefault,
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  }
+  if (isDefault) {
+    try { await db.collection('addresses').where({ uid }).update({ is_default: false }) } catch (e) {}
+  }
+  const r = await db.collection('addresses').add(doc)
+  return ok({ _id: r.id || r._id, ...doc })
+}
+
+/* 删除地址 */
+async function deleteAddress(data) {
+  const id = String(data.id || '')
+  if (!id) return fail('缺少地址ID')
+  await db.collection('addresses').doc(id).remove()
+  return ok({ deleted: true })
+}
+
 /* H5 支付统一下单 (非小程序端: 微信收银台跳转) */
 async function wxpayH5(data) {
   const { order_no } = data
@@ -2701,6 +2749,9 @@ const ROUTES = {
   'order.pay': payOrder,
   'order.wxpay': wxpayPrepay,
   'pay.wxpayH5': wxpayH5,
+  'address.list': listAddresses,
+  'address.add': addAddress,
+  'address.delete': deleteAddress,
   'order.confirm': confirmOrder,
   'order.cancel': cancelOrder,
   'order.delete': deleteUserOrder,
