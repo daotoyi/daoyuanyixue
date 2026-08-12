@@ -60,8 +60,31 @@
           <view class="plm-act">
             <text class="plm-icon">❤</text><text>{{ m.likes || 0 }}</text>
           </view>
-          <view class="plm-act">
+          <view class="plm-act" @tap="toggleMomentComments(m)">
             <text class="plm-icon">💬</text><text>{{ m.comments || 0 }}</text>
+          </view>
+        </view>
+
+        <!-- 评论展开区 (与首页动态流一致) -->
+        <view class="plm-comments" v-if="m._showComments">
+          <view class="cmt-list" v-if="m._comments && m._comments.length">
+            <view class="cmt-item" v-for="(c, ci) in m._comments" :key="ci">
+              <text class="cmt-user">{{ c.user_name }}：</text>
+              <text class="cmt-text">{{ c.content }}</text>
+              <text class="cmt-time">{{ c.created_at }}</text>
+            </view>
+          </view>
+          <view class="cmt-empty" v-else>暂无评论，来抢沙发～</view>
+          <view class="cmt-input-row">
+            <input
+              class="cmt-input"
+              v-model="m._cmtText"
+              placeholder="友善评论，理性交流"
+              maxlength="200"
+              confirm-type="send"
+              @confirm="submitMomentComment(m)"
+            />
+            <view class="plm-cmt-btn" @click="submitMomentComment(m)">发表</view>
           </view>
         </view>
       </view>
@@ -104,7 +127,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { userProfile, followUser, followList } from '../../api/api'
+import { userProfile, followUser, followList, getComments, addComment } from '../../api/api'
 import { resolveCloudUrl, resolveCloudList } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
@@ -176,6 +199,45 @@ function previewMomentImages(m, i) {
   const imgs = (m.images || []).filter(Boolean)
   if (!imgs.length) return
   uni.previewImage({ urls: imgs, current: imgs[i] || imgs[0] })
+}
+
+/* 评论展开/收起 + 加载评论 */
+async function toggleMomentComments(m) {
+  m._showComments = !m._showComments
+  if (m._showComments && !m._comments) {
+    try {
+      m._comments = (await getComments({ moment_id: m.id })) || []
+    } catch (e) {
+      m._comments = []
+    }
+  }
+}
+
+/* 发表评论 */
+async function submitMomentComment(m) {
+  const text = (m._cmtText || '').trim()
+  if (!text) return uni.showToast({ title: '请输入评论内容', icon: 'none' })
+  if (!userStore.isLoggedIn) return uni.showToast({ title: '请先登录', icon: 'none' })
+  try {
+    await addComment({
+      moment_id: m.id,
+      content: text,
+      user_id: userStore.userInfo.uid,
+      user_name: userStore.userInfo.nickname || '道友',
+    })
+    m._cmtText = ''
+    m.comments = (m.comments || 0) + 1
+    if (m._comments) {
+      m._comments.push({
+        user_name: userStore.userInfo.nickname || '道友',
+        content: text,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+    }
+    uni.showToast({ title: '评论成功', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '评论失败: ' + (e.message || ''), icon: 'none' })
+  }
 }
 </script>
 
@@ -315,6 +377,56 @@ function previewMomentImages(m, i) {
   display: flex;
   gap: 30rpx;
   margin-top: 12rpx;
+}
+/* 评论展开区 */
+.plm-comments {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #efe7d8;
+}
+.cmt-list {
+  max-height: 320rpx;
+  overflow-y: auto;
+}
+.cmt-item {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 24rpx;
+  line-height: 1.5;
+  padding: 6rpx 0;
+}
+.cmt-user { color: #8c5a2b; font-weight: 500; }
+.cmt-text { color: #42372c; }
+.cmt-time { color: #b3a595; font-size: 20rpx; margin-left: 12rpx; }
+.cmt-empty { color: #b3a595; font-size: 24rpx; padding: 10rpx 0; }
+.cmt-input-row {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  gap: 12rpx;
+}
+.cmt-input {
+  flex: 1;
+  height: 60rpx;
+  background: #fefbf6;
+  border: 1rpx solid #e6dcca;
+  border-radius: 30rpx;
+  padding: 0 24rpx;
+  font-size: 24rpx;
+  color: #42372c;
+}
+.plm-cmt-btn {
+  flex-shrink: 0;
+  height: 60rpx;
+  padding: 0 30rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #fefbf6;
 }
 .plm-act {
   display: flex;
