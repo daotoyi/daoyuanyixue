@@ -1977,7 +1977,8 @@ async function pandaoDetail(data) {
 async function pandaoMine(data) {
   const { uid } = data
   if (!uid) return ok([])
-  const res = await db.collection('orders').where({ uid: Number(uid), order_type: 'appointment', status: _.neq('待付款') }).orderBy('created_at', 'desc').limit(50).get()
+  // 仅返回有效预约: 已支付且未退款/未取消 (待付款/已退款/已取消 不算已预约)
+  const res = await db.collection('orders').where({ uid: Number(uid), order_type: 'appointment', status: _.in(['待发货', '已完成']) }).orderBy('created_at', 'desc').limit(50).get()
   return ok(res.data)
 }
 
