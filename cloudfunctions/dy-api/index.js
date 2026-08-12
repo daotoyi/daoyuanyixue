@@ -246,7 +246,7 @@ async function userProfile(data) {
     is_followed = !!(await db.collection('follows').where({ uid: Number(viewer_uid), target_uid: Number(uid) }).limit(1).get()).data.length
   }
   return ok({
-    user: { uid: u.uid, nickname: u.nickname, avatar: u.avatar, dao_code: u.dao_code, bio: u.bio || '' },
+    user: { uid: u.uid, nickname: u.nickname, avatar: u.avatar, dao_code: u.dao_code, bio: u.bio || '', balance: u.balance || '0', phone: u.phone || '' },
     moments: moments.data,
     follow_count: follows.total || 0,
     fan_count: fans.total || 0,
@@ -1884,6 +1884,36 @@ async function orderPayBalance(data) {
   })
   return ok({ order_no, balance: String(newBal), message: '预约支付成功' })
 }
+/* 支付宝支付下单 (预约订单等): 需在后台配置支付宝商户 (appid/私钥), 未配置返回明确提示 */
+async function alipayPrepay(data) {
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
+  // 读取支付宝商户配置 (后台支付配置)
+  let cfg = {}
+  try {
+    const payRes = await db.collection('pay_config').limit(1).get()
+    cfg = payRes.data[0] || {}
+  } catch (e) {}
+  const appId = cfg.alipay_appid || ''
+  const privateKey = cfg.alipay_private_key || ''
+  if (!appId || !privateKey) return fail('支付宝支付未配置，请联系管理员或使用微信支付')
+  const price = Number(order.total_price) || 0
+  if (!price || price <= 0) return fail('订单金额异常')
+  // 支付宝 H5/App 支付: 生成支付参数 (示意, 真实接入需 alipay-sdk 签名)
+  return ok({
+    order_no,
+    alipay: {
+      app_id: appId,
+      out_trade_no: order_no,
+      total_amount: price.toFixed(2),
+      subject: (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 64),
+      notify_url: `https://${cfg.alipay_notify_host || 'cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com'}/dy-api/alipay/notify`,
+    },
+  })
+}
 async function adminPandaoCreate(data) {
   await ensureCollection('pandao_sessions')
   const max = await db.collection('pandao_sessions').orderBy('id', 'desc').limit(1).get().catch(() => ({ data: [] }))
@@ -2611,6 +2641,7 @@ const ROUTES = {
   'pandao.cancel': pandaoCancel,
   'pandao.mine': pandaoMine,
   'order.payBalance': orderPayBalance,
+  'order.alipayPrepay': alipayPrepay,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
   'admin.pandao.update': adminPandaoUpdate,

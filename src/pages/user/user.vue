@@ -443,6 +443,7 @@ onShow(async () => {
         avatar: fresh.user.avatar,
         dao_code: fresh.user.dao_code || userInfo.value.dao_code,
         invite_code: fresh.user.invite_code || userInfo.value.invite_code,
+        balance: fresh.user.balance || userInfo.value.balance || '0',
       })
     }
   } catch (e) { /* 忽略, 用本地缓存 */ }

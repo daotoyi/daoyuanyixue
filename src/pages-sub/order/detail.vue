@@ -42,6 +42,23 @@
       <view class="row"><text class="rk">下单时间</text><text class="rv">{{ order.created_at }}</text></view>
     </view>
 
+    <!-- 支付方式选择 (预约订单待付款时显示; 微信默认, 支付宝默认隐藏) -->
+    <view class="pay-methods" v-if="order.status === '待付款' && order.order_type === 'appointment'">
+      <view class="pm-title">选择支付方式</view>
+      <view class="pm-item" :class="{ on: selectedPay === 'wechat' }" @tap="selectedPay = 'wechat'">
+        <view class="pm-icon pm-wx"><text>微</text></view>
+        <text class="pm-name">微信支付</text>
+        <text class="pm-check" :class="{ on: selectedPay === 'wechat' }">{{ selectedPay === 'wechat' ? '✓' : '' }}</text>
+      </view>
+      <!-- 支付宝: 默认隐藏, 点击"更多支付方式"展开 -->
+      <view class="pm-more" v-if="!showAlipay" @tap="showAlipay = true"><text>更多支付方式 ▾</text></view>
+      <view class="pm-item" :class="{ on: selectedPay === 'alipay' }" v-if="showAlipay" @tap="selectedPay = 'alipay'">
+        <view class="pm-icon pm-alipay"><text>支</text></view>
+        <text class="pm-name">支付宝</text>
+        <text class="pm-check" :class="{ on: selectedPay === 'alipay' }">{{ selectedPay === 'alipay' ? '✓' : '' }}</text>
+      </view>
+    </view>
+
     <!-- 底部操作 -->
     <view class="action-bar" v-if="order.status !== '已完成' && order.status !== '已退款' && order.status !== '已取消'">
       <view v-if="order.status === '待付款'" class="btn-fill btn-pay" @tap="doPay">
@@ -66,11 +83,15 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, payOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, orderPayBalance } from '../../api/api'
+import { getOrder, payOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, orderPayBalance, alipayPrepay } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const order = ref(null)
 const orderNo = ref(null)
+
+/* 支付方式选择: 微信默认; 支付宝默认隐藏 */
+const selectedPay = ref('wechat')
+const showAlipay = ref(false)
 
 const statusTip = computed(() => ({
   待付款: '订单尚未支付，请尽快完成付款',
@@ -104,6 +125,34 @@ async function load() {
 }
 
 async function doPay() {
+  // 支付宝支付 (预约订单可选): 调后端生成支付宝订单, 未配置商户时明确提示
+  if (selectedPay.value === 'alipay') {
+    try {
+      const res = await alipayPrepay({ order_no: orderNo.value })
+      if (res && res.alipay) {
+        if (res.alipay.pay_url) {
+          // #ifdef H5
+          window.location.href = res.alipay.pay_url
+          // #endif
+          // #ifndef H5
+          uni.showModal({
+            title: '支付宝支付',
+            content: '请在浏览器中打开支付宝完成支付',
+            showCancel: false,
+          })
+          // #endif
+        } else {
+          uni.showModal({ title: '支付宝支付', content: '支付宝支付参数已生成，商户接入后即可使用；当前请选择微信支付', showCancel: false })
+        }
+      } else {
+        uni.showToast({ title: (res && res.msg) || '支付宝支付未配置', icon: 'none' })
+      }
+    } catch (e) {
+      uni.showToast({ title: (e && e.message) || '支付宝支付失败', icon: 'none' })
+    }
+    return
+  }
+
   // 微信小程序: 真实微信支付; 其他端: 演示支付
   // #ifdef MP-WEIXIN
   try {
@@ -280,6 +329,78 @@ function goShop() {
   color: #b04a45;
   font-weight: 500;
   font-size: 30rpx;
+}
+
+/* 支付方式选择 (预约订单): 微信默认/支付宝默认隐藏 */
+.pay-methods {
+  margin: 20rpx 24rpx;
+  background: #fefbf6;
+  border-radius: 16rpx;
+  border: 1rpx solid #efe7d8;
+  padding: 20rpx 24rpx;
+}
+.pm-title {
+  font-size: 24rpx;
+  color: #8c5a2b;
+  font-weight: 500;
+  margin-bottom: 14rpx;
+}
+.pm-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+}
+.pm-item.on {
+  background: #f5ecdb;
+}
+.pm-icon {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.pm-icon text {
+  font-size: 26rpx;
+  color: #fff;
+  font-weight: 600;
+}
+/* 微信: 绿色 */
+.pm-wx {
+  background: linear-gradient(135deg, #07c160, #06ad56);
+}
+/* 支付宝: 品牌蓝 + "支"字 */
+.pm-alipay {
+  background: linear-gradient(135deg, #1677ff, #0a5fd6);
+}
+.pm-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #42372c;
+}
+.pm-check {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 2rpx solid #d9c39a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #fefbf6;
+}
+.pm-check.on {
+  background: #8c5a2b;
+  border-color: #8c5a2b;
+}
+.pm-more {
+  padding: 12rpx 0 4rpx;
+  font-size: 22rpx;
+  color: #b3a595;
 }
 
 .action-bar {
