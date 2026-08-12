@@ -248,7 +248,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, pandaoBook, getPayConfig, momentLike, myLikes, followList, fileUrl } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, getPayConfig, momentLike, myLikes, followList, fileUrl } from '../../api/api'
 import { isCloudFile } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
@@ -390,7 +390,7 @@ async function bookPandao(pd) {
   try {
     const res = await pandaoBook({ uid: userStore.userInfo.uid, session_id: pd.id })
     if (res && res.order_no) {
-      pd._booked = true // 已报名预约 → 立即显示"已预约"浅绿色
+      // 不立即标记"已预约": 未支付不算预约成功, 支付完成后返回首页由已支付订单标记
       uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
       setTimeout(() => {
         uni.navigateTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
