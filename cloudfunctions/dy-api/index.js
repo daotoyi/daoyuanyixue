@@ -1615,6 +1615,25 @@ async function wxpayPrepay(data) {
   return ok({ payment, order_no })
 }
 
+/* H5 支付统一下单 (非小程序端: 微信收银台跳转) */
+async function wxpayH5(data) {
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
+  const price = Number(order.total_price)
+  if (!price || price <= 0) return fail('订单金额异常')
+  const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
+  const wxpay = require('./wxpay-v3')
+  try {
+    const r = await wxpay.h5UnifiedOrder({ outTradeNo: order_no, totalFee: Math.round(price * 100), body })
+    return ok({ h5_url: r.h5_url, order_no })
+  } catch (e) {
+    return fail('微信支付下单失败: ' + (e.message || '请检查商户配置'))
+  }
+}
+
 /* 微信支付结果回调 (云开发支付成功后调用本云函数) */
 async function wxpayCallback(event) {
   if (event && (event.returnCode === 'SUCCESS' || event.resultCode === 'SUCCESS') && event.outTradeNo) {
@@ -2681,6 +2700,7 @@ const ROUTES = {
   'order.detail': getOrder,
   'order.pay': payOrder,
   'order.wxpay': wxpayPrepay,
+  'pay.wxpayH5': wxpayH5,
   'order.confirm': confirmOrder,
   'order.cancel': cancelOrder,
   'order.delete': deleteUserOrder,

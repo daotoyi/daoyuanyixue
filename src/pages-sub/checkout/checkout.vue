@@ -79,12 +79,7 @@
         <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
       </view>
       <view class="btn-fill btn-submit" @tap="submitOrder">
-        <!-- #ifdef MP-WEIXIN -->
         <text>{{ submitting ? '提交中...' : '提交订单 · 微信支付' }}</text>
-        <!-- #endif -->
-        <!-- #ifndef MP-WEIXIN -->
-        <text>{{ submitting ? '提交中...' : '提交订单 · 模拟支付' }}</text>
-        <!-- #endif -->
       </view>
     </view>
 
@@ -111,7 +106,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxRequestPayment, getCourse, getProduct, getPayConfig } from '../../api/api'
+import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxpayH5, wxRequestPayment, getCourse, getProduct, getPayConfig } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -128,11 +123,8 @@ const submitting = ref(false)
 
 const balance = computed(() => userStore.userInfo.balance || '0.00')
 
-// 支付方式名: 小程序=微信支付(真实); H5/APP=模拟支付(无法真实微信支付)
-let wechatPayName = '微信支付'
-// #ifndef MP-WEIXIN
-wechatPayName = '模拟支付'
-// #endif
+// 支付方式名: 小程序=微信支付(JSAPI); H5/APP=微信支付(H5收银台)
+const wechatPayName = '微信支付'
 
 const payMethods = ref([
   { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
@@ -287,7 +279,7 @@ async function submitOrder() {
       uid: userStore.userInfo.uid || 0,
       course_id: courseId.value || 0,
     })
-    // 微信小程序: 真实微信支付; 其他端: 演示支付
+    // 微信小程序: JSAPI 微信支付; 其他端: 微信H5收银台/余额支付
     // #ifdef MP-WEIXIN
     try {
       const prepay = await wxpayPrepay(order.order_no)
@@ -313,22 +305,37 @@ async function submitOrder() {
     }
     // #endif
     // #ifndef MP-WEIXIN
-    // 非小程序端: 课程/实物订单无真实支付, 引导去小程序支付 (避免"假支付成功"误解)
-    if (courseId.value) {
-      submitting.value = false
-      uni.showToast({ title: '请在小程序内完成微信支付', icon: 'none' })
+    // 非小程序端: 真实微信支付 (H5 收银台跳转)
+    if (payMethod.value === 'balance') {
+      // 余额支付: 真实扣减并确认订单
+      await payOrder(order.order_no)
+      clearSelected()
+      uni.showToast({ title: '支付成功', icon: 'success' })
       setTimeout(() => {
         uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
       }, 800)
       return
     }
-    // 实物商品 H5: 演示支付成功 (仅测试环境)
-    await payOrder(order.order_no)
-    clearSelected()
-    uni.showToast({ title: '支付成功', icon: 'success' })
-    setTimeout(() => {
-      uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
-    }, 800)
+    try {
+      const h5 = await wxpayH5(order.order_no)
+      if (h5 && h5.h5_url) {
+        // #ifdef H5
+        window.location.href = h5.h5_url
+        // #endif
+        // #ifdef APP-PLUS
+        plus.runtime.openURL(h5.h5_url)
+        setTimeout(() => {
+          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
+        }, 1500)
+        // #endif
+        return
+      }
+      throw new Error((h5 && h5.msg) || '微信支付未配置')
+    } catch (payErr) {
+      submitting.value = false
+      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      return
+    }
     // #endif
   } catch (e) {
     uni.showToast({ title: '下单失败：' + (e.message || ''), icon: 'none' })

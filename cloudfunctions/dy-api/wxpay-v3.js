@@ -139,6 +139,30 @@ async function queryOrder(outTradeNo) {
   return res.json
 }
 
+/**
+ * H5 支付统一下单 → 返回 h5_url (微信收银台跳转地址, 公众号 appid + 商户号需开通 H5 支付)
+ */
+async function h5UnifiedOrder({ outTradeNo, totalFee, body }) {
+  const c = cfg()
+  if (!c.GZH_APPID) throw new Error('未配置公众号AppID')
+  const res = await request('POST', '/v3/pay/transactions/h5', {
+    appid: c.GZH_APPID,
+    mchid: c.WXPAY_MCHID,
+    description: String(body || '道元易学-订单').slice(0, 127),
+    out_trade_no: outTradeNo,
+    notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api/pay/notify`,
+    amount: { total: Math.round(totalFee), currency: 'CNY' },
+    scene_info: {
+      payer_client_ip: '0.0.0.0',
+      h5_info: { type: 'WAP', wap_url: `https://${c.WXPAY_NOTIFY_HOST || ''}`, wap_name: '道元易学' },
+    },
+  })
+  if (res.status !== 200 && res.status !== 202) {
+    throw new Error((res.json && res.json.message) || '微信支付H5下单失败(' + res.status + ')')
+  }
+  return { h5_url: res.json.h5_url }
+}
+
 /** 申请退款 */
 async function refund({ outTradeNo, outRefundNo, totalFee, refundFee, reason }) {
   const c = cfg()
@@ -161,4 +185,4 @@ function handleNotify(headers, rawBody) {
   return { eventType: body.event_type, resource, body }
 }
 
-module.exports = { unifiedOrder, queryOrder, refund, handleNotify, verifySignature, decryptResource }
+module.exports = { unifiedOrder, h5UnifiedOrder, queryOrder, refund, handleNotify, verifySignature, decryptResource }

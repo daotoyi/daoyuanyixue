@@ -180,7 +180,7 @@ function goDetail(orderNo) {
 }
 
 async function doPay(o) {
-  // 微信小程序: 真实微信支付; 其他端: 进入订单详情选择支付方式(余额/支付宝, 无模拟支付)
+  // 微信小程序: JSAPI 微信支付; 其他端: 进入订单详情选择支付方式(微信H5/余额/支付宝)
   // #ifdef MP-WEIXIN
   try {
     const prepay = await wxpayPrepay(o.order_no)
