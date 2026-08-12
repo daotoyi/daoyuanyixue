@@ -15,7 +15,8 @@
 - 区域: `ap-shanghai`
 - 静态域名: `cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com`
 - 云函数网关: `https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api` (完整域名含 -1464523137, 短域名会 INVALID_ENV)
-- 云存储CDN: `636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la`
+- 云存储CDN: `7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la` (以代码为准; 旧 636c- 已过时; fileID cloud:// 前缀 replace 成此域名)
+- 课程视频: courses.video 存 CDN URL (后台上传→course_videos/v*.mp4); 小程序播放需配置 downloadFile 合法域名 tcb.qcloud.la
 - 微信小程序 AppID: **`wx3ec1337aae9ace3c`** (旧 wxe4eea58de8107961 已改)
 - 支付: 微信支付 API v3 直连 (商户号 1116271440, 证书 /Users/wenhua/cert/1116271440_20260808_cert/, wxpay-v3.js 零依赖实现, cloud1 不可用 cloudPay)
 

@@ -729,8 +729,29 @@
           <text class="f-label">预览</text>
           <image class="cover-preview" :src="courseForm.cover" mode="aspectFill"></image>
         </view>
-        <view class="f-row">
-          <text class="f-label">视频</text>
+        <!-- 视频集 (多集: 每集标题+视频) -->
+        <view class="f-row" style="align-items: flex-start">
+          <text class="f-label">视频集</text>
+          <view class="ep-list" style="flex: 1">
+            <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ei">
+              <view class="ep-row">
+                <text class="ep-index">{{ ei + 1 }}</text>
+                <input class="f-input ep-title" v-model="ep.title" placeholder="集标题（如：第1集 八字入门）" />
+                <text class="ep-op" @tap="moveEpisode(ei, -1)">↑</text>
+                <text class="ep-op" @tap="moveEpisode(ei, 1)">↓</text>
+                <text class="ep-op danger" @tap="removeEpisode(ei)">✕</text>
+              </view>
+              <view class="ep-row">
+                <input class="f-input" v-model="ep.video" placeholder="本集视频地址" />
+                <text class="btn-p sm" style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
+              </view>
+            </view>
+            <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加一集</view>
+          </view>
+        </view>
+        <!-- 兼容单视频字段 -->
+        <view class="f-row" v-if="courseForm.video && !(courseForm.episodes && courseForm.episodes.length)">
+          <text class="f-label">单视频</text>
           <view class="f-input-wrap">
             <input class="f-input" v-model="courseForm.video" placeholder="课程视频地址" />
             <text class="btn-p sm" style="margin-left: 12rpx; flex-shrink: 0" @tap="uploadCourseVideo">上传视频</text>
@@ -1635,6 +1656,51 @@ function uploadCourseVideo() {
   })
 }
 
+/* ---- 视频集管理 (多集) ---- */
+function addEpisode() {
+  if (!courseForm.value.episodes) courseForm.value.episodes = []
+  courseForm.value.episodes.push({ title: '', video: '' })
+}
+function removeEpisode(i) {
+  courseForm.value.episodes.splice(i, 1)
+}
+function moveEpisode(i, dir) {
+  const arr = courseForm.value.episodes
+  const j = i + dir
+  if (j < 0 || j >= arr.length) return
+  const t = arr[i]
+  arr[i] = arr[j]
+  arr[j] = t
+}
+/* 上传某一集视频 */
+function uploadEpisodeVideo(i) {
+  uni.chooseVideo({
+    count: 1,
+    maxDuration: 3600,
+    compressed: false,
+    success: async (res) => {
+      const filePath = res.tempFilePath
+      uni.showLoading({ title: '视频上传中...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        courseForm.value.episodes[i].video = url
+        if (!courseForm.value.episodes[i].title) courseForm.value.episodes[i].title = `第${i + 1}集`
+        uni.showToast({ title: '已上传', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: e.message || '上传失败', icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+  })
+}
+
 function openProductForm(p) {
   const attrsList = p && p.attrs
     ? Object.keys(p.attrs).map((k) => ({ key: k, value: String(p.attrs[k]) }))
@@ -1717,8 +1783,8 @@ const courseForm = ref({})
 
 function openCourseForm(c) {
   courseForm.value = c
-    ? { ...c }
-    : { id: null, title: '', teacher: '', price: '0.00', ot_price: '', cover: '', category_id: courseActiveCate.value || 1, lessons_count: 0, level: '入门', description: '' }
+    ? { ...c, episodes: Array.isArray(c.episodes) ? c.episodes.map((e) => ({ ...e })) : (c.video ? [{ title: '第1集', video: c.video }] : []) }
+    : { id: null, title: '', teacher: '', price: '0.00', ot_price: '', cover: '', category_id: courseActiveCate.value || 1, lessons_count: 0, level: '入门', description: '', episodes: [] }
   showCourse.value = true
 }
 
@@ -3005,6 +3071,51 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   margin-bottom: 20rpx;
+}
+/* 视频集编辑 */
+.ep-list {
+  display: flex;
+  flex-direction: column;
+}
+.ep-item {
+  background: #faf3e9;
+  border: 1rpx solid #e6dcca;
+  border-radius: 12rpx;
+  padding: 12rpx;
+  margin-bottom: 12rpx;
+}
+.ep-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 8rpx;
+}
+.ep-row:last-child {
+  margin-bottom: 0;
+}
+.ep-index {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #efe3cd;
+  color: #8c5a2b;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ep-title {
+  flex: 1;
+}
+.ep-op {
+  font-size: 26rpx;
+  color: #8c5a2b;
+  padding: 4rpx 10rpx;
+  flex-shrink: 0;
+}
+.ep-op.danger {
+  color: #b04a45;
 }
 .f-label {
   width: 150rpx;

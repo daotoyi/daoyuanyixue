@@ -7,17 +7,30 @@
       <view class="cover-title">{{ course.title }}</view>
     </view>
 
-    <!-- 课程视频 (后台配置 video 地址后显示) -->
-    <view class="course-video" v-if="course.video">
+    <!-- 课程视频 (多集选集; 无 episodes 时兼容单 video) -->
+    <view class="course-video" v-if="currentVideo">
       <video
         class="course-video-player"
-        :src="course.video"
+        :src="currentVideo"
         controls
         poster=""
         object-fit="contain"
         :show-center-play-btn="true"
         :enable-progress-gesture="true"
       ></video>
+      <view class="course-episodes" v-if="episodesList.length">
+        <text class="ep-title">课程目录</text>
+        <view
+          class="ep-item"
+          :class="{ on: currentEp === i }"
+          v-for="(ep, i) in episodesList"
+          :key="i"
+          @tap="switchEp(i)"
+        >
+          <text class="ep-no">{{ i + 1 }}</text>
+          <text class="ep-name">{{ ep.title || '第' + (i + 1) + '集' }}</text>
+        </view>
+      </view>
     </view>
 
     <!-- 价格与信息 -->
@@ -104,6 +117,19 @@ const userStore = useUserStore()
 const course = ref(null)
 const showTeacherPanel = ref(false)
 const teacherInfoData = ref({})
+
+/* 多集视频: 选集播放 (无 episodes 时兼容单 video) */
+const currentEp = ref(0)
+const episodesList = computed(() => (Array.isArray(course.value && course.value.episodes) && course.value.episodes.length ? course.value.episodes : []))
+const currentVideo = computed(() => {
+  if (!course.value) return ''
+  const eps = episodesList.value
+  if (eps.length) return (eps[currentEp.value] && eps[currentEp.value].video) || ''
+  return course.value.video || ''
+})
+function switchEp(i) {
+  currentEp.value = i
+}
 async function showTeacher() {
   try {
     const info = await teacherInfo({ teacher: course.value.teacher })
@@ -198,6 +224,57 @@ function startLearn() {
   height: 400rpx;
   border-radius: 16rpx;
   background: #000;
+}
+/* 课程目录 (选集) */
+.course-episodes {
+  margin-top: 16rpx;
+  background: #fefbf6;
+  border-radius: 16rpx;
+  border: 1rpx solid #efe7d8;
+  padding: 20rpx;
+}
+.ep-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #8c5a2b;
+  margin-bottom: 10rpx;
+  display: block;
+}
+.ep-item {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 16rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: #42372c;
+}
+.ep-item.on {
+  background: #f5ecdb;
+  color: #8c5a2b;
+  font-weight: 500;
+}
+.ep-no {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #efe3cd;
+  color: #8c5a2b;
+  font-size: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.ep-item.on .ep-no {
+  background: #8c5a2b;
+  color: #fefbf6;
+}
+.ep-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card {
