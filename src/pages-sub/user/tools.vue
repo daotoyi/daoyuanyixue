@@ -60,7 +60,6 @@
               </picker>
             </view>
           </view>
-          <view class="tp-tip">选择具体出生时刻（几点几分），自动归入对应时辰排盘</view>
         </template>
 
         <!-- 农历输入: 年月日一行3框 + 时辰一行1框 (每框更宽, 字体与阳历一致) -->
@@ -112,8 +111,8 @@
           <view class="tp-tip">可点击文字手动输入干支，或点右侧下拉滚动选择</view>
         </template>
 
-        <!-- 当前时间起局: 选中则以当下时间起局, 忽略上方输入的时间 -->
-        <view class="tp-row tp-now-row">
+        <!-- 当前时间起局: 仅奇门保留 (紫微/八字用出生时间排盘) -->
+        <view class="tp-row tp-now-row" v-if="activeTool === 'qimen'">
           <text class="tp-label">当前时间</text>
           <switch :checked="form.bazi.useNow" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.useNow = e.detail.value)" />
           <text class="tp-save-tip">开启后以当前时间起局（忽略上方时间）</text>

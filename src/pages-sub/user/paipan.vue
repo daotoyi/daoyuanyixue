@@ -375,7 +375,7 @@
             <text class="pp-cg-sub">{{ data.bazi.chengGu.yearText }} · 骨重合计</text>
           </view>
           <view class="pp-cg-detail">
-            <view class="pp-cg-item" v-for="(it, i) in data.bazi.chengGu.detail" :key="i">
+            <view class="pp-cg-cell" v-for="(it, i) in data.bazi.chengGu.detail" :key="i">
               <text class="pp-cg-d-label">{{ it.label }}</text>
               <text class="pp-cg-d-val">{{ it.val || '—' }}</text>
             </view>
@@ -2187,8 +2187,9 @@ function applyJpUnlock() {
 .pp-cg-weight { font-size: 48rpx; font-weight: 700; color: #8c5a2b; }
 .pp-cg-sub { font-size: 22rpx; color: #b3a595; }
 .pp-cg-detail { display: flex; background: #fff; border-radius: 10rpx; padding: 12rpx 0; margin-bottom: 12rpx; }
-.pp-cg-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; border-right: 1rpx solid #efe7d8; }
-.pp-cg-item:last-child { border-right: none; }
+/* ⚠️ 用 pp-cg-cell 而非 pp-cg-item: 避免与四柱藏干(pp-cg-item)类名冲突, 覆盖藏干横排样式 */
+.pp-cg-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; border-right: 1rpx solid #efe7d8; }
+.pp-cg-cell:last-child { border-right: none; }
 .pp-cg-d-label { font-size: 20rpx; color: #b3a595; }
 .pp-cg-d-val { font-size: 26rpx; color: #42372c; font-weight: 500; }
 .pp-cg-duanyu { background: #fff8ef; border-left: 6rpx solid #c9a36a; border-radius: 8rpx; padding: 16rpx 18rpx; }
