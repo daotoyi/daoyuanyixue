@@ -731,22 +731,22 @@
         </view>
         <!-- 视频集 (多集: 每集标题+视频) -->
         <view class="f-row" style="align-items: flex-start">
-          <text class="f-label">视频集</text>
+          <text class="f-label">课程大纲</text>
           <view class="ep-list" style="flex: 1">
             <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ei">
               <view class="ep-row">
                 <text class="ep-index">{{ ei + 1 }}</text>
-                <input class="f-input ep-title" v-model="ep.title" placeholder="集标题（如：第1集 八字入门）" />
+                <input class="f-input ep-title" v-model="ep.title" placeholder="课时名（如：第1课 阴阳五行）" />
                 <text class="ep-op" @tap="moveEpisode(ei, -1)">↑</text>
                 <text class="ep-op" @tap="moveEpisode(ei, 1)">↓</text>
                 <text class="ep-op danger" @tap="removeEpisode(ei)">✕</text>
               </view>
               <view class="ep-row">
-                <input class="f-input" v-model="ep.video" placeholder="本集视频地址" />
+                <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
                 <text class="btn-p sm" style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
               </view>
             </view>
-            <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加一集</view>
+            <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加课时</view>
           </view>
         </view>
         <!-- 兼容单视频字段 -->

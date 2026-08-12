@@ -145,6 +145,14 @@
      }
     },
     {
+     "path": "course/lesson",
+     "style": {
+      "navigationBarTitleText": "课时学习",
+      "navigationBarBackgroundColor": "#FFFCF5",
+      "navigationBarTextStyle": "black"
+     }
+    },
+    {
      "path": "course/my",
      "style": {
       "navigationBarTitleText": "我的课程",

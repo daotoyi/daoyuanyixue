@@ -7,32 +7,6 @@
       <view class="cover-title">{{ course.title }}</view>
     </view>
 
-    <!-- 课程视频 (多集选集; 无 episodes 时兼容单 video) -->
-    <view class="course-video" v-if="currentVideo">
-      <video
-        class="course-video-player"
-        :src="currentVideo"
-        controls
-        poster=""
-        object-fit="contain"
-        :show-center-play-btn="true"
-        :enable-progress-gesture="true"
-      ></video>
-      <view class="course-episodes" v-if="episodesList.length">
-        <text class="ep-title">课程目录</text>
-        <view
-          class="ep-item"
-          :class="{ on: currentEp === i }"
-          v-for="(ep, i) in episodesList"
-          :key="i"
-          @tap="switchEp(i)"
-        >
-          <text class="ep-no">{{ i + 1 }}</text>
-          <text class="ep-name">{{ ep.title || '第' + (i + 1) + '集' }}</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 价格与信息 -->
     <view class="card">
       <view class="price-row">
@@ -68,16 +42,16 @@
       <text class="desc">{{ course.description }}</text>
     </view>
 
-    <!-- 课程大纲 (课时) -->
+    <!-- 课程大纲 (后台上传的课时; 点击进入小节页播放) -->
     <view class="card">
-      <view class="card-title">课程大纲 · 共 {{ course.lessons_count }} 课时</view>
+      <view class="card-title">课程大纲 · 共 {{ outlineList.length }} 课时</view>
       <view class="outline">
-        <view class="lesson" v-for="n in Math.min(course.lessons_count, 12)" :key="n">
-          <view class="lesson-idx">{{ n < 10 ? '0' + n : n }}</view>
-          <text class="lesson-name">第 {{ n }} 课 · {{ n === 1 ? '课程导论' : '主题精讲 ' + n }}</text>
+        <view class="lesson" v-for="(ep, i) in outlineList" :key="i" @tap="openLesson(i)">
+          <view class="lesson-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
+          <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
           <text class="lesson-lock">🔒</text>
         </view>
-        <view class="lesson-more" v-if="course.lessons_count > 12">
+        <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
           … 共 {{ course.lessons_count }} 课时
         </view>
       </view>
@@ -118,17 +92,21 @@ const course = ref(null)
 const showTeacherPanel = ref(false)
 const teacherInfoData = ref({})
 
-/* 多集视频: 选集播放 (无 episodes 时兼容单 video) */
-const currentEp = ref(0)
+/* 课程大纲: 后台上传的课时(episodes), 无则用课时数生成占位; 点击进入小节页播放 */
 const episodesList = computed(() => (Array.isArray(course.value && course.value.episodes) && course.value.episodes.length ? course.value.episodes : []))
-const currentVideo = computed(() => {
-  if (!course.value) return ''
+const outlineList = computed(() => {
   const eps = episodesList.value
-  if (eps.length) return (eps[currentEp.value] && eps[currentEp.value].video) || ''
-  return course.value.video || ''
+  if (eps.length) return eps
+  const n = Math.min(course.value && course.value.lessons_count || 0, 12)
+  return Array.from({ length: n }, (_, i) => ({ title: i === 0 ? '课程导论' : '主题精讲 ' + (i + 1), video: '' }))
 })
-function switchEp(i) {
-  currentEp.value = i
+function openLesson(i) {
+  const ep = outlineList.value[i]
+  if (!ep || !ep.video) {
+    uni.showToast({ title: '本课时暂未上传视频', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: `/pages-sub/course/lesson?course_id=${course.value.id}&index=${i}` })
 }
 async function showTeacher() {
   try {
@@ -212,69 +190,6 @@ function startLearn() {
   font-weight: 500;
   color: #fefbf6;
   text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.5);
-}
-
-/* 课程视频播放区 */
-.course-video {
-  padding: 20rpx 24rpx;
-  background: #f8f3ea;
-}
-.course-video-player {
-  width: 100%;
-  height: 400rpx;
-  border-radius: 16rpx;
-  background: #000;
-}
-/* 课程目录 (选集) */
-.course-episodes {
-  margin-top: 16rpx;
-  background: #fefbf6;
-  border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
-  padding: 20rpx;
-}
-.ep-title {
-  font-size: 26rpx;
-  font-weight: 500;
-  color: #8c5a2b;
-  margin-bottom: 10rpx;
-  display: block;
-}
-.ep-item {
-  display: flex;
-  align-items: center;
-  padding: 14rpx 16rpx;
-  border-radius: 12rpx;
-  font-size: 26rpx;
-  color: #42372c;
-}
-.ep-item.on {
-  background: #f5ecdb;
-  color: #8c5a2b;
-  font-weight: 500;
-}
-.ep-no {
-  width: 44rpx;
-  height: 44rpx;
-  border-radius: 50%;
-  background: #efe3cd;
-  color: #8c5a2b;
-  font-size: 22rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-  flex-shrink: 0;
-}
-.ep-item.on .ep-no {
-  background: #8c5a2b;
-  color: #fefbf6;
-}
-.ep-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .card {
