@@ -24,6 +24,7 @@
         <text class="batch-act batch-del" @tap="batchDelete">删除所选（{{ selected.length }}）</text>
         <text class="batch-act" @tap="exitBatch">取消</text>
       </template>
+      <text class="sort-toggle" @tap="toggleSort">{{ sortOrder === 'desc' ? '时间 ↓ 最新在前' : '时间 ↑ 最旧在前' }}</text>
     </view>
 
     <!-- 订单列表 -->
@@ -109,9 +110,27 @@ const counts = computed(() => {
 })
 
 const orders = computed(() => {
-  if (activeStatus.value === '全部') return allOrders.value
-  return allOrders.value.filter((o) => o.status === activeStatus.value)
+  const list = activeStatus.value === '全部'
+    ? [...allOrders.value]
+    : allOrders.value.filter((o) => o.status === activeStatus.value)
+  // 按创建时间排序: desc 最新在前(默认), asc 最旧在前
+  list.sort((a, b) => (sortOrder.value === 'desc' ? 1 : -1) * (parseTime(a.created_at) - parseTime(b.created_at)))
+  return list
 })
+
+/* 订单时间排序: desc=最新在前(默认), asc=最旧在前 */
+const sortOrder = ref('desc')
+function toggleSort() {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+}
+/* 解析 '2026/8/5 03:21:05' 格式为时间戳 (非零填充, 不能直接字符串比较) */
+function parseTime(s) {
+  if (!s) return 0
+  const m = String(s).match(/(\d{4})\/(\d{1,2})\/(\d{1,2})\s*(\d{1,2}):(\d{1,2}):(\d{1,2})/)
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime()
+  const t = new Date(String(s).replace(/-/g, '/')).getTime()
+  return isNaN(t) ? 0 : t
+}
 
 async function switchStatus(s) {
   activeStatus.value = s
@@ -354,6 +373,16 @@ async function doDelete(o) {
   font-size: 24rpx;
   color: #8c5a2b;
   padding: 8rpx 24rpx;
+  border: 1rpx solid #d9c39a;
+  border-radius: 999rpx;
+  background: #fefbf6;
+}
+/* 时间排序切换: 靠右 */
+.sort-toggle {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: #8c5a2b;
+  padding: 8rpx 22rpx;
   border: 1rpx solid #d9c39a;
   border-radius: 999rpx;
   background: #fefbf6;

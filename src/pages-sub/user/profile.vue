@@ -44,6 +44,18 @@
           <text class="plm-time">{{ m.created_at }}</text>
         </view>
         <view class="plm-content">{{ m.content }}</view>
+        <!-- 动态图片 (含命盘/AI评估图等): 点击可放大预览 -->
+        <view class="plm-images" v-if="(m.images || []).length">
+          <view
+            class="plm-img-wrap"
+            :class="'img-' + m.images.length"
+            v-for="(img, i) in m.images"
+            :key="i"
+            @tap="previewMomentImages(m, i)"
+          >
+            <image class="plm-img" :src="img" mode="aspectFill"></image>
+          </view>
+        </view>
         <view class="plm-actions">
           <view class="plm-act">
             <text class="plm-icon">❤</text><text>{{ m.likes || 0 }}</text>
@@ -157,6 +169,13 @@ async function toggleFollow() {
 
 function goProfile(u) {
   uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + u.uid })
+}
+
+/* 动态图片预览 (命盘/评估图等) */
+function previewMomentImages(m, i) {
+  const imgs = (m.images || []).filter(Boolean)
+  if (!imgs.length) return
+  uni.previewImage({ urls: imgs, current: imgs[i] || imgs[0] })
 }
 </script>
 
@@ -272,6 +291,26 @@ function goProfile(u) {
   margin-top: 10rpx;
   line-height: 1.5;
 }
+/* 动态图片 (命盘/评估图等): 与首页动态流一致 */
+.plm-images {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+}
+.plm-img-wrap {
+  border-radius: 12rpx;
+  overflow: hidden;
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+}
+.plm-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.plm-img-wrap.img-1 { width: 100%; height: 360rpx; }
+.plm-img-wrap.img-2 { width: calc(50% - 10rpx); height: 220rpx; }
+.plm-img-wrap.img-3 { width: calc(33.3% - 10rpx); height: 200rpx; }
 .plm-actions {
   display: flex;
   gap: 30rpx;
