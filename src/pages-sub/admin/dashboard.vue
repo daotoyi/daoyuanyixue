@@ -1671,7 +1671,8 @@ function uploadCourseVideo() {
 /* ---- 视频集管理 (多集) ---- */
 function addEpisode() {
   if (!courseForm.value.episodes) courseForm.value.episodes = []
-  courseForm.value.episodes.push({ title: '', video: '', free: true })
+  // 新增课时默认付费 (可在行内切换为免费)
+  courseForm.value.episodes.push({ title: '', video: '', free: false })
 }
 function removeEpisode(i) {
   courseForm.value.episodes.splice(i, 1)
