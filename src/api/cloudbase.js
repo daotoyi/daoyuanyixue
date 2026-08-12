@@ -152,9 +152,8 @@ export async function getStorage() {
   // #endif
 
   // #ifndef MP-WEIXIN
-  // H5/App: js-sdk storage 封装为统一签名 (与小程序一致: uploadFile(filePath, cloudPath) / getTempFileURL(fileList))
+  // H5/App: @cloudbase/js-sdk 存储为顶级方法 app.uploadFile / app.getTempFileURL (无 app.storage())
   // 兼容 js-sdk 回调式与 Promise 式两种风格 (回调可能被忽略, 需同时接 Promise)
-  const raw = app.storage()
   const wrap = (fn) => {
     return new Promise((resolve, reject) => {
       let settled = false
@@ -167,9 +166,9 @@ export async function getStorage() {
     })
   }
   return {
-    uploadFile: (filePath, cloudPath) => wrap((done, fail) => raw.uploadFile({ cloudPath, filePath, success: done, fail })),
-    getTempFileURL: (fileList) => wrap((done, fail) => raw.getTempFileURL({ fileList, success: done, fail })),
-    _raw: raw,
+    uploadFile: (filePath, cloudPath) => wrap((done, fail) => app.uploadFile({ cloudPath, filePath, success: done, fail })),
+    getTempFileURL: (fileList) => wrap((done, fail) => app.getTempFileURL({ fileList, success: done, fail })),
+    _raw: app,
   }
   // #endif
 }
