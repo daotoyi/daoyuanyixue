@@ -41,9 +41,10 @@ if (vc) g = g.replace(/versionCode \d+/, `versionCode ${Number(vc) + 1}`)
 g = g.replace(/versionName "[\d.]+"/, `versionName "${next}"`)
 write('mobile/android/app/build.gradle', g)
 
-// 3. download-page APK 文件名
+// 3. download-page APK 文件名 + 页面版本显示
 let d = read('scripts/download-page/index.html')
 d = d.replace(/daoyuan-v[\d.]+\.apk/g, `daoyuan-v${next}.apk`)
+d = d.replace(/Android v[\d.]+/, `Android v${next}`)
 write('scripts/download-page/index.html', d)
 
 // 4. git tag
