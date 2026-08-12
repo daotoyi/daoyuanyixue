@@ -135,11 +135,36 @@ async function listCourses(data) {
   return ok(res.data.filter((c) => c.status !== false && c.status !== 'off'))
 }
 
-async function getCourse(data) {
-  const res = await db.collection('courses').where({ id: Number(data.id) }).limit(1).get()
-  return ok(res.data[0] || null)
+/* 云存储私有读: 将课时视频 CDN URL 转成管理端签名的临时下载 URL (前端直接可播, 不依赖前端登录态) */
+const COURSE_STORAGE_ENV = 'cloud1-d8gs2k9m311f7272f'
+const COURSE_STORAGE_BUCKET = '636c-cloud1-d8gs2k9m311f7272f'
+async function signVideoUrl(url) {
+  if (!url || typeof url !== 'string' || url.indexOf('tcb.qcloud.la') === -1) return url
+  try {
+    const m = url.match(/https:\/\/[^/]+\.tcb\.qcloud\.la\/(.+)$/)
+    if (!m) return url
+    const cloudPath = decodeURIComponent(m[1])
+    const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${cloudPath}`
+    const res = await app.getTempFileURL({ fileList: [{ fileID, maxAge: 7200 }] })
+    const fl = res && res.fileList && res.fileList[0]
+    if (fl && (fl.code === 'SUCCESS' || !fl.code) && fl.tempFileURL) return fl.tempFileURL
+    if (fl && fl.download_url) return fl.download_url
+    return url
+  } catch (e) {
+    return url
+  }
 }
 
+async function getCourse(data) {
+  const res = await db.collection('courses').where({ id: Number(data.id) }).limit(1).get()
+  const course = res.data[0] || null
+  if (course && Array.isArray(course.episodes)) {
+    for (const ep of course.episodes) {
+      if (ep && ep.video) ep.video = await signVideoUrl(ep.video)
+    }
+  }
+  return ok(course)
+}
 /* ============ 动态 ============ */
 
 async function listMoments() {
