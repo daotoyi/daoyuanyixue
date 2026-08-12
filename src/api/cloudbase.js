@@ -10,6 +10,7 @@
 // CloudBase 环境配置
 const ENV_ID = 'cloud1-d8gs2k9m311f7272f'
 const REGION = 'ap-shanghai'
+const API_BASE = 'https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api'
 
 // #ifdef H5 || APP-PLUS
 // H5 / App: 静态引入 @cloudbase/js-sdk (避免 app 端 code-splitting 冲突)
@@ -167,19 +168,43 @@ export async function getStorage() {
   }
   return {
     uploadFile: async (filePath, cloudPath) => {
-      let file = filePath
-      // #ifdef H5
-      // H5 端 uni.chooseVideo/chooseImage 的 tempFilePath 是 blob: URL, js-sdk 需 File/Blob 对象 → 转 File
+      // H5: 云函数生成 COS 临时上传凭证 → 前端直传 (不依赖前端登录态, 避免 unauthenticated)
+      // 1) 调云函数网关获取上传凭证
+      const meta = await new Promise((resolve, reject) => {
+        uni.request({
+          url: API_BASE,
+          method: 'POST',
+          data: { action: 'storage.getUploadUrl', data: { cloudPath } },
+          timeout: 20000,
+          success: (res) => {
+            if (res.data && res.data.status === 200) resolve(res.data.data || {})
+            else reject(new Error((res.data && res.data.msg) || '获取上传凭证失败'))
+          },
+          fail: (err) => reject(new Error('网络请求失败: ' + (err.errMsg || ''))),
+        })
+      })
+      if (!meta || !meta.url) throw new Error(meta && meta.msg ? meta.msg : '上传凭证无效')
+      // 2) blob URL → Blob/File (uni.chooseVideo/chooseImage 的 tempFilePath)
+      let body = filePath
       try {
-        if (typeof fetch === 'function' && typeof Blob !== 'undefined' && typeof File !== 'undefined' && typeof filePath === 'string' && filePath.indexOf('blob:') === 0) {
-          const blob = await fetch(filePath).then((r) => r.blob())
-          file = new File([blob], cloudPath.split('/').pop() || 'upload.bin', { type: blob.type || 'application/octet-stream' })
+        if (typeof fetch === 'function' && typeof filePath === 'string' && filePath.indexOf('blob:') === 0) {
+          body = await fetch(filePath).then((r) => r.blob())
         }
       } catch (e) {
-        console.warn('[CloudBase] blob→File 转换失败, 按原路径上传', e)
+        console.warn('[CloudBase] blob 读取失败, 按原值上传', e)
       }
-      // #endif
-      return wrap((done, fail) => app.uploadFile({ cloudPath, filePath: file, success: done, fail }))
+      // 3) PUT 直传 COS
+      const headers = {}
+      if (meta.authorization) headers.authorization = meta.authorization
+      if (meta.token) headers['x-cos-security-token'] = meta.token
+      if (meta.cosFileId) headers['x-cos-meta-fileid'] = meta.cosFileId
+      const resp = await fetch(meta.url, { method: 'PUT', headers, body })
+      if (!resp.ok) {
+        let msg = '上传失败 HTTP ' + resp.status
+        try { msg = msg + ' ' + (await resp.text()).slice(0, 80) } catch (e2) {}
+        throw new Error(msg)
+      }
+      return { fileID: meta.fileId || meta.cosFileId }
     },
     getTempFileURL: (fileList) => wrap((done, fail) => app.getTempFileURL({ fileList, success: done, fail })),
     _raw: app,

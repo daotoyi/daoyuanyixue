@@ -1587,7 +1587,7 @@ function uploadCourseCover() {
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID
-          .replace(/^cloud:\/\/[^\/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+          .replace(/^cloud:\/\/[^\/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         courseForm.value.cover = url
         uni.showToast({ title: '封面已上传', icon: 'success' })
       } catch (e) {
@@ -1614,7 +1614,7 @@ function uploadProductImg() {
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID
-          .replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+          .replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         const arr = (productForm.value.imagesText || '').split(',').map((s) => s.trim()).filter(Boolean)
         arr.push(url)
         productForm.value.imagesText = arr.join(',')
@@ -1651,7 +1651,7 @@ function uploadCourseVideo() {
         const upRes = await storage.uploadFile(filePath, cloudPath)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
-        const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         courseForm.value.video = url
         uni.showToast({ title: '视频已上传', icon: 'success' })
       } catch (e) {
@@ -1695,7 +1695,7 @@ function uploadEpisodeVideo(i) {
         const upRes = await storage.uploadFile(filePath, cloudPath)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
-        const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         courseForm.value.episodes[i].video = url
         if (!courseForm.value.episodes[i].title) courseForm.value.episodes[i].title = `第${i + 1}集`
         uni.showToast({ title: '已上传', icon: 'success' })

@@ -154,19 +154,19 @@
     "domains": {
       "request": [
         "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
-        "https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
+        "https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
         "https://tcb-api.tencentcloudapi.com",
         "https://ap-shanghai.tcb-api.tencentcloudapi.com",
         "https://api.weixin.qq.com"
       ],
       "uploadFile": [
         "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
-        "https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
+        "https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
         "https://tcb-api.tencentcloudapi.com"
       ],
       "downloadFile": [
         "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
-        "https://7a68-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
+        "https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
         "https://tcb-api.tencentcloudapi.com"
       ],
       "socket": [

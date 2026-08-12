@@ -1921,6 +1921,26 @@ async function alipayPrepay(data) {
     },
   })
 }
+/* 云存储上传凭证 (管理端生成 COS 临时上传信息, 前端直传, 不依赖前端登录态) */
+async function storageGetUploadUrl(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  if (!cloudPath) return fail('缺少 cloudPath')
+  try {
+    const meta = await app.getUploadMetadata({ cloudPath })
+    const m = meta && meta.data ? meta.data : meta
+    return ok({
+      url: m && m.url,
+      token: m && m.token,
+      authorization: m && (m.authorization || m.auth),
+      fileId: m && (m.fileId || m.cosFileId || m.fileID || m.file_id),
+      cosFileId: m && (m.cosFileId || m.fileId || m.fileID),
+      _dbg: JSON.stringify(meta || null),
+    })
+  } catch (e) {
+    return fail('获取上传凭证失败: ' + (e.message || e))
+  }
+}
+
 async function adminPandaoCreate(data) {
   await ensureCollection('pandao_sessions')
   const max = await db.collection('pandao_sessions').orderBy('id', 'desc').limit(1).get().catch(() => ({ data: [] }))
@@ -2652,6 +2672,7 @@ const ROUTES = {
   'pandao.mine': pandaoMine,
   'order.payBalance': orderPayBalance,
   'order.alipayPrepay': alipayPrepay,
+  'storage.getUploadUrl': storageGetUploadUrl,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
   'admin.pandao.update': adminPandaoUpdate,
