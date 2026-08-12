@@ -352,17 +352,8 @@
           <view class="pp-gj-row"><text class="pp-gj-label">月令</text><text class="pp-gj-val">{{ data.bazi.geju.monthZhi }}（藏干 {{ data.bazi.geju.monthCanggan }}）</text></view>
           <view class="pp-gj-row"><text class="pp-gj-label">透干</text><text class="pp-gj-val">{{ data.bazi.geju.touGan }}</text></view>
           <view class="pp-gj-row"><text class="pp-gj-label">喜用</text><text class="pp-gj-val">{{ data.bazi.geju.xiyong }}</text></view>
+          <view class="pp-gj-row" v-if="data.bazi.geju.feature"><text class="pp-gj-label">特征</text><text class="pp-gj-val">{{ data.bazi.geju.feature }}</text></view>
           <view class="pp-tip2">※ {{ data.bazi.geju.desc }}</view>
-        </view>
-      </view>
-
-      <!-- 当前流年 -->
-      <view class="pp-block">
-        <view class="pp-block-head">流年 · {{ curYear }}年</view>
-        <view class="pp-ln-box">
-          <text class="pp-ln-name" :class="'wx-' + wxCls(GAN_WX[GAN.indexOf(data.bazi.liunian.gan)])">{{ data.bazi.liunian.name }}</text>
-          <text class="pp-ln-ss">{{ data.bazi.liunian.ganShishen }}</text>
-          <text class="pp-ln-wx">纳音 {{ NAYIN[((GAN.indexOf(data.bazi.liunian.gan) * 12) + ZHI.indexOf(data.bazi.liunian.zhi)) % 60] }}</text>
         </view>
       </view>
 
@@ -790,7 +781,6 @@ const tabs = [
 ]
 const tab = ref('bazi')
 const wxOrder = ['木', '火', '土', '金', '水']
-const curYear = new Date().getFullYear()
 
 const data = ref(null)
 
