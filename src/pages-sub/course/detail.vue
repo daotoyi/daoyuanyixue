@@ -49,7 +49,8 @@
         <view class="lesson" v-for="(ep, i) in outlineList" :key="i" @tap="openLesson(i)">
           <view class="lesson-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
           <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
-          <text class="lesson-lock">🔒</text>
+          <text class="lesson-tag" :class="{ free: ep.free !== false }">{{ ep.free !== false ? '免费' : '付费' }}</text>
+          <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
         </view>
         <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
           … 共 {{ course.lessons_count }} 课时
@@ -104,6 +105,19 @@ function openLesson(i) {
   const ep = outlineList.value[i]
   if (!ep || !ep.video) {
     uni.showToast({ title: '本课时暂未上传视频', icon: 'none' })
+    return
+  }
+  // 付费课时: 未购买则引导购买 (购买后全部课时开放)
+  if (ep.free === false && !isOwned.value) {
+    uni.showModal({
+      title: '付费课时',
+      content: '该课时为付费内容，购买课程后即可观看全部课时',
+      confirmText: '去购买',
+      cancelText: '取消',
+      success: (r) => {
+        if (r.confirm) buyCourse()
+      },
+    })
     return
   }
   uni.navigateTo({ url: `/pages-sub/course/lesson?course_id=${course.value.id}&index=${i}` })
@@ -309,6 +323,18 @@ function startLearn() {
   margin-left: 16rpx;
   font-size: 26rpx;
   color: #42372c;
+}
+.lesson-tag {
+  font-size: 20rpx;
+  color: #b04a45;
+  border: 1rpx solid #d9a29e;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-right: 12rpx;
+}
+.lesson-tag.free {
+  color: #3d7a4e;
+  border-color: #9cc3a7;
 }
 .lesson-lock {
   font-size: 26rpx;

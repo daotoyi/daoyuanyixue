@@ -1,5 +1,12 @@
 <template>
-  <view class="ls-page" v-if="lesson">
+  <!-- 付费课时锁定态 (未购买) -->
+  <view class="ls-page ls-locked" v-if="locked">
+    <view class="ls-lock-icon">🔒</view>
+    <text class="ls-lock-title">付费课时</text>
+    <text class="ls-lock-desc">购买课程后即可观看全部课时</text>
+    <view class="ls-btn ls-lock-btn" @tap="goBuy">去购买</view>
+  </view>
+  <view class="ls-page" v-else-if="lesson">
     <!-- 课时标题 -->
     <view class="ls-head">
       <text class="ls-title">{{ lesson.title || '第 ' + (index + 1) + ' 课' }}</text>
@@ -38,17 +45,22 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getCourse } from '../../api/api'
+import { getCourse, getMyCourses } from '../../api/api'
+import { useUserStore } from '../../store/index'
 
+const userStore = useUserStore()
 const course = ref(null)
 const index = ref(0)
 const loaded = ref(false)
+const owned = ref(false)
 const lesson = computed(() => {
   const eps = Array.isArray(course.value && course.value.episodes) ? course.value.episodes : []
   return eps[index.value] || null
 })
 const episodes = computed(() => (Array.isArray(course.value && course.value.episodes) ? course.value.episodes : []))
 const courseTitle = computed(() => (course.value && course.value.title) || '')
+/* 付费课时且未购买 → 锁定 (购买后全部开放) */
+const locked = computed(() => loaded.value && !!lesson.value && lesson.value.free === false && !owned.value)
 
 onLoad(async (options) => {
   index.value = Number(options.index) || 0
@@ -58,6 +70,13 @@ onLoad(async (options) => {
       uni.showToast({ title: '课程不存在', icon: 'none' })
     } else {
       uni.setNavigationBarTitle({ title: course.value.title })
+      // 已购判断
+      if (userStore.isLoggedIn) {
+        try {
+          const mine = await getMyCourses({ uid: userStore.userInfo.uid })
+          owned.value = mine.some((c) => c.id === course.value.id)
+        } catch (e) { /* 忽略 */ }
+      }
     }
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
@@ -69,6 +88,11 @@ function go(i) {
   index.value = i
   // 切换课时回到顶部
   uni.pageScrollTo({ scrollTop: 0, duration: 0 })
+}
+
+/* 去购买: 跳课程详情 (含购买按钮) */
+function goBuy() {
+  uni.navigateTo({ url: `/pages-sub/course/detail?id=${course.value && course.value.id}` })
 }
 </script>
 
@@ -130,5 +154,31 @@ function go(i) {
   align-items: center;
   justify-content: center;
   color: #a08c72;
+}
+/* 付费课时锁定态 */
+.ls-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 60rpx;
+}
+.ls-lock-icon {
+  font-size: 90rpx;
+}
+.ls-lock-title {
+  margin-top: 24rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #42372c;
+}
+.ls-lock-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #a08c72;
+}
+.ls-lock-btn {
+  margin-top: 40rpx;
+  padding: 18rpx 80rpx;
 }
 </style>

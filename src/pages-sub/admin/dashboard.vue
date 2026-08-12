@@ -714,7 +714,7 @@
     <view class="pp-mask" v-if="showCourse" @tap="showCourse = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ courseForm.id ? '编辑课程' : '新增课程' }}</view>
-        <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="courseForm.title" /></view>
+        <view class="f-row"><text class="f-label">标题</text><input class="f-input f-title" v-model="courseForm.title" placeholder="课程名称" /></view>
         <view class="f-row"><text class="f-label">讲师</text><input class="f-input" v-model="courseForm.teacher" /></view>
         <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="courseForm.price" /></view>
         <view class="f-row"><text class="f-label">原价</text><input class="f-input" v-model="courseForm.ot_price" placeholder="选填，划线原价" /></view>
@@ -744,6 +744,11 @@
               <view class="ep-row">
                 <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
                 <text class="btn-p sm" style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
+                <text
+                  class="ep-free"
+                  :class="{ on: ep.free !== false }"
+                  @tap="ep.free = ep.free === false ? true : false"
+                >{{ ep.free === false ? '付费' : '免费' }}</text>
               </view>
             </view>
             <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加课时</view>
@@ -774,7 +779,7 @@
             <text v-for="lv in ['入门', '进阶', '高级']" :key="lv" class="pill" :class="{ on: courseForm.level === lv }" @tap="courseForm.level = lv">{{ lv }}</text>
           </view>
         </view>
-        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="courseForm.description" /></view>
+        <view class="f-row" style="align-items: flex-start"><text class="f-label">描述</text><textarea class="f-textarea f-desc" v-model="courseForm.description" placeholder="课程介绍（可多行）" /></view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showCourse = false">取消</view>
           <view class="btn-p sm" @click="saveCourse">保存</view>
@@ -1666,7 +1671,7 @@ function uploadCourseVideo() {
 /* ---- 视频集管理 (多集) ---- */
 function addEpisode() {
   if (!courseForm.value.episodes) courseForm.value.episodes = []
-  courseForm.value.episodes.push({ title: '', video: '' })
+  courseForm.value.episodes.push({ title: '', video: '', free: true })
 }
 function removeEpisode(i) {
   courseForm.value.episodes.splice(i, 1)
@@ -3124,6 +3129,20 @@ onMounted(async () => {
 .ep-op.danger {
   color: #b04a45;
 }
+/* 课时 免费/付费 切换 */
+.ep-free {
+  font-size: 22rpx;
+  color: #b04a45;
+  border: 1rpx solid #d9a29e;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  margin-left: 10rpx;
+  flex-shrink: 0;
+}
+.ep-free.on {
+  color: #3d7a4e;
+  border-color: #9cc3a7;
+}
 .f-label {
   width: 150rpx;
   font-size: 24rpx;
@@ -3147,6 +3166,14 @@ onMounted(async () => {
   padding: 14rpx 20rpx;
   font-size: 26rpx;
   color: #42372c;
+}
+/* 课程表单: 标题/描述输入框加大 */
+.f-title {
+  height: 96rpx;
+  font-size: 30rpx;
+}
+.f-desc {
+  min-height: 320rpx;
 }
 /* 商品图片上传 */
 .f-img-box { flex: 1; }
