@@ -1812,16 +1812,77 @@ async function pandaoBook(data) {
   return ok({ order_no, order_type: 'appointment' })
 }
 
-/* 取消盘道预约: 删除该用户该场次的预约订单 */
+/* 取消盘道预约: 未支付直接删除; 已支付自动退款(微信退款/余额退回) */
 async function pandaoCancel(data) {
   const { uid, session_id } = data
   if (!uid) return fail('请先登录')
   if (!session_id) return fail('缺少场次')
-  const res = await db.collection('orders')
+  const order = (await db.collection('orders')
     .where({ uid: Number(uid), session_id: Number(session_id), order_type: 'appointment' })
-    .remove()
-  if (!res.deleted) return fail('未找到预约记录')
-  return ok({ deleted: true, count: res.deleted })
+    .orderBy('created_at', 'desc').limit(1).get()).data[0]
+  if (!order) return fail('未找到预约记录')
+
+  // 未支付: 直接删除预约订单
+  if (order.status === '待付款') {
+    await db.collection('orders').where({ order_no: order.order_no }).remove()
+    return ok({ refunded: false, message: '预约已取消' })
+  }
+  // 已支付 → 自动退款 (防重复退款)
+  if (order.status !== '已退款' && order.status !== '已取消') {
+    const refundAmt = Number(order.total_price) || 0
+    const isBalance = String(order.pay_method || '').includes('余额')
+    if (isBalance) {
+      // 余额/积分支付: 直接退回余额
+      const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+      const bal = Number((u && u.balance) || 0) || 0
+      await db.collection('users').where({ uid: Number(uid) })
+        .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+    } else {
+      // 微信支付: 调微信退款 API v3
+      try {
+        const wxpay = require('./wxpay-v3')
+        await wxpay.refund({
+          outTradeNo: order.order_no,
+          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+          totalFee: Math.round(refundAmt * 100),
+          refundFee: Math.round(refundAmt * 100),
+          reason: '用户取消盘道预约',
+        })
+      } catch (e) {
+        return fail('微信退款发起失败: ' + (e.message || '请稍后重试'))
+      }
+    }
+    await db.collection('orders').where({ order_no: order.order_no }).update({
+      status: '已退款',
+      refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      refund_reason: '用户取消预约',
+    })
+    return ok({ refunded: true, message: '已取消预约并自动退款' })
+  }
+  return ok({ refunded: false, message: '预约已取消' })
+}
+
+/* 预约订单余额支付 (H5 端无微信支付能力, 用积分余额真实扣款; 小程序端仍走微信支付) */
+async function orderPayBalance(data) {
+  const { order_no, uid } = data
+  if (!order_no || !uid) return fail('参数错误')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
+  if (order.order_type !== 'appointment') return fail('仅预约订单支持余额支付')
+  const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+  const bal = Number((u && u.balance) || 0) || 0
+  const price = Number(order.total_price) || 0
+  if (bal < price) return fail(`余额不足（需 ${price} 积分），请充值或在小程序内微信支付`)
+  const newBal = Math.round((bal - price) * 100) / 100
+  await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
+  await db.collection('orders').where({ order_no }).update({
+    status: '已完成',
+    pay_method: '余额',
+    balance_used: price,
+    pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+  })
+  return ok({ order_no, balance: String(newBal), message: '预约支付成功' })
 }
 async function adminPandaoCreate(data) {
   await ensureCollection('pandao_sessions')
@@ -2549,6 +2610,7 @@ const ROUTES = {
   'pandao.book': pandaoBook,
   'pandao.cancel': pandaoCancel,
   'pandao.mine': pandaoMine,
+  'order.payBalance': orderPayBalance,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
   'admin.pandao.update': adminPandaoUpdate,

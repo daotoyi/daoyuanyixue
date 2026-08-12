@@ -66,7 +66,8 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, payOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { getOrder, payOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, orderPayBalance } from '../../api/api'
+import { useUserStore } from '../../store/index'
 
 const order = ref(null)
 const orderNo = ref(null)
@@ -79,7 +80,7 @@ const statusTip = computed(() => ({
   已退款: '退款已原路退回',
 })[order.value?.status] || '')
 
-// 支付方式名: 小程序=微信支付; H5/APP=模拟支付
+// 支付方式名: 小程序=微信支付; H5/APP=模拟支付 (预约订单 H5 用积分余额真实支付)
 const payName = computed(() => {
   const m = {
     wechat: '微信支付',
@@ -88,6 +89,7 @@ const payName = computed(() => {
   }
   // #ifndef MP-WEIXIN
   m.wechat = '模拟支付'
+  if (order.value && order.value.order_type === 'appointment') return '积分余额支付'
   // #endif
   return m[order.value?.pay_method] || '模拟支付'
 })
@@ -119,6 +121,18 @@ async function doPay() {
   return
   // #endif
   // #ifndef MP-WEIXIN
+  // 预约订单 (盘道): H5 无微信支付能力, 用积分余额真实扣款, 不走模拟支付
+  if (order.value && order.value.order_type === 'appointment') {
+    try {
+      const userStore = useUserStore()
+      await orderPayBalance({ order_no: orderNo.value, uid: userStore.userInfo.uid })
+      uni.showToast({ title: '预约支付成功', icon: 'success' })
+    } catch (e) {
+      uni.showToast({ title: (e && e.message) || '支付失败', icon: 'none' })
+    }
+    await load()
+    return
+  }
   await payOrder(orderNo.value)
   uni.showToast({ title: '支付成功', icon: 'success' })
   await load()

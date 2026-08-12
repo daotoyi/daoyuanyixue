@@ -248,7 +248,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, getPayConfig, momentLike, myLikes, followList, fileUrl } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl } from '../../api/api'
 import { isCloudFile } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
@@ -380,11 +380,30 @@ function goPandaoDetail(pd) {
 
 /* 盘道报名: 创建预约订单 → 跳结算支付 */
 async function bookPandao(pd) {
-  if (pd._booked) return
   const userStore = useUserStore()
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录再报名', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  // 已预约 → 取消预约 (已支付自动退款)
+  if (pd._booked) {
+    uni.showModal({
+      title: '取消预约',
+      content: '确定取消该场次的预约吗？已支付的费用将自动原路退回。',
+      confirmText: '取消预约',
+      confirmColor: '#b04a45',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          const r = await pandaoCancel({ uid: userStore.userInfo.uid, session_id: pd.id })
+          pd._booked = false
+          uni.showToast({ title: (r && r.message) || '已取消预约', icon: 'success' })
+        } catch (e) {
+          uni.showToast({ title: (e && e.message) || '取消失败', icon: 'none' })
+        }
+      },
+    })
     return
   }
   try {
