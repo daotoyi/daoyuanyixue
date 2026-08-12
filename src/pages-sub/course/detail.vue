@@ -7,6 +7,19 @@
       <view class="cover-title">{{ course.title }}</view>
     </view>
 
+    <!-- 课程视频 (后台配置 video 地址后显示) -->
+    <view class="course-video" v-if="course.video">
+      <video
+        class="course-video-player"
+        :src="course.video"
+        controls
+        poster=""
+        object-fit="contain"
+        :show-center-play-btn="true"
+        :enable-progress-gesture="true"
+      ></video>
+    </view>
+
     <!-- 价格与信息 -->
     <view class="card">
       <view class="price-row">
@@ -173,6 +186,18 @@ function startLearn() {
   font-weight: 500;
   color: #fefbf6;
   text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.5);
+}
+
+/* 课程视频播放区 */
+.course-video {
+  padding: 20rpx 24rpx;
+  background: #f8f3ea;
+}
+.course-video-player {
+  width: 100%;
+  height: 400rpx;
+  border-radius: 16rpx;
+  background: #000;
 }
 
 .card {

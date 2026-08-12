@@ -2183,7 +2183,7 @@ async function adminProductDelete(data) {
 
 async function adminCourseUpdate(data) {
   const doc = {}
-  ;['title', 'price', 'ot_price', 'cover', 'teacher', 'category_id', 'lessons_count', 'students_count', 'level', 'description', 'status'].forEach((k) => {
+  ;['title', 'price', 'ot_price', 'cover', 'video', 'teacher', 'category_id', 'lessons_count', 'students_count', 'level', 'description', 'status'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   await db.collection('courses').where({ id: Number(data.id) }).update(doc)
@@ -2201,6 +2201,7 @@ async function adminCourseCreate(data) {
     price: data.price || '0.00',
     ot_price: data.ot_price || '',
     cover: data.cover || '/static/placeholder/course-01.png',
+    video: data.video || '',
     lessons_count: data.lessons_count || 0,
     students_count: data.students_count || 0,
     level: data.level || '入门',
