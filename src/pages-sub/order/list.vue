@@ -16,6 +16,19 @@
       </view>
     </view>
 
+    <!-- 类型筛选 (商品/课程/充值/AI解盘/预约) -->
+    <view class="type-bar">
+      <view
+        v-for="t in typeTabs"
+        :key="t.key"
+        class="type-tab"
+        :class="{ on: activeType === t.key }"
+        @tap="activeType = t.key"
+      >
+        <text>{{ t.label }}</text>
+      </view>
+    </view>
+
     <!-- 批量删除操作条 -->
     <view class="batch-bar">
       <text v-if="!batchMode" class="batch-enter" @tap="enterBatch">☑ 批量删除</text>
@@ -102,17 +115,42 @@ async function loadOrders() {
 }
 
 const counts = computed(() => {
-  const c = { '全部': allOrders.value.length }
+  const base = typeFiltered.value
+  const c = { '全部': base.length }
   statuses.forEach((s) => {
-    if (s !== '全部') c[s] = allOrders.value.filter((o) => o.status === s).length
+    if (s !== '全部') c[s] = base.filter((o) => o.status === s).length
   })
   return c
 })
 
+/* 类型筛选: 商品/课程/充值/AI解盘/预约 (order_type, 兼容旧订单前缀推断) */
+const typeTabs = [
+  { key: 'all', label: '全部' },
+  { key: 'product', label: '商品' },
+  { key: 'course', label: '课程' },
+  { key: 'recharge', label: '充值' },
+  { key: 'tool_unlock', label: 'AI解盘' },
+  { key: 'appointment', label: '预约' },
+]
+const activeType = ref('all')
+function orderTypeOf(o) {
+  if (o.order_type) return o.order_type
+  if (o.course_id) return 'course'
+  const no = String(o.order_no || '')
+  if (no.startsWith('RC')) return 'recharge'
+  if (no.startsWith('TL')) return 'tool_unlock'
+  return 'product'
+}
+const typeFiltered = computed(() =>
+  activeType.value === 'all'
+    ? allOrders.value
+    : allOrders.value.filter((o) => orderTypeOf(o) === activeType.value)
+)
+
 const orders = computed(() => {
   const list = activeStatus.value === '全部'
-    ? [...allOrders.value]
-    : allOrders.value.filter((o) => o.status === activeStatus.value)
+    ? [...typeFiltered.value]
+    : typeFiltered.value.filter((o) => o.status === activeStatus.value)
   // 按创建时间排序: desc 最新在前(默认), asc 最旧在前
   list.sort((a, b) => (sortOrder.value === 'desc' ? 1 : -1) * (parseTime(a.created_at) - parseTime(b.created_at)))
   return list
@@ -360,6 +398,28 @@ async function doDelete(o) {
   padding-bottom: 16rpx;
   border-bottom: 1rpx solid #efe7d8;
 }
+/* 类型筛选: 商品/课程/充值/AI解盘/预约 (浅色小标签) */
+.type-bar {
+  display: flex;
+  gap: 14rpx;
+  padding: 14rpx 20rpx;
+  background: #f1e7d3;
+  border-bottom: 1rpx solid #e5d5b8;
+}
+.type-tab {
+  padding: 8rpx 26rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #857563;
+  background: #fefbf6;
+  border: 1rpx solid #d9c39a;
+}
+.type-tab.on {
+  background: #8c5a2b;
+  color: #fefbf6;
+  border-color: #8c5a2b;
+}
+
 /* 批量删除操作条 */
 .batch-bar {
   display: flex;
