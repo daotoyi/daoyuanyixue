@@ -16,7 +16,7 @@
     <view class="coupon-list" v-else-if="type === 'coupon'">
       <view class="coupon-card" v-for="c in list" :key="c.id">
         <view class="coupon-left">
-          <text class="coupon-val">{{ c.type === 'percent' ? c.value + '折' : c.discount }}</text>
+          <text class="coupon-val">{{ c.type === 'percent' ? (c.value / 10) + '折' : c.discount }}</text>
           <text class="coupon-name">{{ c.name }}</text>
         </view>
         <view class="coupon-right">
@@ -84,11 +84,11 @@ function goShop() {
   uni.switchTab({ url: '/pages/shop/shop' })
 }
 
-/* 充值积分: 1元=1积分 */
+/* 充值积分: 1元=10积分 */
 function goRecharge() {
   const amounts = [10, 30, 50, 100]
   uni.showActionSheet({
-    itemList: amounts.map((a) => '充 ' + a + ' 元 → ' + a + ' 积分'),
+    itemList: amounts.map((a) => '充 ' + a + ' 元 → ' + a * 10 + ' 积分'),
     success: async (res) => {
       const amt = amounts[res.tapIndex]
       if (!amt) return
