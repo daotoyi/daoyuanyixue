@@ -1056,18 +1056,19 @@ async function aiAsk(data) {
   if (!uid) return fail('请先登录')
   const q = String(question || '').trim()
   if (!q) return fail('请输入问题')
-  // 余额校验 + 扣款 (0.5 元/次)
+  // 积分校验 + 扣款 (5 积分/次)
+  const AI_ASK_COST = 5
   try {
     const u = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
     const user = u.data[0]
     const bal = Number(user && user.balance) || 0
-    if (bal < 0.5) return fail('积分不足，AI 提问每次需 0.5 积分，请先充值积分')
-    const newBal = Math.round((bal - 0.5) * 100) / 100
+    if (bal < AI_ASK_COST) return fail('积分不足，AI 提问每次需 5 积分，请先充值积分')
+    const newBal = Math.round((bal - AI_ASK_COST) * 100) / 100
     await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
     // 记录提问流水
     try {
       await db.collection('ai_asks').add({
-        uid: Number(uid), question: q, cost: 0.5, created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        uid: Number(uid), question: q, cost: AI_ASK_COST, created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       })
     } catch (e) { /* 集合不存在则忽略 */ }
   } catch (e) {

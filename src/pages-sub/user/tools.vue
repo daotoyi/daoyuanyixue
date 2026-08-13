@@ -281,12 +281,12 @@
             </view>
           </view>
 
-          <!-- AI 智能问答 (¥0.5/次, 参考八字) -->
+          <!-- AI 智能问答 (5积分/次, 参考八字) -->
           <view class="jp-section">
-            <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
+            <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
             <view class="ai-q-row">
               <input class="ai-q-input" v-model="lyAIQuestion" placeholder="向 AI 提问（如：此卦近期财运如何）" placeholder-class="qm-c-ph" />
-              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 ¥0.5</text></view>
+              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 5积分</text></view>
             </view>
             <view class="jp-ai-loading" v-if="lyAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
             <view v-if="lyAIAnswer && lyAIAnswer.length" class="ai-q-answer">
@@ -404,12 +404,12 @@
             </view>
           </view>
 
-          <!-- AI 智能问答 (¥0.5/次, 参考八字) -->
+          <!-- AI 智能问答 (5积分/次, 参考八字) -->
           <view class="jp-section">
-            <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
+            <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
             <view class="ai-q-row">
               <input class="ai-q-input" v-model="lrAIQuestion" placeholder="向 AI 提问（如：此课出行宜忌）" placeholder-class="qm-c-ph" />
-              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 ¥0.5</text></view>
+              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 5积分</text></view>
             </view>
             <view class="jp-ai-loading" v-if="lrAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
             <view v-if="lrAIAnswer && lrAIAnswer.length" class="ai-q-answer">
@@ -748,7 +748,7 @@ function saveLiuyao() {
   showToolSaveModal.value = true
 }
 
-/* ===== 六爻 AI 智能问答 (¥0.5/次, 参考八字) ===== */
+/* ===== 六爻 AI 智能问答 (5积分/次, 参考八字) ===== */
 const lyAIQuestion = ref('')
 const lyAIAnswer = ref([])
 const lyAIAsking = ref(false)
@@ -765,7 +765,7 @@ function askLyAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从余额扣除 0.5 元，是否继续？',
+    content: '本次提问将从积分扣除 5 积分，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {
@@ -945,7 +945,7 @@ function confirmToolSave() {
   _pendingSave = null
 }
 
-/* ===== 六壬 AI 智能问答 (¥0.5/次, 参考八字) ===== */
+/* ===== 六壬 AI 智能问答 (5积分/次, 参考八字) ===== */
 const lrAIQuestion = ref('')
 const lrAIAnswer = ref([])
 const lrAIAsking = ref(false)
@@ -962,7 +962,7 @@ function askLrAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从余额扣除 0.5 元，是否继续？',
+    content: '本次提问将从积分扣除 5 积分，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {
