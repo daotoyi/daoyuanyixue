@@ -433,7 +433,7 @@ function confirmClear() {
 .wx-wood { color: #2e7d32; }
 .wx-fire { color: #c62828; }
 .wx-earth { color: #8d6e3f; }
-.wx-metal { color: #b8860b; }
+.wx-metal { color: #d4a017; }
 .wx-water { color: #1565c0; }
 /* 编辑备注弹窗 */
 .rec-mask {

@@ -1902,7 +1902,7 @@ function runLiuren() {
 .wx-wood { color: #2e7d32; }
 .wx-fire { color: #c62828; }
 .wx-earth { color: #8d6e3f; }
-.wx-metal { color: #b8860b; }
+.wx-metal { color: #d4a017; }
 .wx-water { color: #1565c0; }
 
 /* 五行统计 */
@@ -1940,7 +1940,7 @@ function runLiuren() {
 .wz-wx-fill.wx-wood { background: #2e7d32; }
 .wz-wx-fill.wx-fire { background: #c62828; }
 .wz-wx-fill.wx-earth { background: #8d6e3f; }
-.wz-wx-fill.wx-metal { background: #b8860b; }
+.wz-wx-fill.wx-metal { background: #d4a017; }
 .wz-wx-fill.wx-water { background: #1565c0; }
 .wz-wx-num {
   width: 60rpx;
@@ -2455,7 +2455,7 @@ function runLiuren() {
 .wx-wood { color: #2e7d32; }
 .wx-fire { color: #c62828; }
 .wx-earth { color: #8d6e3f; }
-.wx-metal { color: #b8860b; }
+.wx-metal { color: #d4a017; }
 .wx-water { color: #1565c0; }
 .th-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
 .th-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }

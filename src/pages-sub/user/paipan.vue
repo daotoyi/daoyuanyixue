@@ -2135,7 +2135,7 @@ function applyJpUnlock() {
 .pp-wx-fill.wx-wood { background: #2e7d32; }
 .pp-wx-fill.wx-fire { background: #c62828; }
 .pp-wx-fill.wx-earth { background: #8d6e3f; }
-.pp-wx-fill.wx-metal { background: #b8860b; }
+.pp-wx-fill.wx-metal { background: #d4a017; }
 .pp-wx-fill.wx-water { background: #1565c0; }
 .pp-wx-num { width: 60rpx; font-size: 22rpx; color: #857563; text-align: right; }
 
@@ -2310,7 +2310,7 @@ function applyJpUnlock() {
 .wx-wood { color: #2e7d32; }
 .wx-fire { color: #c62828; }
 .wx-earth { color: #8d6e3f; }
-.wx-metal { color: #b8860b; }
+.wx-metal { color: #d4a017; }
 .wx-water { color: #1565c0; }
 
 /* 奇门 */
