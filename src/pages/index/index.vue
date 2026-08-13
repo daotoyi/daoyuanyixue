@@ -187,7 +187,7 @@
       <view class="pandao-follow pandao-notify">
         <text class="pf-icon">🔔</text>
         <view class="pf-info">
-          <text class="pf-title">接收订单/盘道/课程消息通知</text>
+          <text class="pf-title">关注 真和盛文化 服务号</text>
           <text class="pf-desc">绑定「真和盛」服务号，订单支付、盘道活动、课程动态实时推送</text>
         </view>
         <view class="pf-btn" @tap="bindGzhNotify">
