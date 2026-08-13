@@ -422,7 +422,7 @@
           </view>
           <view class="jp-lock" v-if="!isJpUnlocked(m.key) && openJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+            <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payJiepan">
               <text>¥9.9 立即解锁</text>
             </view>
@@ -568,7 +568,7 @@
           </view>
           <view class="jp-lock" v-if="!isQmUnlocked(m.key) && qmOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>¥9.9 立即解锁</text></view>
           </view>
         </view>
@@ -736,7 +736,7 @@
           </view>
           <view class="jp-lock" v-if="!isZwUnlocked(m.key) && zwOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>¥9.9 立即解锁</text></view>
           </view>
         </view>
@@ -2088,8 +2088,14 @@ function applyJpUnlock() {
 .pp-head .pp-cell.ex-liushi { background: #f5efe3; color: #3f6f8c; }
 .pp-gan text, .pp-zhi text {
   font-size: 42rpx;
-  font-weight: 600;
+  font-weight: 700;
 }
+/* 天干/地支大字: 五行色加深加重 (与工具入口浅色区分) */
+.pp-gan text.wx-wood, .pp-zhi text.wx-wood { color: #1b5e20; }
+.pp-gan text.wx-fire, .pp-zhi text.wx-fire { color: #b71c1c; }
+.pp-gan text.wx-earth, .pp-zhi text.wx-earth { color: #6d4c2e; }
+.pp-gan text.wx-metal, .pp-zhi text.wx-metal { color: #c99600; }
+.pp-gan text.wx-water, .pp-zhi text.wx-water { color: #0d47a1; }
 /* 五行小图标 (干支旁) */
 .pp-wx-icon { font-size: 20rpx !important; font-weight: 400 !important; margin-right: 2rpx; }
 .pp-gan, .pp-zhi { display: flex; align-items: center; justify-content: center; }

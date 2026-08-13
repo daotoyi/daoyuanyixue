@@ -275,7 +275,7 @@
               </view>
               <view class="jp-lock" v-if="!isLyUnlocked(m.key) && lyOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
                 <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>¥9.9 立即解锁</text></view>
               </view>
             </view>
@@ -398,7 +398,7 @@
               </view>
               <view class="jp-lock" v-if="!isLrUnlocked(m.key) && lrOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9.9 元</text>
+                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
                 <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>¥9.9 立即解锁</text></view>
               </view>
             </view>

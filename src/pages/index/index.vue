@@ -451,11 +451,23 @@ function followGzh() {
   if (wx && wx.openOfficialAccountProfile) {
     wx.openOfficialAccountProfile({
       success: () => {},
-      fail: () => copyGzhWxid(),
+      fail: () => {
+        uni.showModal({
+          title: '无法直接跳转',
+          content: '需先在微信公众平台将本小程序与「真和盛」公众号关联（小程序后台 → 设置 → 关联设置 → 关联公众号，同主体可直接关联），关联后点击即可直达公众号主页。\n\n当前可复制微信号搜索关注：zhenhesheng_com',
+          showCancel: false,
+          confirmText: '知道了',
+        })
+      },
     })
     return
   }
-  copyGzhWxid()
+  uni.showModal({
+    title: '无法直接跳转',
+    content: '当前微信版本暂不支持直接打开公众号，请复制微信号搜索关注：zhenhesheng_com',
+    showCancel: false,
+    confirmText: '知道了',
+  })
   // #endif
   // #ifndef MP-WEIXIN
   if (GZH_HOME_URL) {
