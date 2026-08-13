@@ -270,8 +270,8 @@ function buildTabs(cfg) {
 }
 
 const currentTab = ref('recommend')
-// 公众号主页链接 (H5/APP 端点击"关注"直接跳转; 填 https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=xxx)
-const GZH_HOME_URL = ''
+// 公众号主页链接 (H5/APP 端点击"关注"直接跳转, __biz 来自「真和盛」公众号文章链接)
+const GZH_HOME_URL = 'https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=MzcwOTM0NTY1MA=='
 const momentList = ref([])
 const followUids = ref([]) // 我关注的用户 uid 列表 (关注页过滤用)
 const liveList = ref([])
