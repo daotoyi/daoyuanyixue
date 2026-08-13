@@ -187,8 +187,8 @@
       <view class="pandao-follow pandao-notify">
         <text class="pf-icon">🔔</text>
         <view class="pf-info">
-          <text class="pf-title">关注 真和盛文化 服务号</text>
-          <text class="pf-desc">绑定「真和盛」服务号，订单支付、盘道活动、课程动态实时推送</text>
+          <text class="pf-title">关注「真和盛文化」服务号</text>
+          <text class="pf-desc">绑定「真和盛文化」服务号，订单支付、盘道活动、课程动态实时推送</text>
         </view>
         <view class="pf-btn" @tap="bindGzhNotify">
           <text>开启通知</text>
@@ -422,7 +422,7 @@ async function bookPandao(pd) {
   }
 }
 
-/* 消息通知绑定: 复制服务号绑定链接, 微信内打开授权 */
+/* 消息通知绑定: 小程序直接打开「真和盛文化」服务号主页(关注); H5/APP 复制绑定链接 */
 function bindGzhNotify() {
   const us = useUserStore()
   if (!us.isLoggedIn) {
@@ -431,12 +431,31 @@ function bindGzhNotify() {
     return
   }
   const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/gzh-bind.html?uid=' + (us.userInfo.uid || 0)
+  // #ifdef MP-WEIXIN
+  // 跳「真和盛文化」服务号主页 (gh_94b2620c3a83 服务号原始ID, 需已关联/同主体, 基础库 3.7.10+)
+  if (wx && wx.openOfficialAccountProfile) {
+    wx.openOfficialAccountProfile({
+      username: 'gh_94b2620c3a83',
+      success: () => {},
+      fail: () => copyBindLink(link),
+    })
+    return
+  }
+  copyBindLink(link)
+  // #endif
+  // #ifndef MP-WEIXIN
+  copyBindLink(link)
+  // #endif
+}
+
+/* 回退: 复制服务号绑定链接, 微信内打开授权 */
+function copyBindLink(link) {
   uni.setClipboardData({
     data: link,
     success: () => {
       uni.showModal({
         title: '开启消息通知',
-        content: '绑定链接已复制：\n' + link + '\n\n请在微信中打开链接完成绑定。绑定后，订单支付成功、盘道活动、课程动态将通过「真和盛」服务号推送给您。（需先关注服务号）',
+        content: '绑定链接已复制：\n' + link + '\n\n请在微信中打开链接完成绑定。绑定后，订单支付成功、盘道活动、课程动态将通过「真和盛文化」服务号推送给您。（需先关注服务号）',
         showCancel: false,
         confirmText: '知道了',
       })

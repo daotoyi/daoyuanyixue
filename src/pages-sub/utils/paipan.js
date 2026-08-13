@@ -8,6 +8,8 @@
  * 说明: 紫微/奇门/六壬为简化排盘, 仅供学习参考
  */
 
+import { solarToLunar } from './lunar.js'
+
 export const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
 export const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 export const GAN_WX = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水']
@@ -481,28 +483,81 @@ function gzIndex60(g, z) {
   return 0
 }
 /* birth: { lunarYear, lunarMonth, lunarDay, isLeap, shichen(0-11) } */
+/* 四柱方式称骨推算: 月柱→节月骨重 + 日柱反推公历日期→农历日骨重 (年柱60循环取最近匹配年) */
+function gzMonthDayQian(full) {
+  if (!full || !full.pillars || full.pillars.length < 3) return { monthQian: 0, dayQian: 0, note: '' }
+  const [yp, mp, dp] = full.pillars
+  const zhiToJie = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 11: 10, 0: 11, 1: 12 }
+  const jie = zhiToJie[mp.z] || 0
+  const monthQian = jie >= 1 && jie <= 12 ? (CG_MONTH[jie - 1] || 0) : 0
+  // 节月起始 (公历 [月,日]): 节月1=寅(立春2/4) ... 12=丑(小寒1/6)
+  const starts = [[2, 4], [3, 6], [4, 5], [5, 6], [6, 6], [7, 7], [8, 8], [9, 8], [10, 8], [11, 7], [12, 7], [1, 6]]
+  const [sm, sd] = starts[jie - 1]
+  const [em, ed] = starts[jie % 12] // 下一节月起始 (窗口右边界)
+  const nowY = new Date().getFullYear()
+  let dayQian = 0
+  let note = ''
+  for (let y = nowY - 60; y <= nowY; y++) {
+    // 年柱匹配 (以节月起始日立春界年柱为准)
+    const ypCheck = yearOfPillar(y, sm, sd)
+    if (ypCheck.g !== yp.g || ypCheck.z !== yp.z) continue
+    let y2 = y
+    if (jie === 12) y2 = y + 1 // 丑月窗口跨年 (1/6 -> 次年2/4)
+    const sDate = Date.UTC(y, sm - 1, sd)
+    const eDate = Date.UTC(y2, em - 1, ed)
+    for (let t = sDate; t < eDate; t += 86400000) {
+      const dt = new Date(t)
+      const gy = dt.getUTCFullYear()
+      const gm = dt.getUTCMonth() + 1
+      const gd = dt.getUTCDate()
+      const pill = dayPillar(gy, gm, gd)
+      if (pill.g === dp.g && pill.z === dp.z) {
+        try {
+          const lu = solarToLunar(gy, gm, gd)
+          dayQian = CG_DAY[Math.max(0, (lu.day || 1) - 1)] || 0
+        } catch (e) {}
+        note = `（四柱推算：${gy}年${gm}月${gd}日）`
+        break
+      }
+    }
+    if (note) break
+  }
+  return { monthQian, dayQian, note, jie }
+}
+
 export function chengGu(birth, full) {
   if (!birth) return null
   const yp = full && full.pillars ? full.pillars[0] : null
   const gzIdx = yp ? gzIndex60(yp.g, yp.z) : 0
   const yQian = CG_YEAR[gzIdx] || 0
-  const mQian = birth.lunarMonth >= 1 && birth.lunarMonth <= 12 ? CG_MONTH[birth.lunarMonth - 1] : 0
-  const dQian = birth.lunarDay >= 1 && birth.lunarDay <= 30 ? CG_DAY[birth.lunarDay - 1] : 0
+  const gzOnly = birth.gzOnly === true
+  // 四柱方式: 月柱→节月骨重, 日柱反推公历→农历日骨重
+  let mQian = 0
+  let dQian = 0
+  let gzNote = ''
+  if (gzOnly) {
+    const r = gzMonthDayQian(full)
+    mQian = r.monthQian
+    dQian = r.dayQian
+    gzNote = r.note
+  } else {
+    mQian = birth.lunarMonth >= 1 && birth.lunarMonth <= 12 ? CG_MONTH[birth.lunarMonth - 1] : 0
+    dQian = birth.lunarDay >= 1 && birth.lunarDay <= 30 ? CG_DAY[birth.lunarDay - 1] : 0
+  }
   const hQian = birth.shichen >= 0 && birth.shichen <= 11 ? CG_HOUR[birth.shichen] : 0
   const total = yQian + mQian + dQian + hQian
   const liang = Math.floor(total / 10)
   const qian = total % 10
   const key = liang * 10 + qian
   const qText = (n) => (n >= 10 ? Math.floor(n / 10) + '两' : '') + (n % 10 ? (n % 10) + '钱' : '')
-  const gzOnly = birth.gzOnly === true
   return {
-    yearText: (yp ? yp.name + '年' : '') + (gzOnly ? '（四柱输入，无农历月日）' : ''),
+    yearText: (yp ? yp.name + '年' : '') + (gzOnly ? (gzNote || '（四柱推算）') : ''),
     totalText: `${liang}两${qian ? qian + '钱' : ''}`,
     duanyu: CG_DUANYU[key] || '',
     detail: [
       { label: '年', val: qText(yQian) },
-      { label: '月', val: gzOnly ? '—' : qText(mQian) },
-      { label: '日', val: gzOnly ? '—' : qText(dQian) },
+      { label: '月', val: qText(mQian) },
+      { label: '日', val: qText(dQian) },
       { label: '时', val: qText(hQian) },
     ],
   }
