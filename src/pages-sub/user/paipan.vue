@@ -422,7 +422,7 @@
           </view>
           <view class="jp-lock" v-if="!isJpUnlocked(m.key) && openJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
+            <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payJiepan">
               <text>¥9.9 立即解锁</text>
             </view>
@@ -568,7 +568,7 @@
           </view>
           <view class="jp-lock" v-if="!isQmUnlocked(m.key) && qmOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
+            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>¥9.9 立即解锁</text></view>
           </view>
         </view>
@@ -736,7 +736,7 @@
           </view>
           <view class="jp-lock" v-if="!isZwUnlocked(m.key) && zwOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
+            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>¥9.9 立即解锁</text></view>
           </view>
         </view>
@@ -902,10 +902,10 @@ function payQmJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9.9 积分
+  // H5 端: 余额扣款 9 积分
   uni.showModal({
     title: '解锁奇门深度解盘',
-    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    content: '将从积分余额扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -1305,10 +1305,10 @@ function payZwJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9.9 积分
+  // H5 端: 余额扣款 9 积分
   uni.showModal({
     title: '解锁紫微深度解盘',
-    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    content: '将从积分余额扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -1895,10 +1895,10 @@ function payJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9.9 积分
+  // H5 端: 余额扣款 9 积分
   uni.showModal({
     title: '解锁四柱深度解盘',
-    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    content: '将从积分余额扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {

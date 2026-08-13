@@ -47,7 +47,7 @@
       <view class="co-row-line">
         <text class="line-label">余额抵扣</text>
         <view class="balance-right">
-          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount : '可用 ¥' + balance }}</text>
+          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount : '可用 ' + balance + ' 积分' }}</text>
           <switch :checked="balanceUsed" color="#8c5a2b" style="transform: scale(0.8)" @change="toggleBalance" />
         </view>
       </view>
@@ -220,7 +220,9 @@ const couponDiscount = computed(() => {
   return m ? Number(m[0]) : 0
 })
 
-const discount = computed(() => couponDiscount.value + (balanceUsed.value ? Math.min(parseFloat(balance.value), subTotal.value - couponDiscount.value) : 0))
+// 积分→金额: 10积分=1元
+const POINTS_TO_YUAN = 0.1
+const discount = computed(() => couponDiscount.value + (balanceUsed.value ? Math.min(parseFloat(balance.value) * POINTS_TO_YUAN, subTotal.value - couponDiscount.value) : 0))
 
 const finalPrice = computed(() =>
   Math.max(0, subTotal.value - discount.value).toFixed(2)
@@ -372,10 +374,10 @@ function toggleBalance() {
   }
   balanceUsed.value = !balanceUsed.value
 }
-// 余额实际抵扣金额
+// 积分实际抵扣金额 (10积分=1元)
 const balanceDiscount = computed(() => {
   if (!balanceUsed.value) return '0.00'
-  return Math.min(parseFloat(balance.value) || 0, Math.max(0, subTotal.value - couponDiscount.value)).toFixed(2)
+  return (Math.min(parseFloat(balance.value) * POINTS_TO_YUAN, Math.max(0, subTotal.value - couponDiscount.value))).toFixed(2)
 })
 
 async function submitOrder() {

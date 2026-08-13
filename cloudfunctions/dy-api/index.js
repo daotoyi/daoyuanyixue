@@ -880,10 +880,10 @@ async function vipLevel(data) {
       total += Number(o.total_price) || 0
     }
   })
-  // 2. 储值累计 = 历史累计储值 total_recharge (充值/后台加余额时累计) + 兜底当前余额
+  // 2. 储值累计 = 历史累计储值 total_recharge(元) + 兜底当前余额(积分→元 除以10)
   const userRes = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
   const user = userRes.data[0] || {}
-  const recharge = Number(user.total_recharge || user.balance || 0) || 0
+  const recharge = Number(user.total_recharge || 0) || (Number(user.balance || 0) / RECHARGE_RATE) || 0
   // 等级 = 消费 + 储值 合计
   const totalAmount = total + recharge
   let level = 0
@@ -1364,8 +1364,8 @@ async function checkUpdate() {
 
 /* ============ 订单 (NoSQL 内存主键: order_no) ============ */
 
-/* 积分充值: 1元 = 1 积分, 创建充值订单 → 微信支付 */
-const RECHARGE_RATE = 1 // 1元 = 1 积分
+/* 积分充值: 1元 = 10 积分, 创建充值订单 → 微信支付 */
+const RECHARGE_RATE = 10 // 1元 = 10 积分
 async function rechargeCreate(data) {
   const { uid, amount } = data
   if (!uid) return fail('请先登录')
@@ -1429,21 +1429,22 @@ async function toolUnlock(data) {
     liuyao: '六爻 AI 深度解盘', liuren: '大六壬 AI 深度解盘',
   }
 
-  // 余额扣款解锁 (H5 端)
+  // 余额(积分)扣款解锁 (H5 端): 9 积分/次
   if (String(pay_method || '') === 'balance') {
+    const BAL_PRICE = 9
     const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
     const bal = Number((u && u.balance) || 0) || 0
-    if (bal < PRICE) return fail('余额不足，解锁需 9.9 积分，请先充值')
-    const newBal = Math.round((bal - PRICE) * 100) / 100
+    if (bal < BAL_PRICE) return fail('积分不足，解锁需 9 积分，请先充值')
+    const newBal = Math.round((bal - BAL_PRICE) * 100) / 100
     await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
     // 记一笔工具解锁订单 (已支付状态)
     const order_no = `TL${Date.now()}${Math.floor(Math.random() * 1000)}`
     await db.collection('orders').add({
       order_no,
       status: '已完成',
-      total_price: String(PRICE),
+      total_price: String(BAL_PRICE),
       coupon_discount: 0,
-      balance_used: PRICE,
+      balance_used: BAL_PRICE,
       items: [{ id: 'tool_' + tool, name: names[tool], price: String(PRICE), qty: 1 }],
       pay_method: '余额',
       address: {},
@@ -1508,6 +1509,18 @@ async function payOrder(data) {
     ? { order_no: data.order_no }
     : { _id: data._id }
   const res = await db.collection('orders').where(cond).update({ status: '待发货' })
+  // 余额(积分)支付: 扣减积分 (balance_used 为金额元, 1元=10积分)
+  try {
+    const o = (await db.collection('orders').where(cond).limit(1).get()).data[0]
+    if (o && o.balance_used && o.uid) {
+      const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
+      const bal = Number((u && u.balance) || 0) || 0
+      const cost = Math.round(Number(o.balance_used) * RECHARGE_RATE * 100) / 100
+      if (bal >= cost) {
+        await db.collection('users').where({ uid: Number(o.uid) }).update({ balance: String(Math.round((bal - cost) * 100) / 100) })
+      }
+    }
+  } catch (e) { /* 扣分失败不阻断 */ }
   // 推送订单消息
   try {
     const o = await db.collection('orders').where(cond).limit(1).get()
@@ -2443,14 +2456,14 @@ async function adminUserUpdate(data) {
   if (data.dao_code) {
     doc.invite_code = data.dao_code
   }
-  // 后台改余额(充值)时累计储值总额 total_recharge (用于 VIP 等级)
+  // 后台改余额(充值)时累计储值总额 total_recharge (积分→元 除以10, 用于 VIP 等级)
   if (data.balance !== undefined && data.balance !== '') {
     const exist = await db.collection('users').where({ uid: Number(data.uid) }).limit(1).get()
     const oldUser = exist.data[0] || {}
     const oldBal = Number(oldUser.balance || 0) || 0
     const newBal = Number(data.balance) || 0
     if (newBal > oldBal) {
-      const addRecharge = Math.round((newBal - oldBal) * 100) / 100
+      const addRecharge = Math.round(((newBal - oldBal) / RECHARGE_RATE) * 100) / 100
       doc.total_recharge = Math.round(((Number(oldUser.total_recharge || 0) || 0) + addRecharge) * 100) / 100
     }
   }

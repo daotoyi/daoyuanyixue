@@ -498,35 +498,40 @@ function gzMonthDayQian(full) {
   let dayQian = 0
   let note = ''
   // 优先最近的匹配年 (60甲子循环同柱年多解时取最近, 更接近用户真实出生年)
-  for (let y = nowY; y >= 1900; y--) {
-    // 年柱匹配 (以节月起始日立春界年柱为准)
-    const ypCheck = yearOfPillar(y, sm, sd)
-    if (ypCheck.g !== yp.g || ypCheck.z !== yp.z) continue
-    let y2 = y
-    // 窗口跨年: 下一节月起月 < 当前节月起月 (子月11/7->次年小寒, 丑月1/6->次年立春)
-    if (em < sm) y2 = y + 1
-    // 窗口 ±2 天缓冲 (节气近似误差), 再以月柱验证过滤
-    const sDate = Date.UTC(y, sm - 1, sd) - 2 * 86400000
-    const eDate = Date.UTC(y2, em - 1, ed) + 2 * 86400000
-    for (let t = sDate; t < eDate; t += 86400000) {
-      const dt = new Date(t)
-      const gy = dt.getUTCFullYear()
-      const gm = dt.getUTCMonth() + 1
-      const gd = dt.getUTCDate()
-      const pill = dayPillar(gy, gm, gd)
-      if (pill.g === dp.g && pill.z === dp.z) {
-        // 月柱验证 (五虎遁): 该日期实际月柱须与输入月柱一致, 排除缓冲误匹配
-        const mpCheck = monthPillar(yearOfPillar(gy, gm, gd), gm, gd)
-        if (mpCheck.g !== mp.g || mpCheck.z !== mp.z) continue
-        try {
-          const lu = solarToLunar(gy, gm, gd)
-          dayQian = CG_DAY[Math.max(0, (lu.day || 1) - 1)] || 0
-        } catch (e) {}
-        note = `（四柱推算：${gy}年${gm}月${gd}日）`
-        break
+  // 严格模式: 月柱五虎遁验证; 失败后宽松模式: 仅按节月窗口+日柱匹配(窗口本身按月支限定)
+  for (let strict = 1; strict >= 0 && !note; strict--) {
+    for (let y = nowY; y >= 1900; y--) {
+      // 年柱匹配 (以节月起始日立春界年柱为准)
+      const ypCheck = yearOfPillar(y, sm, sd)
+      if (ypCheck.g !== yp.g || ypCheck.z !== yp.z) continue
+      let y2 = y
+      // 窗口跨年: 下一节月起月 < 当前节月起月 (子月11/7->次年小寒, 丑月1/6->次年立春)
+      if (em < sm) y2 = y + 1
+      // 窗口 ±2 天缓冲 (节气近似误差), 再以月柱验证过滤
+      const sDate = Date.UTC(y, sm - 1, sd) - 2 * 86400000
+      const eDate = Date.UTC(y2, em - 1, ed) + 2 * 86400000
+      for (let t = sDate; t < eDate; t += 86400000) {
+        const dt = new Date(t)
+        const gy = dt.getUTCFullYear()
+        const gm = dt.getUTCMonth() + 1
+        const gd = dt.getUTCDate()
+        const pill = dayPillar(gy, gm, gd)
+        if (pill.g === dp.g && pill.z === dp.z) {
+          if (strict) {
+            // 月柱验证 (五虎遁): 该日期实际月柱须与输入月柱一致, 排除缓冲误匹配
+            const mpCheck = monthPillar(yearOfPillar(gy, gm, gd), gm, gd)
+            if (mpCheck.g !== mp.g || mpCheck.z !== mp.z) continue
+          }
+          try {
+            const lu = solarToLunar(gy, gm, gd)
+            dayQian = CG_DAY[Math.max(0, (lu.day || 1) - 1)] || 0
+          } catch (e) {}
+          note = `（四柱推算：${gy}年${gm}月${gd}日）`
+          break
+        }
       }
+      if (note) break
     }
-    if (note) break
   }
   if (!note) note = '（日柱未能反推：四柱组合与公历不符，请核对输入）'
   return { monthQian, dayQian, note, jie }

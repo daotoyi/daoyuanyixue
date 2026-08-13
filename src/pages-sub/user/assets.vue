@@ -2,10 +2,10 @@
   <view class="assets-page">
     <!-- 积分 -->
     <view class="balance-card" v-if="type === 'balance'">
-      <text class="bc-corner">1 积分 = 1 元</text>
+      <text class="bc-corner">1 元 = 10 积分</text>
       <text class="bc-label">我的积分</text>
       <text class="bc-num">{{ userInfo.balance || '0' }} <text class="bc-unit">积分</text></text>
-      <text class="bc-tip">充值 1 元获得 1 积分，积分可在结算时抵扣</text>
+      <text class="bc-tip">充值 1 元获得 10 积分，积分可在结算时抵扣</text>
       <view class="bc-actions">
         <view class="btn-p sm" @click="goRecharge">充值积分</view>
         <view class="btn-p plain sm" @click="goShop">去购物</view>

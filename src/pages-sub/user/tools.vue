@@ -275,7 +275,7 @@
               </view>
               <view class="jp-lock" v-if="!isLyUnlocked(m.key) && lyOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
+                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9 积分</text>
                 <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>¥9.9 立即解锁</text></view>
               </view>
             </view>
@@ -398,7 +398,7 @@
               </view>
               <view class="jp-lock" v-if="!isLrUnlocked(m.key) && lrOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9.9 积分</text>
+                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9 积分</text>
                 <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>¥9.9 立即解锁</text></view>
               </view>
             </view>
@@ -659,10 +659,10 @@ function payLyJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9.9 积分
+  // H5 端: 余额扣款 9 积分
   uni.showModal({
     title: '解锁六爻深度解盘',
-    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    content: '将从积分余额扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -852,10 +852,10 @@ function payLrJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9.9 积分
+  // H5 端: 余额扣款 9 积分
   uni.showModal({
     title: '解锁六壬深度解盘',
-    content: '将从积分余额扣除 9.9 积分，是否继续？',
+    content: '将从积分余额扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
