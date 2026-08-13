@@ -463,17 +463,15 @@ function copyBindLink(link) {
   })
 }
 
-/* 关注公众号: 先复制微信号并弹'已复制'提示(无论后续跳转成败/取消都已复制), 确认后再尝试直跳公众号主页 */
+/* 关注公众号: 小程序直接打开「真和盛」公众号主页(关注); 取消/失败时复制微信号并弹'已复制'提示 */
 function followGzh() {
   // #ifdef MP-WEIXIN
+  // 跳「真和盛」公众号主页 (gh_9703c59cb860 公众号原始ID, 需已关联/同主体, 基础库 3.7.10+)
   if (wx && wx.openOfficialAccountProfile) {
-    // 先复制+提示, 用户点'知道了（已复制）'后再调官方API直跳公众号主页
-    copyGzhWxid(() => {
-      wx.openOfficialAccountProfile({
-        username: 'gh_9703c59cb860', // 「真和盛」公众号原始 ID
-        success: () => {},
-        fail: () => {},
-      })
+    wx.openOfficialAccountProfile({
+      username: 'gh_9703c59cb860', // 「真和盛」公众号原始 ID
+      success: () => {},
+      fail: () => copyGzhWxid(),
     })
     return
   }
@@ -493,8 +491,8 @@ function followGzh() {
   // #endif
 }
 
-/* 复制公众号微信号并弹'已复制'提示; 确认后执行可选回调 */
-function copyGzhWxid(cb) {
+/* 回退: 复制公众号微信号并弹'已复制'提示 */
+function copyGzhWxid() {
   uni.setClipboardData({
     data: 'zhenhesheng_com',
     success: () => {
@@ -503,7 +501,6 @@ function copyGzhWxid(cb) {
         content: '微信号已复制：zhenhesheng_com\n请打开微信搜索「真和盛」公众号关注',
         showCancel: false,
         confirmText: '知道了（已复制）',
-        success: () => cb && cb(),
       })
     },
   })
