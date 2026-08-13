@@ -2223,6 +2223,7 @@ onMounted(async () => {
   height: 100vh;
   display: flex;
   background: #faf3e9;
+  overflow: hidden;
 }
 /* u-popup 脱离 flex 占位 (H5 下 popup 根元素 static, 会挤占 main 宽度) */
 .admin-dash :deep(.u-popup) {
@@ -2235,6 +2236,7 @@ onMounted(async () => {
 /* ===== 侧边栏 ===== */
 .sidebar {
   width: 210rpx;
+  height: 100vh;
   background: #4e3420;
   display: flex;
   flex-direction: column;
@@ -2298,6 +2300,7 @@ onMounted(async () => {
 
 .menu-scroll {
   flex: 1;
+  min-height: 0;
 }
 .menu-item {
   display: flex;
@@ -2392,6 +2395,8 @@ onMounted(async () => {
 
 .content {
   flex: 1;
+  min-height: 0;
+  height: 0;
 }
 /* content-inner: 承担内边距 (scroll-view 的 padding 在部分环境失效, 移到内部 view 保证四边间距) */
 .content-inner {
