@@ -457,7 +457,7 @@ function copyBindLink(link) {
         title: '开启消息通知',
         content: '绑定链接已复制：\n' + link + '\n\n请在微信中打开链接完成绑定。绑定后，订单支付成功、盘道活动、课程动态将通过「真和盛文化」服务号推送给您。（需先关注服务号）',
         showCancel: false,
-        confirmText: '知道了',
+        confirmText: '知道了（已复制）',
       })
     },
   })
@@ -474,9 +474,9 @@ function followGzh() {
       fail: () => {
         uni.showModal({
           title: '无法直接跳转',
-          content: '打开公众号主页失败。请确认：①微信版本已更新（基础库 3.7.10+）②小程序与「真和盛」公众号已关联。\n\n当前可复制微信号搜索关注：zhenhesheng_com',
+          content: '请复制微信号，在微信中搜索关注「真和盛」公众号：zhenhesheng_com',
           showCancel: false,
-          confirmText: '知道了',
+          confirmText: '知道了（已复制）',
         })
       },
     })
@@ -484,9 +484,9 @@ function followGzh() {
   }
   uni.showModal({
     title: '无法直接跳转',
-    content: '当前微信版本暂不支持直接打开公众号（需基础库 3.7.10+），请复制微信号搜索关注：zhenhesheng_com',
+    content: '请复制微信号，在微信中搜索关注「真和盛」公众号：zhenhesheng_com',
     showCancel: false,
-    confirmText: '知道了',
+    confirmText: '知道了（已复制）',
   })
   // #endif
   // #ifndef MP-WEIXIN
