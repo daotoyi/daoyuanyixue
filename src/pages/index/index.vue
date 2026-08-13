@@ -270,6 +270,8 @@ function buildTabs(cfg) {
 }
 
 const currentTab = ref('recommend')
+// 公众号主页链接 (H5/APP 端点击"关注"直接跳转; 填 https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=xxx)
+const GZH_HOME_URL = ''
 const momentList = ref([])
 const followUids = ref([]) // 我关注的用户 uid 列表 (关注页过滤用)
 const liveList = ref([])
@@ -442,8 +444,35 @@ function bindGzhNotify() {
   })
 }
 
-/* 关注公众号: 复制微信号 zhenhesheng_com 引导微信内搜索关注 */
+/* 关注公众号: 小程序直接打开公众号主页; H5/APP 跳公众号主页链接(已配置时), 否则复制微信号引导搜索 */
 function followGzh() {
+  // #ifdef MP-WEIXIN
+  // 官方 API: 需小程序与公众号同主体/已关联, 基础库 2.22.2+
+  if (wx && wx.openOfficialAccountProfile) {
+    wx.openOfficialAccountProfile({
+      success: () => {},
+      fail: () => copyGzhWxid(),
+    })
+    return
+  }
+  copyGzhWxid()
+  // #endif
+  // #ifndef MP-WEIXIN
+  if (GZH_HOME_URL) {
+    // #ifdef H5
+    window.location.href = GZH_HOME_URL
+    // #endif
+    // #ifdef APP-PLUS
+    plus.runtime.openURL(GZH_HOME_URL)
+    // #endif
+    return
+  }
+  copyGzhWxid()
+  // #endif
+}
+
+/* 回退: 复制微信号引导微信内搜索关注 */
+function copyGzhWxid() {
   uni.setClipboardData({
     data: 'zhenhesheng_com',
     success: () => {
