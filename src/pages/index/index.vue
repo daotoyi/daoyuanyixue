@@ -463,7 +463,7 @@ function copyBindLink(link) {
   })
 }
 
-/* 关注公众号: 小程序直接打开公众号主页; H5/APP 跳公众号主页链接(已配置时), 否则复制微信号引导搜索 */
+/* 关注公众号: 小程序直接打开公众号主页; 取消/失败时复制微信号并弹'已复制'提示 */
 function followGzh() {
   // #ifdef MP-WEIXIN
   // 官方 API: 需传公众号原始ID(username), 小程序与公众号同主体/已关联, 基础库 3.7.10+
@@ -471,23 +471,11 @@ function followGzh() {
     wx.openOfficialAccountProfile({
       username: 'gh_9703c59cb860', // 「真和盛」公众号原始 ID
       success: () => {},
-      fail: () => {
-        uni.showModal({
-          title: '无法直接跳转',
-          content: '请复制微信号，在微信中搜索关注「真和盛」公众号：zhenhesheng_com',
-          showCancel: false,
-          confirmText: '知道了（已复制）',
-        })
-      },
+      fail: () => copyGzhWxid(),
     })
     return
   }
-  uni.showModal({
-    title: '无法直接跳转',
-    content: '请复制微信号，在微信中搜索关注「真和盛」公众号：zhenhesheng_com',
-    showCancel: false,
-    confirmText: '知道了（已复制）',
-  })
+  copyGzhWxid()
   // #endif
   // #ifndef MP-WEIXIN
   if (GZH_HOME_URL) {
@@ -503,15 +491,16 @@ function followGzh() {
   // #endif
 }
 
-/* 回退: 复制微信号引导微信内搜索关注 */
+/* 复制公众号微信号并提示已复制 */
 function copyGzhWxid() {
   uni.setClipboardData({
     data: 'zhenhesheng_com',
     success: () => {
       uni.showModal({
-        title: '关注「真和盛」公众号',
-        content: '微信号已复制：zhenhesheng_com\n请打开微信 → 搜索公众号「真和盛」或微信号 zhenhesheng_com 关注',
+        title: '无法直接跳转',
+        content: '微信号已复制：zhenhesheng_com\n请打开微信搜索「真和盛」公众号关注',
         showCancel: false,
+        confirmText: '知道了（已复制）',
       })
     },
   })

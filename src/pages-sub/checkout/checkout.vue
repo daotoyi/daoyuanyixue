@@ -47,7 +47,7 @@
       <view class="co-row-line">
         <text class="line-label">余额抵扣</text>
         <view class="balance-right">
-          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount : '可用 ' + balance + ' 积分' }}</text>
+          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount + '（用 ' + usedPoints + ' 积分）' : '可用 ' + balance + ' 积分（10积分=1元）' }}</text>
           <switch :checked="balanceUsed" color="#8c5a2b" style="transform: scale(0.8)" @change="toggleBalance" />
         </view>
       </view>
@@ -379,6 +379,8 @@ const balanceDiscount = computed(() => {
   if (!balanceUsed.value) return '0.00'
   return (Math.min(parseFloat(balance.value) * POINTS_TO_YUAN, Math.max(0, subTotal.value - couponDiscount.value))).toFixed(2)
 })
+// 抵扣所用积分数量
+const usedPoints = computed(() => Math.round(parseFloat(balanceDiscount.value) * 10))
 
 async function submitOrder() {
   if (!items.value.length) return
