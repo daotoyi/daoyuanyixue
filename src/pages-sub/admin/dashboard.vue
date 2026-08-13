@@ -357,7 +357,7 @@
               <text class="td w-name">商品</text>
               <text class="td w-price">金额</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops">操作</text>
+              <text class="td w-ops w-ops-4">操作</text>
             </view>
             <view class="tr" v-for="o in orders" :key="o._id || o.order_no">
               <text class="td w-no ellipsis">{{ o.order_no }}</text>
@@ -2558,6 +2558,11 @@ onMounted(async () => {
   font-weight: 500;
   color: #4e3420;
   font-size: 24rpx;
+  /* 表头列间竖线, 区分边界 */
+  border-left: 1rpx solid rgba(201, 169, 106, 0.35);
+}
+.th .td:first-child {
+  border-left: none;
 }
 .td {
   font-size: 24rpx;
