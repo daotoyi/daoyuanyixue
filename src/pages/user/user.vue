@@ -225,13 +225,13 @@ const vipLevel = computed(() => {
 })
 /* 等级说明 (每行一个等级) */
 const vipLevels = [
-  { level: 0, label: 'VIP0', range: '累计消费/储值 1000元以下' },
-  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-2000元' },
-  { level: 2, label: 'VIP2', range: '累计消费/储值 2000-5000元' },
-  { level: 3, label: 'VIP3', range: '累计消费/储值 5000-1万元' },
-  { level: 4, label: 'VIP4', range: '累计消费/储值 1万-2万元' },
-  { level: 5, label: 'VIP5', range: '累计消费/储值 2万-5万元' },
-  { level: 6, label: 'VIP6', range: '累计消费/储值 5万元以上' },
+  { level: 0, label: 'VIP0', range: '累计消费/储值 1000积分以下' },
+  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-2000积分' },
+  { level: 2, label: 'VIP2', range: '累计消费/储值 2000-5000积分' },
+  { level: 3, label: 'VIP3', range: '累计消费/储值 5000-1万积分' },
+  { level: 4, label: 'VIP4', range: '累计消费/储值 1万-2万积分' },
+  { level: 5, label: 'VIP5', range: '累计消费/储值 2万-5万积分' },
+  { level: 6, label: 'VIP6', range: '累计消费/储值 5万积分以上' },
 ]
 
 const assets = ref({ coupon_count: 0, favorite_count: 0, footprint_count: 0 })
