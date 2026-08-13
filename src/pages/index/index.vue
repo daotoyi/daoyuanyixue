@@ -447,14 +447,15 @@ function bindGzhNotify() {
 /* 关注公众号: 小程序直接打开公众号主页; H5/APP 跳公众号主页链接(已配置时), 否则复制微信号引导搜索 */
 function followGzh() {
   // #ifdef MP-WEIXIN
-  // 官方 API: 需小程序与公众号同主体/已关联, 基础库 2.22.2+
+  // 官方 API: 需传公众号原始ID(username), 小程序与公众号同主体/已关联, 基础库 3.7.10+
   if (wx && wx.openOfficialAccountProfile) {
     wx.openOfficialAccountProfile({
+      username: 'gh_9703c59cb860', // 「真和盛」公众号原始 ID
       success: () => {},
       fail: () => {
         uni.showModal({
           title: '无法直接跳转',
-          content: '需先在微信公众平台将本小程序与「真和盛」公众号关联（小程序后台 → 设置 → 关联设置 → 关联公众号，同主体可直接关联），关联后点击即可直达公众号主页。\n\n当前可复制微信号搜索关注：zhenhesheng_com',
+          content: '打开公众号主页失败。请确认：①微信版本已更新（基础库 3.7.10+）②小程序与「真和盛」公众号已关联。\n\n当前可复制微信号搜索关注：zhenhesheng_com',
           showCancel: false,
           confirmText: '知道了',
         })
@@ -464,7 +465,7 @@ function followGzh() {
   }
   uni.showModal({
     title: '无法直接跳转',
-    content: '当前微信版本暂不支持直接打开公众号，请复制微信号搜索关注：zhenhesheng_com',
+    content: '当前微信版本暂不支持直接打开公众号（需基础库 3.7.10+），请复制微信号搜索关注：zhenhesheng_com',
     showCancel: false,
     confirmText: '知道了',
   })

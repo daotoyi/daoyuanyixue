@@ -494,14 +494,15 @@ export function chengGu(birth, full) {
   const qian = total % 10
   const key = liang * 10 + qian
   const qText = (n) => (n >= 10 ? Math.floor(n / 10) + '两' : '') + (n % 10 ? (n % 10) + '钱' : '')
+  const gzOnly = birth.gzOnly === true
   return {
-    yearText: yp ? yp.name + '年' : '',
+    yearText: (yp ? yp.name + '年' : '') + (gzOnly ? '（四柱输入，无农历月日）' : ''),
     totalText: `${liang}两${qian ? qian + '钱' : ''}`,
     duanyu: CG_DUANYU[key] || '',
     detail: [
       { label: '年', val: qText(yQian) },
-      { label: '月', val: qText(mQian) },
-      { label: '日', val: qText(dQian) },
+      { label: '月', val: gzOnly ? '—' : qText(mQian) },
+      { label: '日', val: gzOnly ? '—' : qText(dQian) },
       { label: '时', val: qText(hQian) },
     ],
   }

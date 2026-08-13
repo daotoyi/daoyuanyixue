@@ -1598,9 +1598,9 @@ function applyData(d) {
     if (!p.changsheng) p.changsheng = changShengOf(dayGan, p.z)
   })
   if (!d.bazi.ganZhi) d.bazi.ganZhi = d.bazi.pillars.map((p) => p.name)
-  // 八字格局 + 袁天罡称骨 (历史盘无 birth 时称骨不可用)
+  // 八字格局 + 袁天罡称骨 (历史盘无 birth 时称骨不可用; 四柱方式仅按年时计)
   d.bazi.geju = baziGeju(d.bazi)
-  d.bazi.chengGu = d.bazi.birth && !d.bazi.birth.gzOnly ? chengGu(d.bazi.birth, d.bazi) : null
+  d.bazi.chengGu = d.bazi.birth ? chengGu(d.bazi.birth, d.bazi) : null
   dyOpen.value = -1
   dyYears.value = []
   lnYear.value = null
