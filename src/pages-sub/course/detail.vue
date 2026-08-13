@@ -84,7 +84,7 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getCourse, teacherInfo, getMyCourses } from '../../api/api'
+import { getCourse, teacherInfo, getMyCourses, updateCourseProgress } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -118,6 +118,11 @@ function openLesson(i) {
       },
     })
     return
+  }
+  // 上报学习进度: 记录已打开的章节 (进度 = 已打开章节数/总章节数)
+  if (userStore.isLoggedIn && userStore.userInfo.uid) {
+    const total = episodesList.value.length || course.value.lessons_count || outlineList.value.length
+    updateCourseProgress({ uid: userStore.userInfo.uid, course_id: course.value.id, lesson_idx: i, total_lessons: total }).catch(() => {})
   }
   uni.navigateTo({ url: `/pages-sub/course/lesson?course_id=${course.value.id}&index=${i}` })
 }

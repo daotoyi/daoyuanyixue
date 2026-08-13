@@ -1832,12 +1832,27 @@ async function favoriteCourse(data) {
 }
 
 async function updateCourseProgress(data) {
-  const { uid, course_id, progress } = data
-  await db
-    .collection('user_courses')
-    .where({ uid, course_id: Number(course_id) })
-    .update({ progress, status: progress >= 100 ? '已完成' : '学习中' })
-  return ok({ updated: true })
+  const { uid, course_id, lesson_idx, total_lessons, progress: directProgress } = data
+  const cid = Number(course_id)
+  // 记录已打开章节 (去重), 进度 = 已打开章节数 / 总章节数
+  let opened = []
+  try {
+    const rel = (await db.collection('user_courses').where({ uid, course_id: cid }).limit(1).get()).data[0]
+    if (rel && Array.isArray(rel.opened_lessons)) opened = rel.opened_lessons.slice()
+  } catch (e) {}
+  if (typeof lesson_idx === 'number' && !opened.includes(lesson_idx)) opened.push(lesson_idx)
+  let progress = 0
+  if (opened.length && Number(total_lessons) > 0) {
+    progress = Math.min(100, Math.round((opened.length / Number(total_lessons)) * 100))
+  } else if (typeof directProgress === 'number') {
+    progress = directProgress
+  }
+  await db.collection('user_courses').where({ uid, course_id: cid }).update({
+    progress,
+    opened_lessons: opened,
+    status: progress >= 100 ? '已完成' : '学习中',
+  })
+  return ok({ updated: true, progress })
 }
 
 /* ============ 直播预约 ============ */
