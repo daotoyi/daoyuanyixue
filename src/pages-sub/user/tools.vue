@@ -102,13 +102,16 @@
                   placeholder-class="tp-gz-ph"
                   @input="onGzInput(pi, $event)"
                 />
-                <picker mode="selector" :range="jiaziLabels" @change="(e) => onGzPick(pi, e)">
-                  <view class="tp-gz-drop"><text>▾</text></view>
+                <picker mode="selector" :range="ganLabels" :value="gzGan[pi]" @change="(e) => onGanPick(pi, e)">
+                  <view class="tp-gz-drop"><text>{{ GAN[gzGan[pi]] }}</text></view>
+                </picker>
+                <picker mode="selector" :range="zhiRangeFor(pi)" :value="zhiPos(gzZhi[pi])" @change="(e) => onZhiPick(pi, e)">
+                  <view class="tp-gz-drop"><text>{{ ZHI[gzZhi[pi]] }}</text></view>
                 </picker>
               </view>
             </view>
           </view>
-          <view class="tp-tip">可点击文字手动输入干支，或点右侧下拉滚动选择</view>
+          <view class="tp-tip">可手动输入干支，或用右侧 天干/地支 两个轮盘选择（阳干配阳支，阴干配阴支）</view>
         </template>
 
         <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
@@ -536,6 +539,45 @@ function syncGzText() {
 }
 function onGzPick(pi, e) {
   const idx = Number(e.detail.value)
+  form.value.bazi.gz[pi] = idx
+  gzText.value[pi] = jiaziLabels[idx]
+}
+/* ---- 四柱 天干/地支 双轮盘 (阳干配阳支, 阴干配阴支) ---- */
+const ganLabels = GAN // 10 天干
+/* 阴阳: true=阳, false=阴 (阳干: 甲丙戊庚壬; 阳支: 子寅辰午申戌) */
+const ganYinYang = GAN.map((g) => !['乙', '丁', '己', '辛', '癸'].includes(g))
+const zhiYinYang = ZHI.map((z) => !['丑', '卯', '巳', '未', '酉', '亥'].includes(z))
+/* 每柱当前天干/地支索引 (60甲子 idx%10=天干, idx%12=地支) */
+const gzGan = computed(() => form.value.bazi.gz.map((i) => i % 10))
+const gzZhi = computed(() => form.value.bazi.gz.map((i) => i % 12))
+/* 60甲子索引还原 */
+function gzIndex(g, z) {
+  for (let i = 0; i < 60; i++) if (i % 10 === g && i % 12 === z) return i
+  return 0
+}
+/* 当前柱可选地支轮盘: 按天干阴阳过滤 (阳干只列阳支, 阴干只列阴支 → 无法选择异性支) */
+function zhiRangeFor(pi) {
+  const isYang = ganYinYang[gzGan.value[pi]]
+  return ZHI.filter((_, i) => zhiYinYang[i] === isYang)
+}
+/* 地支在过滤后轮盘中的位置 (阳支/阴支各6个, 位置=floor(z/2)) */
+function zhiPos(z) {
+  return Math.floor(z / 2)
+}
+function onGanPick(pi, e) {
+  const g = Number(e.detail.value)
+  let z = gzZhi.value[pi]
+  // 天干阴阳切换后, 地支若不同阴阳则自动切到同阴阳首个地支 (阳=子, 阴=丑)
+  if (zhiYinYang[z] !== ganYinYang[g]) z = ganYinYang[g] ? 0 : 1
+  const idx = gzIndex(g, z)
+  form.value.bazi.gz[pi] = idx
+  gzText.value[pi] = jiaziLabels[idx]
+}
+function onZhiPick(pi, e) {
+  const g = gzGan.value[pi]
+  const isYang = ganYinYang[g]
+  const z = isYang ? Number(e.detail.value) * 2 : Number(e.detail.value) * 2 + 1
+  const idx = gzIndex(g, z)
   form.value.bazi.gz[pi] = idx
   gzText.value[pi] = jiaziLabels[idx]
 }
@@ -1706,7 +1748,7 @@ function runLiuren() {
 }
 .tp-gz-ph { color: #b3a595; font-size: 26rpx; }
 .tp-gz-drop {
-  width: 52rpx;
+  width: 60rpx;
   height: 60rpx;
   display: flex;
   align-items: center;
@@ -1715,6 +1757,7 @@ function runLiuren() {
   border-left: 1rpx solid #e6dcca;
   color: #8c5a2b;
   font-size: 26rpx;
+  flex-shrink: 0;
 }
 .tp-seg {
   display: flex;
