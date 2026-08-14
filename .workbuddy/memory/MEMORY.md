@@ -37,6 +37,7 @@
 - **认证**: 设备码 auth PENDING→READY 需用户在浏览器打开 tcb.cloud.tencent.com/dev#/cli-auth?user_code=xxx 授权
 - **铁律教训 (08-09)**: 云函数新增路由后**必须重新部署 dy-api**, 否则前端调用失败 = "功能没实现"
 - **写库坑 (08-11)**: writeNoSqlDatabaseContent action=update 的 update 参数是**整体替换语义**(非 $set), 改单个字段必须带上全部字段(如 settings home 组: group/show_follow/show_publish/show_live), 否则其他字段被清空导致功能被误关
+- **TDZ 崩溃铁律 (08-14)**: `<script setup>` 中**顶层立即执行的代码(非函数体内/非 computed/非 watch 回调)绝不能引用后面才声明的 const 变量**(如 form 定义在 614 行, 前面顶层写了 ref(form.value...) 立即执行 → TDZ ReferenceError → 整个页面白屏进不去)。computed/函数体是惰性求值才安全。**页面整体进不去时优先怀疑顶层 TDZ**; 顶层初始化需要 form 时用固定值/惰性写法(事件回调里再读 form)
 
 ## 版本管理 (Git)
 

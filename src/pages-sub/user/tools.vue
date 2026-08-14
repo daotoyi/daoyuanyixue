@@ -1742,7 +1742,7 @@ function runLiuren() {
 .tp-gz-input {
   flex: 1;
   height: 60rpx;
-  padding: 0 12rpx;
+  padding: 0 8rpx;
   font-size: 28rpx;
   text-align: center;
   color: #42372c;
@@ -1750,20 +1750,20 @@ function runLiuren() {
 }
 .tp-gz-ph { color: #b3a595; font-size: 26rpx; }
 .tp-gz-drop {
-  width: 96rpx;
+  width: 64rpx;
   height: 60rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4rpx;
+  gap: 2rpx;
   background: #f5efe3;
   border-left: 1rpx solid #e6dcca;
   color: #8c5a2b;
-  font-size: 26rpx;
+  font-size: 22rpx;
   flex-shrink: 0;
 }
 .tp-gz-caret {
-  font-size: 20rpx;
+  font-size: 16rpx;
   color: #b3a595;
 }
 .tp-seg {
