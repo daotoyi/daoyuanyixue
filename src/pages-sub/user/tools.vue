@@ -94,24 +94,14 @@
             <view class="tp-gz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
               <text class="tp-gz-label">{{ pn }}</text>
               <view class="tp-gz-input-row">
-                <view class="tp-gz-inputs">
-                  <input
-                    class="tp-gz-input"
-                    :value="gzGanChar[pi]"
-                    maxlength="1"
-                    placeholder="天干"
-                    placeholder-class="tp-gz-ph"
-                    @input="onGanInput(pi, $event)"
-                  />
-                  <input
-                    class="tp-gz-input"
-                    :value="gzZhiChar[pi]"
-                    maxlength="1"
-                    placeholder="地支"
-                    placeholder-class="tp-gz-ph"
-                    @input="onZhiInput(pi, $event)"
-                  />
-                </view>
+                <input
+                  class="tp-gz-input"
+                  :value="gzText[pi]"
+                  maxlength="2"
+                  placeholder="甲子"
+                  placeholder-class="tp-gz-ph"
+                  @input="onGzInput(pi, $event)"
+                />
                 <picker
                   mode="multiSelector"
                   :range="gzRangeArr[pi]"
@@ -124,7 +114,7 @@
               </view>
             </view>
           </view>
-          <view class="tp-tip">可手动输入天干/地支（上下两行），或点右侧下拉，在弹窗中左右两列滚动选择（阳干配阳支，阴干配阴支）</view>
+          <view class="tp-tip">可手动输入完整干支（如甲子），或点右侧下拉，在弹窗中左右两列滚动选择（阳干配阳支，阴干配阴支）</view>
         </template>
 
         <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
@@ -553,10 +543,8 @@ const zhiYinYang = ZHI.map((z) => !['丑', '卯', '巳', '未', '酉', '亥'].in
 /* 每柱当前天干/地支索引 (60甲子 idx%10=天干, idx%12=地支) */
 const gzGan = computed(() => form.value.bazi.gz.map((i) => i % 10))
 const gzZhi = computed(() => form.value.bazi.gz.map((i) => i % 12))
-/* 展示: 下拉按钮显示完整干支, 左侧手动输入框分别显示 天干/地支 单字 (上下两行) */
+/* 展示: 下拉按钮显示完整干支, 左侧输入框显示完整干支 (如 甲子) */
 const gzText = computed(() => form.value.bazi.gz.map((idx) => jiaziLabels[idx] || '甲子'))
-const gzGanChar = computed(() => gzGan.value.map((g) => GAN[g]))
-const gzZhiChar = computed(() => gzZhi.value.map((z) => ZHI[z]))
 /* 60甲子索引还原 */
 function gzIndex(g, z) {
   for (let i = 0; i < 60; i++) if (i % 10 === g && i % 12 === z) return i
@@ -594,29 +582,15 @@ function onGzPick(pi, e) {
   gzPanelZ.value[pi] = z
   form.value.bazi.gz[pi] = gzIndex(g, z)
 }
-/* 手动输入天干 (单字, 上输入框): 阴阳联动自动调整地支 */
-function onGanInput(pi, e) {
+/* 手动输入完整干支 (如 甲子): 校验 60甲子合法性 */
+function onGzInput(pi, e) {
   const t = String((e && e.detail ? e.detail.value : '') || '').trim()
-  if (!t) return
-  const g = GAN.indexOf(t)
-  if (g < 0) return
-  let z = gzZhi.value[pi]
-  if (zhiYinYang[z] !== ganYinYang[g]) z = ganYinYang[g] ? 0 : 1
-  gzPanelG.value[pi] = g
-  gzPanelZ.value[pi] = z
-  form.value.bazi.gz[pi] = gzIndex(g, z)
-}
-/* 手动输入地支 (单字, 下输入框): 阴阳不符则忽略 */
-function onZhiInput(pi, e) {
-  const t = String((e && e.detail ? e.detail.value : '') || '').trim()
-  if (!t) return
-  const z = ZHI.indexOf(t)
-  if (z < 0) return
-  const g = gzGan.value[pi]
-  if (zhiYinYang[z] !== ganYinYang[g]) return
-  gzPanelG.value[pi] = g
-  gzPanelZ.value[pi] = z
-  form.value.bazi.gz[pi] = gzIndex(g, z)
+  if (t.length >= 2) {
+    const idx = jiaziLabels.findIndex((l) => l === t)
+    if (idx >= 0) {
+      form.value.bazi.gz[pi] = idx
+    }
+  }
 }
 const provinceNames = PROVINCE_NAMES
 /* 当前选中省的城市列表 */
@@ -1754,38 +1728,29 @@ function runLiuren() {
   color: #857563;
   margin-bottom: 8rpx;
 }
-/* 四柱: 左侧手动输入(天干/地支上下两行) + 右侧干支联动下拉 */
+/* 四柱: 左侧手动输入(完整干支) + 右侧干支联动下拉 */
 .tp-gz-input-row {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   width: 100%;
   border: 1rpx solid #d8ccb8;
   border-radius: 10rpx;
   background: #f8f3ea;
   overflow: hidden;
 }
-.tp-gz-inputs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
 .tp-gz-input {
   flex: 1;
-  height: 38rpx;
-  line-height: 38rpx;
-  padding: 0 8rpx;
-  font-size: 26rpx;
+  height: 60rpx;
+  padding: 0 12rpx;
+  font-size: 28rpx;
   text-align: center;
   color: #42372c;
+  min-width: 0;
 }
-.tp-gz-input + .tp-gz-input {
-  border-top: 1rpx solid #ece2d2;
-}
-.tp-gz-ph { color: #b3a595; font-size: 24rpx; }
+.tp-gz-ph { color: #b3a595; font-size: 26rpx; }
 .tp-gz-drop {
   width: 96rpx;
-  height: 78rpx;
+  height: 60rpx;
   display: flex;
   align-items: center;
   justify-content: center;
