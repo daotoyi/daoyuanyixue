@@ -1457,7 +1457,7 @@ function buildLiuri(liunianYear, monthIdx) {
 
 /* 联动列 + 四柱 (从左到右: 流时/流日/流月/流年/大运/四柱) */
 /* ---- 天干/地支作用关系板块 ---- */
-/* 盘面全部干支: 四柱 + 选中的大运/流年/流月/流日/流时 (默认含当前流年) */
+/* 盘面全部干支: 仅四柱 + 实际选中的大运/流年/流月/流日/流时 (顶部未显示的不参与作用关系) */
 const allGanzhi = computed(() => {
   if (!data.value) return []
   const list = data.value.bazi.pillars.map((p, i) => ({
@@ -1469,11 +1469,6 @@ const allGanzhi = computed(() => {
   ]
   for (const [v, name] of seq) {
     if (v && v.ganIdx !== undefined) list.push({ ganIdx: v.ganIdx, zhiIdx: v.zhiIdx, label: name + '（' + v.label + '）' })
-  }
-  // 默认补充当前流年 (若未选中任何)
-  if (!list.some((x) => x.label.startsWith('流年'))) {
-    const ln = data.value.bazi.liunian
-    list.push({ ganIdx: GAN.indexOf(ln.gan), zhiIdx: ZHI.indexOf(ln.zhi), label: '流年（' + ln.name + '）' })
   }
   return list
 })

@@ -260,10 +260,10 @@ export function shishen(dayGan, otherGan) {
   if (WX_ORDER[(dIdx + 4) % 5] === og) return sameYang ? '偏印' : '正印'
   // 我生
   if (WX_ORDER[(dIdx + 1) % 5] === og) return sameYang ? '食神' : '伤官'
-  // 克我
-  if (WX_ORDER[(dIdx + 2) % 5] === og) return sameYang ? '七杀' : '正官'
-  // 我克
-  if (WX_ORDER[(dIdx + 3) % 5] === og) return sameYang ? '偏财' : '正财'
+  // 克我 (如木被金克: 木0+3=3金): 偏移 +3
+  if (WX_ORDER[(dIdx + 3) % 5] === og) return sameYang ? '七杀' : '正官'
+  // 我克 (如木克土: 木0+2=2土): 偏移 +2
+  if (WX_ORDER[(dIdx + 2) % 5] === og) return sameYang ? '偏财' : '正财'
   // 同我
   return sameYang ? '比肩' : '劫财'
 }
@@ -483,13 +483,14 @@ function gzIndex60(g, z) {
   return 0
 }
 /* birth: { lunarYear, lunarMonth, lunarDay, isLeap, shichen(0-11) } */
-/* 四柱方式称骨推算: 月柱→节月骨重 + 日柱反推公历日期→农历日骨重 (年柱60循环取最近匹配年) */
+/* 四柱方式称骨推算: 月柱→节气月仅作日期窗口定位; 反推公历后改用**农历月份**骨重 + 农历日骨重 (袁天罡称骨按月为农历月, 非节气月) */
 function gzMonthDayQian(full) {
   if (!full || !full.pillars || full.pillars.length < 3) return { monthQian: 0, dayQian: 0, note: '' }
   const [yp, mp, dp] = full.pillars
   const zhiToJie = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 11: 10, 0: 11, 1: 12 }
   const jie = zhiToJie[mp.z] || 0
-  const monthQian = jie >= 1 && jie <= 12 ? (CG_MONTH[jie - 1] || 0) : 0
+  // 节气月骨重仅作兜底, 反推成功后会被农历月份覆盖 (称骨按月为农历月)
+  let monthQian = jie >= 1 && jie <= 12 ? (CG_MONTH[jie - 1] || 0) : 0
   // 节月起始 (公历 [月,日]): 节月1=寅(立春2/4) ... 12=丑(小寒1/6)
   const starts = [[2, 4], [3, 6], [4, 5], [5, 6], [6, 6], [7, 7], [8, 8], [9, 8], [10, 8], [11, 7], [12, 7], [1, 6]]
   const [sm, sd] = starts[jie - 1]
@@ -525,6 +526,9 @@ function gzMonthDayQian(full) {
           try {
             const lu = solarToLunar(gy, gm, gd)
             dayQian = CG_DAY[Math.max(0, (lu.day || 1) - 1)] || 0
+            // 袁天罡称骨月骨重按**农历月份**(非节气月): 反推成功后用农历月覆盖上方节月值
+            const lm = (lu.month || 1) - 1
+            if (lm >= 0 && lm < 12) monthQian = CG_MONTH[lm] || 0
           } catch (e) {}
           note = `（四柱推算：${gy}年${gm}月${gd}日）`
           break
