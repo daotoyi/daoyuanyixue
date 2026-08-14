@@ -88,30 +88,43 @@
           </view>
         </template>
 
-        <!-- 四柱输入: 四柱一排 + 手动输入 + 右侧下拉轮盘 -->
+        <!-- 四柱输入: 左侧手动输入(天干/地支上下两行) + 右侧干支联动下拉(弹窗分两列: 左天干轮 右地支轮) -->
         <template v-else>
           <view class="tp-gz-grid">
             <view class="tp-gz-col" v-for="(pn, pi) in ['年柱', '月柱', '日柱', '时柱']" :key="pn">
               <text class="tp-gz-label">{{ pn }}</text>
               <view class="tp-gz-input-row">
-                <input
-                  class="tp-gz-input"
-                  :value="gzText[pi]"
-                  maxlength="2"
-                  placeholder="甲子"
-                  placeholder-class="tp-gz-ph"
-                  @input="onGzInput(pi, $event)"
-                />
-                <picker mode="selector" :range="ganLabels" :value="gzGan[pi]" @change="(e) => onGanPick(pi, e)">
-                  <view class="tp-gz-drop"><text>{{ GAN[gzGan[pi]] }}</text></view>
-                </picker>
-                <picker mode="selector" :range="zhiRangeFor(pi)" :value="zhiPos(gzZhi[pi])" @change="(e) => onZhiPick(pi, e)">
-                  <view class="tp-gz-drop"><text>{{ ZHI[gzZhi[pi]] }}</text></view>
+                <view class="tp-gz-inputs">
+                  <input
+                    class="tp-gz-input"
+                    :value="gzGanChar[pi]"
+                    maxlength="1"
+                    placeholder="天干"
+                    placeholder-class="tp-gz-ph"
+                    @input="onGanInput(pi, $event)"
+                  />
+                  <input
+                    class="tp-gz-input"
+                    :value="gzZhiChar[pi]"
+                    maxlength="1"
+                    placeholder="地支"
+                    placeholder-class="tp-gz-ph"
+                    @input="onZhiInput(pi, $event)"
+                  />
+                </view>
+                <picker
+                  mode="multiSelector"
+                  :range="gzRangeArr[pi]"
+                  :value="gzPanelIdx(pi)"
+                  @columnchange="(e) => onGzColumnChange(pi, e)"
+                  @change="(e) => onGzPick(pi, e)"
+                >
+                  <view class="tp-gz-drop"><text>{{ gzText[pi] }}</text><text class="tp-gz-caret">▾</text></view>
                 </picker>
               </view>
             </view>
           </view>
-          <view class="tp-tip">可手动输入干支，或用右侧 天干/地支 两个轮盘选择（阳干配阳支，阴干配阴支）</view>
+          <view class="tp-tip">可手动输入天干/地支（上下两行），或点右侧下拉，在弹窗中左右两列滚动选择（阳干配阳支，阴干配阴支）</view>
         </template>
 
         <!-- 真太阳时 (阳历/农历) : 省/市/县 三级转盘 -->
@@ -532,17 +545,7 @@ const lunarMonthLabels = (() => {
   return arr
 })()
 const jiaziLabels = Array.from({ length: 60 }, (_, i) => GAN[i % 10] + ZHI[i % 12])
-/* 四柱手动输入文本 (与 form.bazi.gz 同步) */
-const gzText = ref(['甲子', '甲子', '甲子', '甲子'])
-function syncGzText() {
-  gzText.value = form.value.bazi.gz.map((idx) => jiaziLabels[idx] || '甲子')
-}
-function onGzPick(pi, e) {
-  const idx = Number(e.detail.value)
-  form.value.bazi.gz[pi] = idx
-  gzText.value[pi] = jiaziLabels[idx]
-}
-/* ---- 四柱 天干/地支 双轮盘 (阳干配阳支, 阴干配阴支) ---- */
+/* ---- 四柱 天干/地支 输入 (阳干配阳支, 阴干配阴支) ---- */
 const ganLabels = GAN // 10 天干
 /* 阴阳: true=阳, false=阴 (阳干: 甲丙戊庚壬; 阳支: 子寅辰午申戌) */
 const ganYinYang = GAN.map((g) => !['乙', '丁', '己', '辛', '癸'].includes(g))
@@ -550,47 +553,70 @@ const zhiYinYang = ZHI.map((z) => !['丑', '卯', '巳', '未', '酉', '亥'].in
 /* 每柱当前天干/地支索引 (60甲子 idx%10=天干, idx%12=地支) */
 const gzGan = computed(() => form.value.bazi.gz.map((i) => i % 10))
 const gzZhi = computed(() => form.value.bazi.gz.map((i) => i % 12))
+/* 展示: 下拉按钮显示完整干支, 左侧手动输入框分别显示 天干/地支 单字 (上下两行) */
+const gzText = computed(() => form.value.bazi.gz.map((idx) => jiaziLabels[idx] || '甲子'))
+const gzGanChar = computed(() => gzGan.value.map((g) => GAN[g]))
+const gzZhiChar = computed(() => gzZhi.value.map((z) => ZHI[z]))
 /* 60甲子索引还原 */
 function gzIndex(g, z) {
   for (let i = 0; i < 60; i++) if (i % 10 === g && i % 12 === z) return i
   return 0
 }
-/* 当前柱可选地支轮盘: 按天干阴阳过滤 (阳干只列阳支, 阴干只列阴支 → 无法选择异性支) */
-function zhiRangeFor(pi) {
-  const isYang = ganYinYang[gzGan.value[pi]]
+/* 指定天干的同阴阳地支列表 (阳=子寅辰午申戌 6个, 阴=丑卯巳未酉亥 6个) */
+function zhiListForGan(g) {
+  const isYang = ganYinYang[g]
   return ZHI.filter((_, i) => zhiYinYang[i] === isYang)
 }
-/* 地支在过滤后轮盘中的位置 (阳支/阴支各6个, 位置=floor(z/2)) */
-function zhiPos(z) {
-  return Math.floor(z / 2)
+/* 弹出面板: 每柱二维 range = [左列天干 10个, 右列地支(按天干阴阳过滤 6个)] */
+const gzRangeArr = ref(form.value.bazi.gz.map((i) => [GAN, zhiListForGan(i % 10)]))
+/* 弹出面板临时选中 (g=天干索引, z=真实地支索引 0-11) */
+const gzPanelG = ref(gzGan.value.slice())
+const gzPanelZ = ref(gzZhi.value.slice())
+function gzPanelIdx(pi) {
+  return [gzPanelG.value[pi], Math.floor(gzPanelZ.value[pi] / 2)]
 }
-function onGanPick(pi, e) {
+/* 天干列滚动 → 右列地支列表联动刷新, 阴阳不符自动切同阴阳首支 (阳=子, 阴=丑) */
+function onGzColumnChange(pi, e) {
+  if (e.detail.column !== 0) return
   const g = Number(e.detail.value)
-  let z = gzZhi.value[pi]
-  // 天干阴阳切换后, 地支若不同阴阳则自动切到同阴阳首个地支 (阳=子, 阴=丑)
-  if (zhiYinYang[z] !== ganYinYang[g]) z = ganYinYang[g] ? 0 : 1
-  const idx = gzIndex(g, z)
-  form.value.bazi.gz[pi] = idx
-  gzText.value[pi] = jiaziLabels[idx]
+  gzPanelG.value[pi] = g
+  gzRangeArr.value[pi] = [GAN, zhiListForGan(g)]
+  const z = gzPanelZ.value[pi]
+  if (zhiYinYang[z] !== ganYinYang[g]) gzPanelZ.value[pi] = ganYinYang[g] ? 0 : 1
 }
-function onZhiPick(pi, e) {
-  const g = gzGan.value[pi]
+/* 确认选择 (弹窗两列: 左天干 右地支) → 写回 form, 左侧输入框经 computed 自动同步 */
+function onGzPick(pi, e) {
+  const g = Number(e.detail.value[0])
+  const zPos = Number(e.detail.value[1])
   const isYang = ganYinYang[g]
-  const z = isYang ? Number(e.detail.value) * 2 : Number(e.detail.value) * 2 + 1
-  const idx = gzIndex(g, z)
-  form.value.bazi.gz[pi] = idx
-  gzText.value[pi] = jiaziLabels[idx]
+  const z = isYang ? zPos * 2 : zPos * 2 + 1
+  gzPanelG.value[pi] = g
+  gzPanelZ.value[pi] = z
+  form.value.bazi.gz[pi] = gzIndex(g, z)
 }
-function onGzInput(pi, e) {
-  const txt = (e && e.detail ? e.detail.value : '') || ''
-  const t = String(txt).trim()
-  if (t.length >= 2) {
-    const idx = jiaziLabels.findIndex((l) => l === t)
-    if (idx >= 0) {
-      form.value.bazi.gz[pi] = idx
-      gzText.value[pi] = jiaziLabels[idx]
-    }
-  }
+/* 手动输入天干 (单字, 上输入框): 阴阳联动自动调整地支 */
+function onGanInput(pi, e) {
+  const t = String((e && e.detail ? e.detail.value : '') || '').trim()
+  if (!t) return
+  const g = GAN.indexOf(t)
+  if (g < 0) return
+  let z = gzZhi.value[pi]
+  if (zhiYinYang[z] !== ganYinYang[g]) z = ganYinYang[g] ? 0 : 1
+  gzPanelG.value[pi] = g
+  gzPanelZ.value[pi] = z
+  form.value.bazi.gz[pi] = gzIndex(g, z)
+}
+/* 手动输入地支 (单字, 下输入框): 阴阳不符则忽略 */
+function onZhiInput(pi, e) {
+  const t = String((e && e.detail ? e.detail.value : '') || '').trim()
+  if (!t) return
+  const z = ZHI.indexOf(t)
+  if (z < 0) return
+  const g = gzGan.value[pi]
+  if (zhiYinYang[z] !== ganYinYang[g]) return
+  gzPanelG.value[pi] = g
+  gzPanelZ.value[pi] = z
+  form.value.bazi.gz[pi] = gzIndex(g, z)
 }
 const provinceNames = PROVINCE_NAMES
 /* 当前选中省的城市列表 */
@@ -1728,36 +1754,51 @@ function runLiuren() {
   color: #857563;
   margin-bottom: 8rpx;
 }
-/* 四柱: 手动输入 + 右侧下拉轮盘 */
+/* 四柱: 左侧手动输入(天干/地支上下两行) + 右侧干支联动下拉 */
 .tp-gz-input-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
   border: 1rpx solid #d8ccb8;
   border-radius: 10rpx;
   background: #f8f3ea;
   overflow: hidden;
 }
+.tp-gz-inputs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .tp-gz-input {
   flex: 1;
-  height: 60rpx;
-  padding: 0 12rpx;
-  font-size: 28rpx;
+  height: 38rpx;
+  line-height: 38rpx;
+  padding: 0 8rpx;
+  font-size: 26rpx;
   text-align: center;
   color: #42372c;
 }
-.tp-gz-ph { color: #b3a595; font-size: 26rpx; }
+.tp-gz-input + .tp-gz-input {
+  border-top: 1rpx solid #ece2d2;
+}
+.tp-gz-ph { color: #b3a595; font-size: 24rpx; }
 .tp-gz-drop {
-  width: 60rpx;
-  height: 60rpx;
+  width: 96rpx;
+  height: 78rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4rpx;
   background: #f5efe3;
   border-left: 1rpx solid #e6dcca;
   color: #8c5a2b;
   font-size: 26rpx;
   flex-shrink: 0;
+}
+.tp-gz-caret {
+  font-size: 20rpx;
+  color: #b3a595;
 }
 .tp-seg {
   display: flex;
