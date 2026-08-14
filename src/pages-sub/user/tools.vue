@@ -263,7 +263,7 @@
                 <text class="jp-block-icon">{{ m.icon }}</text>
                 <text class="jp-block-name">{{ m.name }}</text>
                 <view class="jp-paid-tag">
-                  <text v-if="!isLyUnlocked(m.key)">¥9.9 解锁</text>
+                  <text v-if="!isLyUnlocked(m.key)">¥9 解锁</text>
                   <text v-else class="jp-unlocked">已解锁</text>
                 </view>
                 <text class="jp-arrow">{{ lyOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -276,7 +276,7 @@
               <view class="jp-lock" v-if="!isLyUnlocked(m.key) && lyOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
                 <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-                <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>¥9.9 立即解锁</text></view>
+                <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>¥9 立即解锁</text></view>
               </view>
             </view>
           </view>
@@ -386,7 +386,7 @@
                 <text class="jp-block-icon">{{ m.icon }}</text>
                 <text class="jp-block-name">{{ m.name }}</text>
                 <view class="jp-paid-tag">
-                  <text v-if="!isLrUnlocked(m.key)">¥9.9 解锁</text>
+                  <text v-if="!isLrUnlocked(m.key)">¥9 解锁</text>
                   <text v-else class="jp-unlocked">已解锁</text>
                 </view>
                 <text class="jp-arrow">{{ lrOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -399,7 +399,7 @@
               <view class="jp-lock" v-if="!isLrUnlocked(m.key) && lrOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
                 <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-                <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>¥9.9 立即解锁</text></view>
+                <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>¥9 立即解锁</text></view>
               </view>
             </view>
           </view>

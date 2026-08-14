@@ -408,7 +408,7 @@
             <text class="jp-block-icon">{{ m.icon }}</text>
             <text class="jp-block-name">{{ m.name }}</text>
             <view class="jp-paid-tag">
-              <text v-if="!isJpUnlocked(m.key)">¥9.9 解锁</text>
+              <text v-if="!isJpUnlocked(m.key)">¥9 解锁</text>
               <text v-else class="jp-unlocked">已解锁</text>
             </view>
             <text class="jp-arrow">{{ openJp[m.key] ? '▲' : '▼' }}</text>
@@ -424,7 +424,7 @@
             <text class="jp-lock-icon">🔒</text>
             <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9 积分</text>
             <view class="btn-fill btn-pay" @tap.stop="payJiepan">
-              <text>¥9.9 立即解锁</text>
+              <text>¥9 立即解锁</text>
             </view>
           </view>
         </view>
@@ -556,7 +556,7 @@
             <text class="jp-block-icon">{{ m.icon }}</text>
             <text class="jp-block-name">{{ m.name }}</text>
             <view class="jp-paid-tag">
-              <text v-if="!isQmUnlocked(m.key)">¥9.9 解锁</text>
+              <text v-if="!isQmUnlocked(m.key)">¥9 解锁</text>
               <text v-else class="jp-unlocked">已解锁</text>
             </view>
             <text class="jp-arrow">{{ qmOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -569,7 +569,7 @@
           <view class="jp-lock" v-if="!isQmUnlocked(m.key) && qmOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
             <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-            <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>¥9.9 立即解锁</text></view>
+            <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>¥9 立即解锁</text></view>
           </view>
         </view>
       </view>
@@ -724,7 +724,7 @@
             <text class="jp-block-icon">{{ m.icon }}</text>
             <text class="jp-block-name">{{ m.name }}</text>
             <view class="jp-paid-tag">
-              <text v-if="!isZwUnlocked(m.key)">¥9.9 解锁</text>
+              <text v-if="!isZwUnlocked(m.key)">¥9 解锁</text>
               <text v-else class="jp-unlocked">已解锁</text>
             </view>
             <text class="jp-arrow">{{ zwOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -737,7 +737,7 @@
           <view class="jp-lock" v-if="!isZwUnlocked(m.key) && zwOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
             <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-            <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>¥9.9 立即解锁</text></view>
+            <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>¥9 立即解锁</text></view>
           </view>
         </view>
       </view>
