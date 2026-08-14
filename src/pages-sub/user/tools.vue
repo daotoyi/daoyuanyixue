@@ -556,10 +556,11 @@ function zhiListForGan(g) {
   return ZHI.filter((_, i) => zhiYinYang[i] === isYang)
 }
 /* 弹出面板: 每柱二维 range = [左列天干 10个, 右列地支(按天干阴阳过滤 6个)] */
-const gzRangeArr = ref(form.value.bazi.gz.map((i) => [GAN, zhiListForGan(i % 10)]))
-/* 弹出面板临时选中 (g=天干索引, z=真实地支索引 0-11) */
-const gzPanelG = ref(gzGan.value.slice())
-const gzPanelZ = ref(gzZhi.value.slice())
+/* ⚠️ 注意: 此处不能引用 form (form 定义在后面, 顶层立即执行会 TDZ 崩溃), 用固定值初始化, onGzColumnChange 时联动刷新 */
+const gzRangeArr = ref([0, 1, 2, 3].map(() => [GAN, zhiListForGan(0)]))
+/* 弹出面板临时选中 (g=天干索引, z=真实地支索引 0-11); 初始 [0,0,0,0] = 甲子, 与 form.bazi.gz 初始一致 */
+const gzPanelG = ref([0, 0, 0, 0])
+const gzPanelZ = ref([0, 0, 0, 0])
 function gzPanelIdx(pi) {
   return [gzPanelG.value[pi], Math.floor(gzPanelZ.value[pi] / 2)]
 }
