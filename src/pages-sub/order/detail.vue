@@ -42,7 +42,7 @@
       <view class="row"><text class="rk">下单时间</text><text class="rv">{{ order.created_at }}</text></view>
     </view>
 
-    <!-- 支付方式选择 (待付款订单; 微信/余额/支付宝三选一, 支付宝默认隐藏且受后台开关控制) -->
+    <!-- 支付方式选择 (待付款订单; 微信/积分/支付宝三选一, 支付宝默认隐藏且受后台开关控制) -->
     <view class="pay-methods" v-if="order.status === '待付款'">
       <view class="pm-title">选择支付方式</view>
       <view class="pm-item" :class="{ on: selectedPay === 'wechat' }" @tap="selectedPay = 'wechat'">
@@ -52,7 +52,7 @@
       </view>
       <view class="pm-item" :class="{ on: selectedPay === 'balance' }" @tap="selectedPay = 'balance'">
         <view class="pm-icon pm-balance"><text>积</text></view>
-        <text class="pm-name">余额支付（积分）</text>
+        <text class="pm-name">积分支付</text>
         <text class="pm-check" :class="{ on: selectedPay === 'balance' }">{{ selectedPay === 'balance' ? '✓' : '' }}</text>
       </view>
       <!-- 支付宝: 默认隐藏, 后台开启"显示支付宝"后可用 -->
@@ -94,7 +94,7 @@ import { useUserStore } from '../../store/index'
 const order = ref(null)
 const orderNo = ref(null)
 
-/* 支付方式选择: 微信/余额/支付宝 三选一; 默认小程序=微信, H5/其他=余额; 支付宝默认隐藏(后台开关) */
+/* 支付方式选择: 微信/积分/支付宝 三选一; 默认小程序=微信, H5/其他=积分; 支付宝默认隐藏(后台开关) */
 const selectedPay = ref('balance')
 // #ifdef MP-WEIXIN
 selectedPay.value = 'wechat'
@@ -125,13 +125,13 @@ const statusTip = computed(() => ({
   已退款: '退款已原路退回',
 })[order.value?.status] || '')
 
-// 支付方式名: 微信支付 / 余额支付 / 支付宝
+// 支付方式名: 微信支付 / 积分支付 / 支付宝
 const payName = computed(() => {
   const m = {
     wechat: '微信支付',
     alipay: '支付宝',
-    balance: '余额支付',
-    余额: '余额支付',
+    balance: '积分支付',
+    余额: '积分支付',
   }
   return m[order.value?.pay_method] || '微信支付'
 })
@@ -169,7 +169,7 @@ async function doPay() {
     return
   }
 
-  // 余额支付 (积分真实扣款, 支持所有订单类型)
+  // 积分支付 (积分真实扣款, 支持所有订单类型)
   if (selectedPay.value === 'balance') {
     try {
       const userStore = useUserStore()
@@ -202,7 +202,7 @@ async function doPay() {
   // H5/App 无 JSAPI 微信支付能力: 明确引导, 不再静默走其他支付
   uni.showModal({
     title: '微信支付',
-    content: '微信支付请在微信小程序中完成；当前端请选择「余额支付」或「支付宝」。',
+    content: '微信支付请在微信小程序中完成；当前端请选择「积分支付」或「支付宝」。',
     showCancel: false,
   })
   return
@@ -398,7 +398,7 @@ function goShop() {
 .pm-alipay {
   background: linear-gradient(135deg, #1677ff, #0a5fd6);
 }
-/* 余额支付: 金色 + "积"字 */
+/* 积分支付: 金色 + "积"字 */
 .pm-balance {
   background: linear-gradient(135deg, #d4a24c, #b8860b);
 }

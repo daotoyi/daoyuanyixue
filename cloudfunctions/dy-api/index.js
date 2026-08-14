@@ -1993,7 +1993,7 @@ async function orderPayBalance(data) {
   const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
   const bal = Number((u && u.balance) || 0) || 0
   const price = Number(order.total_price) || 0
-  if (bal < price) return fail(`余额不足（需 ${price} 积分），请先充值`)
+  if (bal < price) return fail(`积分不足（需 ${price} 积分），请先充值`)
   const newBal = Math.round((bal - price) * 100) / 100
   await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
   // 支付成功: 预约/虚拟商品标记已完成, 实体商品标记待发货

@@ -59,7 +59,7 @@ const list = ref([])
 onLoad((options) => {
   type.value = options.type || 'balance'
   uni.setNavigationBarTitle({
-    title: { balance: '我的余额', coupon: '我的优惠券', favorite: '我的收藏', footprint: '我的足迹' }[type.value] || '我的',
+    title: { balance: '我的积分', coupon: '我的优惠券', favorite: '我的收藏', footprint: '我的足迹' }[type.value] || '我的',
   })
   load()
 })
@@ -113,7 +113,7 @@ function goRecharge() {
   padding: 24rpx;
 }
 
-/* 余额 */
+/* 积分 */
 .balance-card {
   display: flex;
   flex-direction: column;

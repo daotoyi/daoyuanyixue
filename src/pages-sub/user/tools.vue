@@ -651,7 +651,7 @@ function isLyUnlocked(key) {
   }
 }
 function payLyJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -659,10 +659,10 @@ function payLyJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9 积分
+  // H5 端: 积分扣款 9 积分
   uni.showModal({
     title: '解锁六爻深度解盘',
-    content: '将从积分余额扣除 9 积分，是否继续？',
+    content: '将从积分扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -844,7 +844,7 @@ function isLrUnlocked(key) {
   }
 }
 function payLrJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -852,10 +852,10 @@ function payLrJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9 积分
+  // H5 端: 积分扣款 9 积分
   uni.showModal({
     title: '解锁六壬深度解盘',
-    content: '将从积分余额扣除 9 积分，是否继续？',
+    content: '将从积分扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {

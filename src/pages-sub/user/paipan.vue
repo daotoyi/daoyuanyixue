@@ -430,12 +430,12 @@
         </view>
       </view>
 
-      <!-- AI 智能问答 (¥0.5/次) -->
+      <!-- AI 智能问答 (5积分/次) -->
       <view class="pp-block jp-section">
-        <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
+        <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
         <view class="ai-q-row">
           <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个盘什么时候事业运好转）" placeholder-class="qm-c-ph" />
-          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 ¥0.5</text></view>
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5积分</text></view>
         </view>
         <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
         <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
@@ -574,12 +574,12 @@
         </view>
       </view>
 
-      <!-- AI 智能问答 (¥0.5/次) -->
+      <!-- AI 智能问答 (5积分/次) -->
       <view class="pp-block jp-section">
-        <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
+        <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
         <view class="ai-q-row">
           <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个盘最近适合出行吗）" placeholder-class="qm-c-ph" />
-          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 ¥0.5</text></view>
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5积分</text></view>
         </view>
         <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
         <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
@@ -742,12 +742,12 @@
         </view>
       </view>
 
-      <!-- AI 智能问答 (¥0.5/次, 与八字/奇门共用) -->
+      <!-- AI 智能问答 (5积分/次, 与八字/奇门共用) -->
       <view class="pp-block jp-section">
-        <view class="pp-block-head">AI 智能问答 · ¥0.5/次</view>
+        <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
         <view class="ai-q-row">
           <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个命盘什么时候适合换工作）" placeholder-class="qm-c-ph" />
-          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 ¥0.5</text></view>
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5积分</text></view>
         </view>
         <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
         <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
@@ -894,7 +894,7 @@ function isQmUnlocked(key) {
   }
 }
 function payQmJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -902,10 +902,10 @@ function payQmJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9 积分
+  // H5 端: 积分扣款 9 积分
   uni.showModal({
     title: '解锁奇门深度解盘',
-    content: '将从积分余额扣除 9 积分，是否继续？',
+    content: '将从积分扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -1035,7 +1035,7 @@ function confirmSaveDisk() {
   uni.showToast({ title: '已保存到历史', icon: 'success' })
 }
 
-/* AI 智能问答 (¥0.5/次, 从余额扣款) */
+/* AI 智能问答 (5积分/次) */
 const aiQuestion = ref('')
 const aiAnswer = ref([])
 const aiAsking = ref(false)
@@ -1052,7 +1052,7 @@ function askAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从余额扣除 0.5 元，是否继续？',
+    content: '本次提问将从积分扣除 5 积分，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {
@@ -1297,7 +1297,7 @@ function isZwUnlocked(key) {
   }
 }
 function payZwJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -1305,10 +1305,10 @@ function payZwJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9 积分
+  // H5 端: 积分扣款 9 积分
   uni.showModal({
     title: '解锁紫微深度解盘',
-    content: '将从积分余额扣除 9 积分，是否继续？',
+    content: '将从积分扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -1887,7 +1887,7 @@ function isJpUnlocked(key) {
 }
 
 function payJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=余额(积分)扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -1895,10 +1895,10 @@ function payJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 余额扣款 9 积分
+  // H5 端: 积分扣款 9 积分
   uni.showModal({
     title: '解锁四柱深度解盘',
-    content: '将从积分余额扣除 9 积分，是否继续？',
+    content: '将从积分扣除 9 积分，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {

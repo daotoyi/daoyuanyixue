@@ -2128,7 +2128,7 @@ const settingsTabs = [
     group: 'pay', label: '支付设置', desc: '结算支付方式展示开关',
     fields: [
       { key: 'show_alipay', label: '显示支付宝', type: 'switch', desc: '开启后结算页显示支付宝选项（默认隐藏）' },
-      { key: 'show_balance', label: '显示余额支付', type: 'switch', desc: '开启后结算页显示余额抵扣（默认显示）' },
+      { key: 'show_balance', label: '显示积分支付', type: 'switch', desc: '开启后结算页显示积分抵扣（默认显示）' },
       { key: 'alipay_appid', label: '支付宝 AppID', secret: true, placeholder: '支付宝开放平台应用 APPID' },
       { key: 'alipay_private_key', label: '支付宝应用私钥', secret: true, placeholder: '应用私钥（PKCS8）' },
       { key: 'alipay_public_key', label: '支付宝公钥', secret: true, placeholder: '支付宝平台公钥（验签）' },

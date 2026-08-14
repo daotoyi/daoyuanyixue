@@ -45,7 +45,7 @@
       </view>
 
       <view class="co-row-line">
-        <text class="line-label">余额抵扣</text>
+        <text class="line-label">积分抵扣</text>
         <view class="balance-right">
           <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount + '（用 ' + usedPoints + ' 积分）' : '可用 ' + balance + ' 积分（10积分=1元）' }}</text>
           <switch :checked="balanceUsed" color="#8c5a2b" style="transform: scale(0.8)" @change="toggleBalance" />
@@ -178,7 +178,7 @@ const wechatPayName = '微信支付'
 
 const payMethods = ref([
   { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
-  { key: 'balance', name: '余额支付', icon: '💰' },
+  { key: 'balance', name: '积分支付', icon: '💰' },
 ])
 
 // 按后台配置过滤支付方式 (支付宝默认隐藏)
@@ -187,7 +187,7 @@ async function loadPayConfig() {
     const cfg = await getPayConfig()
     const list = [
       { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
-      { key: 'balance', name: '余额支付', icon: '💰' },
+      { key: 'balance', name: '积分支付', icon: '💰' },
     ]
     if (cfg.show_alipay) list.push({ key: 'alipay', name: '支付宝', icon: '🔵' })
     if (cfg.show_balance === false) {
@@ -199,7 +199,7 @@ async function loadPayConfig() {
   } catch (e) {
     payMethods.value = [
       { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
-      { key: 'balance', name: '余额支付', icon: '💰' },
+      { key: 'balance', name: '积分支付', icon: '💰' },
     ]
   }
 }
@@ -369,7 +369,7 @@ function applyCoupon(c) {
 function toggleBalance() {
   const bal = parseFloat(balance.value) || 0
   if (!balanceUsed.value && bal <= 0) {
-    uni.showToast({ title: '余额为 0，请先充值', icon: 'none' })
+    uni.showToast({ title: '积分为 0，请先充值', icon: 'none' })
     return
   }
   balanceUsed.value = !balanceUsed.value
@@ -401,7 +401,7 @@ async function submitOrder() {
       uid: userStore.userInfo.uid || 0,
       course_id: courseId.value || 0,
     })
-    // 微信小程序: JSAPI 微信支付; 其他端: 微信H5收银台/余额支付
+    // 微信小程序: JSAPI 微信支付; 其他端: 微信H5收银台/积分支付
     // #ifdef MP-WEIXIN
     try {
       const prepay = await wxpayPrepay(order.order_no)
@@ -429,7 +429,7 @@ async function submitOrder() {
     // #ifndef MP-WEIXIN
     // 非小程序端: 真实微信支付 (H5 收银台跳转)
     if (payMethod.value === 'balance') {
-      // 余额支付: 真实扣减并确认订单
+      // 积分支付: 真实扣减并确认订单
       await payOrder(order.order_no)
       clearSelected()
       uni.showToast({ title: '支付成功', icon: 'success' })

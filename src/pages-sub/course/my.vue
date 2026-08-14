@@ -322,14 +322,16 @@ function goCourse() {
 }
 
 .empty {
+  width: 100%;
   padding-top: 120rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 .empty-btn {
   width: 320rpx;
-  margin-top: 40rpx;
+  margin: 40rpx auto 0;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {
