@@ -88,18 +88,21 @@
             </view>
           </scroll-view>
         </view>
-        <!-- 用户精选 (推荐页最底部内容模块) -->
-        <view class="rec-sec" v-if="recShowUsers && recUsers.length">
+        <!-- 动态精选 (推荐页最底部内容模块: 后台推荐的用户动态) -->
+        <view class="rec-sec" v-if="recShowMoments && recMoments.length">
           <view class="rec-head">
-            <text class="rec-title">🧙 用户精选</text>
-            <text class="rec-more" @tap="goUserProfile(recUsers[0])">更多 ›</text>
+            <text class="rec-title">🧙 动态精选</text>
+            <text class="rec-more" @tap="goProfile(recMoments[0])">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
-            <view class="rec-user-card" v-for="u in recUsers.slice(0, 8)" :key="u.uid" @tap="goUserProfile(u)">
-              <image v-if="u.avatar" class="rec-user-avatar" :src="u.avatar" mode="aspectFill"></image>
-              <view v-else class="rec-user-avatar rec-user-fallback"><text>{{ (u.nickname || '道')[0] }}</text></view>
-              <text class="rec-user-name ellipsis-1">{{ u.nickname }}</text>
-              <text class="rec-user-dao" v-if="u.dao_code">{{ u.dao_code }}</text>
+            <view class="rec-moment-card" v-for="m in recMoments.slice(0, 8)" :key="m.id" @tap="goProfile(m)">
+              <image v-if="m.images && m.images.length" class="rec-moment-img" :src="m.images[0]" mode="aspectFill"></image>
+              <view v-else class="rec-moment-img rec-moment-fallback"><text>{{ (m.content || '道')[0] }}</text></view>
+              <text class="rec-moment-content ellipsis-2">{{ m.content }}</text>
+              <view class="rec-moment-foot">
+                <text class="rec-moment-user">{{ m.user_name }}</text>
+                <text class="rec-moment-likes">👍 {{ m.likes || 0 }}</text>
+              </view>
             </view>
           </scroll-view>
         </view>
@@ -331,7 +334,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl, getProducts, getCourses } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl, getProducts, getCourses, getRecommendedMoments } from '../../api/api'
 import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
@@ -366,8 +369,8 @@ const recShowPandao = ref(true)
 const recShowProduct = ref(true)
 const recShowCourse = ref(true)
 const recShowMoment = ref(true)
-const recShowUsers = ref(true)
-const recUsers = ref([])
+const recShowMoments = ref(true)
+const recMoments = ref([])
 /* 推荐页商品/课程列表 (仅显示后台标记"首页推荐"的) */
 const productList = ref([])
 const courseList = ref([])
@@ -755,9 +758,6 @@ function goProfile(m) {
   if (!m || !m.user_id) return
   uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + m.user_id })
 }
-function goUserProfile(u) {
-  if (u && u.uid !== undefined) goProfile({ user_id: u.uid })
-}
 
 /* 盘道临近提醒: 按 start_date 计算 今天/明天/X天后/已结束 */
 function nearPdLabel(p) {
@@ -840,12 +840,11 @@ onShow(async () => {
     } catch (e) { /* 忽略 */ }
   }
 
-  // ①.6 推荐页用户精选 (首页精选用户, 独立加载)
+  // ①.6 推荐页动态精选 (后台标记 is_recommended 的用户动态, 独立加载)
   try {
-    const users = await getRecommendedUsers()
-    recUsers.value = (users || []).map((u) => ({ ...u }))
-    Promise.all(recUsers.value.map(async (u) => { if (u.avatar) u.avatar = await resolveCloudUrl(u.avatar).catch(() => u.avatar) }))
-  } catch (e) { recUsers.value = [] }
+    const list = await getRecommendedMoments()
+    recMoments.value = await convertMomentImages(list || [])
+  } catch (e) { recMoments.value = [] }
 
   // ①.7 我的关注列表 (关注页只显示关注的人)
   followUids.value = []
@@ -1595,6 +1594,13 @@ onShow(async () => {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.ellipsis-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+}
 
 
 .pandao-cover {
@@ -1612,45 +1618,60 @@ onShow(async () => {
   background: #f8f3ea;
 }
 
-/* 用户精选卡片 */
-.rec-user-card {
+/* 动态精选卡片 */
+.rec-moment-card {
   display: inline-flex;
   flex-direction: column;
-  align-items: center;
-  width: 150rpx;
-  margin-right: 20rpx;
+  width: 280rpx;
+  margin-right: 16rpx;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 14rpx;
+  padding: 12rpx;
   vertical-align: top;
 }
-.rec-user-avatar {
-  width: 110rpx;
-  height: 110rpx;
-  border-radius: 50%;
+.rec-moment-img {
+  width: 100%;
+  height: 150rpx;
+  border-radius: 10rpx;
   background: #f8f3ea;
-  border: 2rpx solid #efe7d8;
   overflow: hidden;
 }
-.rec-user-fallback {
+.rec-moment-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #8c5a2b;
+  color: #b3a595;
   font-size: 40rpx;
   background: #f5efe3;
 }
-.rec-user-name {
+.rec-moment-content {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
   color: #42372c;
-  text-align: center;
+  line-height: 1.5;
+  min-height: 72rpx;
 }
-.rec-user-dao {
-  display: block;
-  margin-top: 4rpx;
+.rec-moment-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+.rec-moment-user {
+  font-size: 20rpx;
+  color: #8c5a2b;
+  max-width: 160rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rec-moment-likes {
   font-size: 20rpx;
   color: #b3a595;
-  text-align: center;
 }
+
 
 /* 盘道临近提醒标签 */
 .pandao-near {

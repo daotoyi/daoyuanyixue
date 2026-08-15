@@ -252,15 +252,10 @@ async function myFollowList(data) {
 }
 
 /* 个人主页: 用户信息 + 动态 + 关注/粉丝数 */
-/* 首页推荐页"用户精选": 返回后台标记 home_recommend 的用户 (公开字段, 不含敏感信息) */
-async function recommendedUsers(data) {
-  const res = await db.collection('users').where({ home_recommend: true }).limit(20).get()
-  return ok((res.data || []).map((u) => ({
-    uid: u.uid,
-    nickname: u.nickname || '道友',
-    avatar: u.avatar || '',
-    dao_code: u.dao_code || '',
-  })))
+/* 首页推荐页"动态精选": 返回后台标记 is_recommended 的用户动态 */
+async function recommendedMoments(data) {
+  const res = await db.collection('moments').where({ is_recommended: true }).orderBy('id', 'desc').limit(20).get()
+  return ok(res.data || [])
 }
 
 async function userProfile(data) {
@@ -2793,7 +2788,7 @@ const ROUTES = {
   'user.follow': followUser,
   'user.followList': myFollowList,
   'user.profile': userProfile,
-  'user.recommended': recommendedUsers,
+  'moments.recommended': recommendedMoments,
   'comments.list': listComments,
   'comments.add': addComment,
   'live.list': listLiveStreams,

@@ -490,7 +490,6 @@
               <text class="td w-price">道号</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
               <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
-              <text class="td w-rec">精选</text>
               <text class="td w-ops">操作</text>
               <text class="td w-remark">备注</text>
             </view>
@@ -509,9 +508,6 @@
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
-              <view class="td w-rec ops">
-                <text class="op" :class="u.home_recommend === true ? 'rec-on' : ''" @tap="toggleUserHome(u)">{{ u.home_recommend === true ? '★精选' : '精选' }}</text>
-              </view>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
                 <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
                 <text class="op" @tap="openEditUser(u)">编辑</text>
@@ -1609,14 +1605,6 @@ function openEditUser(u) {
   assignMode.value = 'edit'
   assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '', remark: u.remark || '' }
   showAssignId.value = true
-}
-
-/* 用户: 切换"首页精选"标记 (home_recommend) */
-async function toggleUserHome(u) {
-  const val = u.home_recommend === true ? false : true
-  await adminUserUpdate({ uid: u.uid, home_recommend: val })
-  u.home_recommend = val
-  uni.showToast({ title: val ? '已加入首页用户精选' : '已取消精选', icon: 'success' })
 }
 
 async function saveAssignId() {
