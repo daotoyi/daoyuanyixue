@@ -48,7 +48,7 @@
     <view class="asset-card">
       <view class="asset-item" @tap="goAssets('balance')">
         <text class="asset-num">{{ userInfo.balance || '0' }}</text>
-        <text class="asset-label">积分</text>
+        <text class="asset-label">元宝</text>
       </view>
       <view class="asset-divider"></view>
       <view class="asset-item" @tap="goAssets('coupon')">
@@ -225,13 +225,13 @@ const vipLevel = computed(() => {
 })
 /* 等级说明 (每行一个等级) */
 const vipLevels = [
-  { level: 0, label: 'VIP0', range: '累计消费/储值 1000积分以下' },
-  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-2000积分' },
-  { level: 2, label: 'VIP2', range: '累计消费/储值 2000-5000积分' },
-  { level: 3, label: 'VIP3', range: '累计消费/储值 5000-10000积分' },
-  { level: 4, label: 'VIP4', range: '累计消费/储值 10000-20000积分' },
-  { level: 5, label: 'VIP5', range: '累计消费/储值 20000-50000积分' },
-  { level: 6, label: 'VIP6', range: '累计消费/储值 50000积分以上' },
+  { level: 0, label: 'VIP0', range: '累计消费/储值 1000元宝以下' },
+  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-2000元宝' },
+  { level: 2, label: 'VIP2', range: '累计消费/储值 2000-5000元宝' },
+  { level: 3, label: 'VIP3', range: '累计消费/储值 5000-10000元宝' },
+  { level: 4, label: 'VIP4', range: '累计消费/储值 10000-20000元宝' },
+  { level: 5, label: 'VIP5', range: '累计消费/储值 20000-50000元宝' },
+  { level: 6, label: 'VIP6', range: '累计消费/储值 50000元宝以上' },
 ]
 
 const assets = ref({ coupon_count: 0, favorite_count: 0, footprint_count: 0 })

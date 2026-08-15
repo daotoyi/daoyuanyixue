@@ -408,7 +408,7 @@
             <text class="jp-block-icon">{{ m.icon }}</text>
             <text class="jp-block-name">{{ m.name }}</text>
             <view class="jp-paid-tag">
-              <text v-if="!isJpUnlocked(m.key)">¥9 解锁</text>
+              <text v-if="!isJpUnlocked(m.key)">🪙9 解锁</text>
               <text v-else class="jp-unlocked">已解锁</text>
             </view>
             <text class="jp-arrow">{{ openJp[m.key] ? '▲' : '▼' }}</text>
@@ -422,20 +422,20 @@
           </view>
           <view class="jp-lock" v-if="!isJpUnlocked(m.key) && openJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9 积分</text>
+            <text class="jp-lock-tip">深入解盘 · 事业/财富/婚姻 三合一 9 元宝</text>
             <view class="btn-fill btn-pay" @tap.stop="payJiepan">
-              <text>¥9 立即解锁</text>
+              <text>🪙9 立即解锁</text>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- AI 智能问答 (5积分/次) -->
+      <!-- AI 智能问答 (5元宝/次) -->
       <view class="pp-block jp-section">
-        <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
+        <view class="pp-block-head">AI 智能问答 · 5元宝/次</view>
         <view class="ai-q-row">
           <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个盘什么时候事业运好转）" placeholder-class="qm-c-ph" />
-          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5积分</text></view>
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5元宝</text></view>
         </view>
         <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
         <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
@@ -556,7 +556,7 @@
             <text class="jp-block-icon">{{ m.icon }}</text>
             <text class="jp-block-name">{{ m.name }}</text>
             <view class="jp-paid-tag">
-              <text v-if="!isQmUnlocked(m.key)">¥9 解锁</text>
+              <text v-if="!isQmUnlocked(m.key)">🪙9 解锁</text>
               <text v-else class="jp-unlocked">已解锁</text>
             </view>
             <text class="jp-arrow">{{ qmOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -568,18 +568,18 @@
           </view>
           <view class="jp-lock" v-if="!isQmUnlocked(m.key) && qmOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-            <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>¥9 立即解锁</text></view>
+            <text class="jp-lock-tip">深入奇门解盘 · 事业/财富/婚姻 三合一 9 元宝</text>
+            <view class="btn-fill btn-pay" @tap.stop="payQmJiepan"><text>🪙9 立即解锁</text></view>
           </view>
         </view>
       </view>
 
-      <!-- AI 智能问答 (5积分/次) -->
+      <!-- AI 智能问答 (5元宝/次) -->
       <view class="pp-block jp-section">
-        <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
+        <view class="pp-block-head">AI 智能问答 · 5元宝/次</view>
         <view class="ai-q-row">
           <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个盘最近适合出行吗）" placeholder-class="qm-c-ph" />
-          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5积分</text></view>
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5元宝</text></view>
         </view>
         <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
         <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
@@ -724,7 +724,7 @@
             <text class="jp-block-icon">{{ m.icon }}</text>
             <text class="jp-block-name">{{ m.name }}</text>
             <view class="jp-paid-tag">
-              <text v-if="!isZwUnlocked(m.key)">¥9 解锁</text>
+              <text v-if="!isZwUnlocked(m.key)">🪙9 解锁</text>
               <text v-else class="jp-unlocked">已解锁</text>
             </view>
             <text class="jp-arrow">{{ zwOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -736,18 +736,18 @@
           </view>
           <view class="jp-lock" v-if="!isZwUnlocked(m.key) && zwOpenJp[m.key]">
             <text class="jp-lock-icon">🔒</text>
-            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-            <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>¥9 立即解锁</text></view>
+            <text class="jp-lock-tip">深入紫微解盘 · 事业/财富/婚姻 三合一 9 元宝</text>
+            <view class="btn-fill btn-pay" @tap.stop="payZwJiepan"><text>🪙9 立即解锁</text></view>
           </view>
         </view>
       </view>
 
-      <!-- AI 智能问答 (5积分/次, 与八字/奇门共用) -->
+      <!-- AI 智能问答 (5元宝/次, 与八字/奇门共用) -->
       <view class="pp-block jp-section">
-        <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
+        <view class="pp-block-head">AI 智能问答 · 5元宝/次</view>
         <view class="ai-q-row">
           <input class="ai-q-input" v-model="aiQuestion" placeholder="向 AI 提问（如：这个命盘什么时候适合换工作）" placeholder-class="qm-c-ph" />
-          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5积分</text></view>
+          <view class="btn-fill btn-ask" @tap="askAI"><text>提问 5元宝</text></view>
         </view>
         <view class="jp-ai-loading" v-if="aiAsking"><text>🤖 AI 思考中，请稍候...</text></view>
         <view v-if="aiAnswer && aiAnswer.length" class="ai-q-answer">
@@ -894,7 +894,7 @@ function isQmUnlocked(key) {
   }
 }
 function payQmJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -902,10 +902,10 @@ function payQmJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 积分扣款 9 积分
+  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
     title: '解锁奇门深度解盘',
-    content: '将从积分扣除 9 积分，是否继续？',
+    content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -1035,7 +1035,7 @@ function confirmSaveDisk() {
   uni.showToast({ title: '已保存到历史', icon: 'success' })
 }
 
-/* AI 智能问答 (5积分/次) */
+/* AI 智能问答 (5元宝/次) */
 const aiQuestion = ref('')
 const aiAnswer = ref([])
 const aiAsking = ref(false)
@@ -1052,7 +1052,7 @@ function askAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从积分扣除 5 积分，是否继续？',
+    content: '本次提问将从元宝扣除 5 元宝，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {
@@ -1297,7 +1297,7 @@ function isZwUnlocked(key) {
   }
 }
 function payZwJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -1305,10 +1305,10 @@ function payZwJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 积分扣款 9 积分
+  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
     title: '解锁紫微深度解盘',
-    content: '将从积分扣除 9 积分，是否继续？',
+    content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -1882,7 +1882,7 @@ function isJpUnlocked(key) {
 }
 
 function payJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -1890,10 +1890,10 @@ function payJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 积分扣款 9 积分
+  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
     title: '解锁四柱深度解盘',
-    content: '将从积分扣除 9 积分，是否继续？',
+    content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {

@@ -880,7 +880,7 @@ async function vipLevel(data) {
       total += Number(o.total_price) || 0
     }
   })
-  // 2. 储值累计 = 历史累计储值 total_recharge(元) + 兜底当前余额(积分→元 除以10)
+  // 2. 储值累计 = 历史累计储值 total_recharge(元) + 兜底当前余额(元宝→元 除以10)
   const userRes = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
   const user = userRes.data[0] || {}
   const recharge = Number(user.total_recharge || 0) || (Number(user.balance || 0) / RECHARGE_RATE) || 0
@@ -1056,13 +1056,13 @@ async function aiAsk(data) {
   if (!uid) return fail('请先登录')
   const q = String(question || '').trim()
   if (!q) return fail('请输入问题')
-  // 积分校验 + 扣款 (5 积分/次)
+  // 元宝校验 + 扣款 (5 元宝/次)
   const AI_ASK_COST = 5
   try {
     const u = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
     const user = u.data[0]
     const bal = Number(user && user.balance) || 0
-    if (bal < AI_ASK_COST) return fail('积分不足，AI 提问每次需 5 积分，请先充值积分')
+    if (bal < AI_ASK_COST) return fail('元宝不足，AI 提问每次需 5 元宝，请先充值元宝')
     const newBal = Math.round((bal - AI_ASK_COST) * 100) / 100
     await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
     // 记录提问流水
@@ -1364,8 +1364,8 @@ async function checkUpdate() {
 
 /* ============ 订单 (NoSQL 内存主键: order_no) ============ */
 
-/* 积分充值: 1元 = 10 积分, 创建充值订单 → 微信支付 */
-const RECHARGE_RATE = 10 // 1元 = 10 积分
+/* 元宝充值: 1元 = 10 元宝, 创建充值订单 → 微信支付 */
+const RECHARGE_RATE = 10 // 1元 = 10 元宝
 async function rechargeCreate(data) {
   const { uid, amount } = data
   if (!uid) return fail('请先登录')
@@ -1379,14 +1379,14 @@ async function rechargeCreate(data) {
     total_price: String(amt),
     coupon_discount: 0,
     balance_used: 0,
-    items: [{ id: 'recharge', name: `积分充值 ${points} 积分`, price: String(amt), qty: 1 }],
+    items: [{ id: 'recharge', name: `元宝充值 ${points} 元宝`, price: String(amt), qty: 1 }],
     pay_method: 'wechat',
     address: {},
     uid: Number(uid),
     course_id: 0,
     session_id: 0,
     order_type: 'recharge',
-    recharge_points: points, // 到账积分
+    recharge_points: points, // 到账元宝
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
   return ok({ order_no, points })
@@ -1417,7 +1417,7 @@ async function createOrder(data) {
 }
 
 /* 玄学工具 9.9 付费解锁:
-   pay_method=balance → 直接扣余额解锁(积分 1:1, H5 端无微信支付能力用余额)
+   pay_method=balance → 直接扣余额解锁(元宝 1:1, H5 端无微信支付能力用余额)
    pay_method=wechat (默认) → 创建 tool_unlock 订单走微信支付, 支付成功回调才解锁 */
 async function toolUnlock(data) {
   const { uid, tool, pay_method } = data // tool: bazi | qimen | ziwei | liuyao | liuren
@@ -1429,12 +1429,12 @@ async function toolUnlock(data) {
     liuyao: '六爻 AI 深度解盘', liuren: '大六壬 AI 深度解盘',
   }
 
-  // 余额(积分)扣款解锁 (H5 端): 9 积分/次
+  // 余额(元宝)扣款解锁 (H5 端): 9 元宝/次
   if (String(pay_method || '') === 'balance') {
     const BAL_PRICE = 9
     const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
     const bal = Number((u && u.balance) || 0) || 0
-    if (bal < BAL_PRICE) return fail('积分不足，解锁需 9 积分，请先充值')
+    if (bal < BAL_PRICE) return fail('元宝不足，解锁需 9 元宝，请先充值')
     const newBal = Math.round((bal - BAL_PRICE) * 100) / 100
     await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
     // 记一笔工具解锁订单 (已支付状态)
@@ -1509,7 +1509,7 @@ async function payOrder(data) {
     ? { order_no: data.order_no }
     : { _id: data._id }
   const res = await db.collection('orders').where(cond).update({ status: '待发货' })
-  // 余额(积分)支付: 扣减积分 (balance_used 为金额元, 1元=10积分)
+  // 余额(元宝)支付: 扣减元宝 (balance_used 为金额元, 1元=10元宝)
   try {
     const o = (await db.collection('orders').where(cond).limit(1).get()).data[0]
     if (o && o.balance_used && o.uid) {
@@ -1953,7 +1953,7 @@ async function pandaoCancel(data) {
     const refundAmt = Number(order.total_price) || 0
     const isBalance = String(order.pay_method || '').includes('余额')
     if (isBalance) {
-      // 余额/积分支付: 直接退回余额
+      // 余额/元宝支付: 直接退回余额
       const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
       const bal = Number((u && u.balance) || 0) || 0
       await db.collection('users').where({ uid: Number(uid) })
@@ -1983,7 +1983,7 @@ async function pandaoCancel(data) {
   return ok({ refunded: false, message: '预约已取消' })
 }
 
-/* 订单余额支付 (H5 端无微信支付能力, 用积分余额真实扣款; 支持商品/课程/预约等所有订单) */
+/* 订单余额支付 (H5 端无微信支付能力, 用元宝余额真实扣款; 支持商品/课程/预约等所有订单) */
 async function orderPayBalance(data) {
   const { order_no, uid } = data
   if (!order_no || !uid) return fail('参数错误')
@@ -1993,7 +1993,7 @@ async function orderPayBalance(data) {
   const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
   const bal = Number((u && u.balance) || 0) || 0
   const price = Number(order.total_price) || 0
-  if (bal < price) return fail(`积分不足（需 ${price} 积分），请先充值`)
+  if (bal < price) return fail(`元宝不足（需 ${price} 元宝），请先充值`)
   const newBal = Math.round((bal - price) * 100) / 100
   await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
   // 支付成功: 预约/虚拟商品标记已完成, 实体商品标记待发货
@@ -2471,7 +2471,7 @@ async function adminUserUpdate(data) {
   if (data.dao_code) {
     doc.invite_code = data.dao_code
   }
-  // 后台改余额(充值)时累计储值总额 total_recharge (积分→元 除以10, 用于 VIP 等级)
+  // 后台改余额(充值)时累计储值总额 total_recharge (元宝→元 除以10, 用于 VIP 等级)
   if (data.balance !== undefined && data.balance !== '') {
     const exist = await db.collection('users').where({ uid: Number(data.uid) }).limit(1).get()
     const oldUser = exist.data[0] || {}
@@ -2951,7 +2951,7 @@ exports.main = async (event = {}) => {
                 await db.collection('orders').where({ order_no: resource.out_trade_no }).update({ appointment_status: '已预约' })
               } catch (e4) {}
             }
-            // 积分充值订单: 支付成功加积分到账 (1元=1积分)
+            // 元宝充值订单: 支付成功加元宝到账 (1元=1元宝)
             if (o.order_type === 'recharge' && o.recharge_points) {
               try {
                 const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]

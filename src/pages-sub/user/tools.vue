@@ -269,7 +269,7 @@
                 <text class="jp-block-icon">{{ m.icon }}</text>
                 <text class="jp-block-name">{{ m.name }}</text>
                 <view class="jp-paid-tag">
-                  <text v-if="!isLyUnlocked(m.key)">¥9 解锁</text>
+                  <text v-if="!isLyUnlocked(m.key)">🪙9 解锁</text>
                   <text v-else class="jp-unlocked">已解锁</text>
                 </view>
                 <text class="jp-arrow">{{ lyOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -281,18 +281,18 @@
               </view>
               <view class="jp-lock" v-if="!isLyUnlocked(m.key) && lyOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-                <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>¥9 立即解锁</text></view>
+                <text class="jp-lock-tip">深入六爻解盘 · 事业/财富/婚姻 三合一 9 元宝</text>
+                <view class="btn-fill btn-pay" @tap.stop="payLyJiepan"><text>🪙9 立即解锁</text></view>
               </view>
             </view>
           </view>
 
-          <!-- AI 智能问答 (5积分/次, 参考八字) -->
+          <!-- AI 智能问答 (5元宝/次, 参考八字) -->
           <view class="jp-section">
-            <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
+            <view class="pp-block-head">AI 智能问答 · 5元宝/次</view>
             <view class="ai-q-row">
               <input class="ai-q-input" v-model="lyAIQuestion" placeholder="向 AI 提问（如：此卦近期财运如何）" placeholder-class="qm-c-ph" />
-              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 5积分</text></view>
+              <view class="btn-fill btn-ask" @tap="askLyAI"><text>提问 5元宝</text></view>
             </view>
             <view class="jp-ai-loading" v-if="lyAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
             <view v-if="lyAIAnswer && lyAIAnswer.length" class="ai-q-answer">
@@ -392,7 +392,7 @@
                 <text class="jp-block-icon">{{ m.icon }}</text>
                 <text class="jp-block-name">{{ m.name }}</text>
                 <view class="jp-paid-tag">
-                  <text v-if="!isLrUnlocked(m.key)">¥9 解锁</text>
+                  <text v-if="!isLrUnlocked(m.key)">🪙9 解锁</text>
                   <text v-else class="jp-unlocked">已解锁</text>
                 </view>
                 <text class="jp-arrow">{{ lrOpenJp[m.key] ? '▲' : '▼' }}</text>
@@ -404,18 +404,18 @@
               </view>
               <view class="jp-lock" v-if="!isLrUnlocked(m.key) && lrOpenJp[m.key]">
                 <text class="jp-lock-icon">🔒</text>
-                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9 积分</text>
-                <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>¥9 立即解锁</text></view>
+                <text class="jp-lock-tip">深入六壬解盘 · 事业/财富/婚姻 三合一 9 元宝</text>
+                <view class="btn-fill btn-pay" @tap.stop="payLrJiepan"><text>🪙9 立即解锁</text></view>
               </view>
             </view>
           </view>
 
-          <!-- AI 智能问答 (5积分/次, 参考八字) -->
+          <!-- AI 智能问答 (5元宝/次, 参考八字) -->
           <view class="jp-section">
-            <view class="pp-block-head">AI 智能问答 · 5积分/次</view>
+            <view class="pp-block-head">AI 智能问答 · 5元宝/次</view>
             <view class="ai-q-row">
               <input class="ai-q-input" v-model="lrAIQuestion" placeholder="向 AI 提问（如：此课出行宜忌）" placeholder-class="qm-c-ph" />
-              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 5积分</text></view>
+              <view class="btn-fill btn-ask" @tap="askLrAI"><text>提问 5元宝</text></view>
             </view>
             <view class="jp-ai-loading" v-if="lrAIAsking"><text>🤖 AI 思考中，请稍候...</text></view>
             <view v-if="lrAIAnswer && lrAIAnswer.length" class="ai-q-answer">
@@ -694,7 +694,7 @@ function isLyUnlocked(key) {
   }
 }
 function payLyJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -702,10 +702,10 @@ function payLyJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 积分扣款 9 积分
+  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
     title: '解锁六爻深度解盘',
-    content: '将从积分扣除 9 积分，是否继续？',
+    content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -791,7 +791,7 @@ function saveLiuyao() {
   showToolSaveModal.value = true
 }
 
-/* ===== 六爻 AI 智能问答 (5积分/次, 参考八字) ===== */
+/* ===== 六爻 AI 智能问答 (5元宝/次, 参考八字) ===== */
 const lyAIQuestion = ref('')
 const lyAIAnswer = ref([])
 const lyAIAsking = ref(false)
@@ -808,7 +808,7 @@ function askLyAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从积分扣除 5 积分，是否继续？',
+    content: '本次提问将从元宝扣除 5 元宝，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {
@@ -887,7 +887,7 @@ function isLrUnlocked(key) {
   }
 }
 function payLrJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=积分扣款, 支付成功后才解锁
+  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
@@ -895,10 +895,10 @@ function payLrJiepan() {
     return
   }
   // #ifndef MP-WEIXIN
-  // H5 端: 积分扣款 9 积分
+  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
     title: '解锁六壬深度解盘',
-    content: '将从积分扣除 9 积分，是否继续？',
+    content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
@@ -988,7 +988,7 @@ function confirmToolSave() {
   _pendingSave = null
 }
 
-/* ===== 六壬 AI 智能问答 (5积分/次, 参考八字) ===== */
+/* ===== 六壬 AI 智能问答 (5元宝/次, 参考八字) ===== */
 const lrAIQuestion = ref('')
 const lrAIAnswer = ref([])
 const lrAIAsking = ref(false)
@@ -1005,7 +1005,7 @@ function askLrAI() {
   }
   uni.showModal({
     title: 'AI 智能问答',
-    content: '本次提问将从积分扣除 5 积分，是否继续？',
+    content: '本次提问将从元宝扣除 5 元宝，是否继续？',
     confirmText: '确认提问',
     cancelText: '取消',
     success: (res) => {

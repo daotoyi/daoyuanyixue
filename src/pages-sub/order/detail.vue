@@ -42,7 +42,7 @@
       <view class="row"><text class="rk">下单时间</text><text class="rv">{{ order.created_at }}</text></view>
     </view>
 
-    <!-- 支付方式选择 (待付款订单; 微信/积分/支付宝三选一, 支付宝默认隐藏且受后台开关控制) -->
+    <!-- 支付方式选择 (待付款订单; 微信/元宝/支付宝三选一, 支付宝默认隐藏且受后台开关控制) -->
     <view class="pay-methods" v-if="order.status === '待付款'">
       <view class="pm-title">选择支付方式</view>
       <view class="pm-item" :class="{ on: selectedPay === 'wechat' }" @tap="selectedPay = 'wechat'">
@@ -50,9 +50,9 @@
         <text class="pm-name">微信支付</text>
         <text class="pm-check" :class="{ on: selectedPay === 'wechat' }">{{ selectedPay === 'wechat' ? '✓' : '' }}</text>
       </view>
-      <view class="pm-item" :class="{ on: selectedPay === 'balance' }" @tap="selectedPay = 'balance'">
-        <view class="pm-icon pm-balance"><text>积</text></view>
-        <text class="pm-name">积分支付</text>
+      <view class="pm-item" :class="{ on: selectedPay === 'balance' }" v-if="!isRechargeOrder" @tap="selectedPay = 'balance'">
+        <view class="pm-icon pm-balance"><text>宝</text></view>
+        <text class="pm-name">元宝支付</text>
         <text class="pm-check" :class="{ on: selectedPay === 'balance' }">{{ selectedPay === 'balance' ? '✓' : '' }}</text>
       </view>
       <!-- 支付宝: 默认隐藏, 后台开启"显示支付宝"后可用 -->
@@ -94,7 +94,7 @@ import { useUserStore } from '../../store/index'
 const order = ref(null)
 const orderNo = ref(null)
 
-/* 支付方式选择: 微信/积分/支付宝 三选一; 默认小程序=微信, H5/其他=积分; 支付宝默认隐藏(后台开关) */
+/* 支付方式选择: 微信/元宝/支付宝 三选一; 默认小程序=微信, H5/其他=元宝; 支付宝默认隐藏(后台开关) */
 const selectedPay = ref('balance')
 // #ifdef MP-WEIXIN
 selectedPay.value = 'wechat'
@@ -125,19 +125,24 @@ const statusTip = computed(() => ({
   已退款: '退款已原路退回',
 })[order.value?.status] || '')
 
-// 支付方式名: 微信支付 / 积分支付 / 支付宝
+// 充值订单: 不能用元宝支付买元宝, 只支持微信/支付宝
+const isRechargeOrder = computed(() => order.value?.order_type === 'recharge')
+
+// 支付方式名: 微信支付 / 元宝支付 / 支付宝
 const payName = computed(() => {
   const m = {
     wechat: '微信支付',
     alipay: '支付宝',
-    balance: '积分支付',
-    余额: '积分支付',
+    balance: '元宝支付',
+    余额: '元宝支付',
   }
   return m[order.value?.pay_method] || '微信支付'
 })
 
 async function load() {
   order.value = await getOrder(orderNo.value)
+  // 充值订单: 强制微信支付 (元宝不能买元宝), H5 端默认也切到微信
+  if (isRechargeOrder.value && selectedPay.value === 'balance') selectedPay.value = 'wechat'
 }
 
 async function doPay() {
@@ -169,8 +174,12 @@ async function doPay() {
     return
   }
 
-  // 积分支付 (积分真实扣款, 支持所有订单类型)
+  // 元宝支付 (元宝真实扣款, 支持所有订单类型; 充值订单不允许元宝支付)
   if (selectedPay.value === 'balance') {
+    if (isRechargeOrder.value) {
+      uni.showToast({ title: '充值订单请使用微信支付', icon: 'none' })
+      return
+    }
     try {
       const userStore = useUserStore()
       await orderPayBalance({ order_no: orderNo.value, uid: userStore.userInfo.uid })
@@ -202,7 +211,7 @@ async function doPay() {
   // H5/App 无 JSAPI 微信支付能力: 明确引导, 不再静默走其他支付
   uni.showModal({
     title: '微信支付',
-    content: '微信支付请在微信小程序中完成；当前端请选择「积分支付」或「支付宝」。',
+    content: '微信支付请在微信小程序中完成；当前端请选择「元宝支付」或「支付宝」。',
     showCancel: false,
   })
   return
@@ -398,7 +407,7 @@ function goShop() {
 .pm-alipay {
   background: linear-gradient(135deg, #1677ff, #0a5fd6);
 }
-/* 积分支付: 金色 + "积"字 */
+/* 元宝支付: 金色 + "积"字 */
 .pm-balance {
   background: linear-gradient(135deg, #d4a24c, #b8860b);
 }

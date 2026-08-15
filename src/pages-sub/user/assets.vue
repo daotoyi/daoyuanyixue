@@ -1,13 +1,13 @@
 <template>
   <view class="assets-page">
-    <!-- 积分 -->
+    <!-- 元宝 -->
     <view class="balance-card" v-if="type === 'balance'">
-      <text class="bc-corner">1 元 = 10 积分</text>
-      <text class="bc-label">我的积分</text>
-      <text class="bc-num">{{ userInfo.balance || '0' }} <text class="bc-unit">积分</text></text>
-      <text class="bc-tip">充值 1 元获得 10 积分，积分可在结算时抵扣</text>
+      <text class="bc-corner">1 元 = 10 元宝</text>
+      <text class="bc-label">我的元宝</text>
+      <text class="bc-num">{{ userInfo.balance || '0' }} <text class="bc-unit">元宝</text></text>
+      <text class="bc-tip">充值 1 元获得 10 元宝，元宝可在结算时抵扣</text>
       <view class="bc-actions">
-        <view class="btn-p sm" @click="goRecharge">充值积分</view>
+        <view class="btn-p sm" @click="goRecharge">充值元宝</view>
         <view class="btn-p plain sm" @click="goShop">去购物</view>
       </view>
     </view>
@@ -42,6 +42,42 @@
         <view class="empty-tip">{{ type === 'favorite' ? '暂无收藏商品' : '暂无浏览足迹' }}</view>
       </view>
     </view>
+
+    <!-- 充值元宝弹窗: 固定档位 + 自定义金额 -->
+    <view class="rc-mask" v-if="showRecharge" @tap="showRecharge = false">
+      <view class="rc-pop" @tap.stop>
+        <view class="rc-title">充值元宝</view>
+        <view class="rc-sub">1 元 = 10 元宝</view>
+        <view class="rc-grid">
+          <view
+            class="rc-item"
+            v-for="a in [10, 50, 100, 200, 500]"
+            :key="a"
+            :class="{ on: selAmt === a }"
+            @tap="selAmt = a; customAmt = ''"
+          >
+            <text class="rc-num">¥{{ a }}</text>
+            <text class="rc-points">充 {{ a * 10 }} 元宝</text>
+          </view>
+          <view class="rc-item rc-custom" :class="{ on: selAmt === 0 && customAmt }" @tap="selAmt = 0">
+            <input
+              class="rc-input"
+              type="digit"
+              placeholder="自定义金额"
+              placeholder-class="rc-ph"
+              :value="customAmt"
+              @focus="selAmt = 0"
+              @input="(e) => customAmt = e.detail.value"
+            />
+            <text class="rc-points" v-if="customAmt">充 {{ (Number(customAmt) || 0) * 10 }} 元宝</text>
+          </view>
+        </view>
+        <view class="rc-actions">
+          <view class="btn-p plain sm" @tap="showRecharge = false">取消</view>
+          <view class="btn-p sm" @tap="confirmRecharge">确认充值</view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -59,7 +95,7 @@ const list = ref([])
 onLoad((options) => {
   type.value = options.type || 'balance'
   uni.setNavigationBarTitle({
-    title: { balance: '我的积分', coupon: '我的优惠券', favorite: '我的收藏', footprint: '我的足迹' }[type.value] || '我的',
+    title: { balance: '我的元宝', coupon: '我的优惠券', favorite: '我的收藏', footprint: '我的足迹' }[type.value] || '我的',
   })
   load()
 })
@@ -84,25 +120,37 @@ function goShop() {
   uni.switchTab({ url: '/pages/shop/shop' })
 }
 
-/* 充值积分: 1元=10积分 */
+/* 充值元宝: 1元=10元宝, 弹窗选档位(10/50/100/200/500)或自定义金额 */
+const showRecharge = ref(false)
+const selAmt = ref(10)
+const customAmt = ref('')
+
 function goRecharge() {
-  const amounts = [10, 30, 50, 100]
-  uni.showActionSheet({
-    itemList: amounts.map((a) => '充 ' + a + ' 元 → ' + a * 10 + ' 积分'),
-    success: async (res) => {
-      const amt = amounts[res.tapIndex]
-      if (!amt) return
-      try {
-        const r = await rechargeCreate({ uid: userStore.userInfo.uid, amount: amt })
-        if (r && r.order_no) {
-          uni.showToast({ title: '充值订单已创建，请完成支付', icon: 'none' })
-          setTimeout(() => uni.redirectTo({ url: '/pages-sub/order/detail?order_no=' + r.order_no }), 800)
-        }
-      } catch (e) {
-        uni.showToast({ title: e.message || '创建失败', icon: 'none' })
-      }
-    },
-  })
+  selAmt.value = 10
+  customAmt.value = ''
+  showRecharge.value = true
+}
+
+async function confirmRecharge() {
+  let amt = selAmt.value
+  if (!amt || amt <= 0) {
+    const c = Number(customAmt.value)
+    if (!c || c <= 0) {
+      uni.showToast({ title: '请输入充值金额', icon: 'none' })
+      return
+    }
+    amt = c
+  }
+  try {
+    const r = await rechargeCreate({ uid: userStore.userInfo.uid, amount: amt })
+    if (r && r.order_no) {
+      showRecharge.value = false
+      uni.showToast({ title: '充值订单已创建，请完成支付', icon: 'none' })
+      setTimeout(() => uni.redirectTo({ url: '/pages-sub/order/detail?order_no=' + r.order_no }), 800)
+    }
+  } catch (e) {
+    uni.showToast({ title: e.message || '创建失败', icon: 'none' })
+  }
 }
 </script>
 
@@ -113,7 +161,7 @@ function goRecharge() {
   padding: 24rpx;
 }
 
-/* 积分 */
+/* 元宝 */
 .balance-card {
   display: flex;
   flex-direction: column;
@@ -243,6 +291,92 @@ function goRecharge() {
 
 .empty {
   padding-top: 80rpx;
+}
+
+/* 充值元宝弹窗 */
+.rc-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(38, 22, 8, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+.rc-pop {
+  width: 600rpx;
+  background: #fefbf6;
+  border-radius: 24rpx;
+  padding: 40rpx 36rpx 32rpx;
+}
+.rc-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #42372c;
+  text-align: center;
+}
+.rc-sub {
+  font-size: 22rpx;
+  color: #b3a595;
+  text-align: center;
+  margin: 8rpx 0 28rpx;
+}
+.rc-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.rc-item {
+  width: calc(33.33% - 11rpx);
+  box-sizing: border-box;
+  border: 2rpx solid #e6dcca;
+  border-radius: 14rpx;
+  background: #f8f3ea;
+  padding: 20rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+}
+.rc-item.on {
+  border-color: #8c5a2b;
+  background: #fdf6ec;
+  box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.15);
+}
+.rc-num {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #8c5a2b;
+}
+.rc-points {
+  font-size: 20rpx;
+  color: #b3a595;
+}
+.rc-item.on .rc-points {
+  color: #8c5a2b;
+}
+.rc-custom {
+  padding: 12rpx 0;
+}
+.rc-input {
+  width: 100%;
+  text-align: center;
+  font-size: 30rpx;
+  color: #42372c;
+  height: 56rpx;
+}
+.rc-ph {
+  color: #b3a595;
+  font-size: 26rpx;
+}
+.rc-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 32rpx;
+}
+.rc-actions .btn-p {
+  flex: 1;
+  margin: 0;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {
