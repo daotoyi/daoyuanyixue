@@ -30,7 +30,7 @@
         <!-- 直播 -->
         <view class="rec-sec" v-if="recShowLive && liveList.length">
           <view class="rec-head">
-            <text class="rec-title">📺 直播</text>
+            <text class="rec-title">📺 直播活动</text>
             <text class="rec-more" @tap="switchTab('live')">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
@@ -77,7 +77,7 @@
         <!-- 课程 -->
         <view class="rec-sec" v-if="recShowCourse && recCourses.length">
           <view class="rec-head">
-            <text class="rec-title">📖 精选课程</text>
+            <text class="rec-title">📖 课程精选</text>
             <text class="rec-more" @tap="goCourseTab">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
@@ -88,14 +88,14 @@
             </view>
           </scroll-view>
         </view>
-        <!-- 动态精选 (推荐页最底部内容模块: 我关注的用户的推荐动态, 横向滑动显示全部) -->
-        <view class="rec-sec" v-if="recShowMoments && recMomentsShown.length">
+        <!-- 动态精选 (推荐页最底部内容模块: 后台精选的全部用户动态, 横向滑动显示) -->
+        <view class="rec-sec" v-if="recShowMoments && recMoments.length">
           <view class="rec-head">
             <text class="rec-title">🧙 动态精选</text>
             <text class="rec-more" @tap="switchTab('follow')">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
-            <view class="rec-moment-card" v-for="m in recMomentsShown" :key="m.id" @tap="goProfile(m)">
+            <view class="rec-moment-card" v-for="m in recMoments" :key="m.id" @tap="goProfile(m)">
               <image v-if="m.images && m.images.length" class="rec-moment-img" :src="m.images[0]" mode="aspectFill"></image>
               <view v-else class="rec-moment-img rec-moment-fallback"><text>{{ (m.content || '道')[0] }}</text></view>
               <text class="rec-moment-content ellipsis-2">{{ m.content }}</text>
@@ -334,7 +334,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl, getProducts, getCourses, getRecommendedMoments } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, fileUrl, getProducts, getCourses, getRecommendedMoments } from '../../api/api'
 import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
@@ -359,7 +359,6 @@ const currentTab = ref('recommend')
 // 公众号主页链接 (H5/APP 端点击"关注"直接跳转, __biz 来自「真和盛」公众号文章链接)
 const GZH_HOME_URL = 'https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=MzcwOTM0NTY1MA=='
 const momentList = ref([])
-const followUids = ref([]) // 我关注的用户 uid 列表 (动态精选过滤用)
 const liveList = ref([])
 const pandaoList = ref([])
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
@@ -449,8 +448,7 @@ const shownMoments = computed(() => {
   return momentList.value
 })
 
-/* 动态精选 (推荐页底部): 只显示我关注的用户的推荐动态 (后台标记 is_recommended 且作者被我关注) */
-const recMomentsShown = computed(() => recMoments.value.filter((m) => followUids.value.includes(Number(m.user_id))))
+/* 动态精选 (推荐页底部): 后台精选的全部用户动态 (moments.recommended 已过滤 is_recommended) */
 
 function switchTab(key) {
   currentTab.value = key
@@ -844,15 +842,6 @@ onShow(async () => {
     const list = await getRecommendedMoments()
     recMoments.value = await convertMomentImages(list || [])
   } catch (e) { recMoments.value = [] }
-
-  // ①.7 我的关注列表 (关注页只显示关注的人)
-  followUids.value = []
-  if (userStore.isLoggedIn) {
-    try {
-      const fl = await followList({ uid: userStore.userInfo.uid, type: 'follow' })
-      followUids.value = (fl || []).map((u) => Number(u.uid))
-    } catch (e) { /* 忽略 */ }
-  }
 
   // ② 盘道活动: 独立加载 (任一接口失败不影响盘道展示)
   try {

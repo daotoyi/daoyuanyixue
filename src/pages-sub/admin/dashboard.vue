@@ -555,16 +555,16 @@
               <text class="td w-name">作者</text>
               <text class="td w-name">内容</text>
               <text class="td w-time">时间</text>
-              <text class="td w-status">推荐</text>
+              <text class="td w-status">精选</text>
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr" v-for="m in moments" :key="m._id || m.id">
               <text class="td w-name">{{ m.user_name }}</text>
               <text class="td w-name ellipsis">{{ m.content }}</text>
               <text class="td w-time">{{ m.created_at || '-' }}</text>
-              <text class="td w-status" :class="m.is_recommended ? 'on' : 'off'">{{ m.is_recommended ? '已推荐' : '未推荐' }}</text>
+              <text class="td w-status" :class="m.is_recommended ? 'on' : 'off'">{{ m.is_recommended ? '已精选' : '未精选' }}</text>
               <view class="td w-ops ops">
-                <text class="op op-fixed" @tap="auditMoment(m)">{{ m.is_recommended ? '取消推荐' : '推荐' }}</text>
+                <text class="op op-fixed" @tap="auditMoment(m)">{{ m.is_recommended ? '取消精选' : '精选' }}</text>
                 <text class="op danger" @tap="deleteMoment(m)">删除</text>
               </view>
             </view>
@@ -2279,7 +2279,7 @@ async function deleteMoment(m) {
 
 async function auditMoment(m) {
   await adminMomentAudit({ id: m.id, _id: m._id, is_recommended: !m.is_recommended })
-  uni.showToast({ title: m.is_recommended ? '已取消推荐' : '已推荐', icon: 'none' })
+  uni.showToast({ title: m.is_recommended ? '已取消精选' : '已精选', icon: 'none' })
   await loadModule('moments')
 }
 
