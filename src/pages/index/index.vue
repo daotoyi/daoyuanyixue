@@ -88,14 +88,14 @@
             </view>
           </scroll-view>
         </view>
-        <!-- 动态精选 (推荐页最底部内容模块: 我关注的用户的推荐动态) -->
+        <!-- 动态精选 (推荐页最底部内容模块: 我关注的用户的推荐动态, 横向滑动显示全部) -->
         <view class="rec-sec" v-if="recShowMoments && recMomentsShown.length">
           <view class="rec-head">
             <text class="rec-title">🧙 动态精选</text>
-            <text class="rec-more" @tap="goProfile(recMomentsShown[0])">更多 ›</text>
+            <text class="rec-more" @tap="switchTab('follow')">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
-            <view class="rec-moment-card" v-for="m in recMomentsShown.slice(0, 8)" :key="m.id" @tap="goProfile(m)">
+            <view class="rec-moment-card" v-for="m in recMomentsShown" :key="m.id" @tap="goProfile(m)">
               <image v-if="m.images && m.images.length" class="rec-moment-img" :src="m.images[0]" mode="aspectFill"></image>
               <view v-else class="rec-moment-img rec-moment-fallback"><text>{{ (m.content || '道')[0] }}</text></view>
               <text class="rec-moment-content ellipsis-2">{{ m.content }}</text>
@@ -108,7 +108,7 @@
         </view>
       </view>
 
-      <view class="feed" v-if="recShowMoment && shownMoments.length">
+      <view class="feed" v-if="currentTab === 'follow' && shownMoments.length">
         <view class="moment-card" v-for="m in shownMoments" :key="m.id">
           <view class="moment-head">
             <view class="avatar-circle" @tap.stop="goProfile(m)"><text>{{ m.user_name[0] }}</text></view>
@@ -181,13 +181,13 @@
         </view>
       </view>
 
-      <view class="empty" v-else-if="recShowMoment">
+      <view class="empty" v-else-if="currentTab === 'follow'">
         <text class="empty-icon">📭</text>
         <text class="empty-tip">暂无动态</text>
       </view>
 
-      <!-- 发布动态: 悬浮右下角 (后台可配置隐藏) -->
-      <view class="fab-publish" v-if="homeShowPublish" @tap="goPublish">
+      <!-- 发布动态: 悬浮右下角 (仅动态tab显示, 推荐页不显示; 后台可配置隐藏) -->
+      <view class="fab-publish" v-if="currentTab === 'follow' && homeShowPublish" @tap="goPublish">
         <text class="fab-icon">✎</text>
         <text class="fab-text">发布动态</text>
       </view>
@@ -338,7 +338,7 @@ import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, get
 import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
-// tab 顺序固定: 推荐 → 动态 → 盘道 → 直播 (显示与否由后台首页管理开关控制)
+// tab 顺序固定: 推荐 → 盘道 → 直播 → 动态 (显示与否由后台首页管理开关控制)
 const tabs = ref([
   { key: 'recommend', label: '推荐' },
   { key: 'pandao', label: '盘道' },
@@ -348,9 +348,9 @@ const tabs = ref([
 function buildTabs(cfg) {
   const arr = []
   if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐' })
-  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '动态' })
   if (cfg.show_pandao !== false) arr.push({ key: 'pandao', label: '盘道' }) // 盘道默认显示, 后台可关
   if (cfg.show_live === true) arr.push({ key: 'live', label: '直播' })
+  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '动态' }) // 动态放最后 (直播右面)
   tabs.value = arr
   if (!arr.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
 }
