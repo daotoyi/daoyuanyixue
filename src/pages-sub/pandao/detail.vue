@@ -4,11 +4,12 @@
       <image class="pd-cover" v-if="session.cover" :src="session._coverUrl || session.cover" mode="aspectFill"></image>
       <view class="pd-badge-row">
         <text class="pd-badge">{{ session.day || '盘道' }}</text>
+        <text class="pd-near" v-if="session._near">{{ session._near }}</text>
         <text class="pd-status" :class="'st-' + statusKey(session.status)">{{ session.status || '即将开始' }}</text>
       </view>
       <text class="pd-title">{{ session.title }}</text>
       <view class="pd-meta">
-        <view class="pd-meta-item"><text class="pd-meta-icon">🕐</text><text>{{ session.day }} {{ session.time }}</text></view>
+        <view class="pd-meta-item"><text class="pd-meta-icon">🕐</text><text>{{ session.start_date || '' }} {{ session.day }} {{ session.time }}</text></view>
         <view class="pd-meta-item"><text class="pd-meta-icon">📍</text><text>{{ session.place }}</text></view>
         <view class="pd-meta-item"><text class="pd-meta-icon">💰</text><text class="pd-price">¥{{ session.price }}</text></view>
       </view>
@@ -39,6 +40,21 @@ import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getPandaoDetail, pandaoBook, pandaoCancel, getPandaoMine } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudUrl } from '../../utils/avatar'
+
+/* 盘道临近提醒: 按 start_date 计算 */
+function nearLabel(p) {
+  if (!p || !p.start_date) return ''
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(String(p.start_date).replace(/-/g, '/'))
+  if (isNaN(d.getTime())) return ''
+  d.setHours(0, 0, 0, 0)
+  const diff = Math.round((d - today) / 86400000)
+  if (diff < 0) return ''
+  if (diff === 0) return '今天开始'
+  if (diff === 1) return '明天开始'
+  if (diff <= 3) return diff + '天后开始'
+  return ''
+}
 
 const userStore = useUserStore()
 const session = ref(null)
@@ -73,6 +89,7 @@ async function loadDetail() {
     if (session.value && session.value.cover) {
       session.value._coverUrl = await resolveCloudUrl(session.value.cover).catch(() => '')
     }
+    if (session.value) session.value._near = nearLabel(session.value)
     if (session.value && userStore.isLoggedIn) {
       try {
         const mine = await getPandaoMine({ uid: userStore.userInfo.uid })
@@ -164,6 +181,14 @@ async function bookNow() {
   font-size: 24rpx;
   font-weight: bold;
   padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+}
+
+.pd-near {
+  font-size: 20rpx;
+  color: #c0392b;
+  background: #fdece8;
+  padding: 4rpx 14rpx;
   border-radius: 999rpx;
 }
 .pd-status {

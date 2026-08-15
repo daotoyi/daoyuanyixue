@@ -88,6 +88,21 @@
             </view>
           </scroll-view>
         </view>
+        <!-- 用户精选 (推荐页最底部内容模块) -->
+        <view class="rec-sec" v-if="recShowUsers && recUsers.length">
+          <view class="rec-head">
+            <text class="rec-title">🧙 用户精选</text>
+            <text class="rec-more" @tap="goUserProfile(recUsers[0])">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-user-card" v-for="u in recUsers.slice(0, 8)" :key="u.uid" @tap="goUserProfile(u)">
+              <image v-if="u.avatar" class="rec-user-avatar" :src="u.avatar" mode="aspectFill"></image>
+              <view v-else class="rec-user-avatar rec-user-fallback"><text>{{ (u.nickname || '道')[0] }}</text></view>
+              <text class="rec-user-name ellipsis-1">{{ u.nickname }}</text>
+              <text class="rec-user-dao" v-if="u.dao_code">{{ u.dao_code }}</text>
+            </view>
+          </scroll-view>
+        </view>
       </view>
 
       <view class="feed" v-if="recShowMoment && shownMoments.length">
@@ -222,8 +237,10 @@
           <view class="pandao-head">
             <text class="pandao-badge">{{ pd.day }}</text>
             <view class="pandao-info">
-              <text class="pandao-title">{{ pd.title }}</text>
-              <text class="pandao-time">🕐 {{ pd.day }} {{ pd.time }}</text>
+              <text class="pandao-title">{{ pd.title }}
+                <text class="pandao-near" v-if="pd._near">{{ pd._near }}</text>
+              </text>
+              <text class="pandao-time">🕐 {{ pd.start_date || '' }} {{ pd.day }} {{ pd.time }}</text>
               <text class="pandao-place">📍 {{ pd.place }}</text>
               <text class="pandao-desc">{{ pd.desc }}</text>
             </view>
@@ -349,6 +366,8 @@ const recShowPandao = ref(true)
 const recShowProduct = ref(true)
 const recShowCourse = ref(true)
 const recShowMoment = ref(true)
+const recShowUsers = ref(true)
+const recUsers = ref([])
 /* 推荐页商品/课程列表 (仅显示后台标记"首页推荐"的) */
 const productList = ref([])
 const courseList = ref([])
@@ -736,6 +755,24 @@ function goProfile(m) {
   if (!m || !m.user_id) return
   uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + m.user_id })
 }
+function goUserProfile(u) {
+  if (u && u.uid !== undefined) goProfile({ user_id: u.uid })
+}
+
+/* 盘道临近提醒: 按 start_date 计算 今天/明天/X天后/已结束 */
+function nearPdLabel(p) {
+  if (!p || !p.start_date) return ''
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(String(p.start_date).replace(/-/g, '/'))
+  if (isNaN(d.getTime())) return ''
+  d.setHours(0, 0, 0, 0)
+  const diff = Math.round((d - today) / 86400000)
+  if (diff < 0) return ''
+  if (diff === 0) return '今天开始'
+  if (diff === 1) return '明天开始'
+  if (diff <= 3) return diff + '天后开始'
+  return ''
+}
 
 function goPublish() {
   uni.navigateTo({ url: '/pages-sub/moment/publish' })
@@ -803,7 +840,14 @@ onShow(async () => {
     } catch (e) { /* 忽略 */ }
   }
 
-  // ①.6 我的关注列表 (关注页只显示关注的人)
+  // ①.6 推荐页用户精选 (首页精选用户, 独立加载)
+  try {
+    const users = await getRecommendedUsers()
+    recUsers.value = (users || []).map((u) => ({ ...u }))
+    Promise.all(recUsers.value.map(async (u) => { if (u.avatar) u.avatar = await resolveCloudUrl(u.avatar).catch(() => u.avatar) }))
+  } catch (e) { recUsers.value = [] }
+
+  // ①.7 我的关注列表 (关注页只显示关注的人)
   followUids.value = []
   if (userStore.isLoggedIn) {
     try {
@@ -815,7 +859,7 @@ onShow(async () => {
   // ② 盘道活动: 独立加载 (任一接口失败不影响盘道展示)
   try {
     const pandao = await getPandaoList()
-    pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
+    pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false, _near: nearPdLabel(p) }))
     Promise.all(pandaoList.value.map(async (p) => { if (p.cover) p._coverUrl = await resolveCloudUrl(p.cover).catch(() => '') }))
     if (userStore.isLoggedIn) {
       try {
@@ -1566,5 +1610,57 @@ onShow(async () => {
   border-radius: 10rpx;
   margin-bottom: 8rpx;
   background: #f8f3ea;
+}
+
+/* 用户精选卡片 */
+.rec-user-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 150rpx;
+  margin-right: 20rpx;
+  vertical-align: top;
+}
+.rec-user-avatar {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: #f8f3ea;
+  border: 2rpx solid #efe7d8;
+  overflow: hidden;
+}
+.rec-user-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8c5a2b;
+  font-size: 40rpx;
+  background: #f5efe3;
+}
+.rec-user-name {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #42372c;
+  text-align: center;
+}
+.rec-user-dao {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #b3a595;
+  text-align: center;
+}
+
+/* 盘道临近提醒标签 */
+.pandao-near {
+  display: inline-block;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  color: #c0392b;
+  background: #fdece8;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  font-weight: normal;
 }
 </style>

@@ -192,7 +192,22 @@
             </view>
             <view class="pd-form-title">{{ pdForm.id ? '编辑场次 #' + pdForm.id : '新增场次' }}</view>
             <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="pdForm.title" placeholder="如: 周六盘道 · 通州总部" /></view>
-            <view class="f-row"><text class="f-label">时间</text><input class="f-input" v-model="pdForm.time" placeholder="如: 周六 14:00-17:00" /></view>
+            <view class="f-row">
+              <text class="f-label">活动日期</text>
+              <picker mode="date" :value="pdForm.start_date" @change="onPdDatePick">
+                <view class="f-input" :class="{ ph: !pdForm.start_date }">{{ pdForm.start_date || '点击选择日期' }}</view>
+              </picker>
+            </view>
+            <view class="f-row">
+              <text class="f-label">开始时间</text>
+              <picker mode="time" :value="pdTimeValue" @change="onPdTimePick">
+                <view class="f-input" :class="{ ph: !pdForm.time }">{{ pdForm.time || '点击选择时间' }}</view>
+              </picker>
+            </view>
+            <view class="f-row">
+              <text class="f-label">星期</text>
+              <view class="f-input-wrap"><text class="f-label-plain">{{ pdForm.day || '选择日期后自动同步' }}</text></view>
+            </view>
             <view class="f-row"><text class="f-label">地点</text><input class="f-input" v-model="pdForm.place" placeholder="活动地点" /></view>
             <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="pdForm.price" placeholder="如: 129" /></view>
             <view class="f-row">
@@ -475,6 +490,7 @@
               <text class="td w-price">道号</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
               <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
+              <text class="td w-rec">精选</text>
               <text class="td w-ops">操作</text>
               <text class="td w-remark">备注</text>
             </view>
@@ -493,6 +509,9 @@
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
+              <view class="td w-rec ops">
+                <text class="op" :class="u.home_recommend === true ? 'rec-on' : ''" @tap="toggleUserHome(u)">{{ u.home_recommend === true ? '★精选' : '精选' }}</text>
+              </view>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
                 <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
                 <text class="op" @tap="openEditUser(u)">编辑</text>
@@ -1276,8 +1295,27 @@ const pdStatusOptions = ['即将开始', '进行中', '已结束']
 function pdStatusKey(st) {
   return { '即将开始': 'upcoming', '进行中': 'live', '已结束': 'end' }[st] || 'upcoming'
 }
+/* 盘道场次: 日期 picker 选日期 → 自动算周几同步到 day */
+function onPdDatePick(e) {
+  const d = String(e.detail.value || '')
+  pdForm.value.start_date = d
+  if (d) {
+    const wd = new Date(d.replace(/-/g, '/')).getDay()
+    pdForm.value.day = '星期' + ['日', '一', '二', '三', '四', '五', '六'][wd]
+  }
+}
+/* 盘道场次: 时间 picker */
+function onPdTimePick(e) {
+  pdForm.value.time = String(e.detail.value || '')
+}
+/* 时间 picker 回显值: 兼容旧区间格式 19:00-21:00 → 19:00 */
+const pdTimeValue = computed(() => {
+  const t = pdForm.value.time || ''
+  return t.includes('-') ? t.split('-')[0].trim() : t
+})
+
 function emptyPdForm() {
-  return { id: 0, title: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '' }
+  return { id: 0, title: '', day: '', start_date: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '' }
 }
 const pdForm = ref(emptyPdForm())
 
@@ -1336,10 +1374,10 @@ async function addPandaoSession() {
   if (!f.title.trim()) return uni.showToast({ title: '请输入活动标题', icon: 'none' })
   try {
     if (f.id) {
-      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
+      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
       uni.showToast({ title: '已保存', icon: 'success' })
     } else {
-      await adminPandaoCreate({ title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
+      await adminPandaoCreate({ title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
       uni.showToast({ title: '已添加', icon: 'success' })
     }
     pdForm.value = emptyPdForm()
@@ -1354,7 +1392,9 @@ function editPandaoSession(pd) {
   pdForm.value = {
     id: pd.id,
     title: pd.title || '',
-    time: pd.time || '',
+    day: pd.day || '',
+    start_date: pd.start_date || '',
+    time: pd.time || '', 
     place: pd.place || '',
     price: pd.price || '',
     desc: pd.desc || '',
@@ -1569,6 +1609,14 @@ function openEditUser(u) {
   assignMode.value = 'edit'
   assignForm.value = { uid: u.uid, dao_code: u.dao_code || '', role: u.role || 'user', nickname: u.nickname || '', remark: u.remark || '' }
   showAssignId.value = true
+}
+
+/* 用户: 切换"首页精选"标记 (home_recommend) */
+async function toggleUserHome(u) {
+  const val = u.home_recommend === true ? false : true
+  await adminUserUpdate({ uid: u.uid, home_recommend: val })
+  u.home_recommend = val
+  uni.showToast({ title: val ? '已加入首页用户精选' : '已取消精选', icon: 'success' })
 }
 
 async function saveAssignId() {
@@ -2979,6 +3027,17 @@ onMounted(async () => {
 .filter-pill.on {
   background: #8c5a2b;
   color: #fefbf6;
+}
+
+
+.f-input.ph {
+  color: #b3a595;
+}
+/* 表单只读文本(如自动同步的星期) */
+.f-label-plain {
+  font-size: 26rpx;
+  color: #42372c;
+  line-height: 56rpx;
 }
 /* 首页管理 */
 .home-pandao-list {

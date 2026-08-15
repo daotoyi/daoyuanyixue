@@ -252,6 +252,17 @@ async function myFollowList(data) {
 }
 
 /* 个人主页: 用户信息 + 动态 + 关注/粉丝数 */
+/* 首页推荐页"用户精选": 返回后台标记 home_recommend 的用户 (公开字段, 不含敏感信息) */
+async function recommendedUsers(data) {
+  const res = await db.collection('users').where({ home_recommend: true }).limit(20).get()
+  return ok((res.data || []).map((u) => ({
+    uid: u.uid,
+    nickname: u.nickname || '道友',
+    avatar: u.avatar || '',
+    dao_code: u.dao_code || '',
+  })))
+}
+
 async function userProfile(data) {
   const { uid, viewer_uid } = data
   if (!uid) return fail('缺少用户')
@@ -2109,6 +2120,7 @@ async function adminPandaoCreate(data) {
     id: nextId,
     title: String(data.title || '').slice(0, 50),
     day: String(data.day || (String(data.time || '').includes('周') ? String(data.time).split(' ')[0] : '周六')).slice(0, 10),
+    start_date: String(data.start_date || '').slice(0, 20),
     time: String(data.time || '').slice(0, 30),
     place: String(data.place || '').slice(0, 80),
     price: String(data.price || '0'),
@@ -2133,6 +2145,8 @@ async function adminPandaoUpdate(data) {
   await ensureCollection('pandao_sessions')
   const doc = {}
   if (data.title !== undefined) doc.title = String(data.title).slice(0, 50)
+  if (data.day !== undefined) doc.day = String(data.day).slice(0, 10)
+  if (data.start_date !== undefined) doc.start_date = String(data.start_date).slice(0, 20)
   if (data.time !== undefined) doc.time = String(data.time).slice(0, 30)
   if (data.place !== undefined) doc.place = String(data.place).slice(0, 80)
   if (data.price !== undefined) doc.price = String(data.price)
@@ -2506,7 +2520,7 @@ async function adminUserUpdate(data) {
     if (opRole !== 'admin') return fail('只有超级管理员可以任命超级管理员')
   }
   const doc = {}
-  ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code', 'remark'].forEach((k) => {
+  ;['nickname', 'vip_level', 'balance', 'role', 'status', 'dao_code', 'remark', 'home_recommend'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   if (data.dao_code) {
@@ -2779,6 +2793,7 @@ const ROUTES = {
   'user.follow': followUser,
   'user.followList': myFollowList,
   'user.profile': userProfile,
+  'user.recommended': recommendedUsers,
   'comments.list': listComments,
   'comments.add': addComment,
   'live.list': listLiveStreams,
