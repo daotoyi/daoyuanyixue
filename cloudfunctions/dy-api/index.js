@@ -2349,7 +2349,7 @@ async function adminProductCreate(data) {
 
 async function adminProductUpdate(data) {
   const doc = {}
-  ;['name', 'price', 'ot_price', 'images', 'cate_id', 'sales', 'stock', 'description', 'is_show', 'attrs'].forEach((k) => {
+  ;['name', 'price', 'ot_price', 'images', 'cate_id', 'sales', 'stock', 'description', 'is_show', 'attrs', 'home_recommend'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   await db.collection('products').where({ id: Number(data.id) }).update(doc)
@@ -2363,7 +2363,7 @@ async function adminProductDelete(data) {
 
 async function adminCourseUpdate(data) {
   const doc = {}
-  ;['title', 'price', 'ot_price', 'cover', 'video', 'episodes', 'teacher', 'category_id', 'lessons_count', 'students_count', 'level', 'description', 'status'].forEach((k) => {
+  ;['title', 'price', 'ot_price', 'cover', 'video', 'episodes', 'teacher', 'category_id', 'lessons_count', 'students_count', 'level', 'description', 'status', 'home_recommend'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   await db.collection('courses').where({ id: Number(data.id) }).update(doc)
@@ -2734,14 +2734,15 @@ async function appPayConfig() {
       show_live: homeDoc.show_live === '1' || homeDoc.show_live === true || false, // 首页直播入口, 默认隐藏
       show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
       pandao_fixed: Array.isArray(pandaoDoc.fixed) && pandaoDoc.fixed.length ? pandaoDoc.fixed : DEFAULT_PANDAO_FIXED, // 固定盘道活动(周几+老师)
-      // 首页-推荐页展示模块 (直播/盘道活动/商品/课程, 默认全部显示)
+      // 首页-推荐页展示模块 (直播/盘道活动/商品/课程/动态, 默认全部显示)
       rec_show_live: recDoc.rec_show_live !== '0',
       rec_show_pandao: recDoc.rec_show_pandao !== '0',
       rec_show_product: recDoc.rec_show_product !== '0',
       rec_show_course: recDoc.rec_show_course !== '0',
+      rec_show_moment: recDoc.rec_show_moment !== '0',
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true })
   }
 }
 

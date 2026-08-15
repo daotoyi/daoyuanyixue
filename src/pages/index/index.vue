@@ -59,13 +59,13 @@
         </view>
 
         <!-- 商品 -->
-        <view class="rec-sec" v-if="recShowProduct && productList.length">
+        <view class="rec-sec" v-if="recShowProduct && recProducts.length">
           <view class="rec-head">
             <text class="rec-title">🛍️ 好物推荐</text>
             <text class="rec-more" @tap="goShopTab">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
-            <view class="rec-prod-card" v-for="p in productList.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
+            <view class="rec-prod-card" v-for="p in recProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
               <image class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
               <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
               <text class="rec-prod-price">¥{{ p.price }}</text>
@@ -74,13 +74,13 @@
         </view>
 
         <!-- 课程 -->
-        <view class="rec-sec" v-if="recShowCourse && courseList.length">
+        <view class="rec-sec" v-if="recShowCourse && recCourses.length">
           <view class="rec-head">
             <text class="rec-title">📖 精选课程</text>
             <text class="rec-more" @tap="goCourseTab">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
-            <view class="rec-course-card" v-for="c in courseList.slice(0, 6)" :key="c.id" @tap="goCourseDetail(c)">
+            <view class="rec-course-card" v-for="c in recCourses.slice(0, 6)" :key="c.id" @tap="goCourseDetail(c)">
               <image class="rec-course-img" :src="c.cover" mode="aspectFill"></image>
               <text class="rec-course-title ellipsis-1">{{ c.title }}</text>
               <text class="rec-course-price">¥{{ c.price }}</text>
@@ -89,7 +89,7 @@
         </view>
       </view>
 
-      <view class="feed" v-if="shownMoments.length">
+      <view class="feed" v-if="recShowMoment && shownMoments.length">
         <view class="moment-card" v-for="m in shownMoments" :key="m.id">
           <view class="moment-head">
             <view class="avatar-circle" @tap.stop="goProfile(m)"><text>{{ m.user_name[0] }}</text></view>
@@ -162,7 +162,7 @@
         </view>
       </view>
 
-      <view class="empty" v-else>
+      <view class="empty" v-else-if="recShowMoment">
         <text class="empty-icon">📭</text>
         <text class="empty-tip">暂无动态</text>
       </view>
@@ -346,9 +346,12 @@ const recShowLive = ref(true)
 const recShowPandao = ref(true)
 const recShowProduct = ref(true)
 const recShowCourse = ref(true)
-/* 推荐页商品/课程列表 */
+const recShowMoment = ref(true)
+/* 推荐页商品/课程列表 (仅显示后台标记"首页推荐"的) */
 const productList = ref([])
 const courseList = ref([])
+const recProducts = computed(() => productList.value.filter((p) => p.home_recommend === true))
+const recCourses = computed(() => courseList.value.filter((c) => c.home_recommend === true))
 
 /* ============ 盘道活动日历 (本月/下月, 固定周规则) ============ */
 const calOffset = ref(0) // 0=本月 1=下月
@@ -783,6 +786,7 @@ onShow(async () => {
     recShowPandao.value = cfg.rec_show_pandao !== false
     recShowProduct.value = cfg.rec_show_product !== false
     recShowCourse.value = cfg.rec_show_course !== false
+    recShowMoment.value = cfg.rec_show_moment !== false
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
 
   // ①.5 推荐页商品/课程列表 (独立加载, 失败不影响其他)

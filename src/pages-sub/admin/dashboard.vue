@@ -132,7 +132,7 @@
               </view>
             </view>
             <view class="f-row">
-              <text class="f-label">推荐页·盘道活动</text>
+              <text class="f-label">推荐页·盘道</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.rec_show_pandao" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_pandao = $event.detail.value" />
               </view>
@@ -147,6 +147,12 @@
               <text class="f-label">推荐页·课程</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.rec_show_course" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_course = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·动态</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_moment = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
@@ -281,6 +287,7 @@
                 <text class="td w-price">售价</text>
                 <text class="td w-stock">库存</text>
                 <text class="td w-status">状态</text>
+                <text class="td w-rec">首页推荐</text>
                 <text class="td w-ops">操作</text>
               </view>
               <view class="tr" v-for="p in productGrouped[productActiveCate] || []" :key="p.id">
@@ -289,6 +296,9 @@
                 <text class="td w-price">¥{{ p.price }}</text>
                 <text class="td w-stock">{{ p.stock }}</text>
                 <text class="td w-status" :class="p.is_show === false ? 'off' : 'on'">{{ p.is_show === false ? '已下架' : '已上架' }}</text>
+                <view class="td w-rec ops">
+                  <text class="op" :class="p.home_recommend === true ? 'rec-on' : ''" @tap="toggleProductHome(p)">{{ p.home_recommend === true ? '★推荐' : '推荐' }}</text>
+                </view>
                 <view class="td w-ops ops">
                   <text class="op" @tap="openProductForm(p)">编辑</text>
                   <text class="op" @tap="toggleProduct(p)">{{ p.is_show === false ? '上架' : '下架' }}</text>
@@ -344,6 +354,7 @@
                 <text class="td w-price">价格</text>
                 <text class="td w-stock">课时</text>
                 <text class="td w-status">等级</text>
+                <text class="td w-rec">首页推荐</text>
                 <text class="td w-ops">操作</text>
               </view>
               <view class="tr" v-for="c in courseGrouped[courseActiveCate] || []" :key="c.id">
@@ -351,6 +362,9 @@
                 <text class="td w-price">¥{{ c.price }}</text>
                 <text class="td w-stock">{{ c.lessons_count }}</text>
                 <text class="td w-status" :class="c.status === false || c.status === 'off' ? 'off' : 'on'">{{ c.status === false || c.status === 'off' ? '已下架' : '已上架' }}</text>
+                <view class="td w-rec ops">
+                  <text class="op" :class="c.home_recommend === true ? 'rec-on' : ''" @tap="toggleCourseHome(c)">{{ c.home_recommend === true ? '★推荐' : '推荐' }}</text>
+                </view>
                 <view class="td w-ops ops" v-if="canManageCourses">
                   <text class="op" @tap="toggleCourse(c)">{{ c.status === false || c.status === 'off' ? '上架' : '下架' }}</text>
                   <text class="op" @tap="openCourseForm(c)">编辑</text>
@@ -1164,7 +1178,7 @@ async function loadModule(key) {
 }
 
 /* ===== 首页管理 ===== */
-const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true })
+const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true })
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
@@ -1254,6 +1268,7 @@ async function loadHomeConfig() {
       rec_show_pandao: rc.rec_show_pandao !== '0' && rc.rec_show_pandao !== false,
       rec_show_product: rc.rec_show_product !== '0' && rc.rec_show_product !== false,
       rec_show_course: rc.rec_show_course !== '0' && rc.rec_show_course !== false,
+      rec_show_moment: rc.rec_show_moment !== '0' && rc.rec_show_moment !== false,
     }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
@@ -1266,7 +1281,7 @@ async function loadHomeConfig() {
 async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
-    await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0' } })
+    await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
@@ -1810,6 +1825,29 @@ async function saveProduct() {
 async function toggleProduct(p) {
   await adminProductUpdate({ id: p.id, is_show: p.is_show === false })
   await loadProductCates()
+}
+
+/* 商品/课程: 切换"首页推荐"标记 (home_recommend) */
+async function toggleProductHome(p) {
+  const val = p.home_recommend === true ? false : true
+  await adminProductUpdate({ id: p.id, home_recommend: val })
+  const g = { ...productGrouped.value }
+  Object.keys(g).forEach((k) => {
+    g[k] = g[k].map((x) => (x.id === p.id ? { ...x, home_recommend: val } : x))
+  })
+  productGrouped.value = g
+  uni.showToast({ title: val ? '已推荐到首页' : '已取消推荐', icon: 'success' })
+}
+
+async function toggleCourseHome(c) {
+  const val = c.home_recommend === true ? false : true
+  await adminCourseUpdate({ id: c.id, home_recommend: val })
+  const g = { ...courseGrouped.value }
+  Object.keys(g).forEach((k) => {
+    g[k] = g[k].map((x) => (x.id === c.id ? { ...x, home_recommend: val } : x))
+  })
+  courseGrouped.value = g
+  uni.showToast({ title: val ? '已推荐到首页' : '已取消推荐', icon: 'success' })
 }
 
 async function toggleCourse(c) {
@@ -2717,6 +2755,12 @@ onMounted(async () => {
 }
 .op.danger {
   color: #b04a45;
+}
+/* 首页推荐列 + 推荐高亮 */
+.w-rec { width: 150rpx; display: flex; align-items: center; justify-content: center; }
+.op.rec-on {
+  color: #b07a2a;
+  font-weight: 600;
 }
 .on { color: #6e7f5a; }
 .off { color: #b04a45; }
