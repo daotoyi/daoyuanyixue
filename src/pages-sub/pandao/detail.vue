@@ -1,6 +1,7 @@
 <template>
   <view class="pd-page">
     <view class="pd-card" v-if="session">
+      <image class="pd-cover" v-if="session.cover" :src="session.cover" mode="aspectFill"></image>
       <view class="pd-badge-row">
         <text class="pd-badge">{{ session.day || '盘道' }}</text>
         <text class="pd-status" :class="'st-' + statusKey(session.status)">{{ session.status || '即将开始' }}</text>
@@ -140,6 +141,13 @@ async function bookNow() {
   border-radius: 16rpx;
   border: 1rpx solid #efe7d8;
   padding: 30rpx 24rpx;
+}
+.pd-cover {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  background: #f8f3ea;
 }
 .pd-badge-row {
   display: flex;

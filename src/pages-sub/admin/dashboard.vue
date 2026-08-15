@@ -160,7 +160,13 @@
               <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
+        </view>
 
+        <!-- ===== 盘道管理 ===== -->
+        <view v-else-if="activeModule === 'pandao'" class="module">
+          <view class="module-head">
+            <text class="module-title">盘道管理</text>
+          </view>
           <view class="settings-card">
             <view class="settings-desc">
               <text class="sd-title">盘道活动场次</text>
@@ -168,6 +174,7 @@
             </view>
             <view class="home-pandao-list">
               <view class="home-pd-row" v-for="pd in homePandaoList" :key="pd.id">
+                <image class="home-pd-cover" v-if="pd.cover" :src="pd.cover" mode="aspectFill"></image>
                 <view class="home-pd-info">
                   <text class="home-pd-title">{{ pd.title }}
                     <text class="home-pd-status" :class="'st-' + pdStatusKey(pd.status)">{{ pd.status || '即将开始' }}</text>
@@ -188,6 +195,16 @@
             <view class="f-row"><text class="f-label">时间</text><input class="f-input" v-model="pdForm.time" placeholder="如: 周六 14:00-17:00" /></view>
             <view class="f-row"><text class="f-label">地点</text><input class="f-input" v-model="pdForm.place" placeholder="活动地点" /></view>
             <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="pdForm.price" placeholder="如: 129" /></view>
+            <view class="f-row">
+              <text class="f-label">封面图</text>
+              <view class="f-input-wrap">
+                <view class="f-row-inline">
+                  <view class="btn-p plain sm" @click="uploadPandaoCover">上传封面</view>
+                  <image class="cover-preview" v-if="pdForm.cover" :src="pdForm.cover" mode="aspectFill" @tap="previewPandaoCover"></image>
+                  <text class="f-label-sm" v-if="pdForm.cover" @tap="pdForm.cover = ''">移除</text>
+                </view>
+              </view>
+            </view>
             <view class="f-row"><text class="f-label">状态</text>
               <view class="f-pills wrap">
                 <text v-for="st in pdStatusOptions" :key="st" class="pill" :class="{ on: pdForm.status === st }" @tap="pdForm.status = st">{{ st }}</text>
@@ -841,6 +858,16 @@
       <view class="form-sheet">
         <view class="sheet-title">{{ liveForm.id ? '编辑直播' : '新增直播' }}</view>
         <view class="f-row"><text class="f-label">标题</text><input class="f-input" v-model="liveForm.title" /></view>
+        <view class="f-row">
+          <text class="f-label">封面图</text>
+          <view class="f-input-wrap">
+            <view class="f-row-inline">
+              <view class="btn-p plain sm" @click="uploadLiveCover">上传封面</view>
+              <image class="cover-preview" v-if="liveForm.cover" :src="liveForm.cover" mode="aspectFill" @tap="liveForm.cover && uni.previewImage({ urls: [liveForm.cover] })"></image>
+              <text class="f-label-sm" v-if="liveForm.cover" @tap="liveForm.cover = ''">移除</text>
+            </view>
+          </view>
+        </view>
         <view class="f-row"><text class="f-label">主播</text><input class="f-input" v-model="liveForm.anchor" /></view>
         <view class="f-row"><text class="f-label">开始时间</text><input class="f-input" v-model="liveForm.start_time" placeholder="2026-08-05 20:00" /></view>
         <view class="f-row">
@@ -993,6 +1020,7 @@ const modules = [
   { key: 'orders', label: '订单管理', icon: '📦' },
   { key: 'coupons', label: '优惠券', icon: '🎟' },
   { key: 'users', label: '用户管理', icon: '👥' },
+  { key: 'pandao', label: '盘道管理', icon: '☯️' },
   { key: 'lives', label: '直播管理', icon: '📡' },
   { key: 'moments', label: '动态管理', icon: '📝' },
   { key: 'feedbacks', label: '反馈管理', icon: '💬' },
@@ -1167,6 +1195,7 @@ async function loadModule(key) {
       } catch (e) { /* 转换失败保持 */ }
     }
     else if (key === 'lives') lives.value = await adminList({ collection: 'live_streams' })
+    else if (key === 'pandao') await loadPandaoConfig()
     else if (key === 'moments') moments.value = await adminList({ collection: 'moments' })
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })
     else if (key === 'wxmp') await loadWxmp()
@@ -1246,7 +1275,7 @@ function pdStatusKey(st) {
   return { '即将开始': 'upcoming', '进行中': 'live', '已结束': 'end' }[st] || 'upcoming'
 }
 function emptyPdForm() {
-  return { id: 0, title: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始' }
+  return { id: 0, title: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '' }
 }
 const pdForm = ref(emptyPdForm())
 
@@ -1278,6 +1307,16 @@ async function loadHomeConfig() {
   } catch (e) {}
 }
 
+/* 盘道管理: 场次列表 + 固定规则配置 */
+async function loadPandaoConfig() {
+  try {
+    const pd = await adminList({ collection: 'pandao_sessions' })
+    homePandaoList.value = pd || []
+    const pf = await adminSettingsGet({ group: 'pandao' })
+    homePandaoFixed.value = Array.isArray(pf.configs.fixed) ? pf.configs.fixed : []
+  } catch (e) {}
+}
+
 async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
@@ -1293,14 +1332,14 @@ async function addPandaoSession() {
   if (!f.title.trim()) return uni.showToast({ title: '请输入活动标题', icon: 'none' })
   try {
     if (f.id) {
-      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status })
+      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
       uni.showToast({ title: '已保存', icon: 'success' })
     } else {
-      await adminPandaoCreate({ title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status })
+      await adminPandaoCreate({ title: f.title.trim(), time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
       uni.showToast({ title: '已添加', icon: 'success' })
     }
     pdForm.value = emptyPdForm()
-    await loadHomeConfig()
+    await loadPandaoConfig()
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
   }
@@ -1317,6 +1356,7 @@ function editPandaoSession(pd) {
     desc: pd.desc || '',
     content: pd.content || '',
     status: pd.status || '即将开始',
+    cover: pd.cover || '',
   }
 }
 
@@ -1329,7 +1369,7 @@ async function deletePandaoSession(pd) {
       try {
         await adminPandaoDelete({ id: pd.id })
         uni.showToast({ title: '已删除', icon: 'success' })
-        await loadHomeConfig()
+        await loadPandaoConfig()
       } catch (e) {}
     },
   })
@@ -1659,6 +1699,61 @@ function uploadCourseCover() {
         const url = fileID
           .replace(/^cloud:\/\/[^\/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         courseForm.value.cover = url
+        uni.showToast({ title: '封面已上传', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+  })
+}
+
+/* 盘道封面: 上传 + 预览 */
+function uploadPandaoCover() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const filePath = res.tempFilePaths[0]
+      uni.showLoading({ title: '上传中...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = 'pandao/p' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png'
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        pdForm.value.cover = fileID.replace(/^cloud:\/\/[^\/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        uni.showToast({ title: '封面已上传', icon: 'success' })
+      } catch (e) {
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+      } finally {
+        uni.hideLoading()
+      }
+    },
+  })
+}
+function previewPandaoCover() {
+  if (pdForm.value.cover) uni.previewImage({ urls: [pdForm.value.cover] })
+}
+
+/* 直播封面: 上传 (表单 UI 在直播弹窗) */
+function uploadLiveCover() {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const filePath = res.tempFilePaths[0]
+      uni.showLoading({ title: '上传中...' })
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        const cloudPath = 'lives/l' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png'
+        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+        if (!fileID) throw new Error('上传失败')
+        liveForm.value.cover = fileID.replace(/^cloud:\/\/[^\/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         uni.showToast({ title: '封面已上传', icon: 'success' })
       } catch (e) {
         uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
@@ -2092,7 +2187,7 @@ const showLive = ref(false)
 const liveForm = ref({})
 
 function openLiveForm(l) {
-  liveForm.value = l ? { ...l } : { id: null, title: '', anchor: '', start_time: '', status: 'upcoming', description: '' }
+  liveForm.value = l ? { ...l } : { id: null, title: '', anchor: '', start_time: '', status: 'upcoming', description: '', cover: '' }
   showLive.value = true
 }
 
@@ -2798,6 +2893,26 @@ onMounted(async () => {
   height: 90rpx;
   border-radius: 8rpx;
   border: 1rpx solid #efe7d8;
+}
+/* 上传封面: 按钮+预览 同行 */
+.f-row-inline {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.f-label-sm {
+  font-size: 22rpx;
+  color: #b04a45;
+  white-space: nowrap;
+}
+/* 盘道场次列表封面缩略图 */
+.home-pd-cover {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 10rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+  background: #f8f3ea;
 }
 .filter-row {
   display: flex;

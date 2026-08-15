@@ -50,6 +50,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-pd-card" v-for="pd in pandaoList.slice(0, 6)" :key="pd.id" @tap="goPandaoDetail(pd)">
+              <image class="rec-pd-img" v-if="pd.cover" :src="pd.cover" mode="aspectFill"></image>
               <text class="rec-pd-badge">{{ pd.day }}</text>
               <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
               <text class="rec-pd-meta ellipsis-1">📍 {{ pd.place }}</text>
@@ -217,6 +218,7 @@
 
       <view class="pandao-list">
         <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id" @tap="goPandaoDetail(pd)">
+          <image class="pandao-cover" v-if="pd.cover" :src="pd.cover" mode="aspectFill"></image>
           <view class="pandao-head">
             <text class="pandao-badge">{{ pd.day }}</text>
             <view class="pandao-info">
@@ -1547,4 +1549,19 @@ onShow(async () => {
   text-overflow: ellipsis;
 }
 
+
+.pandao-cover {
+  width: 100%;
+  height: 220rpx;
+  border-radius: 12rpx;
+  margin-bottom: 14rpx;
+  background: #f8f3ea;
+}
+.rec-pd-img {
+  width: 100%;
+  height: 130rpx;
+  border-radius: 10rpx;
+  margin-bottom: 8rpx;
+  background: #f8f3ea;
+}
 </style>

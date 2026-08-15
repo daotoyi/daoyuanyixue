@@ -2114,6 +2114,7 @@ async function adminPandaoCreate(data) {
     price: String(data.price || '0'),
     desc: String(data.desc || '').slice(0, 200),
     content: String(data.content || '').slice(0, 2000),
+    cover: String(data.cover || '').slice(0, 500),
     status: String(data.status || '即将开始'),
   }
   if (!doc.title) return fail('请输入活动标题')
@@ -2137,6 +2138,7 @@ async function adminPandaoUpdate(data) {
   if (data.price !== undefined) doc.price = String(data.price)
   if (data.desc !== undefined) doc.desc = String(data.desc).slice(0, 500)
   if (data.content !== undefined) doc.content = String(data.content).slice(0, 2000) // 详情页富内容
+  if (data.cover !== undefined) doc.cover = String(data.cover).slice(0, 500) // 封面图
   if (data.status !== undefined) doc.status = String(data.status) // 即将开始/已结束/已发布
   const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).update(doc)
   return ok({ updated: res.updated })
