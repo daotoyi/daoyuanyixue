@@ -1,7 +1,7 @@
 <template>
   <view class="pd-page">
     <view class="pd-card" v-if="session">
-      <image class="pd-cover" v-if="session.cover" :src="session.cover" mode="aspectFill"></image>
+      <image class="pd-cover" v-if="session.cover" :src="session._coverUrl || session.cover" mode="aspectFill"></image>
       <view class="pd-badge-row">
         <text class="pd-badge">{{ session.day || '盘道' }}</text>
         <text class="pd-status" :class="'st-' + statusKey(session.status)">{{ session.status || '即将开始' }}</text>
@@ -38,6 +38,7 @@ import { ref } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getPandaoDetail, pandaoBook, pandaoCancel, getPandaoMine } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { resolveCloudUrl } from '../../utils/avatar'
 
 const userStore = useUserStore()
 const session = ref(null)
@@ -69,6 +70,9 @@ async function loadDetail() {
   try {
     const res = await getPandaoDetail({ id: sessionId.value })
     session.value = res || null
+    if (session.value && session.value.cover) {
+      session.value._coverUrl = await resolveCloudUrl(session.value.cover).catch(() => '')
+    }
     if (session.value && userStore.isLoggedIn) {
       try {
         const mine = await getPandaoMine({ uid: userStore.userInfo.uid })

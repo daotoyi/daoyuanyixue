@@ -35,7 +35,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-live-card" v-for="l in liveList.slice(0, 6)" :key="l.id" @tap="enterLive(l)">
-              <image class="rec-live-img" :src="l.cover" mode="aspectFill"></image>
+              <image class="rec-live-img" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
               <text class="rec-live-title ellipsis-1">{{ l.title }}</text>
               <text class="rec-live-status" :class="'st-' + l.status">{{ statusText(l.status) }}</text>
             </view>
@@ -50,7 +50,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-pd-card" v-for="pd in pandaoList.slice(0, 6)" :key="pd.id" @tap="goPandaoDetail(pd)">
-              <image class="rec-pd-img" v-if="pd.cover" :src="pd.cover" mode="aspectFill"></image>
+              <image class="rec-pd-img" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
               <text class="rec-pd-badge">{{ pd.day }}</text>
               <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
               <text class="rec-pd-meta ellipsis-1">📍 {{ pd.place }}</text>
@@ -218,7 +218,7 @@
 
       <view class="pandao-list">
         <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id" @tap="goPandaoDetail(pd)">
-          <image class="pandao-cover" v-if="pd.cover" :src="pd.cover" mode="aspectFill"></image>
+          <image class="pandao-cover" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
           <view class="pandao-head">
             <text class="pandao-badge">{{ pd.day }}</text>
             <view class="pandao-info">
@@ -315,7 +315,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl, getProducts, getCourses } from '../../api/api'
-import { isCloudFile } from '../../utils/avatar'
+import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
 // tab 顺序固定: 推荐 → 关注 → 盘道 → 直播 (显示与否由后台首页管理开关控制)
@@ -816,6 +816,7 @@ onShow(async () => {
   try {
     const pandao = await getPandaoList()
     pandaoList.value = (pandao || []).map((p) => ({ ...p, _booked: false }))
+    Promise.all(pandaoList.value.map(async (p) => { if (p.cover) p._coverUrl = await resolveCloudUrl(p.cover).catch(() => '') }))
     if (userStore.isLoggedIn) {
       try {
         const pdOrders = await getPandaoMine({ uid: userStore.userInfo.uid })
@@ -836,6 +837,8 @@ onShow(async () => {
     const converted = await convertMomentImages(moments)
     momentList.value = converted.map((m) => ({ ...m, _liked: likedIds.has(Number(m.id)) }))
     liveList.value = lives.map((l) => ({ ...l, _booked: false }))
+    // 封面 cloud:// → _coverUrl (私有桶签名 URL, 保留 cover fileID)
+    Promise.all(liveList.value.map(async (l) => { if (l.cover) l._coverUrl = await resolveCloudUrl(l.cover).catch(() => '') }))
     // 已预约的直播标记
     if (userStore.isLoggedIn) {
       try {

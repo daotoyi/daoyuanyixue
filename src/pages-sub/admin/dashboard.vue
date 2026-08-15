@@ -174,7 +174,7 @@
             </view>
             <view class="home-pandao-list">
               <view class="home-pd-row" v-for="pd in homePandaoList" :key="pd.id">
-                <image class="home-pd-cover" v-if="pd.cover" :src="pd.cover" mode="aspectFill"></image>
+                <image class="home-pd-cover" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
                 <view class="home-pd-info">
                   <text class="home-pd-title">{{ pd.title }}
                     <text class="home-pd-status" :class="'st-' + pdStatusKey(pd.status)">{{ pd.status || '即将开始' }}</text>
@@ -200,7 +200,7 @@
               <view class="f-input-wrap">
                 <view class="f-row-inline">
                   <view class="btn-p plain sm" @click="uploadPandaoCover">上传封面</view>
-                  <image class="cover-preview" v-if="pdForm.cover" :src="pdForm.cover" mode="aspectFill" @tap="previewPandaoCover"></image>
+                  <image class="cover-preview" v-if="pdForm.cover" :src="pdForm._coverUrl || pdForm.cover" mode="aspectFill" @tap="previewPandaoCover"></image>
                   <text class="f-label-sm" v-if="pdForm.cover" @tap="pdForm.cover = ''">移除</text>
                 </view>
               </view>
@@ -510,6 +510,7 @@
           </view>
           <view class="table">
             <view class="tr th">
+              <text class="td w-img">图</text>
               <text class="td w-name">标题</text>
               <text class="td w-name">主播</text>
               <text class="td w-time">开始时间</text>
@@ -517,6 +518,7 @@
               <text class="td w-ops">操作</text>
             </view>
             <view class="tr" v-for="l in lives" :key="l.id">
+              <image class="td w-img thumb" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
               <text class="td w-name ellipsis">{{ l.title }}</text>
               <text class="td w-name">{{ l.anchor }}</text>
               <text class="td w-time">{{ l.start_time || '-' }}</text>
@@ -863,7 +865,7 @@
           <view class="f-input-wrap">
             <view class="f-row-inline">
               <view class="btn-p plain sm" @click="uploadLiveCover">上传封面</view>
-              <image class="cover-preview" v-if="liveForm.cover" :src="liveForm.cover" mode="aspectFill" @tap="liveForm.cover && uni.previewImage({ urls: [liveForm.cover] })"></image>
+              <image class="cover-preview" v-if="liveForm.cover" :src="liveForm._coverUrl || liveForm.cover" mode="aspectFill" @tap="liveForm.cover && uni.previewImage({ urls: [liveForm._coverUrl || liveForm.cover] })"></image>
               <text class="f-label-sm" v-if="liveForm.cover" @tap="liveForm.cover = ''">移除</text>
             </view>
           </view>
@@ -1194,7 +1196,7 @@ async function loadModule(key) {
         users.value = await resolveCloudList(users.value, 'avatar', (u) => u.uid)
       } catch (e) { /* 转换失败保持 */ }
     }
-    else if (key === 'lives') lives.value = await adminList({ collection: 'live_streams' })
+    else if (key === 'lives') { lives.value = await adminList({ collection: 'live_streams' }); await resolveCloudListField(lives.value, 'cover') }
     else if (key === 'pandao') await loadPandaoConfig()
     else if (key === 'moments') moments.value = await adminList({ collection: 'moments' })
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })
@@ -1301,6 +1303,7 @@ async function loadHomeConfig() {
     }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
+    await resolveCloudListField(homePandaoList.value, 'cover')
     // 固定盘道活动配置
     const pf = await adminSettingsGet({ group: 'pandao' })
     homePandaoFixed.value = Array.isArray(pf.configs.fixed) ? pf.configs.fixed : []
@@ -1312,6 +1315,7 @@ async function loadPandaoConfig() {
   try {
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
+    await resolveCloudListField(homePandaoList.value, 'cover')
     const pf = await adminSettingsGet({ group: 'pandao' })
     homePandaoFixed.value = Array.isArray(pf.configs.fixed) ? pf.configs.fixed : []
   } catch (e) {}
@@ -1358,6 +1362,7 @@ function editPandaoSession(pd) {
     status: pd.status || '即将开始',
     cover: pd.cover || '',
   }
+  pdForm.value._coverUrl = pd._coverUrl || ''
 }
 
 async function deletePandaoSession(pd) {
@@ -1709,6 +1714,16 @@ function uploadCourseCover() {
   })
 }
 
+/* 列表封面转换: cloud:// fileID → _coverUrl (保留原 cover, 供编辑回传持久 fileID) */
+async function resolveCloudListField(list, field = 'cover') {
+  if (!Array.isArray(list) || !list.length) return
+  await Promise.all(list.map(async (item) => {
+    if (item && item[field] && !item._coverUrl) {
+      item._coverUrl = await resolveCloudUrl(item[field]).catch(() => '')
+    }
+  }))
+}
+
 /* 盘道封面: 上传 + 预览 */
 function uploadPandaoCover() {
   uni.chooseImage({
@@ -1724,7 +1739,9 @@ function uploadPandaoCover() {
         const upRes = await storage.uploadFile(filePath, cloudPath)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
-        pdForm.value.cover = fileID.replace(/^cloud:\/\/[^\/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        // 存 cloud:// fileID (私有桶, 显示时由 resolveCloudUrl 转签名 URL)
+        pdForm.value.cover = fileID
+        pdForm.value._coverUrl = await resolveCloudUrl(fileID).catch(() => '')
         uni.showToast({ title: '封面已上传', icon: 'success' })
       } catch (e) {
         uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
@@ -1735,7 +1752,8 @@ function uploadPandaoCover() {
   })
 }
 function previewPandaoCover() {
-  if (pdForm.value.cover) uni.previewImage({ urls: [pdForm.value.cover] })
+  const url = pdForm.value._coverUrl || pdForm.value.cover
+  if (url) uni.previewImage({ urls: [url] })
 }
 
 /* 直播封面: 上传 (表单 UI 在直播弹窗) */
@@ -1753,7 +1771,8 @@ function uploadLiveCover() {
         const upRes = await storage.uploadFile(filePath, cloudPath)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
-        liveForm.value.cover = fileID.replace(/^cloud:\/\/[^\/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+        liveForm.value.cover = fileID
+        liveForm.value._coverUrl = await resolveCloudUrl(fileID).catch(() => '')
         uni.showToast({ title: '封面已上传', icon: 'success' })
       } catch (e) {
         uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
@@ -2188,6 +2207,7 @@ const liveForm = ref({})
 
 function openLiveForm(l) {
   liveForm.value = l ? { ...l } : { id: null, title: '', anchor: '', start_time: '', status: 'upcoming', description: '', cover: '' }
+  liveForm.value._coverUrl = (l && l._coverUrl) || ''
   showLive.value = true
 }
 
