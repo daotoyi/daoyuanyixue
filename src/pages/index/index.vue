@@ -25,6 +25,70 @@
 
     <!-- 推荐 / 关注: 动态流 -->
     <scroll-view scroll-y class="feed-scroll" v-if="currentTab === 'recommend' || currentTab === 'follow'">
+      <!-- 推荐页内容模块 (后台可配置: 直播/盘道活动/商品/课程) -->
+      <view class="rec-modules" v-if="currentTab === 'recommend'">
+        <!-- 直播 -->
+        <view class="rec-sec" v-if="recShowLive && liveList.length">
+          <view class="rec-head">
+            <text class="rec-title">📺 直播</text>
+            <text class="rec-more" @tap="switchTab('live')">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-live-card" v-for="l in liveList.slice(0, 6)" :key="l.id" @tap="enterLive(l)">
+              <image class="rec-live-img" :src="l.cover" mode="aspectFill"></image>
+              <text class="rec-live-title ellipsis-1">{{ l.title }}</text>
+              <text class="rec-live-status" :class="'st-' + l.status">{{ statusText(l.status) }}</text>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 盘道活动 -->
+        <view class="rec-sec" v-if="recShowPandao && pandaoList.length">
+          <view class="rec-head">
+            <text class="rec-title">☯️ 盘道活动</text>
+            <text class="rec-more" @tap="switchTab('pandao')">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-pd-card" v-for="pd in pandaoList.slice(0, 6)" :key="pd.id" @tap="goPandaoDetail(pd)">
+              <text class="rec-pd-badge">{{ pd.day }}</text>
+              <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
+              <text class="rec-pd-meta ellipsis-1">📍 {{ pd.place }}</text>
+              <text class="rec-pd-price">¥{{ pd.price }}</text>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 商品 -->
+        <view class="rec-sec" v-if="recShowProduct && productList.length">
+          <view class="rec-head">
+            <text class="rec-title">🛍️ 好物推荐</text>
+            <text class="rec-more" @tap="goShopTab">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-prod-card" v-for="p in productList.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
+              <image class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
+              <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
+              <text class="rec-prod-price">¥{{ p.price }}</text>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 课程 -->
+        <view class="rec-sec" v-if="recShowCourse && courseList.length">
+          <view class="rec-head">
+            <text class="rec-title">📖 精选课程</text>
+            <text class="rec-more" @tap="goCourseTab">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-course-card" v-for="c in courseList.slice(0, 6)" :key="c.id" @tap="goCourseDetail(c)">
+              <image class="rec-course-img" :src="c.cover" mode="aspectFill"></image>
+              <text class="rec-course-title ellipsis-1">{{ c.title }}</text>
+              <text class="rec-course-price">¥{{ c.price }}</text>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
       <view class="feed" v-if="shownMoments.length">
         <view class="moment-card" v-for="m in shownMoments" :key="m.id">
           <view class="moment-head">
@@ -248,7 +312,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
-import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl } from '../../api/api'
+import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, followList, fileUrl, getProducts, getCourses } from '../../api/api'
 import { isCloudFile } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
@@ -277,6 +341,14 @@ const followUids = ref([]) // 我关注的用户 uid 列表 (关注页过滤用)
 const liveList = ref([])
 const pandaoList = ref([])
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
+/* 推荐页内容模块开关 (后台 recommend 组配置, 默认全显) */
+const recShowLive = ref(true)
+const recShowPandao = ref(true)
+const recShowProduct = ref(true)
+const recShowCourse = ref(true)
+/* 推荐页商品/课程列表 */
+const productList = ref([])
+const courseList = ref([])
 
 /* ============ 盘道活动日历 (本月/下月, 固定周规则) ============ */
 const calOffset = ref(0) // 0=本月 1=下月
@@ -378,6 +450,20 @@ async function refreshMoments() {
 /* 盘道详情页 */
 function goPandaoDetail(pd) {
   uni.navigateTo({ url: '/pages-sub/pandao/detail?id=' + pd.id })
+}
+
+/* 推荐页商品/课程: 点击详情 / 更多跳 tabBar */
+function goProductDetail(p) {
+  uni.navigateTo({ url: `/pages-sub/product/detail?id=${p.id}` })
+}
+function goCourseDetail(c) {
+  uni.navigateTo({ url: `/pages-sub/course/detail?id=${c.id}` })
+}
+function goShopTab() {
+  uni.switchTab({ url: '/pages/shop/shop' })
+}
+function goCourseTab() {
+  uni.switchTab({ url: '/pages/course/course' })
 }
 
 /* 盘道报名: 创建预约订单 → 跳结算支付 */
@@ -692,9 +778,26 @@ onShow(async () => {
     homeShowPublish.value = cfg.show_publish === true
     buildTabs(cfg)
     if (Array.isArray(cfg.pandao_fixed) && cfg.pandao_fixed.length) pandaoFixed.value = cfg.pandao_fixed
+    // 推荐页内容模块开关
+    recShowLive.value = cfg.rec_show_live !== false
+    recShowPandao.value = cfg.rec_show_pandao !== false
+    recShowProduct.value = cfg.rec_show_product !== false
+    recShowCourse.value = cfg.rec_show_course !== false
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
 
-  // ①.5 我的关注列表 (关注页只显示关注的人)
+  // ①.5 推荐页商品/课程列表 (独立加载, 失败不影响其他)
+  if (recShowProduct.value || recShowCourse.value) {
+    try {
+      const [prods, courses] = await Promise.all([
+        recShowProduct.value ? getProducts({}).catch(() => []) : Promise.resolve([]),
+        recShowCourse.value ? getCourses({}).catch(() => []) : Promise.resolve([]),
+      ])
+      productList.value = prods || []
+      courseList.value = courses || []
+    } catch (e) { /* 忽略 */ }
+  }
+
+  // ①.6 我的关注列表 (关注页只显示关注的人)
   followUids.value = []
   if (userStore.isLoggedIn) {
     try {
@@ -1340,6 +1443,104 @@ onShow(async () => {
   .home-page {
     max-width: 1320px;
   }
+}
+
+
+/* ===== 推荐页内容模块 (直播/盘道/商品/课程) ===== */
+.rec-modules {
+  padding: 0 24rpx 8rpx;
+}
+.rec-sec {
+  margin-bottom: 28rpx;
+}
+.rec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.rec-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #42372c;
+}
+.rec-more {
+  font-size: 24rpx;
+  color: #8c5a2b;
+}
+.rec-scroll {
+  white-space: nowrap;
+  width: 100%;
+}
+.rec-live-card,
+.rec-pd-card,
+.rec-prod-card,
+.rec-course-card {
+  display: inline-flex;
+  flex-direction: column;
+  width: 220rpx;
+  margin-right: 16rpx;
+  background: #fefbf6;
+  border: 1rpx solid #efe7d8;
+  border-radius: 14rpx;
+  padding: 12rpx;
+  vertical-align: top;
+}
+.rec-live-img,
+.rec-prod-img,
+.rec-course-img {
+  width: 100%;
+  height: 130rpx;
+  border-radius: 10rpx;
+  background: #f8f3ea;
+}
+.rec-live-title,
+.rec-prod-name,
+.rec-course-title,
+.rec-pd-title {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #42372c;
+}
+.rec-live-status {
+  display: inline-block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  align-self: flex-start;
+}
+.rec-live-status.st-live { background: #fdece8; color: #c0392b; }
+.rec-live-status.st-upcoming { background: #fdf3e2; color: #b07a2a; }
+.rec-live-status.st-ended { background: #efeadf; color: #857563; }
+.rec-pd-badge {
+  align-self: flex-start;
+  font-size: 20rpx;
+  color: #8c5a2b;
+  background: #f5efe3;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+}
+.rec-pd-meta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: #b3a595;
+}
+.rec-pd-price,
+.rec-prod-price,
+.rec-course-price {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #b04a45;
+}
+.ellipsis-1 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 </style>

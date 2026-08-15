@@ -122,6 +122,41 @@
 
           <view class="settings-card">
             <view class="settings-desc">
+              <text class="sd-title">首页-推荐页展示</text>
+              <text class="sd-text">控制「推荐」页签中展示的内容模块（默认全部显示）</text>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·直播</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_live = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·盘道活动</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_pandao" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_pandao = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·商品</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_product" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_product = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·课程</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_course" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_course = $event.detail.value" />
+              </view>
+            </view>
+            <view class="settings-actions">
+              <text class="settings-tip">关闭后「推荐」页签将不展示对应内容模块</text>
+              <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
+            </view>
+          </view>
+
+          <view class="settings-card">
+            <view class="settings-desc">
               <text class="sd-title">盘道活动场次</text>
               <text class="sd-text">线下排盘道活动（默认每周三/周六通州总部，可增删）</text>
             </view>
@@ -1129,7 +1164,7 @@ async function loadModule(key) {
 }
 
 /* ===== 首页管理 ===== */
-const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false })
+const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true })
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
@@ -1203,9 +1238,23 @@ const pdForm = ref(emptyPdForm())
 
 async function loadHomeConfig() {
   try {
-    const res = await adminSettingsGet({ group: 'home' })
-    const cfg = res.configs || {}
-    homeCfg.value = { show_recommend: cfg.show_recommend !== '0' && cfg.show_recommend !== false, show_publish: cfg.show_publish === '1' || cfg.show_publish === true, show_pandao: cfg.show_pandao !== '0' && cfg.show_pandao !== false, show_live: cfg.show_live === '1' || cfg.show_live === true, show_follow: cfg.show_follow === '1' || cfg.show_follow === true }
+    const [homeRes, recRes] = await Promise.all([
+      adminSettingsGet({ group: 'home' }),
+      adminSettingsGet({ group: 'recommend' }).catch(() => ({ configs: {} })),
+    ])
+    const cfg = homeRes.configs || {}
+    const rc = recRes.configs || {}
+    homeCfg.value = {
+      show_recommend: cfg.show_recommend !== '0' && cfg.show_recommend !== false,
+      show_publish: cfg.show_publish === '1' || cfg.show_publish === true,
+      show_pandao: cfg.show_pandao !== '0' && cfg.show_pandao !== false,
+      show_live: cfg.show_live === '1' || cfg.show_live === true,
+      show_follow: cfg.show_follow === '1' || cfg.show_follow === true,
+      rec_show_live: rc.rec_show_live !== '0' && rc.rec_show_live !== false,
+      rec_show_pandao: rc.rec_show_pandao !== '0' && rc.rec_show_pandao !== false,
+      rec_show_product: rc.rec_show_product !== '0' && rc.rec_show_product !== false,
+      rec_show_course: rc.rec_show_course !== '0' && rc.rec_show_course !== false,
+    }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
     // 固定盘道活动配置
@@ -1217,6 +1266,7 @@ async function loadHomeConfig() {
 async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
+    await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
