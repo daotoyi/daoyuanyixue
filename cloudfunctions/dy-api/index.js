@@ -884,21 +884,60 @@ async function vipLevel(data) {
   const userRes = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
   const user = userRes.data[0] || {}
   const recharge = Number(user.total_recharge || 0) || (Number(user.balance || 0) / RECHARGE_RATE) || 0
-  // 等级 = 消费 + 储值 合计
+  // 等级 = 消费 + 储值 合计 (8档: <1000 / 1000 / 3000 / 5000 / 10000 / 30000 / 50000 / 100000)
   const totalAmount = total + recharge
   let level = 0
-  if (totalAmount >= 50000) level = 6
-  else if (totalAmount >= 20000) level = 5
+  if (totalAmount >= 100000) level = 7
+  else if (totalAmount >= 50000) level = 6
+  else if (totalAmount >= 30000) level = 5
   else if (totalAmount >= 10000) level = 4
   else if (totalAmount >= 5000) level = 3
-  else if (totalAmount >= 2000) level = 2
-  else if (totalAmount > 1000) level = 1
+  else if (totalAmount >= 3000) level = 2
+  else if (totalAmount >= 1000) level = 1
   await db.collection('users').where({ uid: Number(uid) }).update({
     vip_level: level,
     total_spent: Math.round(total * 100) / 100,
     total_recharge: recharge,
   })
   return ok({ level, total_spent: Math.round(total * 100) / 100, total_recharge: recharge, total_amount: Math.round(totalAmount * 100) / 100 })
+}
+
+/* 批量重算所有用户 VIP 等级 (按新 8 档阈值), 供后台/运维调用 */
+async function recalcAllVip(data) {
+  const users = (await db.collection('users').limit(1000).get()).data
+  const dist = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 }
+  let updated = 0
+  for (const u of users) {
+    const uid = Number(u.uid)
+    if (!uid) continue
+    // 订单累计消费 (排除未付款/已退款/已取消)
+    const orderRes = await db.collection('orders').where({ uid }).limit(200).get()
+    let total = 0
+    orderRes.data.forEach((o) => {
+      if (o.status !== '待付款' && o.status !== '已退款' && o.status !== '已取消') {
+        total += Number(o.total_price) || 0
+      }
+    })
+    // 储值累计
+    const recharge = Number(u.total_recharge || 0) || (Number(u.balance || 0) / RECHARGE_RATE) || 0
+    const totalAmount = total + recharge
+    let level = 0
+    if (totalAmount >= 100000) level = 7
+    else if (totalAmount >= 50000) level = 6
+    else if (totalAmount >= 30000) level = 5
+    else if (totalAmount >= 10000) level = 4
+    else if (totalAmount >= 5000) level = 3
+    else if (totalAmount >= 3000) level = 2
+    else if (totalAmount >= 1000) level = 1
+    await db.collection('users').where({ uid }).update({
+      vip_level: level,
+      total_spent: Math.round(total * 100) / 100,
+      total_recharge: recharge,
+    })
+    dist[level] = (dist[level] || 0) + 1
+    updated++
+  }
+  return ok({ updated, total: users.length, distribution: dist })
 }
 
 /* ---- DeepSeek AI 解盘 ---- */
@@ -2763,6 +2802,7 @@ const ROUTES = {
   'user.unread': unreadCount,
   'user.messages.read': markMessagesRead,
   'user.vip': vipLevel,
+  'admin.recalcVip': recalcAllVip,
   'ai.jiepan': aiJiepan,
   'ai.ask': aiAsk,
   'admin.feedbacks.list': adminFeedbacks,

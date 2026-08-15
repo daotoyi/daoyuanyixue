@@ -211,27 +211,29 @@ const userInfo = computed(() => userStore.userInfo)
 const daoCode = computed(() => userInfo.value.dao_code || userInfo.value.invite_code || '')
 const inviteLink = computed(() => `https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/download/?invite=${daoCode.value}`)
 
-// 会员等级: 按累计消费 (储值/购买) 自动划分
+// 会员等级: 按累计消费 (储值/购买) 自动划分 (8档: <1000/1000/3000/5000/10000/30000/50000/100000)
 const vipLevel = computed(() => {
   // 等级 = 累计消费 + 累计储值
   const total = (Number(userInfo.value.total_spent || 0) || 0) + (Number(userInfo.value.total_recharge || 0) || 0)
+  if (total >= 100000) return 7
   if (total >= 50000) return 6
-  if (total >= 20000) return 5
+  if (total >= 30000) return 5
   if (total >= 10000) return 4
   if (total >= 5000) return 3
-  if (total >= 2000) return 2
-  if (total > 1000) return 1
+  if (total >= 3000) return 2
+  if (total >= 1000) return 1
   return 0
 })
 /* 等级说明 (每行一个等级) */
 const vipLevels = [
   { level: 0, label: 'VIP0', range: '累计消费/储值 1000元宝以下' },
-  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-2000元宝' },
-  { level: 2, label: 'VIP2', range: '累计消费/储值 2000-5000元宝' },
+  { level: 1, label: 'VIP1', range: '累计消费/储值 1000-3000元宝' },
+  { level: 2, label: 'VIP2', range: '累计消费/储值 3000-5000元宝' },
   { level: 3, label: 'VIP3', range: '累计消费/储值 5000-10000元宝' },
-  { level: 4, label: 'VIP4', range: '累计消费/储值 10000-20000元宝' },
-  { level: 5, label: 'VIP5', range: '累计消费/储值 20000-50000元宝' },
-  { level: 6, label: 'VIP6', range: '累计消费/储值 50000元宝以上' },
+  { level: 4, label: 'VIP4', range: '累计消费/储值 10000-30000元宝' },
+  { level: 5, label: 'VIP5', range: '累计消费/储值 30000-50000元宝' },
+  { level: 6, label: 'VIP6', range: '累计消费/储值 50000-100000元宝' },
+  { level: 7, label: 'VIP7', range: '累计消费/储值 100000元宝以上' },
 ]
 
 const assets = ref({ coupon_count: 0, favorite_count: 0, footprint_count: 0 })
@@ -634,6 +636,7 @@ onShow(async () => {
 .vip-4 { background: linear-gradient(135deg, #d8b84c, #a8822a); }
 .vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
 .vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
+.vip-7 { background: linear-gradient(135deg, #8c6d3f, #4e3420); box-shadow: 0 0 12rpx rgba(140, 109, 63, 0.5); }
 /* 等级说明弹窗 */
 .vip-tip { display: block; text-align: center; font-size: 26rpx; color: #5f4c3a; margin-bottom: 20rpx; font-weight: 500; }
 .vip-row {
