@@ -550,17 +550,13 @@
           <view class="module-head">
             <text class="module-title">动态管理（{{ moments.length }}）</text>
           </view>
-          <!-- 发布权限开关 -->
-          <view class="f-row" style="margin-bottom: 8rpx;">
-            <text class="f-label">允许发布动态</text>
-            <view class="f-input-wrap">
-              <switch :checked="momentCfg.allow_publish_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="momentCfg.allow_publish_moment = $event.detail.value" />
-            </view>
+          <!-- 发布权限开关: 标签+开关+保存 一行显示 -->
+          <view class="moment-cfg-row">
+            <text class="moment-cfg-label">允许发布动态</text>
+            <switch :checked="momentCfg.allow_publish_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="momentCfg.allow_publish_moment = $event.detail.value" />
+            <view class="btn-p sm moment-cfg-save" @click="saveMomentConfig">保存</view>
           </view>
-          <text class="settings-tip">关闭后，普通用户和员工无法发布动态，仅超管/管理员可发布</text>
-          <view class="settings-actions" style="margin-top: 12rpx; margin-bottom: 20rpx;">
-            <view class="btn-p sm" @click="saveMomentConfig">保存设置</view>
-          </view>
+          <text class="settings-tip" style="margin-bottom: 20rpx;">关闭后，普通用户和员工无法发布动态，仅超管/管理员可发布</text>
           <view class="table">
             <view class="tr th">
               <text class="td w-name">作者</text>
@@ -3169,6 +3165,21 @@ onMounted(async () => {
   color: #b3a595;
   flex: 1;
   margin-right: 20rpx;
+}
+/* 动态管理: 发布权限开关 一行显示 */
+.moment-cfg-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+.moment-cfg-label {
+  font-size: 26rpx;
+  color: #42372c;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.moment-cfg-save {
+  margin-left: 16rpx;
 }
 
 /* 分类布局 (商品/课程管理) */
