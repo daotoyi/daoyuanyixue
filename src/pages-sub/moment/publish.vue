@@ -27,16 +27,22 @@
       </view>
     </view>
 
+    <!-- 发布权限关闭提示 -->
+    <view v-if="!canPublish" class="publish-disabled">
+      <text class="disabled-icon">🔒</text>
+      <text class="disabled-text">当前暂未开放动态发布，请联系管理员</text>
+    </view>
+
     <!-- 发布按钮 -->
-    <view class="publish-btn">
+    <view class="publish-btn" v-if="canPublish">
       <view class="btn-p" @click="doPublish">发 布</view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { publishMoment } from '../../api/api'
+import { ref, onMounted } from 'vue'
+import { publishMoment, getPayConfig } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
@@ -44,6 +50,18 @@ import { useUserStore } from '../../store/index'
 const content = ref('')
 const images = ref([]) // { fileID, local, url } 云存储上传
 const publishing = ref(false)
+const canPublish = ref(true) // 发布权限 (后台开关控制, admin/manager 始终允许)
+
+onMounted(async () => {
+  try {
+    const cfg = await getPayConfig()
+    const allow = cfg.allow_publish_moment !== false
+    const us = useUserStore()
+    const role = us.userInfo.role || ''
+    const isAdmin = role === 'admin' || role === 'manager'
+    canPublish.value = allow || isAdmin
+  } catch (e) { /* 默认允许 */ }
+})
 
 /* 选择图片并上传云存储 (避免本地临时路径入库导致图片失效/空白) */
 function chooseImage() {
@@ -209,6 +227,20 @@ async function doPublish() {
 .publish-btn {
   margin-top: 40rpx;
   padding: 0 60rpx;
+}
+.publish-disabled {
+  margin-top: 60rpx;
+  text-align: center;
+  padding: 40rpx;
+}
+.disabled-icon {
+  font-size: 80rpx;
+  display: block;
+  margin-bottom: 20rpx;
+}
+.disabled-text {
+  font-size: 28rpx;
+  color: #857563;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

@@ -575,6 +575,19 @@ async function publishMoment(data) {
     } catch (e) {}
   }
   data.user_name = realName
+  // 动态发布权限检查: 若后台关闭了 allow_publish_moment, 仅超管/管理员可发布
+  try {
+    const userRole = data.opRole || data.role || (uid ? ((await db.collection('users').where({ uid }).limit(1).get()).data[0] || {}).role : '') || 'user'
+    if (userRole !== 'admin' && userRole !== 'manager') {
+      const mRes = await db.collection('settings').where({ group: 'moment' }).limit(1).get()
+      const mDoc = mRes.data[0] || {}
+      if (mDoc.allow_publish_moment === '0' || mDoc.allow_publish_moment === false) {
+        return fail('当前暂未开放动态发布，请联系管理员')
+      }
+    }
+  } catch (e) {
+    // 查询异常不阻塞发布 (保证可用性)
+  }
   // 内容安全检查 (提审要求: 任意发布场景生效; HTTP access_token 方案 + openapi 兜底)
   try {
     const sec = await secCheckText(content)
@@ -2703,7 +2716,7 @@ async function adminRecentOrders(data) {
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
 
-const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home', 'pandao', 'recommend']
+const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home', 'pandao', 'recommend', 'moment']
 
 async function adminSettingsGet(data) {
   const group = data.group
@@ -2726,16 +2739,18 @@ const DEFAULT_PANDAO_FIXED = [
 /* 用户端公开配置: 支付展示设置 (不含敏感信息) */
 async function appPayConfig() {
   try {
-    const [payRes, homeRes, pandaoRes, recommendRes] = await Promise.all([
+    const [payRes, homeRes, pandaoRes, recommendRes, momentRes] = await Promise.all([
       db.collection('settings').where({ group: 'pay' }).limit(1).get(),
       db.collection('settings').where({ group: 'home' }).limit(1).get(),
       db.collection('settings').where({ group: 'pandao' }).limit(1).get(),
       db.collection('settings').where({ group: 'recommend' }).limit(1).get(),
+      db.collection('settings').where({ group: 'moment' }).limit(1).get(),
     ])
     const payDoc = payRes.data[0] || {}
     const homeDoc = homeRes.data[0] || {}
     const pandaoDoc = pandaoRes.data[0] || {}
     const recDoc = recommendRes.data[0] || {}
+    const momentDoc = momentRes.data[0] || {}
     return ok({
       show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
       show_balance: payDoc.show_balance !== '0', // 默认显示余额
@@ -2751,9 +2766,11 @@ async function appPayConfig() {
       rec_show_product: recDoc.rec_show_product !== '0',
       rec_show_course: recDoc.rec_show_course !== '0',
       rec_show_moment: recDoc.rec_show_moment !== '0',
+      // 动态发布控制: 普通用户/员工是否允许发布动态 (默认允许), 超管/管理员始终可发布
+      allow_publish_moment: momentDoc.allow_publish_moment !== '0',
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: true })
   }
 }
 

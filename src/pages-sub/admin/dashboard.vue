@@ -550,6 +550,17 @@
           <view class="module-head">
             <text class="module-title">动态管理（{{ moments.length }}）</text>
           </view>
+          <!-- 发布权限开关 -->
+          <view class="f-row" style="margin-bottom: 8rpx;">
+            <text class="f-label">允许发布动态</text>
+            <view class="f-input-wrap">
+              <switch :checked="momentCfg.allow_publish_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="momentCfg.allow_publish_moment = $event.detail.value" />
+            </view>
+          </view>
+          <text class="settings-tip">关闭后，普通用户和员工无法发布动态，仅超管/管理员可发布</text>
+          <view class="settings-actions" style="margin-top: 12rpx; margin-bottom: 20rpx;">
+            <view class="btn-p sm" @click="saveMomentConfig">保存设置</view>
+          </view>
           <view class="table">
             <view class="tr th">
               <text class="td w-name">作者</text>
@@ -1213,7 +1224,7 @@ async function loadModule(key) {
     }
     else if (key === 'lives') { lives.value = await adminList({ collection: 'live_streams' }); await resolveCloudListField(lives.value, 'cover') }
     else if (key === 'pandao') await loadPandaoConfig()
-    else if (key === 'moments') moments.value = await adminList({ collection: 'moments' })
+    else if (key === 'moments') { moments.value = await adminList({ collection: 'moments' }); await loadMomentConfig() }
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })
     else if (key === 'wxmp') await loadWxmp()
     else if (key === 'feedbacks') await loadFeedbacks()
@@ -1225,6 +1236,7 @@ async function loadModule(key) {
 
 /* ===== 首页管理 ===== */
 const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true })
+const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
@@ -1359,6 +1371,24 @@ async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
     await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0' } })
+    uni.showToast({ title: '已保存', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  }
+}
+
+/* 动态发布权限: 加载/保存 */
+async function loadMomentConfig() {
+  try {
+    const res = await adminSettingsGet({ group: 'moment' })
+    const cfg = res.configs || {}
+    momentCfg.value = { allow_publish_moment: cfg.allow_publish_moment !== '0' && cfg.allow_publish_moment !== false }
+  } catch (e) { /* 默认允许 */ }
+}
+
+async function saveMomentConfig() {
+  try {
+    await adminSettingsSave({ group: 'moment', configs: { allow_publish_moment: momentCfg.value.allow_publish_moment ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })

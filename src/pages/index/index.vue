@@ -186,8 +186,8 @@
         <text class="empty-tip">暂无动态</text>
       </view>
 
-      <!-- 发布动态: 悬浮右下角 (仅动态tab显示, 推荐页不显示; 后台可配置隐藏) -->
-      <view class="fab-publish" v-if="currentTab === 'follow' && homeShowPublish" @tap="goPublish">
+      <!-- 发布动态: 悬浮右下角 (仅动态tab显示, 推荐页不显示; 后台可配置隐藏; 发布权限关闭时仅管理员可见) -->
+      <view class="fab-publish" v-if="currentTab === 'follow' && homeShowPublish && canPublishMoment" @tap="goPublish">
         <text class="fab-icon">✎</text>
         <text class="fab-text">发布动态</text>
       </view>
@@ -362,6 +362,7 @@ const momentList = ref([])
 const liveList = ref([])
 const pandaoList = ref([])
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
+const allowPublishMoment = ref(true) // 后台可配置: 普通用户是否允许发布动态 (默认允许)
 /* 推荐页内容模块开关 (后台 recommend 组配置, 默认全显) */
 const recShowLive = ref(true)
 const recShowPandao = ref(true)
@@ -430,6 +431,13 @@ function calTip(d) {
 
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
+
+// 发布权限: 后台关闭时仅 admin/manager 可发布
+const canPublishMoment = computed(() => {
+  if (allowPublishMoment.value) return true
+  const role = userStore.userInfo.role || ''
+  return role === 'admin' || role === 'manager'
+})
 
 /* logo 绝对路径 (H5 需运行时 origin, 避免 Vite publicPath=./ 编译成相对路径导致 image 背景 none 不渲染) */
 const logoUrl = computed(() => {
@@ -772,6 +780,10 @@ function nearPdLabel(p) {
 }
 
 function goPublish() {
+  if (!canPublishMoment.value) {
+    uni.showToast({ title: '当前暂未开放动态发布', icon: 'none' })
+    return
+  }
   uni.navigateTo({ url: '/pages-sub/moment/publish' })
 }
 
@@ -815,6 +827,7 @@ onShow(async () => {
   try {
     const cfg = await getPayConfig()
     homeShowPublish.value = cfg.show_publish === true
+    allowPublishMoment.value = cfg.allow_publish_moment !== false
     buildTabs(cfg)
     if (Array.isArray(cfg.pandao_fixed) && cfg.pandao_fixed.length) pandaoFixed.value = cfg.pandao_fixed
     // 推荐页内容模块开关
