@@ -97,7 +97,7 @@
               </view>
             </view>
             <view class="f-row">
-              <text class="f-label">关注账号</text>
+              <text class="f-label">动态tab</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.show_follow" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
               </view>

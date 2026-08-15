@@ -23,7 +23,7 @@
       </view>
     </view>
 
-    <!-- 推荐 / 关注: 动态流 -->
+    <!-- 推荐 / 动态: 动态流 -->
     <scroll-view scroll-y class="feed-scroll" v-if="currentTab === 'recommend' || currentTab === 'follow'">
       <!-- 推荐页内容模块 (后台可配置: 直播/盘道活动/商品/课程) -->
       <view class="rec-modules" v-if="currentTab === 'recommend'">
@@ -88,14 +88,14 @@
             </view>
           </scroll-view>
         </view>
-        <!-- 动态精选 (推荐页最底部内容模块: 后台推荐的用户动态) -->
-        <view class="rec-sec" v-if="recShowMoments && recMoments.length">
+        <!-- 动态精选 (推荐页最底部内容模块: 我关注的用户的推荐动态) -->
+        <view class="rec-sec" v-if="recShowMoments && recMomentsShown.length">
           <view class="rec-head">
             <text class="rec-title">🧙 动态精选</text>
-            <text class="rec-more" @tap="goProfile(recMoments[0])">更多 ›</text>
+            <text class="rec-more" @tap="goProfile(recMomentsShown[0])">更多 ›</text>
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
-            <view class="rec-moment-card" v-for="m in recMoments.slice(0, 8)" :key="m.id" @tap="goProfile(m)">
+            <view class="rec-moment-card" v-for="m in recMomentsShown.slice(0, 8)" :key="m.id" @tap="goProfile(m)">
               <image v-if="m.images && m.images.length" class="rec-moment-img" :src="m.images[0]" mode="aspectFill"></image>
               <view v-else class="rec-moment-img rec-moment-fallback"><text>{{ (m.content || '道')[0] }}</text></view>
               <text class="rec-moment-content ellipsis-2">{{ m.content }}</text>
@@ -338,7 +338,7 @@ import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, get
 import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 
-// tab 顺序固定: 推荐 → 关注 → 盘道 → 直播 (显示与否由后台首页管理开关控制)
+// tab 顺序固定: 推荐 → 动态 → 盘道 → 直播 (显示与否由后台首页管理开关控制)
 const tabs = ref([
   { key: 'recommend', label: '推荐' },
   { key: 'pandao', label: '盘道' },
@@ -348,7 +348,7 @@ const tabs = ref([
 function buildTabs(cfg) {
   const arr = []
   if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐' })
-  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '关注' })
+  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '动态' })
   if (cfg.show_pandao !== false) arr.push({ key: 'pandao', label: '盘道' }) // 盘道默认显示, 后台可关
   if (cfg.show_live === true) arr.push({ key: 'live', label: '直播' })
   tabs.value = arr
@@ -359,7 +359,7 @@ const currentTab = ref('recommend')
 // 公众号主页链接 (H5/APP 端点击"关注"直接跳转, __biz 来自「真和盛」公众号文章链接)
 const GZH_HOME_URL = 'https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=MzcwOTM0NTY1MA=='
 const momentList = ref([])
-const followUids = ref([]) // 我关注的用户 uid 列表 (关注页过滤用)
+const followUids = ref([]) // 我关注的用户 uid 列表 (动态精选过滤用)
 const liveList = ref([])
 const pandaoList = ref([])
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
@@ -442,16 +442,15 @@ const logoUrl = computed(() => {
   // #endif
 })
 
-// 推荐=全部动态; 关注=精选(推荐)动态
+// 推荐=被推荐动态; 动态=所有用户动态
 const shownMoments = computed(() => {
-  // 推荐=被推荐动态; 关注=我关注的人发的动态; 未推荐的不显示在推荐页
+  // 推荐=被推荐动态 (后台标记推荐才显示); 动态=所有用户发布的动态
   if (currentTab.value === 'recommend') return momentList.value.filter((m) => m.is_recommended)
-  if (currentTab.value === 'follow') {
-    // 只显示我关注的人 (user_id) 发的动态
-    return momentList.value.filter((m) => followUids.value.includes(Number(m.user_id)))
-  }
   return momentList.value
 })
+
+/* 动态精选 (推荐页底部): 只显示我关注的用户的推荐动态 (后台标记 is_recommended 且作者被我关注) */
+const recMomentsShown = computed(() => recMoments.value.filter((m) => followUids.value.includes(Number(m.user_id))))
 
 function switchTab(key) {
   currentTab.value = key
@@ -461,7 +460,7 @@ function switchTab(key) {
   }
 }
 
-/* 刷新动态列表 (推荐/关注共用) */
+/* 刷新动态列表 (推荐/动态共用) */
 async function refreshMoments() {
   try {
     const [moments, likes] = await Promise.all([
