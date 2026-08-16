@@ -37,6 +37,7 @@
             <view class="rec-live-card" v-for="l in liveList.slice(0, 6)" :key="l.id" @tap="enterLive(l)">
               <image class="rec-live-img" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
               <text class="rec-live-title ellipsis-1">{{ l.title }}</text>
+              <text class="rec-live-time ellipsis-1">🕐 {{ l.start_time || '时间待定' }}</text>
               <text class="rec-live-status" :class="'st-' + l.status">{{ statusText(l.status) }}</text>
             </view>
           </scroll-view>
@@ -53,6 +54,7 @@
               <image class="rec-pd-img" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
               <text class="rec-pd-badge">{{ pd.day }}</text>
               <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
+              <text class="rec-pd-time ellipsis-1">🕐 {{ pd.start_date || '' }} {{ pd.time }}</text>
               <text class="rec-pd-meta ellipsis-1">📍 {{ pd.place }}</text>
               <text class="rec-pd-price">¥{{ pd.price }}</text>
             </view>
@@ -1584,6 +1586,12 @@ onShow(async () => {
   font-size: 24rpx;
   color: #42372c;
 }
+.rec-live-time {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: #857563;
+}
 .rec-live-status {
   display: inline-block;
   margin-top: 6rpx;
@@ -1602,6 +1610,12 @@ onShow(async () => {
   background: #f5efe3;
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
+}
+.rec-pd-time {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: #857563;
 }
 .rec-pd-meta {
   display: block;
