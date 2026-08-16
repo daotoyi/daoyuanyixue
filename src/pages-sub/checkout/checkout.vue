@@ -151,7 +151,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, payOrder, wxpayPrepay, wxpayH5, wxRequestPayment, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress } from '../../api/api'
+import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -427,10 +427,10 @@ async function submitOrder() {
     }
     // #endif
     // #ifndef MP-WEIXIN
-    // 非小程序端: 真实微信支付 (H5 收银台跳转)
+    // 非小程序端: 微信支付走小程序跳转(App)或H5收银台(H5); 元宝支付真实扣减
     if (payMethod.value === 'balance') {
-      // 元宝支付: 真实扣减并确认订单
-      await payOrder(order.order_no)
+      // 元宝支付: 真实扣减元宝并确认订单 (orderPayBalance 按 total_price 扣, 修复之前不扣元宝的bug)
+      await orderPayBalance({ order_no: order.order_no, uid: userStore.userInfo.uid })
       clearSelected()
       uni.showToast({ title: '支付成功', icon: 'success' })
       setTimeout(() => {
@@ -438,18 +438,30 @@ async function submitOrder() {
       }, 800)
       return
     }
+    // #ifdef APP-PLUS
+    // App 端微信支付: 生成小程序 scheme 唤起微信小程序, 在小程序内完成支付
+    try {
+      const sc = await wxmpScheme(order.order_no)
+      if (sc && sc.openlink) {
+        plus.runtime.openURL(sc.openlink)
+        uni.showToast({ title: '已唤起微信小程序，请在小程序中完成支付', icon: 'none' })
+        setTimeout(() => {
+          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
+        }, 1200)
+        return
+      }
+      throw new Error((sc && sc.msg) || '微信小程序跳转链接生成失败')
+    } catch (payErr) {
+      submitting.value = false
+      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      return
+    }
+    // #endif
+    // #ifdef H5
     try {
       const h5 = await wxpayH5(order.order_no)
       if (h5 && h5.h5_url) {
-        // #ifdef H5
         window.location.href = h5.h5_url
-        // #endif
-        // #ifdef APP-PLUS
-        plus.runtime.openURL(h5.h5_url)
-        setTimeout(() => {
-          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
-        }, 1500)
-        // #endif
         return
       }
       throw new Error((h5 && h5.msg) || '微信支付未配置')
@@ -458,6 +470,7 @@ async function submitOrder() {
       uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
       return
     }
+    // #endif
     // #endif
   } catch (e) {
     uni.showToast({ title: '下单失败：' + (e.message || ''), icon: 'none' })

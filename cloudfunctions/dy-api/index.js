@@ -1623,11 +1623,59 @@ async function cancelOrder(data) {
   const cond = data.order_no
     ? { order_no: data.order_no }
     : { _id: data._id }
-  // 仅待付款可取消
+  // 允许取消: 待付款(未支付) 或 待发货(已支付未发货, 需自动退款)
   const exist = await db.collection('orders').where(cond).limit(1).get()
   if (!exist.data.length) return fail('订单不存在')
-  if (exist.data[0].status !== '待付款') return fail('只有待付款订单可以取消')
-  await db.collection('orders').where(cond).update({ status: '已取消' })
+  const order = exist.data[0]
+  if (order.status !== '待付款' && order.status !== '待发货') return fail('只有未付款或未发货的订单可以取消')
+
+  // 已支付(待发货)取消 → 自动退款 (防重复退款)
+  if (order.status === '待发货') {
+    const refundAmt = Number(order.total_price) || 0
+    const isBalance = String(order.pay_method || '').includes('余额')
+    if (isBalance) {
+      // 元宝支付: 直接退回元宝余额
+      const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
+      const bal = Number((u && u.balance) || 0) || 0
+      await db.collection('users').where({ uid: Number(order.uid) })
+        .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+    } else if (order.pay_method === '微信支付' || order.pay_method === 'wechat' || order.trade_no) {
+      // 微信支付: 调微信退款 API v3
+      try {
+        const wxpay = require('./wxpay-v3')
+        await wxpay.refund({
+          outTradeNo: order.order_no,
+          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+          totalFee: Math.round(refundAmt * 100),
+          refundFee: Math.round(refundAmt * 100),
+          reason: '用户取消订单',
+        })
+      } catch (e) {
+        return fail('微信退款发起失败: ' + (e.message || '请稍后重试'))
+      }
+    } else {
+      // 其他支付方式兜底: 走微信退款接口 (微信支付订单必填 trade_no)
+      try {
+        const wxpay = require('./wxpay-v3')
+        await wxpay.refund({
+          outTradeNo: order.order_no,
+          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+          totalFee: Math.round(refundAmt * 100),
+          refundFee: Math.round(refundAmt * 100),
+          reason: '用户取消订单',
+        })
+      } catch (e) {
+        return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+      }
+    }
+    await db.collection('orders').where(cond).update({
+      status: '已退款',
+      refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      refund_reason: '用户取消订单',
+    })
+  } else {
+    await db.collection('orders').where(cond).update({ status: '已取消' })
+  }
   // 推送消息
   try {
     const o = exist.data[0]
@@ -1637,13 +1685,13 @@ async function cancelOrder(data) {
         uid: o.uid,
         type: 'order',
         title: '订单已取消',
-        content: `订单 ${o.order_no} 已取消`,
+        content: `订单 ${o.order_no} 已取消${o.status === '待发货' ? '，款项已原路退回' : ''}`,
         read: false,
         created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       })
     }
   } catch (e) {}
-  return ok({ updated: true })
+  return ok({ updated: true, refunded: order.status === '待发货' })
 }
 
 /* 用户端: 删除自己的订单 (校验 uid 归属, 防止删他人订单) */
@@ -1752,6 +1800,46 @@ async function wxpayH5(data) {
   } catch (e) {
     return fail('微信支付下单失败: ' + (e.message || '请检查商户配置'))
   }
+}
+
+/* App 端微信支付: 生成小程序 URL Scheme, 唤起微信小程序完成支付 (App 无原生微信支付SDK, 借道小程序)
+   wxa/generatescheme: 需小程序已发布且配置好 access_token (config.local WX_APPSECRET) */
+async function wxmpScheme(data) {
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
+  const token = await getWxAccessToken()
+  if (!token) return fail('小程序未配置（缺少 AppSecret），请在服务端 config.local.js 配置后重试')
+  // 小程序页面路径: 订单详情页 (分包 pages-sub/order/detail), 打开后自动进入支付
+  const path = 'pages-sub/order/detail'
+  const query = 'order_no=' + encodeURIComponent(order_no)
+  const body = JSON.stringify({
+    jump_wxa: { path, query },
+    is_expire: true,
+    expire_type: 1,
+    expire_interval: 30, // 30 天内有效
+  })
+  const res = await new Promise((resolve) => {
+    const https = require('https')
+    const req = https.request(`https://api.weixin.qq.com/wxa/generatescheme?access_token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (r) => {
+      let d = ''
+      r.on('data', (c) => (d += c))
+      r.on('end', () => { try { resolve(JSON.parse(d)) } catch (e) { resolve({ errmsg: '响应解析失败' }) } })
+    })
+    req.on('error', (e) => resolve({ errmsg: e.message || '网络错误' }))
+    req.write(body)
+    req.end()
+  })
+  if (!res.openlink) {
+    console.log('[dy-api] generatescheme 失败:', JSON.stringify(res))
+    return fail('小程序跳转链接生成失败: ' + (res.errmsg || '请稍后重试'))
+  }
+  return ok({ openlink: res.openlink, order_no })
 }
 
 /* 微信支付结果回调 (云开发支付成功后调用本云函数) */
@@ -2855,6 +2943,7 @@ const ROUTES = {
   'order.pay': payOrder,
   'order.wxpay': wxpayPrepay,
   'pay.wxpayH5': wxpayH5,
+  'pay.wxmpScheme': wxmpScheme,
   'address.list': listAddresses,
   'address.add': addAddress,
   'address.delete': deleteAddress,

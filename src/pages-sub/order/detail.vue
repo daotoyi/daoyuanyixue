@@ -72,6 +72,9 @@
       <view v-if="order.status === '待付款'" class="btn-fill btn-cancel" @tap="doCancel">
         <text>取消订单</text>
       </view>
+      <view v-else-if="order.status === '待发货'" class="btn-fill btn-cancel" @tap="doCancel">
+        <text>取消订单</text>
+      </view>
       <view v-else-if="order.status === '待收货'" class="btn-fill btn-confirm" @tap="doConfirm">
         <text>确认收货</text>
       </view>
@@ -88,7 +91,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, orderPayBalance, alipayPrepay, getPayConfig } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, wxmpScheme, orderPayBalance, alipayPrepay, getPayConfig } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const order = ref(null)
@@ -207,8 +210,23 @@ async function doPay() {
   await load()
   return
   // #endif
-  // #ifndef MP-WEIXIN
-  // H5/App 无 JSAPI 微信支付能力: 明确引导, 不再静默走其他支付
+  // #ifdef APP-PLUS
+  // App 端微信支付: 生成小程序 scheme 唤起微信小程序, 在小程序内完成支付
+  try {
+    const sc = await wxmpScheme(orderNo.value)
+    if (sc && sc.openlink) {
+      plus.runtime.openURL(sc.openlink)
+      uni.showToast({ title: '已唤起微信小程序，请在小程序中完成支付', icon: 'none' })
+    } else {
+      uni.showToast({ title: (sc && sc.msg) || '微信小程序跳转链接生成失败', icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+  }
+  return
+  // #endif
+  // #ifdef H5
+  // H5 端无 JSAPI 微信支付能力: 明确引导, 不再静默走其他支付
   uni.showModal({
     title: '微信支付',
     content: '微信支付请在微信小程序中完成；当前端请选择「元宝支付」或「支付宝」。',
@@ -219,15 +237,16 @@ async function doPay() {
 }
 
 async function doCancel() {
+  const isPaid = order.value.status === '待发货'
   uni.showModal({
     title: '取消订单',
-    content: '确定取消该订单吗？',
+    content: isPaid ? '确定取消该订单吗？取消后款项将原路退回。' : '确定取消该订单吗？',
     success: async (r) => {
       if (!r.confirm) return
       try {
-        await cancelOrder({ order_no: orderNo.value })
-        uni.showToast({ title: '订单已取消', icon: 'success' })
-        order.value.status = '已取消'
+        const res = await cancelOrder({ order_no: orderNo.value })
+        uni.showToast({ title: '订单已取消' + (res && res.refunded ? '，已退款' : ''), icon: 'success' })
+        order.value.status = (res && res.refunded) ? '已退款' : '已取消'
       } catch (e) {
         uni.showToast({ title: e.message || '取消失败', icon: 'none' })
       }

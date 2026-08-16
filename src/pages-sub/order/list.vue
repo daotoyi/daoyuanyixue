@@ -69,6 +69,9 @@
               <view v-if="o.status === '待付款'" class="btn-fill btn-pay" @tap.stop="doPay(o)">
                 <text>去支付</text>
               </view>
+              <view v-else-if="o.status === '待发货'" class="btn-fill btn-cancel" @tap.stop="doCancel(o)">
+                <text>取消订单</text>
+              </view>
               <view v-else-if="o.status === '待收货'" class="btn-fill btn-confirm" @tap.stop="doConfirm(o)">
                 <text>确认收货</text>
               </view>
@@ -93,7 +96,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOrders, payOrder, confirmOrder, deleteOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { getOrders, confirmOrder, deleteOrder, cancelOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
@@ -205,6 +208,25 @@ async function doConfirm(o) {
   await confirmOrder(o.order_no)
   uni.showToast({ title: '已确认收货', icon: 'success' })
   await loadOrders()
+}
+
+/* 取消订单 (待付款直接取消; 待发货取消自动退款) */
+async function doCancel(o) {
+  const isPaid = o.status === '待发货'
+  uni.showModal({
+    title: '取消订单',
+    content: isPaid ? '确定取消该订单吗？取消后款项将原路退回。' : '确定取消该订单吗？',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        const res = await cancelOrder({ order_no: o.order_no })
+        uni.showToast({ title: '订单已取消' + (res && res.refunded ? '，已退款' : ''), icon: 'success' })
+        await loadOrders()
+      } catch (e) {
+        uni.showToast({ title: e.message || '取消失败', icon: 'none' })
+      }
+    },
+  })
 }
 
 /* ===== 批量删除 ===== */
@@ -516,6 +538,9 @@ async function doDelete(o) {
 }
 .btn-confirm {
   background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+}
+.btn-cancel {
+  background: linear-gradient(135deg, #7a6a52, #5f513c);
 }
 /* 删除订单: 细描边弱化, 不喧宾夺主 */
 .btn-del {

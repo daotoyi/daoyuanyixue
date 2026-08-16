@@ -356,8 +356,6 @@ function buildTabs(cfg) {
 }
 
 const currentTab = ref('recommend')
-// 公众号主页链接 (H5/APP 端点击"关注"直接跳转, __biz 来自「真和盛」公众号文章链接)
-const GZH_HOME_URL = 'https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=MzcwOTM0NTY1MA=='
 const momentList = ref([])
 const liveList = ref([])
 const pandaoList = ref([])
@@ -540,7 +538,7 @@ async function bookPandao(pd) {
   }
 }
 
-/* 消息通知绑定: 小程序直接打开「真和盛文化」服务号主页(关注); H5/APP 复制绑定链接 */
+/* 消息通知绑定: 小程序直接打开「真和盛文化」服务号主页(关注); H5/APP 复制绑定链接并唤起微信 */
 function bindGzhNotify() {
   const us = useUserStore()
   if (!us.isLoggedIn) {
@@ -566,22 +564,47 @@ function bindGzhNotify() {
   // #endif
 }
 
-/* 回退: 复制服务号绑定链接, 微信内打开授权 */
+/* 回退/非小程序端: 复制服务号绑定链接, 并提供"打开微信"唤起微信 App (浏览器直开链接会提示'请在微信客户端打开') */
 function copyBindLink(link) {
   uni.setClipboardData({
     data: link,
     success: () => {
+      // #ifndef MP-WEIXIN
+      uni.showModal({
+        title: '开启消息通知',
+        content: '绑定链接已复制：\n' + link + '\n\n点击「打开微信」唤起微信 App，在微信中打开链接完成绑定（需先关注「真和盛文化」服务号）。',
+        confirmText: '打开微信',
+        cancelText: '取消',
+        success: (r) => {
+          if (r.confirm) openWeixinApp()
+        },
+      })
+      // #endif
+      // #ifdef MP-WEIXIN
       uni.showModal({
         title: '开启消息通知',
         content: '绑定链接已复制：\n' + link + '\n\n请在微信中打开链接完成绑定。绑定后，订单支付成功、盘道活动、课程动态将通过「真和盛文化」服务号推送给您。（需先关注服务号）',
         showCancel: false,
         confirmText: '知道了（已复制）',
       })
+      // #endif
     },
   })
 }
 
-/* 关注公众号: 小程序直接打开「真和盛」公众号主页(关注); 取消/失败时复制微信号并弹'已复制'提示 */
+/* 唤起微信 App: H5 用 weixin:// scheme, App 用 plus.runtime.openURL */
+function openWeixinApp() {
+  // #ifdef H5
+  try {
+    window.location.href = 'weixin://'
+  } catch (e) {}
+  // #endif
+  // #ifdef APP-PLUS
+  plus.runtime.openURL('weixin://')
+  // #endif
+}
+
+/* 关注公众号: 小程序直接打开「真和盛」公众号主页(关注); H5/App 弹窗唤起微信(浏览器直开 mp.weixin.qq.com 会提示'请在微信客户端打开') */
 function followGzh() {
   // #ifdef MP-WEIXIN
   // 跳「真和盛」公众号主页 (gh_9703c59cb860 公众号原始ID, 需已关联/同主体, 基础库 3.7.10+)
@@ -596,30 +619,35 @@ function followGzh() {
   copyGzhWxid()
   // #endif
   // #ifndef MP-WEIXIN
-  if (GZH_HOME_URL) {
-    // #ifdef H5
-    window.location.href = GZH_HOME_URL
-    // #endif
-    // #ifdef APP-PLUS
-    plus.runtime.openURL(GZH_HOME_URL)
-    // #endif
-    return
-  }
+  // 复制微信号 + 弹窗唤起微信 App (weixin:// 直达微信, 微信内搜索「真和盛」即可关注)
   copyGzhWxid()
   // #endif
 }
 
-/* 回退: 复制公众号微信号并弹'已复制'提示 */
+/* 回退/非小程序端: 复制公众号微信号, 弹窗唤起微信 App (微信内搜索关注) */
 function copyGzhWxid() {
   uni.setClipboardData({
     data: 'zhenhesheng_com',
     success: () => {
+      // #ifndef MP-WEIXIN
+      uni.showModal({
+        title: '关注「真和盛」公众号',
+        content: '微信号已复制：zhenhesheng_com\n点击「打开微信」唤起微信 App，在微信中搜索「真和盛」公众号即可关注。',
+        confirmText: '打开微信',
+        cancelText: '取消',
+        success: (r) => {
+          if (r.confirm) openWeixinApp()
+        },
+      })
+      // #endif
+      // #ifdef MP-WEIXIN
       uni.showModal({
         title: '关注「真和盛」公众号',
         content: '微信号已复制：zhenhesheng_com\n请打开微信搜索「真和盛」公众号关注',
         showCancel: false,
         confirmText: '知道了（已复制）',
       })
+      // #endif
     },
   })
 }
