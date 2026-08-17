@@ -241,6 +241,8 @@ export const confirmOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.confirm', { order_no: orderNo })
 export const cancelOrder = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.cancel', data)
+export const courseRefund = (data) =>
+  __USE_MOCK__ ? _fromMock(() => ({ refunded: true }))() : _callFunction('order.courseRefund', data)
 export const deleteOrder = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ deleted: true }))() : _callFunction('order.delete', data)
 export const unlockTool = (data) =>
@@ -296,6 +298,7 @@ export const adminCouponCreate = _admin('admin.coupons.create')
 export const adminCouponUpdate = _admin('admin.coupons.update')
 export const adminCouponDelete = _admin('admin.coupons.delete')
 export const adminRecentOrders = _admin('admin.recentOrders')
+export const adminOrderAnalysis = _admin('admin.orderAnalysis')
 export const adminSettingsGet = _admin('admin.settings.get')
 export const adminSettingsSave = _admin('admin.settings.save')
 export const adminCateList = _admin('admin.categories.list')

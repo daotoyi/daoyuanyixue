@@ -75,6 +75,9 @@
               <view v-else-if="o.status === '待收货'" class="btn-fill btn-confirm" @tap.stop="doConfirm(o)">
                 <text>确认收货</text>
               </view>
+              <view v-if="canCourseRefund(o)" class="btn-fill btn-refund" @tap.stop="doCourseRefund(o)">
+                <text>申请退款</text>
+              </view>
               <view v-if="canAftersale(o)" class="btn-after" :class="{ hasrecord: hasAftersale(o) }" @tap.stop="openAftersale(o)">
                 <text>{{ hasAftersale(o) ? '售后中' : '售后' }}</text>
               </view>
@@ -108,7 +111,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOrders, confirmOrder, deleteOrder, cancelOrder, wxpayPrepay, wxRequestPayment, getMyAftersales } from '../../api/api'
+import { getOrders, confirmOrder, deleteOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
@@ -268,6 +271,32 @@ async function doCancel(o) {
         await loadOrders()
       } catch (e) {
         uni.showToast({ title: e.message || '取消失败', icon: 'none' })
+      }
+    },
+  })
+}
+
+/* 课程7日退款: 已完成课程订单且7日内可申请退款 */
+function canCourseRefund(o) {
+  if (orderTypeOf(o) !== 'course') return false
+  if (o.status !== '已完成') return false
+  const t = parseTime(o.pay_time || o.created_at)
+  if (!t) return false
+  return (Date.now() - t) / (1000 * 60 * 60 * 24) <= 7
+}
+
+async function doCourseRefund(o) {
+  uni.showModal({
+    title: '课程退款',
+    content: '确认申请退款吗？退款后课程访问权限将收回，款项原路退回。',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        const res = await courseRefund({ order_no: o.order_no, uid: useUserStore().userInfo.uid })
+        uni.showToast({ title: (res && res.message) || '退款成功', icon: 'success' })
+        await loadOrders()
+      } catch (e) {
+        uni.showToast({ title: e.message || '退款失败', icon: 'none' })
       }
     },
   })
@@ -585,6 +614,10 @@ async function doDelete(o) {
 }
 .btn-cancel {
   background: linear-gradient(135deg, #7a6a52, #5f513c);
+}
+/* 课程退款按钮 */
+.btn-refund {
+  background: linear-gradient(135deg, #c97b5a, #a55a3a);
 }
 /* 售后按钮: 描边样式区分, 有处理中记录时高亮 */
 .btn-after {

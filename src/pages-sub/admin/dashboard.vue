@@ -435,6 +435,7 @@
           <view class="table">
             <view class="tr th">
               <text class="td w-no">订单号</text>
+              <text class="td w-user">用户名</text>
               <text class="td w-name">商品</text>
               <text class="td w-price">金额</text>
               <text class="td w-status">状态</text>
@@ -442,6 +443,7 @@
             </view>
             <view class="tr" v-for="o in orders" :key="o._id || o.order_no">
               <text class="td w-no ellipsis">{{ o.order_no }}</text>
+              <text class="td w-user ellipsis">{{ o.nickname || ('UID ' + o.uid) }}</text>
               <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
               <text class="td w-price">¥{{ o.total_price }}</text>
               <view class="td w-status">
@@ -455,6 +457,62 @@
                 <text class="op op-col danger" :class="{ hide: userRole !== 'admin' }" @tap="deleteOrder(o)">删除</text>
               </view>
             </view>
+          </view>
+        </view>
+
+        <!-- ===== 订单分析 ===== -->
+        <view v-else-if="activeModule === 'orderAnalysis'" class="module">
+          <view class="module-head">
+            <text class="module-title">订单分析</text>
+          </view>
+
+          <!-- 饼图: 按类型成交分布 -->
+          <view class="analysis-section">
+            <text class="analysis-sub-title">成交分布（按类型）</text>
+            <view class="pie-wrap">
+              <!-- SVG 饼图 -->
+              <view class="pie-svg-box">
+                <view v-if="analysisPie.length" class="pie-svg-inner">
+                  <!-- 每段用 conic-gradient 渲染 -->
+                  <view class="pie-disk" :style="{ background: pieGradient }">
+                    <view class="pie-center">
+                      <text class="pie-total-num">{{ analysisTotalCount }}</text>
+                      <text class="pie-total-label">总订单</text>
+                    </view>
+                  </view>
+                </view>
+                <view v-else class="pie-empty"><text>暂无数据</text></view>
+              </view>
+              <!-- 图例 -->
+              <view class="pie-legend">
+                <view class="legend-row" v-for="(p, i) in analysisPie" :key="p.key">
+                  <view class="legend-dot" :style="{ background: pieColors[i % pieColors.length] }"></view>
+                  <text class="legend-label">{{ p.label }}</text>
+                  <text class="legend-count">{{ p.count }} 单</text>
+                  <text class="legend-amount">¥{{ p.amount.toFixed(2) }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 用户消费排名 -->
+          <view class="analysis-section">
+            <text class="analysis-sub-title">用户消费排名 TOP {{ analysisRanking.length }}</text>
+            <view class="table" v-if="analysisRanking.length">
+              <view class="tr th">
+                <text class="td w-rank">排名</text>
+                <text class="td w-rk-name">用户</text>
+                <text class="td w-rk-count">订单数</text>
+                <text class="td w-rk-amount">消费金额</text>
+              </view>
+              <view class="tr" v-for="(u, i) in analysisRanking" :key="u.uid">
+                <text class="td w-rank" :class="{ 'rank-top': i < 3 }">{{ i + 1 }}</text>
+                <text class="td w-rk-name ellipsis">{{ u.nickname || ('UID ' + u.uid) }}</text>
+                <text class="td w-rk-count">{{ u.count }}</text>
+                <text class="td w-rk-amount">¥{{ u.total.toFixed(2) }}</text>
+              </view>
+            </view>
+            <view v-else class="empty-tip">暂无消费数据</view>
           </view>
         </view>
 
@@ -1099,6 +1157,7 @@ const stCls = (v) => ST_CLS[v] || v
 import { ref, computed, onMounted } from 'vue'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
+  adminOrderAnalysis,
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
@@ -1120,6 +1179,7 @@ const modules = [
   { key: 'products', label: '商品管理', icon: '🛍' },
   { key: 'courses', label: '课程管理', icon: '📚' },
   { key: 'orders', label: '订单管理', icon: '📦' },
+  { key: 'orderAnalysis', label: '订单分析', icon: '📈' },
   { key: 'aftersales', label: '售后管理', icon: '🛠' },
   { key: 'coupons', label: '优惠券', icon: '🎟' },
   { key: 'pandao', label: '盘道管理', icon: '☯️' },
@@ -1130,9 +1190,9 @@ const modules = [
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
 // 员工权限: 仅概览/商品/课程/订单/直播 (注意: 员工不能登录后台, 此配置保留以防历史会话)
-const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'lives']
+const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'orderAnalysis', 'lives']
 // 管理员(manager)权限: 概览/首页管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
-const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'aftersales', 'coupons', 'lives', 'moments', 'feedbacks']
+const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'orderAnalysis', 'aftersales', 'coupons', 'lives', 'moments', 'feedbacks']
 const userRole = computed(() => userStore.userInfo.role || 'user')
 /* 课程管理权限: 超管(admin)/管理员(manager)可管理, 员工(staff)只能查看 */
 const canManageCourses = computed(() => ['admin', 'manager'].includes(userRole.value))
@@ -1215,6 +1275,7 @@ const orderTypeFilterOptions = [
   { value: '全部', label: '全部类别' },
   { value: 'product', label: '商品' },
   { value: 'course', label: '课程' },
+  { value: 'tool_unlock', label: 'AI解盘' },
   { value: 'appointment', label: '预约' },
 ]
 const orderTypeFilter = ref('全部')
@@ -1290,6 +1351,7 @@ async function loadModule(key) {
     else if (key === 'products') await loadProductCates()
     else if (key === 'courses') await loadCourseCates()
     else if (key === 'orders') await loadOrders()
+    else if (key === 'orderAnalysis') await loadOrderAnalysis()
     else if (key === 'users') {
       users.value = await adminList({ collection: 'users' })
       // cloud:// 头像转可访问 URL (H5 image 无法渲染 cloud://, 双端统一)
@@ -1524,6 +1586,35 @@ async function deletePandaoSession(pd) {
 
 async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
+}
+
+/* ===== 订单分析 ===== */
+const analysisPie = ref([])
+const analysisRanking = ref([])
+const pieColors = ['#c4753a', '#6e8b4e', '#8b6a9e', '#b85c5c']
+const analysisTotalCount = computed(() => analysisPie.value.reduce((s, p) => s + p.count, 0))
+const pieGradient = computed(() => {
+  if (!analysisPie.value.length) return ''
+  const total = analysisTotalCount.value || 1
+  let acc = 0
+  const stops = analysisPie.value.map((p, i) => {
+    const start = (acc / total) * 360
+    acc += p.count
+    const end = (acc / total) * 360
+    const color = pieColors[i % pieColors.length]
+    return `${color} ${start}deg ${end}deg`
+  })
+  return `conic-gradient(${stops.join(', ')})`
+})
+
+async function loadOrderAnalysis() {
+  try {
+    const res = await adminOrderAnalysis()
+    analysisPie.value = res.pieData || []
+    analysisRanking.value = res.ranking || []
+  } catch (e) {
+    uni.showToast({ title: e.message || '加载失败', icon: 'none' })
+  }
 }
 
 /* 反馈管理 */
@@ -2968,6 +3059,81 @@ onMounted(async () => {
 .w-price { width: 120rpx; }
 .w-stock { width: 130rpx; text-align: center; }
 .w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
+.w-user { width: 160rpx; font-size: 20rpx; white-space: nowrap; padding: 0 6rpx; }
+
+/* ===== 订单分析 ===== */
+.analysis-section { margin-bottom: 32rpx; }
+.analysis-sub-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #42372c;
+  margin-bottom: 20rpx;
+  padding-left: 16rpx;
+  border-left: 6rpx solid #c4753a;
+}
+.pie-wrap {
+  display: flex;
+  align-items: center;
+  gap: 40rpx;
+  padding: 20rpx;
+}
+.pie-svg-box {
+  flex-shrink: 0;
+  width: 280rpx;
+  height: 280rpx;
+}
+.pie-svg-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.pie-disk {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.pie-center {
+  width: 130rpx;
+  height: 130rpx;
+  border-radius: 50%;
+  background: #faf6f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.pie-total-num { font-size: 36rpx; font-weight: 700; color: #42372c; }
+.pie-total-label { font-size: 20rpx; color: #8a7e6e; }
+.pie-empty {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: 4rpx dashed #ddd;
+  color: #ccc; font-size: 24rpx;
+}
+.pie-legend { flex: 1; }
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 10rpx 0;
+}
+.legend-dot { width: 20rpx; height: 20rpx; border-radius: 50%; flex-shrink: 0; }
+.legend-label { font-size: 26rpx; color: #42372c; min-width: 100rpx; }
+.legend-count { font-size: 24rpx; color: #8a7e6e; }
+.legend-amount { font-size: 26rpx; color: #c4753a; font-weight: 600; margin-left: auto; }
+.w-rank { width: 80rpx; text-align: center; font-weight: 600; color: #8a7e6e; }
+.rank-top { color: #c4753a; font-size: 28rpx; }
+.w-rk-name { flex: 2; min-width: 0; white-space: nowrap; }
+.w-rk-count { width: 120rpx; text-align: center; }
+.w-rk-amount { width: 180rpx; text-align: right; color: #c4753a; font-weight: 600; }
+
 /* 用户统计条 */
 .user-stats {
   display: flex;

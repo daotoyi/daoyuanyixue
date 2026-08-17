@@ -1785,6 +1785,93 @@ async function cancelOrder(data) {
   return ok({ updated: true, refunded: order.status === '待发货' })
 }
 
+/* 课程7日退款: 购买7日内且未观看(progress=0)可申请退款 */
+async function courseRefund(data) {
+  const { uid, order_no } = data
+  if (!uid) return fail('请先登录')
+  if (!order_no) return fail('缺少订单号')
+  const exist = await db.collection('orders').where({ order_no, uid: Number(uid) }).limit(1).get()
+  if (!exist.data.length) return fail('订单不存在或无权操作')
+  const order = exist.data[0]
+  // 仅课程订单且已完成(已支付)可退款
+  const oType = order.order_type || (order.course_id ? 'course' : 'product')
+  if (oType !== 'course') return fail('仅课程订单可申请退款')
+  if (order.status !== '已完成') return fail('当前订单状态不支持退款')
+
+  // 7日期限校验: 以支付时间优先, 无则用创建时间
+  const payTimeStr = order.pay_time || order.created_at || ''
+  if (!payTimeStr) return fail('订单时间异常，请联系客服')
+  const payTime = new Date(payTimeStr.replace(/-/g, '/'))
+  if (isNaN(payTime.getTime())) return fail('订单时间异常，请联系客服')
+  const daysDiff = (Date.now() - payTime.getTime()) / (1000 * 60 * 60 * 24)
+  if (daysDiff > 7) return fail('已超过7天退款期限')
+
+  // 未观看校验: user_courses progress === 0 且无 opened_lessons
+  const ucRes = await db.collection('user_courses')
+    .where({ uid: Number(uid), course_id: Number(order.course_id) })
+    .limit(1).get()
+  if (ucRes.data.length) {
+    const uc = ucRes.data[0]
+    const progress = Number(uc.progress) || 0
+    const opened = Array.isArray(uc.opened_lessons) ? uc.opened_lessons : []
+    if (progress > 0 || opened.length > 0) {
+      return fail('课程已观看，不支持退款')
+    }
+  }
+
+  // 退款: 按支付方式原路退回
+  const refundAmt = Number(order.total_price) || 0
+  const isBalance = String(order.pay_method || '').includes('余额')
+  if (isBalance) {
+    const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+    const bal = Number((u && u.balance) || 0) || 0
+    await db.collection('users').where({ uid: Number(uid) })
+      .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+  } else {
+    try {
+      const wxpay = require('./wxpay-v3')
+      await wxpay.refund({
+        outTradeNo: order.order_no,
+        outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+        totalFee: Math.round(refundAmt * 100),
+        refundFee: Math.round(refundAmt * 100),
+        reason: '课程7日退款',
+      })
+    } catch (e) {
+      return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+    }
+  }
+
+  // 删除 user_courses 记录 (收回课程访问权)
+  try {
+    await db.collection('user_courses')
+      .where({ uid: Number(uid), course_id: Number(order.course_id) })
+      .remove()
+  } catch (e) {}
+
+  // 标记订单已退款
+  await db.collection('orders').where({ order_no }).update({
+    status: '已退款',
+    refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    refund_reason: '课程7日退款',
+  })
+
+  // 推送消息
+  try {
+    await db.collection('messages').add({
+      id: Date.now() % 1000000,
+      uid: Number(uid),
+      type: 'order',
+      title: '课程退款成功',
+      content: `课程订单 ${order_no} 已退款，款项已原路退回`,
+      read: false,
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    })
+  } catch (e) {}
+
+  return ok({ refunded: true, message: '退款成功' })
+}
+
 /* 用户端: 删除自己的订单 (校验 uid 归属, 防止删他人订单) */
 async function deleteUserOrder(data) {
   const { uid, order_no } = data
@@ -2410,6 +2497,7 @@ const MANAGER_ROUTES = [
   'admin.aftersales.list',
   'admin.aftersales.reply',
   'admin.aftersales.delete',
+  'admin.orderAnalysis',
 ]
 
 // 员工允许查询的集合
@@ -2528,6 +2616,16 @@ async function adminList(data) {
           }
         })
       )
+    }
+  }
+  // 订单列表: 关联用户昵称 (uid → nickname)
+  if (collection === 'orders' && res.data.length) {
+    const uids = [...new Set(res.data.map((o) => o.uid).filter(Boolean))]
+    if (uids.length) {
+      const usersRes = await db.collection('users').where({ uid: _.in(uids) }).limit(200).get()
+      const nameMap = {}
+      for (const u of usersRes.data) nameMap[String(u.uid)] = u.nickname || u.phone || ('UID ' + u.uid)
+      for (const o of res.data) o.nickname = nameMap[String(o.uid)] || ('UID ' + o.uid)
     }
   }
   return ok(res.data)
@@ -2896,6 +2994,62 @@ async function adminRecentOrders(data) {
   return ok(res.data)
 }
 
+/* 订单分析: 按类型(商品/课程/AI解盘)统计成交额 + 用户消费排名 */
+async function adminOrderAnalysis() {
+  // 拉全部已支付订单 (排除待付款/已取消)
+  const res = await db.collection('orders')
+    .where({ status: _.nin(['待付款', '已取消']) })
+    .limit(1000).get()
+  const orders = res.data
+
+  // 按类型聚合
+  const typeMap = { product: { label: '商品', count: 0, amount: 0 }, course: { label: '课程', count: 0, amount: 0 }, tool_unlock: { label: 'AI解盘', count: 0, amount: 0 } }
+  // 用户消费聚合
+  const userMap = {} // uid → { uid, nickname, total, count }
+
+  for (const o of orders) {
+    let t = o.order_type || (o.course_id ? 'course' : 'product')
+    const no = String(o.order_no || '')
+    if (!o.order_type) {
+      if (no.startsWith('TL')) t = 'tool_unlock'
+      else if (no.startsWith('RC')) t = 'recharge'
+    }
+    const amt = Number(o.total_price) || 0
+    if (typeMap[t]) {
+      typeMap[t].count++
+      typeMap[t].amount += amt
+    }
+    // 用户消费 (排除退款订单)
+    if (o.status !== '已退款' && o.uid) {
+      const key = String(o.uid)
+      if (!userMap[key]) userMap[key] = { uid: o.uid, nickname: o.nickname || '', total: 0, count: 0 }
+      userMap[key].total += amt
+      userMap[key].count++
+    }
+  }
+
+  // 补全用户昵称
+  const uids = Object.values(userMap).map((u) => u.uid).filter(Boolean)
+  if (uids.length) {
+    const users = await db.collection('users').where({ uid: _.in(uids) }).limit(500).get()
+    const nameMap = {}
+    for (const u of users.data) nameMap[String(u.uid)] = u.nickname || u.phone || ('UID ' + u.uid)
+    for (const k of Object.keys(userMap)) {
+      if (!userMap[k].nickname) userMap[k].nickname = nameMap[k] || ('UID ' + userMap[k].uid)
+    }
+  }
+
+  // 排名: 按消费总额降序
+  const ranking = Object.values(userMap).sort((a, b) => b.total - a.total).slice(0, 20)
+
+  const pieData = Object.entries(typeMap).map(([k, v]) => ({
+    key: k, label: v.label, count: v.count,
+    amount: Math.round(v.amount * 100) / 100,
+  }))
+
+  return ok({ pieData, ranking })
+}
+
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
 
 const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home', 'pandao', 'recommend', 'moment']
@@ -3048,6 +3202,7 @@ const ROUTES = {
   'address.delete': deleteAddress,
   'order.confirm': confirmOrder,
   'order.cancel': cancelOrder,
+  'order.courseRefund': courseRefund,
   'order.delete': deleteUserOrder,
   'course.buy': buyCourse,
   'tool.unlock': toolUnlock,
@@ -3090,6 +3245,7 @@ const ROUTES = {
   'admin.coupons.update': adminCouponUpdate,
   'admin.coupons.delete': adminCouponDelete,
   'admin.recentOrders': adminRecentOrders,
+  'admin.orderAnalysis': adminOrderAnalysis,
   'admin.settings.get': adminSettingsGet,
   'admin.settings.save': adminSettingsSave,
   'admin.categories.list': adminCateList,

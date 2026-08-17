@@ -78,6 +78,9 @@
       <view v-else-if="order.status === '待收货'" class="btn-fill btn-confirm" @tap="doConfirm">
         <text>确认收货</text>
       </view>
+      <view v-if="canCourseRefund" class="btn-fill btn-refund" @tap="doCourseRefund">
+        <text>申请退款</text>
+      </view>
       <view v-if="canAftersale" class="btn-after" :class="{ hasrecord: hasAftersale }" @tap="showAftersale = true">
         <text>{{ hasAftersale ? '售后处理中' : '售后反馈' }}</text>
       </view>
@@ -103,7 +106,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, wxmpScheme, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const order = ref(null)
@@ -147,6 +150,35 @@ const canAftersale = computed(() => {
 const hasAftersale = computed(() =>
   aftersaleRecords.value.some((r) => r.order_no === orderNo.value && r.status !== '已处理')
 )
+
+/* 课程7日退款: 已完成课程订单且7日内可申请 */
+const canCourseRefund = computed(() => {
+  const o = order.value
+  if (!o || o.status !== '已完成') return false
+  const t = o.order_type || (o.course_id ? 'course' : 'product')
+  if (t !== 'course') return false
+  const tStr = o.pay_time || o.created_at || ''
+  const ts = new Date(String(tStr).replace(/-/g, '/')).getTime()
+  if (!ts) return false
+  return (Date.now() - ts) / (1000 * 60 * 60 * 24) <= 7
+})
+
+async function doCourseRefund() {
+  uni.showModal({
+    title: '课程退款',
+    content: '确认申请退款吗？退款后课程访问权限将收回，款项原路退回。',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        const res = await courseRefund({ order_no: orderNo.value, uid: useUserStore().userInfo.uid })
+        uni.showToast({ title: (res && res.message) || '退款成功', icon: 'success' })
+        await load()
+      } catch (e) {
+        uni.showToast({ title: e.message || '退款失败', icon: 'none' })
+      }
+    },
+  })
+}
 
 /* 读取后台支付配置 (显示支付宝开关) */
 async function loadPayConfig() {
@@ -533,6 +565,11 @@ function goShop() {
 }
 .btn-cancel {
   background: linear-gradient(135deg, #9a9a9a, #777);
+  margin-left: 16rpx;
+}
+/* 课程退款按钮 */
+.btn-refund {
+  background: linear-gradient(135deg, #c97b5a, #a55a3a);
   margin-left: 16rpx;
 }
 /* 售后反馈按钮: 描边样式, 处理中高亮 */
