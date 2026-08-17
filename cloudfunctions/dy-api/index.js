@@ -581,7 +581,7 @@ async function publishMoment(data) {
     if (userRole !== 'admin' && userRole !== 'manager') {
       const mRes = await db.collection('settings').where({ group: 'moment' }).limit(1).get()
       const mDoc = mRes.data[0] || {}
-      if (mDoc.allow_publish_moment === '0' || mDoc.allow_publish_moment === false) {
+      if (mDoc.allow_publish_moment !== '1' && mDoc.allow_publish_moment !== true) {
         return fail('当前暂未开放动态发布，请联系管理员')
       }
     }
@@ -3096,17 +3096,17 @@ async function appPayConfig() {
       show_live: homeDoc.show_live === '1' || homeDoc.show_live === true || false, // 首页直播入口, 默认隐藏
       show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
       pandao_fixed: Array.isArray(pandaoDoc.fixed) && pandaoDoc.fixed.length ? pandaoDoc.fixed : DEFAULT_PANDAO_FIXED, // 固定盘道活动(周几+老师)
-      // 首页-推荐页展示模块 (直播/盘道活动/商品/课程/动态, 默认全部显示)
-      rec_show_live: recDoc.rec_show_live !== '0',
+      // 首页-推荐页展示模块 (直播默认隐藏, 其余默认显示)
+      rec_show_live: recDoc.rec_show_live === '1' || recDoc.rec_show_live === true || false,
       rec_show_pandao: recDoc.rec_show_pandao !== '0',
       rec_show_product: recDoc.rec_show_product !== '0',
       rec_show_course: recDoc.rec_show_course !== '0',
       rec_show_moment: recDoc.rec_show_moment !== '0',
-      // 动态发布控制: 普通用户/员工是否允许发布动态 (默认允许), 超管/管理员始终可发布
-      allow_publish_moment: momentDoc.allow_publish_moment !== '0',
+      // 动态发布控制: 普通用户/员工是否允许发布动态 (默认关闭), 超管/管理员始终可发布
+      allow_publish_moment: momentDoc.allow_publish_moment === '1' || momentDoc.allow_publish_moment === true || false,
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: true })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false })
   }
 }
 
