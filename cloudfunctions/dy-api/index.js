@@ -855,6 +855,97 @@ async function adminFeedbackDelete(data) {
   return ok({ deleted: true })
 }
 
+/* ---- 订单售后 (商品/课程反馈) ---- */
+
+/* 用户提交售后反馈: 校验订单归属 + 类型(仅商品/课程) */
+async function submitAftersale(data) {
+  const { uid, order_no, content } = data
+  if (!uid) return fail('请先登录')
+  if (!order_no) return fail('缺少订单号')
+  if (!content || !String(content).trim()) return fail('请描述售后问题')
+  const exist = await db.collection('orders').where({ order_no }).limit(1).get()
+  if (!exist.data.length) return fail('订单不存在')
+  const order = exist.data[0]
+  if (Number(order.uid) !== Number(uid)) return fail('只能对本人订单发起售后')
+  const orderType = order.order_type || (order.course_id ? 'course' : 'product')
+  if (orderType !== 'product' && orderType !== 'course') return fail('该订单类型不支持售后反馈')
+  const doc = {
+    id: Date.now() % 1000000,
+    uid: Number(uid),
+    nickname: data.nickname || '',
+    order_no,
+    order_type: orderType,
+    item_names: (order.items || []).map((i) => i.name).join('、'),
+    total_price: order.total_price || '',
+    content: String(content).trim().slice(0, 500),
+    images: Array.isArray(data.images) ? data.images.slice(0, 3).map((s) => String(s)) : [],
+    status: '待处理',
+    reply: '',
+    replied_at: '',
+    created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  }
+  // 集合不存在时自动创建 (首次使用容错)
+  try {
+    await db.collection('aftersales').add(doc)
+  } catch (e) {
+    if (String(e.message || '').includes('collection') || String(e.message || '').includes('not exist')) {
+      await db.createCollection('aftersales').catch(() => {})
+      await db.collection('aftersales').add(doc)
+    } else {
+      throw e
+    }
+  }
+  return ok(doc)
+}
+
+/* 我的售后记录 */
+async function myAftersales(data) {
+  const { uid } = data
+  if (!uid) return ok([])
+  const res = await db.collection('aftersales').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(50).get()
+  return ok(res.data)
+}
+
+/* 后台: 售后列表 (可按状态筛选) */
+async function adminAftersales(data) {
+  const cond = data.status && data.status !== '全部' ? { status: data.status } : {}
+  const res = await db.collection('aftersales').where(cond).orderBy('id', 'desc').limit(200).get()
+  return ok(res.data)
+}
+
+/* 后台: 处理售后 (回复 + 状态流转), 并推送消息给用户 */
+async function adminAftersaleReply(data) {
+  const status = data.status || '已处理'
+  const reply = data.reply || ''
+  const existed = await db.collection('aftersales').where({ id: Number(data.id) }).limit(1).get()
+  const rec = existed.data[0]
+  if (!rec) return fail('售后记录不存在')
+  await db.collection('aftersales').where({ id: Number(data.id) }).update({
+    status,
+    reply,
+    replied_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  })
+  // 推送消息给用户
+  try {
+    await db.collection('messages').add({
+      id: Date.now() % 1000000,
+      uid: rec.uid,
+      type: 'order',
+      title: '售后反馈已处理',
+      content: `订单 ${rec.order_no} 的售后反馈${status === '已处理' ? '已处理完成' : '处理中'}${reply ? '：' + String(reply).slice(0, 100) : ''}`,
+      read: false,
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    })
+  } catch (e) {}
+  return ok({ updated: true })
+}
+
+/* 后台: 删除售后记录 */
+async function adminAftersaleDelete(data) {
+  await db.collection('aftersales').where({ id: Number(data.id) }).remove()
+  return ok({ deleted: true })
+}
+
 /* 管理工具: 创建集合 */
 async function adminCreateCollection(data) {
   const name = String(data.name || '').trim()
@@ -2316,6 +2407,9 @@ const MANAGER_ROUTES = [
   'admin.feedbacks.list',
   'admin.feedbacks.reply',
   'admin.feedbacks.delete',
+  'admin.aftersales.list',
+  'admin.aftersales.reply',
+  'admin.aftersales.delete',
 ]
 
 // 员工允许查询的集合
@@ -2933,6 +3027,11 @@ const ROUTES = {
   'admin.feedbacks.list': adminFeedbacks,
   'admin.feedbacks.reply': adminFeedbackReply,
   'admin.feedbacks.delete': adminFeedbackDelete,
+  'aftersale.submit': submitAftersale,
+  'aftersale.my': myAftersales,
+  'admin.aftersales.list': adminAftersales,
+  'admin.aftersales.reply': adminAftersaleReply,
+  'admin.aftersales.delete': adminAftersaleDelete,
   'admin.db.createCollection': adminCreateCollection,
   'app.checkUpdate': checkUpdate,
   'admin.logistics.list': listLogistics,

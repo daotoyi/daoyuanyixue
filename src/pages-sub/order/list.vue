@@ -75,6 +75,9 @@
               <view v-else-if="o.status === '待收货'" class="btn-fill btn-confirm" @tap.stop="doConfirm(o)">
                 <text>确认收货</text>
               </view>
+              <view v-if="canAftersale(o)" class="btn-after" :class="{ hasrecord: hasAftersale(o) }" @tap.stop="openAftersale(o)">
+                <text>{{ hasAftersale(o) ? '售后中' : '售后' }}</text>
+              </view>
               <view class="btn-del" @tap.stop="doDelete(o)">
                 <text>删除</text>
               </view>
@@ -87,6 +90,15 @@
         <view class="empty-tip">暂无相关订单</view>
       </view>
     </scroll-view>
+
+    <!-- 售后反馈弹窗 -->
+    <aftersale-popup
+      :visible="showAftersale"
+      :order="asOrder"
+      :records="aftersaleRecords"
+      @close="showAftersale = false"
+      @submitted="loadAftersales"
+    ></aftersale-popup>
   </view>
 </template>
 
@@ -96,7 +108,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOrders, confirmOrder, deleteOrder, cancelOrder, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { getOrders, confirmOrder, deleteOrder, cancelOrder, wxpayPrepay, wxRequestPayment, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
@@ -108,13 +120,45 @@ onLoad((options) => {
 })
 
 onShow(async () => {
-  await loadOrders()
+  await Promise.all([loadOrders(), loadAftersales()])
 })
 
 // 一次拉全部订单, 统计各状态数量 (必须传 uid, 只拉自己的订单)
 async function loadOrders() {
   const uid = useUserStore().userInfo.uid
   allOrders.value = await getOrders({ status: '全部', uid })
+}
+
+/* ===== 售后反馈 ===== */
+const aftersaleRecords = ref([])
+const showAftersale = ref(false)
+const asOrder = ref(null)
+
+async function loadAftersales() {
+  try {
+    const uid = useUserStore().userInfo.uid
+    if (!uid) return
+    aftersaleRecords.value = await getMyAftersales({ uid })
+  } catch (e) {
+    aftersaleRecords.value = []
+  }
+}
+
+/* 商品/课程订单且已支付(非待付款)可发起售后反馈 */
+function canAftersale(o) {
+  const t = orderTypeOf(o)
+  if (t !== 'product' && t !== 'course') return false
+  return o.status && o.status !== '待付款'
+}
+
+/* 该订单是否有处理中的售后记录 */
+function hasAftersale(o) {
+  return aftersaleRecords.value.some((r) => r.order_no === o.order_no && r.status !== '已处理')
+}
+
+function openAftersale(o) {
+  asOrder.value = o
+  showAftersale.value = true
 }
 
 const counts = computed(() => {
@@ -542,6 +586,30 @@ async function doDelete(o) {
 .btn-cancel {
   background: linear-gradient(135deg, #7a6a52, #5f513c);
 }
+/* 售后按钮: 描边样式区分, 有处理中记录时高亮 */
+.btn-after {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  height: 64rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid #ba7517;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-after text {
+  font-size: 24rpx;
+  color: #ba7517;
+  letter-spacing: 1rpx;
+}
+.btn-after.hasrecord {
+  background: #ba7517;
+}
+.btn-after.hasrecord text {
+  color: #fefbf6;
+}
+
 /* 删除订单: 细描边弱化, 不喧宾夺主 */
 .btn-del {
   flex-shrink: 0;

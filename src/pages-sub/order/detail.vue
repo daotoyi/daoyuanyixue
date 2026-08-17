@@ -65,7 +65,7 @@
     </view>
 
     <!-- 底部操作 -->
-    <view class="action-bar" v-if="order.status !== '已完成' && order.status !== '已退款' && order.status !== '已取消'">
+    <view class="action-bar" v-if="order.status !== '已取消'">
       <view v-if="order.status === '待付款'" class="btn-fill btn-pay" @tap="doPay">
         <text>立即支付</text>
       </view>
@@ -78,10 +78,22 @@
       <view v-else-if="order.status === '待收货'" class="btn-fill btn-confirm" @tap="doConfirm">
         <text>确认收货</text>
       </view>
-      <view v-else class="btn-fill btn-shop" @tap="goShop">
+      <view v-if="canAftersale" class="btn-after" :class="{ hasrecord: hasAftersale }" @tap="showAftersale = true">
+        <text>{{ hasAftersale ? '售后处理中' : '售后反馈' }}</text>
+      </view>
+      <view v-else-if="order.status === '已完成' || order.status === '已退款'" class="btn-fill btn-shop" @tap="goShop">
         <text>去逛逛</text>
       </view>
     </view>
+
+    <!-- 售后反馈弹窗 -->
+    <aftersale-popup
+      :visible="showAftersale"
+      :order="order"
+      :records="aftersaleRecords"
+      @close="showAftersale = false"
+      @submitted="loadAftersales"
+    ></aftersale-popup>
   </view>
 </template>
 
@@ -91,7 +103,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, wxmpScheme, orderPayBalance, alipayPrepay, getPayConfig } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, wxpayPrepay, wxRequestPayment, wxmpScheme, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const order = ref(null)
@@ -107,8 +119,34 @@ const alipayEnabled = ref(false)
 
 onLoad(async (options) => {
   orderNo.value = options.order_no
-  await Promise.all([load(), loadPayConfig()])
+  await Promise.all([load(), loadPayConfig(), loadAftersales()])
 })
+
+/* ===== 售后反馈 ===== */
+const aftersaleRecords = ref([])
+const showAftersale = ref(false)
+
+async function loadAftersales() {
+  try {
+    const uid = useUserStore().userInfo.uid
+    if (!uid) return
+    aftersaleRecords.value = await getMyAftersales({ uid })
+  } catch (e) {
+    aftersaleRecords.value = []
+  }
+}
+
+/* 商品/课程订单且已支付(非待付款)可发起售后反馈 */
+const canAftersale = computed(() => {
+  const o = order.value
+  if (!o || !o.status || o.status === '待付款') return false
+  const t = o.order_type || (o.course_id ? 'course' : 'product')
+  return t === 'product' || t === 'course'
+})
+
+const hasAftersale = computed(() =>
+  aftersaleRecords.value.some((r) => r.order_no === orderNo.value && r.status !== '已处理')
+)
 
 /* 读取后台支付配置 (显示支付宝开关) */
 async function loadPayConfig() {
@@ -496,6 +534,28 @@ function goShop() {
 .btn-cancel {
   background: linear-gradient(135deg, #9a9a9a, #777);
   margin-left: 16rpx;
+}
+/* 售后反馈按钮: 描边样式, 处理中高亮 */
+.btn-after {
+  flex-shrink: 0;
+  height: 84rpx;
+  padding: 0 48rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid #ba7517;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-after text {
+  font-size: 28rpx;
+  color: #ba7517;
+  letter-spacing: 2rpx;
+}
+.btn-after.hasrecord {
+  background: #ba7517;
+}
+.btn-after.hasrecord text {
+  color: #fefbf6;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

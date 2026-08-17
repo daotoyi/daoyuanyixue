@@ -458,6 +458,52 @@
           </view>
         </view>
 
+        <!-- ===== 售后管理 ===== -->
+        <view v-else-if="activeModule === 'aftersales'" class="module">
+          <view class="module-head">
+            <text class="module-title">售后管理（{{ aftersales.length }}）</text>
+            <view class="filter-pills">
+              <text
+                v-for="s in aftersaleStatusOptions"
+                :key="s"
+                class="pill"
+                :class="{ on: aftersaleFilter === s }"
+                @tap="aftersaleFilter = s; loadAftersales()"
+              >{{ s }}</text>
+            </view>
+          </view>
+          <view class="table">
+            <view class="tr th">
+              <text class="td w-no">用户/订单</text>
+              <text class="td w-name">售后内容</text>
+              <text class="td w-time">时间</text>
+              <text class="td w-status">状态</text>
+              <text class="td w-ops">操作</text>
+            </view>
+            <view class="tr" v-for="a in aftersales" :key="a.id">
+              <view class="td w-no">
+                <text class="ellipsis">{{ a.nickname || ('UID ' + a.uid) }}</text>
+                <text class="td-sub ellipsis">{{ a.order_no }}</text>
+                <text class="td-sub ellipsis">{{ a.item_names }}</text>
+                <text class="td-sub">¥{{ a.total_price }}</text>
+              </view>
+              <view class="td w-name">
+                <text class="ellipsis">{{ a.content }}</text>
+                <view class="fb-imgs" v-if="a._imgs && a._imgs.length">
+                  <image class="fb-thumb" v-for="(src, si) in a._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewAsImg(a, si)"></image>
+                </view>
+                <text class="td-sub as-reply-echo" v-if="a.reply">已回复：{{ a.reply }}</text>
+              </view>
+              <text class="td w-time">{{ a.created_at }}</text>
+              <text class="td w-status" :class="a.status === '待处理' ? 'st-wait' : (a.status === '处理中' ? 'st-doing' : 'st-done')">{{ a.status }}</text>
+              <view class="td w-ops ops">
+                <text class="op" @tap="openAftersaleHandle(a)">处理</text>
+                <text class="op danger" @tap="deleteAftersale(a)">删除</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
         <!-- ===== 用户管理 ===== -->
         <view v-else-if="activeModule === 'users'" class="module">
           <view class="module-head">
@@ -993,6 +1039,37 @@
       </view>
     </view></view>
 
+    <!-- ===== 售后处理弹窗 ===== -->
+    <view class="pp-mask" v-if="showAftersaleHandle" @tap="showAftersaleHandle = false"><view class="pp-sheet" @tap.stop>
+      <view class="form-sheet">
+        <view class="sheet-title">处理售后</view>
+        <template v-if="asHandleForm.rec">
+          <view class="f-row"><text class="f-label">订单号</text><text class="f-text">{{ asHandleForm.rec.order_no }}</text></view>
+          <view class="f-row"><text class="f-label">商品</text><text class="f-text">{{ asHandleForm.rec.item_names }}</text></view>
+          <view class="f-row"><text class="f-label">用户</text><text class="f-text">{{ asHandleForm.rec.nickname || ('UID ' + asHandleForm.rec.uid) }}</text></view>
+          <view class="f-row"><text class="f-label">问题描述</text><text class="f-text">{{ asHandleForm.rec.content }}</text></view>
+          <view class="f-row" v-if="asHandleForm.rec._imgs && asHandleForm.rec._imgs.length">
+            <text class="f-label">图片</text>
+            <view class="fb-imgs">
+              <image class="fb-thumb" v-for="(src, si) in asHandleForm.rec._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewAsImg(asHandleForm.rec, si)"></image>
+            </view>
+          </view>
+        </template>
+        <view class="f-row">
+          <text class="f-label">处理状态</text>
+          <view class="f-pills">
+            <text class="pill" :class="{ on: asHandleForm.status === '处理中' }" @tap="asHandleForm.status = '处理中'">处理中</text>
+            <text class="pill" :class="{ on: asHandleForm.status === '已处理' }" @tap="asHandleForm.status = '已处理'">已处理</text>
+          </view>
+        </view>
+        <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="asHandleForm.reply" placeholder="填写处理结果，将推送给用户" /></view>
+        <view class="sheet-actions">
+          <view class="btn-p plain sm" @click="showAftersaleHandle = false">取消</view>
+          <view class="btn-p sm" @click="saveAftersaleReply">确认处理</view>
+        </view>
+      </view>
+    </view></view>
+
     <!-- ===== 分类编辑弹窗 ===== -->
     <view class="pp-mask" v-if="showCate" @tap="showCate = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
@@ -1028,6 +1105,7 @@ import {
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
+  adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
   wxmpGetAuthUrl, wxmpListBound, wxmpGetExperienceQr, wxmpUploadCode, wxmpSubmitAudit, wxmpRelease,
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -1042,6 +1120,7 @@ const modules = [
   { key: 'products', label: '商品管理', icon: '🛍' },
   { key: 'courses', label: '课程管理', icon: '📚' },
   { key: 'orders', label: '订单管理', icon: '📦' },
+  { key: 'aftersales', label: '售后管理', icon: '🛠' },
   { key: 'coupons', label: '优惠券', icon: '🎟' },
   { key: 'pandao', label: '盘道管理', icon: '☯️' },
   { key: 'lives', label: '直播管理', icon: '📡' },
@@ -1053,7 +1132,7 @@ const modules = [
 // 员工权限: 仅概览/商品/课程/订单/直播 (注意: 员工不能登录后台, 此配置保留以防历史会话)
 const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'lives']
 // 管理员(manager)权限: 概览/首页管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
-const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'coupons', 'lives', 'moments', 'feedbacks']
+const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'aftersales', 'coupons', 'lives', 'moments', 'feedbacks']
 const userRole = computed(() => userStore.userInfo.role || 'user')
 /* 课程管理权限: 超管(admin)/管理员(manager)可管理, 员工(staff)只能查看 */
 const canManageCourses = computed(() => ['admin', 'manager'].includes(userRole.value))
@@ -1224,6 +1303,7 @@ async function loadModule(key) {
     else if (key === 'coupons') coupons.value = await adminList({ collection: 'coupons' })
     else if (key === 'wxmp') await loadWxmp()
     else if (key === 'feedbacks') await loadFeedbacks()
+    else if (key === 'aftersales') await loadAftersales()
     else if (key === 'settings') await loadSettings(activeSettingsTab.value)
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
@@ -1488,6 +1568,56 @@ function deleteFeedback(f) {
         await adminFeedbackDelete({ id: f.id })
         uni.showToast({ title: '已删除', icon: 'none' })
         await loadFeedbacks()
+      } catch (e) {
+        uni.showToast({ title: '删除失败', icon: 'none' })
+      }
+    },
+  })
+}
+
+/* ===== 售后管理 ===== */
+const aftersales = ref([])
+const aftersaleFilter = ref('全部')
+const aftersaleStatusOptions = ['全部', '待处理', '处理中', '已处理']
+const showAftersaleHandle = ref(false)
+const asHandleForm = ref({ rec: null, status: '已处理', reply: '' })
+
+async function loadAftersales() {
+  aftersales.value = await adminAftersalesList({ status: aftersaleFilter.value })
+  // 售后图片 cloud:// → 可访问 URL (H5 渲染)
+  for (const a of aftersales.value) {
+    if (a.images && a.images.length) {
+      a._imgs = await Promise.all(a.images.map((src) => resolveCloudUrl(src)))
+    }
+  }
+}
+
+function openAftersaleHandle(a) {
+  asHandleForm.value = { rec: a, status: a.status === '待处理' ? '处理中' : (a.status || '已处理'), reply: a.reply || '' }
+  showAftersaleHandle.value = true
+}
+
+function previewAsImg(a, i) {
+  if (a._imgs && a._imgs.length) uni.previewImage({ urls: a._imgs, current: a._imgs[i] })
+}
+
+async function saveAftersaleReply() {
+  await adminAftersaleReply({ id: asHandleForm.value.rec.id, status: asHandleForm.value.status, reply: asHandleForm.value.reply })
+  showAftersaleHandle.value = false
+  uni.showToast({ title: '已处理', icon: 'success' })
+  await loadAftersales()
+}
+
+function deleteAftersale(a) {
+  uni.showModal({
+    title: '删除售后记录',
+    content: `确定删除订单 ${a.order_no} 的这条售后记录吗？`,
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        await adminAftersaleDelete({ id: a.id })
+        uni.showToast({ title: '已删除', icon: 'none' })
+        await loadAftersales()
       } catch (e) {
         uni.showToast({ title: '删除失败', icon: 'none' })
       }
@@ -3375,6 +3505,7 @@ onMounted(async () => {
 .st-unpaid { color: #b04a45; font-weight: 500; }
 .st-wait { color: #ba7517; font-weight: 500; }
 .st-done { color: #6e7f5a; font-weight: 500; }
+.st-doing { color: #8c5a2b; font-weight: 500; }
 .st-unshipped { color: #8c5a2b; font-weight: 500; }
 .st-unreceived { color: #ba7517; font-weight: 500; }
 .st-done { color: #6e7f5a; font-weight: 500; }
@@ -3384,6 +3515,23 @@ onMounted(async () => {
   font-size: 20rpx;
   color: #b3a595;
   margin-top: 4rpx;
+}
+/* 售后管理: 单元格内次要信息行 / 弹窗只读文本 / 回复回显 */
+.td-sub {
+  display: block;
+  font-size: 20rpx;
+  color: #b3a595;
+  margin-top: 4rpx;
+}
+.f-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #42372c;
+  line-height: 1.5;
+  word-break: break-all;
+}
+.as-reply-echo {
+  color: #8c5a2b;
 }
 /* 时间列: 单行显示 */
 .w-time {
