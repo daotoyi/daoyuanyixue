@@ -268,7 +268,7 @@ const toolEntries = [
   { key: 'liuyao', label: '六爻', icon: '🪙' },
 ]
 
-const isAdmin = computed(() => userInfo.value.role === 'admin' || userInfo.value.role === 'staff')
+const isAdmin = computed(() => userInfo.value.role === 'admin' || userInfo.value.role === 'manager')
 
 const menuItems = [
   { key: 'invite', label: '邀请有礼', icon: '🎁' },
