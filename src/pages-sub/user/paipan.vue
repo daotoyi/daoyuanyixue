@@ -776,7 +776,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { GAN, ZHI, GAN_WX, ZHI_WX, NAYIN, shishen, ZHI_CANGGAN, shenshaOf, dayPillar, changShengOf, ganRelation, zhiRelation, baziGeju, chengGu } from '../utils/paipan'
 import { GRID_POS, sanFangSiZheng, liunianOfDayun, liuyueOf, liuriOf, starKind, lightOf } from '../utils/ziwei'
 import { generateJiepan, summaryJiepan } from '../utils/jiepan'
-import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { aiJiepan, aiAsk, unlockTool } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -894,64 +894,7 @@ function isQmUnlocked(key) {
   }
 }
 function payQmJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
-  const us = useUserStore()
-  if (!us.isLoggedIn) {
-    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
-    return
-  }
-  // #ifndef MP-WEIXIN
-  // H5 端: 元宝扣款 9 元宝
-  uni.showModal({
-    title: '解锁奇门深度解盘',
-    content: '将从元宝扣除 9 元宝，是否继续？',
-    confirmText: '确认解锁',
-    confirmColor: '#8c5a2b',
-    success: (r) => {
-      if (!r.confirm) return
-      uni.showLoading({ title: '解锁中...', mask: true })
-      unlockTool({ uid: us.userInfo.uid, tool: 'qimen', pay_method: 'balance' })
-        .then((res) => {
-          uni.hideLoading()
-          if (res && (res.order_no && res.pay_method === 'balance')) {
-            applyQmUnlock()
-          } else {
-            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
-          }
-        })
-        .catch((e) => {
-          uni.hideLoading()
-          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-        })
-    },
-  })
-  return
-  // #endif
-  uni.showLoading({ title: '创建订单...', mask: true })
-  unlockTool({ uid: us.userInfo.uid, tool: 'qimen' })
-    .then(async (res) => {
-      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
-      uni.hideLoading()
-      // #ifdef MP-WEIXIN
-      try {
-        const prepay = await wxpayPrepay(res.order_no)
-        if (prepay && prepay.payment) {
-          await wxRequestPayment(prepay.payment)
-          applyQmUnlock() // 支付成功 → 解锁
-        } else {
-          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
-        }
-      } catch (e) {
-        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
-      }
-      return
-      // #endif
-    })
-    .catch((e) => {
-      uni.hideLoading()
-      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-    })
+  payWithBalance({ title: '解锁奇门深度解盘', tool: 'qimen', applyFn: applyQmUnlock })
 }
 /* 写入奇门解锁状态并刷新界面 (仅支付成功调用, 按盘绑定: 每个盘单独收费) */
 function applyQmUnlock() {
@@ -1015,10 +958,82 @@ function saveDisk() {
             data: data.value,
           }
     saveRemarkInput.value = ''
+    // 附带已生成的 AI 解盘/问答内容 (付费内容随盘保存, 恢复后直接展示, 无需重复付费)
+    Object.assign(_saveRec, collectAiSnapshot(isQm, isZw))
     showSaveModal.value = true
   } catch (e) {
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
+}
+
+/* 收集当前盘已生成的 AI 内容快照 (只收非空段落, 减少历史存储体积) */
+function collectAiSnapshot(isQm, isZw) {
+  const snap = {}
+  try {
+    if (isQm) {
+      const m = {}
+      Object.entries(qmData.value).forEach(([k, v]) => { if (v && v.length) m[k] = v })
+      if (Object.keys(m).length) snap.aiQm = m
+    } else if (isZw) {
+      const m = {}
+      Object.entries(zwData.value).forEach(([k, v]) => { if (v && v.length) m[k] = v })
+      if (Object.keys(m).length) snap.aiZw = m
+    } else {
+      const m = {}
+      Object.entries(jpData.value).forEach(([k, v]) => { if (v && v.length) m[k] = v })
+      if (Object.keys(m).length) snap.aiJp = m
+    }
+    if (aiAnswer.value && aiAnswer.value.length) {
+      snap.aiQa = { question: aiQuestion.value || '', answer: aiAnswer.value }
+    }
+  } catch (e) { /* 忽略 */ }
+  return snap
+}
+
+/* 恢复历史盘时还原 AI 解盘/问答内容 + 补记解锁状态 (内容已付费, 恢复后直接显示) */
+function restoreAiSnapshot(rec) {
+  try {
+    if (rec.aiJp) {
+      const base = { liuqin: [], health: [], career: [], wealth: [], marriage: [] }
+      Object.assign(base, rec.aiJp)
+      jpData.value = base
+      const keys = Object.keys(rec.aiJp)
+      keys.forEach((k) => { jpAiDone.value[k] = true })
+      markPaidKeys(PAID_KEY, diskKeyBazi(), keys)
+    }
+    if (rec.aiQm) {
+      const base = { zongping: [], yongshen: [], career: [], wealth: [], marriage: [] }
+      Object.assign(base, rec.aiQm)
+      qmData.value = base
+      const keys = Object.keys(rec.aiQm)
+      keys.forEach((k) => { qmAiDone.value[k] = true })
+      markPaidKeys(QM_PAID_KEY, diskKeyQimen(), keys)
+    }
+    if (rec.aiZw) {
+      const base = { zongping: [], sizheng: [], career: [], wealth: [], marriage: [] }
+      Object.assign(base, rec.aiZw)
+      zwData.value = base
+      const keys = Object.keys(rec.aiZw)
+      keys.forEach((k) => { zwAiDone.value[k] = true })
+      markPaidKeys(ZW_PAID_KEY, diskKeyZiwei(), keys)
+    }
+    if (rec.aiQa) {
+      aiQuestion.value = rec.aiQa.question || ''
+      aiAnswer.value = Array.isArray(rec.aiQa.answer) ? rec.aiQa.answer : []
+    }
+    paidTick.value++
+  } catch (e) { /* 忽略 */ }
+}
+
+/* 将已付费模块补记到本地解锁记录 (防止恢复历史后重复收费) */
+function markPaidKeys(storageKey, diskKey, keys) {
+  try {
+    const map = readPaidMap(storageKey)
+    const arr = map[diskKey] || []
+    keys.forEach((k) => { if (!arr.includes(k)) arr.push(k) })
+    map[diskKey] = arr
+    uni.setStorageSync(storageKey, map)
+  } catch (e) { /* 忽略 */ }
 }
 function confirmSaveDisk() {
   if (!_saveRec) return
@@ -1074,8 +1089,22 @@ function askAI() {
         .then((res2) => {
           if (res2 && res2.content && res2.content.length) {
             aiAnswer.value = res2.content
+            if (res2.balance != null) userStore.setUserInfo({ balance: String(res2.balance) })
           } else if (res2 && res2.msg) {
-            aiAskErr.value = res2.msg
+            if (String(res2.msg).indexOf('元宝不足') >= 0) {
+              uni.showModal({
+                title: '元宝不足',
+                content: '元宝不足，AI 提问需 5 元宝，请先充值。是否前往充值？',
+                confirmText: '去充值',
+                confirmColor: '#8c5a2b',
+                cancelText: '取消',
+                success: (rr) => {
+                  if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
+                },
+              })
+            } else {
+              aiAskErr.value = res2.msg
+            }
           } else {
             aiAnswer.value = ['AI 暂时没有回答，请稍后再试']
           }
@@ -1297,64 +1326,7 @@ function isZwUnlocked(key) {
   }
 }
 function payZwJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
-  const us = useUserStore()
-  if (!us.isLoggedIn) {
-    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
-    return
-  }
-  // #ifndef MP-WEIXIN
-  // H5 端: 元宝扣款 9 元宝
-  uni.showModal({
-    title: '解锁紫微深度解盘',
-    content: '将从元宝扣除 9 元宝，是否继续？',
-    confirmText: '确认解锁',
-    confirmColor: '#8c5a2b',
-    success: (r) => {
-      if (!r.confirm) return
-      uni.showLoading({ title: '解锁中...', mask: true })
-      unlockTool({ uid: us.userInfo.uid, tool: 'ziwei', pay_method: 'balance' })
-        .then((res) => {
-          uni.hideLoading()
-          if (res && (res.order_no && res.pay_method === 'balance')) {
-            applyZwUnlock()
-          } else {
-            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
-          }
-        })
-        .catch((e) => {
-          uni.hideLoading()
-          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-        })
-    },
-  })
-  return
-  // #endif
-  uni.showLoading({ title: '创建订单...', mask: true })
-  unlockTool({ uid: us.userInfo.uid, tool: 'ziwei' })
-    .then(async (res) => {
-      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
-      uni.hideLoading()
-      // #ifdef MP-WEIXIN
-      try {
-        const prepay = await wxpayPrepay(res.order_no)
-        if (prepay && prepay.payment) {
-          await wxRequestPayment(prepay.payment)
-          applyZwUnlock() // 支付成功 → 解锁
-        } else {
-          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
-        }
-      } catch (e) {
-        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
-      }
-      return
-      // #endif
-    })
-    .catch((e) => {
-      uni.hideLoading()
-      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-    })
+  payWithBalance({ title: '解锁紫微深度解盘', tool: 'ziwei', applyFn: applyZwUnlock })
 }
 /* 写入紫微解锁状态并刷新界面 (仅支付成功调用, 按盘绑定: 每个盘单独收费) */
 function applyZwUnlock() {
@@ -1680,6 +1652,8 @@ function useHistory(rec) {
   if (rec.type === 'liuyao' || rec.type === 'liuren') {
     try {
       uni.setStorageSync(rec.type === 'liuyao' ? 'liuyao_restore' : 'liuren_restore', rec.data[rec.type])
+      // 附带 AI 解盘/问答内容, 工具页恢复后直接展示
+      uni.setStorageSync(rec.type === 'liuyao' ? 'liuyao_restore_ai' : 'liuren_restore_ai', { aiJp: rec.aiJp, aiLr: rec.aiLr, aiQa: rec.aiQa })
     } catch (e) { /* 忽略 */ }
     showHistory.value = false
     uni.navigateTo({ url: `/pages-sub/user/tools?tool=${rec.type}` })
@@ -1689,6 +1663,8 @@ function useHistory(rec) {
   // 修复: 点击历史后切换到对应工具 tab (奇门/紫微/四柱)
   const rt = inferRecType(rec)
   if (rt === 'qimen' || rt === 'ziwei') tab.value = rt
+  // 还原已付费的 AI 解盘/问答内容 (随盘保存, 恢复后直接展示)
+  restoreAiSnapshot(rec)
   showHistory.value = false
   uni.showToast({ title: '已加载历史排盘', icon: 'none' })
 }
@@ -1881,31 +1857,45 @@ function isJpUnlocked(key) {
   }
 }
 
-function payJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
+/* 元宝支付通用逻辑: 所有端默认元宝扣款(9元宝), 余额不足弹窗提示充值 */
+function payWithBalance({ title, tool, applyFn }) {
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
-  // #ifndef MP-WEIXIN
-  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
-    title: '解锁四柱深度解盘',
+    title,
     content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
       if (!r.confirm) return
       uni.showLoading({ title: '解锁中...', mask: true })
-      unlockTool({ uid: us.userInfo.uid, tool: 'bazi', pay_method: 'balance' })
+      unlockTool({ uid: us.userInfo.uid, tool, pay_method: 'balance' })
         .then((res) => {
           uni.hideLoading()
-          if (res && (res.order_no && res.pay_method === 'balance')) {
-            applyJpUnlock()
+          if (res && res.order_no && res.pay_method === 'balance') {
+            // 扣款成功: 同步本地余额并解锁
+            if (res.balance != null) us.setUserInfo({ balance: String(res.balance) })
+            applyFn()
           } else {
-            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+            const msg = (res && res.msg) || '解锁失败'
+            if (String(msg).indexOf('元宝不足') >= 0) {
+              uni.showModal({
+                title: '元宝不足',
+                content: '元宝不足，解锁需 9 元宝，请先充值。是否前往充值？',
+                confirmText: '去充值',
+                confirmColor: '#8c5a2b',
+                cancelText: '取消',
+                success: (rr) => {
+                  if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
+                },
+              })
+            } else {
+              uni.showToast({ title: msg, icon: 'none' })
+            }
           }
         })
         .catch((e) => {
@@ -1914,32 +1904,10 @@ function payJiepan() {
         })
     },
   })
-  return
-  // #endif
-  uni.showLoading({ title: '创建订单...', mask: true })
-  unlockTool({ uid: us.userInfo.uid, tool: 'bazi' })
-    .then(async (res) => {
-      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
-      uni.hideLoading()
-      // #ifdef MP-WEIXIN
-      try {
-        const prepay = await wxpayPrepay(res.order_no)
-        if (prepay && prepay.payment) {
-          await wxRequestPayment(prepay.payment)
-          applyJpUnlock() // 支付成功 → 解锁
-        } else {
-          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
-        }
-      } catch (e) {
-        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
-      }
-      return
-      // #endif
-    })
-    .catch((e) => {
-      uni.hideLoading()
-      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-    })
+}
+
+function payJiepan() {
+  payWithBalance({ title: '解锁四柱深度解盘', tool: 'bazi', applyFn: applyJpUnlock })
 }
 /* 写入四柱解锁状态并刷新界面 (仅支付成功调用, 按盘绑定: 每个盘单独收费) */
 function applyJpUnlock() {

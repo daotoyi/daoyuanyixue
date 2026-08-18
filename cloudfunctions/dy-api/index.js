@@ -1208,12 +1208,13 @@ async function aiAsk(data) {
   if (!q) return fail('请输入问题')
   // 元宝校验 + 扣款 (5 元宝/次)
   const AI_ASK_COST = 5
+  let newBal = 0
   try {
     const u = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
     const user = u.data[0]
     const bal = Number(user && user.balance) || 0
     if (bal < AI_ASK_COST) return fail('元宝不足，AI 提问每次需 5 元宝，请先充值元宝')
-    const newBal = Math.round((bal - AI_ASK_COST) * 100) / 100
+    newBal = Math.round((bal - AI_ASK_COST) * 100) / 100
     await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
     // 记录提问流水
     try {
@@ -1257,7 +1258,7 @@ async function aiAsk(data) {
           .trim()
       )
       .filter(Boolean)
-    return ok({ content: paras })
+    return ok({ content: paras, balance: String(newBal) })
   } catch (e) {
     return fail('AI 回答失败：' + (e.message || '网络错误'))
   }

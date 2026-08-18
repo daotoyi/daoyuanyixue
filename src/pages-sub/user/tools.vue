@@ -494,7 +494,7 @@ import { fullLiuyao } from '../utils/liuyao'
 import { fullLiuren } from '../utils/liuren'
 import { solarToLunar, lunarToSolar, trueSolarTime } from '../utils/lunar'
 import { REGION_DATA, PROVINCE_NAMES, getRegionLngLat } from '../utils/cities'
-import { aiJiepan, aiAsk, unlockTool, wxpayPrepay, wxRequestPayment } from '../../api/api'
+import { aiJiepan, aiAsk, unlockTool } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -693,31 +693,45 @@ function isLyUnlocked(key) {
     return false
   }
 }
-function payLyJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
+/* 元宝支付通用逻辑: 所有端默认元宝扣款(9元宝), 余额不足弹窗提示充值 */
+function payWithBalance({ title, tool, applyFn }) {
   const us = useUserStore()
   if (!us.isLoggedIn) {
     uni.showToast({ title: '请先登录再解锁', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
-  // #ifndef MP-WEIXIN
-  // H5 端: 元宝扣款 9 元宝
   uni.showModal({
-    title: '解锁六爻深度解盘',
+    title,
     content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
     confirmColor: '#8c5a2b',
     success: (r) => {
       if (!r.confirm) return
       uni.showLoading({ title: '解锁中...', mask: true })
-      unlockTool({ uid: us.userInfo.uid, tool: 'liuyao', pay_method: 'balance' })
+      unlockTool({ uid: us.userInfo.uid, tool, pay_method: 'balance' })
         .then((res) => {
           uni.hideLoading()
-          if (res && (res.unlocked === true || (res.order_no && res.pay_method === 'balance'))) {
-            applyLyUnlock()
+          if (res && res.order_no && res.pay_method === 'balance') {
+            // 扣款成功: 同步本地余额并解锁
+            if (res.balance != null) us.setUserInfo({ balance: String(res.balance) })
+            applyFn()
           } else {
-            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
+            const msg = (res && res.msg) || '解锁失败'
+            if (String(msg).indexOf('元宝不足') >= 0) {
+              uni.showModal({
+                title: '元宝不足',
+                content: '元宝不足，解锁需 9 元宝，请先充值。是否前往充值？',
+                confirmText: '去充值',
+                confirmColor: '#8c5a2b',
+                cancelText: '取消',
+                success: (rr) => {
+                  if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
+                },
+              })
+            } else {
+              uni.showToast({ title: msg, icon: 'none' })
+            }
           }
         })
         .catch((e) => {
@@ -726,32 +740,9 @@ function payLyJiepan() {
         })
     },
   })
-  return
-  // #endif
-  uni.showLoading({ title: '创建订单...', mask: true })
-  unlockTool({ uid: us.userInfo.uid, tool: 'liuyao' })
-    .then(async (res) => {
-      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
-      uni.hideLoading()
-      // #ifdef MP-WEIXIN
-      try {
-        const prepay = await wxpayPrepay(res.order_no)
-        if (prepay && prepay.payment) {
-          await wxRequestPayment(prepay.payment)
-          applyLyUnlock() // 支付成功 → 解锁
-        } else {
-          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
-        }
-      } catch (e) {
-        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
-      }
-      return
-      // #endif
-    })
-    .catch((e) => {
-      uni.hideLoading()
-      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-    })
+}
+function payLyJiepan() {
+  payWithBalance({ title: '解锁六爻深度解盘', tool: 'liuyao', applyFn: applyLyUnlock })
 }
 /* 写入六爻解锁状态并刷新界面 (仅支付成功调用) */
 function applyLyUnlock() {
@@ -786,6 +777,11 @@ function saveLiuyao() {
     gzText: `${lyFull.value.name} 变 ${lyFull.value.cName || '无'}`,
     data: lyFull.value,
     evt: (form.value.liuyao.eventText || '').trim(),
+    // 附带已生成的 AI 解盘/问答内容 (恢复后直接展示, 无需重复付费)
+    aiJp: aiDataSnapshot(lyData.value),
+    aiQa: (lyAIAnswer.value && lyAIAnswer.value.length)
+      ? { question: lyAIQuestion.value || '', answer: lyAIAnswer.value }
+      : null,
   }
   toolSaveRemarkInput.value = ''
   showToolSaveModal.value = true
@@ -821,8 +817,22 @@ function askLyAI() {
         .then((res2) => {
           if (res2 && res2.content && res2.content.length) {
             lyAIAnswer.value = res2.content
+            if (res2.balance != null) userStore.setUserInfo({ balance: String(res2.balance) })
           } else if (res2 && res2.msg) {
-            lyAIErr.value = res2.msg
+            if (String(res2.msg).indexOf('元宝不足') >= 0) {
+              uni.showModal({
+                title: '元宝不足',
+                content: '元宝不足，AI 提问需 5 元宝，请先充值。是否前往充值？',
+                confirmText: '去充值',
+                confirmColor: '#8c5a2b',
+                cancelText: '取消',
+                success: (rr) => {
+                  if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
+                },
+              })
+            } else {
+              lyAIErr.value = res2.msg
+            }
           } else {
             lyAIAnswer.value = ['AI 暂时没有回答，请稍后再试']
           }
@@ -887,64 +897,7 @@ function isLrUnlocked(key) {
   }
 }
 function payLrJiepan() {
-  // 付费解锁: 小程序=微信支付; H5=元宝扣款, 支付成功后才解锁
-  const us = useUserStore()
-  if (!us.isLoggedIn) {
-    uni.showToast({ title: '请先登录再解锁', icon: 'none' })
-    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
-    return
-  }
-  // #ifndef MP-WEIXIN
-  // H5 端: 元宝扣款 9 元宝
-  uni.showModal({
-    title: '解锁六壬深度解盘',
-    content: '将从元宝扣除 9 元宝，是否继续？',
-    confirmText: '确认解锁',
-    confirmColor: '#8c5a2b',
-    success: (r) => {
-      if (!r.confirm) return
-      uni.showLoading({ title: '解锁中...', mask: true })
-      unlockTool({ uid: us.userInfo.uid, tool: 'liuren', pay_method: 'balance' })
-        .then((res) => {
-          uni.hideLoading()
-          if (res && (res.unlocked === true || (res.order_no && res.pay_method === 'balance'))) {
-            applyLrUnlock()
-          } else {
-            uni.showToast({ title: (res && res.msg) || '解锁失败', icon: 'none' })
-          }
-        })
-        .catch((e) => {
-          uni.hideLoading()
-          uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-        })
-    },
-  })
-  return
-  // #endif
-  uni.showLoading({ title: '创建订单...', mask: true })
-  unlockTool({ uid: us.userInfo.uid, tool: 'liuren' })
-    .then(async (res) => {
-      if (!res || !res.order_no) throw new Error((res && res.msg) || '下单失败')
-      uni.hideLoading()
-      // #ifdef MP-WEIXIN
-      try {
-        const prepay = await wxpayPrepay(res.order_no)
-        if (prepay && prepay.payment) {
-          await wxRequestPayment(prepay.payment)
-          applyLrUnlock() // 支付成功 → 解锁
-        } else {
-          uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
-        }
-      } catch (e) {
-        uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
-      }
-      return
-      // #endif
-    })
-    .catch((e) => {
-      uni.hideLoading()
-      uni.showToast({ title: (e && e.message) || '解锁失败', icon: 'none' })
-    })
+  payWithBalance({ title: '解锁六壬深度解盘', tool: 'liuren', applyFn: applyLrUnlock })
 }
 /* 写入六壬解锁状态并刷新界面 (仅支付成功调用) */
 function applyLrUnlock() {
@@ -975,6 +928,11 @@ function saveLiuren() {
     gzText: `${lrFull.value.chuan.map((c) => c.zhi).join('→')} · 空亡${lrFull.value.kong}`,
     data: lrFull.value,
     evt: (form.value.liuren.eventText || '').trim(),
+    // 附带已生成的 AI 解盘/问答内容 (恢复后直接展示, 无需重复付费)
+    aiLr: aiDataSnapshot(lrData.value),
+    aiQa: (lrAIAnswer.value && lrAIAnswer.value.length)
+      ? { question: lrAIQuestion.value || '', answer: lrAIAnswer.value }
+      : null,
   }
   toolSaveRemarkInput.value = ''
   showToolSaveModal.value = true
@@ -983,7 +941,7 @@ function saveLiuren() {
 /* 确认保存 (弹窗点保存) */
 function confirmToolSave() {
   if (!_pendingSave) return
-  saveHistory(_pendingSave.type, _pendingSave.label, _pendingSave.gzText, _pendingSave.data, toolSaveRemarkInput.value.trim(), _pendingSave.evt)
+  saveHistory(_pendingSave.type, _pendingSave.label, _pendingSave.gzText, _pendingSave.data, toolSaveRemarkInput.value.trim(), _pendingSave.evt, { aiJp: _pendingSave.aiJp, aiLr: _pendingSave.aiLr, aiQa: _pendingSave.aiQa })
   showToolSaveModal.value = false
   _pendingSave = null
 }
@@ -1018,8 +976,22 @@ function askLrAI() {
         .then((res2) => {
           if (res2 && res2.content && res2.content.length) {
             lrAIAnswer.value = res2.content
+            if (res2.balance != null) userStore.setUserInfo({ balance: String(res2.balance) })
           } else if (res2 && res2.msg) {
-            lrAIErr.value = res2.msg
+            if (String(res2.msg).indexOf('元宝不足') >= 0) {
+              uni.showModal({
+                title: '元宝不足',
+                content: '元宝不足，AI 提问需 5 元宝，请先充值。是否前往充值？',
+                confirmText: '去充值',
+                confirmColor: '#8c5a2b',
+                cancelText: '取消',
+                success: (rr) => {
+                  if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
+                },
+              })
+            } else {
+              lrAIErr.value = res2.msg
+            }
           } else {
             lrAIAnswer.value = ['AI 暂时没有回答，请稍后再试']
           }
@@ -1032,24 +1004,38 @@ function askLrAI() {
   })
 }
 /* 通用保存 (六爻/六壬) */
-function saveHistory(type, label, gzText, data, remark = '', eventText = '') {
+function saveHistory(type, label, gzText, data, remark = '', eventText = '', extra = {}) {
   try {
     let list = uni.getStorageSync('paipan_history') || []
     if (!Array.isArray(list)) list = []
     const now = new Date()
     const p = (n) => String(n).padStart(2, '0')
-    list.unshift({
+    const rec = {
       ts: Date.now(),
       time: `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`,
       label, gzText, type, remark, eventText,
       data: { [type]: data },
-    })
+    }
+    // 附带 AI 解盘/问答内容 (只存非空)
+    if (extra.aiJp && Object.keys(extra.aiJp).length) rec.aiJp = extra.aiJp
+    if (extra.aiLr && Object.keys(extra.aiLr).length) rec.aiLr = extra.aiLr
+    if (extra.aiQa && extra.aiQa.answer && extra.aiQa.answer.length) rec.aiQa = extra.aiQa
+    list.unshift(rec)
     if (list.length > 20) list = list.slice(0, 20)
     uni.setStorageSync('paipan_history', list)
     uni.showToast({ title: '已保存到历史', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: '保存失败', icon: 'none' })
   }
+}
+
+/* AI 解盘内容快照: 只保留非空段落 */
+function aiDataSnapshot(dataRef) {
+  const m = {}
+  try {
+    Object.entries(dataRef).forEach(([k, v]) => { if (v && v.length) m[k] = v })
+  } catch (e) { /* 忽略 */ }
+  return Object.keys(m).length ? m : null
 }
 
 /* ===== 排盘历史弹窗 (四柱/奇门/紫微/六爻/六壬 共用) ===== */
@@ -1113,7 +1099,47 @@ function useToolHistory(rec) {
     if (t === 'liuyao') lyFull.value = rec.data.liuyao
     else lrFull.value = rec.data.liuren
   } catch (e) { /* 忽略 */ }
+  // 还原已付费的 AI 解盘/问答内容 (随盘保存, 恢复后直接展示, 无需重复付费)
+  restoreToolAi(rec, t)
   uni.showToast({ title: '已加载历史排盘', icon: 'none' })
+}
+
+/* 恢复历史盘时还原 AI 解盘/问答内容 + 补记解锁状态 */
+function restoreToolAi(rec, t) {
+  try {
+    if (t === 'liuyao') {
+      if (rec.aiJp && Object.keys(rec.aiJp).length) {
+        const base = { zongping: [], career: [], wealth: [], marriage: [] }
+        Object.assign(base, rec.aiJp)
+        lyData.value = base
+        const keys = Object.keys(rec.aiJp)
+        keys.forEach((k) => { lyAiDone.value[k] = true })
+        const paid = uni.getStorageSync(LY_PAID_KEY) || []
+        keys.forEach((k) => { if (!paid.includes(k)) paid.push(k) })
+        uni.setStorageSync(LY_PAID_KEY, paid)
+      }
+      if (rec.aiQa) {
+        lyAIQuestion.value = rec.aiQa.question || ''
+        lyAIAnswer.value = Array.isArray(rec.aiQa.answer) ? rec.aiQa.answer : []
+      }
+    } else if (t === 'liuren') {
+      if (rec.aiLr && Object.keys(rec.aiLr).length) {
+        const base = { zongping: [], career: [], wealth: [], marriage: [] }
+        Object.assign(base, rec.aiLr)
+        lrData.value = base
+        const keys = Object.keys(rec.aiLr)
+        keys.forEach((k) => { lrAiDone.value[k] = true })
+        const paid = uni.getStorageSync(LR_PAID_KEY) || []
+        keys.forEach((k) => { if (!paid.includes(k)) paid.push(k) })
+        uni.setStorageSync(LR_PAID_KEY, paid)
+      }
+      if (rec.aiQa) {
+        lrAIQuestion.value = rec.aiQa.question || ''
+        lrAIAnswer.value = Array.isArray(rec.aiQa.answer) ? rec.aiQa.answer : []
+      }
+    }
+    paidTick.value++
+  } catch (e) { /* 忽略 */ }
 }
 function removeToolHistory(rec) {
   const idx = toolHistoryList.value.findIndex((r) => r === rec || (r.ts === rec.ts && r.gzText === rec.gzText))
@@ -1328,6 +1354,17 @@ onLoad((options) => {
     if (lrRestore && activeTool.value === 'liuren') {
       lrFull.value = lrRestore
       uni.removeStorageSync('liuren_restore')
+    }
+    // 还原随盘保存的 AI 解盘/问答内容
+    const lyAiRestore = uni.getStorageSync('liuyao_restore_ai')
+    if (lyAiRestore && activeTool.value === 'liuyao') {
+      restoreToolAi(lyAiRestore, 'liuyao')
+      uni.removeStorageSync('liuyao_restore_ai')
+    }
+    const lrAiRestore = uni.getStorageSync('liuren_restore_ai')
+    if (lrAiRestore && activeTool.value === 'liuren') {
+      restoreToolAi(lrAiRestore, 'liuren')
+      uni.removeStorageSync('liuren_restore_ai')
     }
   } catch (e) { /* 忽略 */ }
 })
