@@ -3046,6 +3046,8 @@ async function adminOrderAnalysis() {
   const typeMap = { product: { label: '商品', count: 0, amount: 0 }, course: { label: '课程', count: 0, amount: 0 }, tool_unlock: { label: 'AI解盘', count: 0, amount: 0 } }
   // 用户消费聚合
   const userMap = {} // uid → { uid, nickname, total, count }
+  // 产品销售聚合 (按 items[].name, 排除已退款)
+  const productMap = {} // name → { name, count, amount }
 
   for (const o of orders) {
     let t = o.order_type || (o.course_id ? 'course' : 'product')
@@ -3058,6 +3060,19 @@ async function adminOrderAnalysis() {
     if (typeMap[t]) {
       typeMap[t].count++
       typeMap[t].amount += amt
+    }
+    // 产品销售 (排除退款订单)
+    if (o.status !== '已退款') {
+      const items = Array.isArray(o.items) ? o.items : []
+      for (const it of items) {
+        const name = String((it && it.name) || '').trim()
+        if (!name) continue
+        const qty = Number(it.qty) || 1
+        const price = Number(it.price) || 0
+        if (!productMap[name]) productMap[name] = { name, count: 0, amount: 0 }
+        productMap[name].count += qty
+        productMap[name].amount += Math.round(price * qty * 100) / 100
+      }
     }
     // 用户消费 (排除退款订单)
     if (o.status !== '已退款' && o.uid) {
@@ -3082,6 +3097,11 @@ async function adminOrderAnalysis() {
   // 排名: 按消费总额降序
   const ranking = Object.values(userMap).sort((a, b) => b.total - a.total).slice(0, 20)
 
+  // 产品销售统计: 按销售额降序 (前端可切换数量/金额升序降序)
+  const products = Object.values(productMap)
+    .map((p) => ({ name: p.name, count: p.count, amount: Math.round(p.amount * 100) / 100 }))
+    .sort((a, b) => b.amount - a.amount)
+
   // 只返回有成交数据的类型 (count/amount 均为 0 的类型不返回, 避免环形图整段为 0 导致只有一种颜色)
   const pieData = Object.entries(typeMap)
     .filter(([, v]) => v.count > 0 || v.amount > 0)
@@ -3090,7 +3110,7 @@ async function adminOrderAnalysis() {
       amount: Math.round(v.amount * 100) / 100,
     }))
 
-  return ok({ pieData, ranking })
+  return ok({ pieData, ranking, products })
 }
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */

@@ -520,6 +520,26 @@
             </view>
           </view>
 
+          <!-- 产品销售统计 (表头可点击切换排序) -->
+          <view class="analysis-section">
+            <text class="analysis-sub-title">产品销售统计（{{ analysisProducts.length }} 项）</text>
+            <view class="table" v-if="analysisProducts.length">
+              <view class="tr th">
+                <text class="td w-rank">排名</text>
+                <text class="td w-rk-name">产品</text>
+                <text class="td w-rk-count sort-th" @tap="toggleProductSort('count')">销售数量 {{ sortArrow('count') }}</text>
+                <text class="td w-rk-amount sort-th" @tap="toggleProductSort('amount')">销售额 {{ sortArrow('amount') }}</text>
+              </view>
+              <view class="tr" v-for="(p, i) in analysisProductsSorted" :key="p.name">
+                <text class="td w-rank" :class="{ 'rank-top': i < 3 }">{{ i + 1 }}</text>
+                <text class="td w-rk-name ellipsis">{{ p.name }}</text>
+                <text class="td w-rk-count">{{ p.count }}</text>
+                <text class="td w-rk-amount">¥{{ p.amount.toFixed(2) }}</text>
+              </view>
+            </view>
+            <view v-else class="empty-tip">暂无销售数据</view>
+          </view>
+
           <!-- 用户消费排名 -->
           <view class="analysis-section">
             <text class="analysis-sub-title">用户消费排名 TOP {{ analysisRanking.length }}</text>
@@ -563,12 +583,19 @@
               <text class="td w-status">状态</text>
               <text class="td w-ops">操作</text>
             </view>
-            <view class="tr" v-for="a in aftersales" :key="a.id">
+            <view class="tr" :class="{ 'tr-sub': a._isSub }" v-for="a in aftersaleRows" :key="a.id">
               <view class="td w-no">
-                <text class="ellipsis">{{ a.nickname || ('UID ' + a.uid) }}</text>
-                <text class="td-sub ellipsis">{{ a.order_no }}</text>
-                <text class="td-sub ellipsis">{{ a.item_names }}</text>
-                <text class="td-sub">¥{{ a.total_price }}</text>
+                <template v-if="!a._isSub">
+                  <text class="ellipsis">{{ a.nickname || ('UID ' + a.uid) }}</text>
+                  <text class="td-sub ellipsis">{{ a.order_no }}</text>
+                  <text class="td-sub ellipsis">{{ a.item_names }}</text>
+                  <text class="td-sub">¥{{ a.total_price }}</text>
+                  <text class="td-sub as-group-badge" v-if="a._groupCount > 1">共 {{ a._groupCount }} 条反馈</text>
+                </template>
+                <template v-else>
+                  <text class="as-sub-tag">↳ 后续反馈 #{{ a._subIdx + 1 }}</text>
+                  <text class="td-sub ellipsis as-sub-orderno">{{ a.order_no }}</text>
+                </template>
               </view>
               <view class="td w-name">
                 <text class="ellipsis">{{ a.content }}</text>
@@ -1616,6 +1643,26 @@ async function loadOrders() {
 /* ===== 订单分析 ===== */
 const analysisPie = ref([])
 const analysisRanking = ref([])
+const analysisProducts = ref([])
+/* 产品销售统计排序: key='count'|'amount', dir='desc'|'asc', 默认销售额降序 */
+const productSort = ref({ key: 'amount', dir: 'desc' })
+const analysisProductsSorted = computed(() => {
+  const { key, dir } = productSort.value
+  const mul = dir === 'asc' ? 1 : -1
+  return [...analysisProducts.value].sort((a, b) => (a[key] - b[key]) * mul || a.name.localeCompare(b.name, 'zh') * mul)
+})
+/* 点击表头切换排序: 同列切换升降序, 换列默认降序 */
+function toggleProductSort(key) {
+  if (productSort.value.key === key) {
+    productSort.value = { key, dir: productSort.value.dir === 'desc' ? 'asc' : 'desc' }
+  } else {
+    productSort.value = { key, dir: 'desc' }
+  }
+}
+function sortArrow(key) {
+  if (productSort.value.key !== key) return '⇅'
+  return productSort.value.dir === 'desc' ? '↓' : '↑'
+}
 const pieColors = ['#c4753a', '#6e8b4e', '#8b6a9e', '#b85c5c']
 const analysisTotalCount = computed(() => analysisPie.value.reduce((s, p) => s + p.count, 0))
 const analysisTotalAmount = computed(() => analysisPie.value.reduce((s, p) => s + p.amount, 0))
@@ -1650,6 +1697,8 @@ async function loadOrderAnalysis() {
     const res = await adminOrderAnalysis()
     analysisPie.value = res.pieData || []
     analysisRanking.value = res.ranking || []
+    analysisProducts.value = res.products || []
+    productSort.value = { key: 'amount', dir: 'desc' }
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
   }
@@ -1710,6 +1759,27 @@ const aftersaleFilter = ref('全部')
 const aftersaleStatusOptions = ['全部', '待处理', '处理中', '已处理']
 const showAftersaleHandle = ref(false)
 const asHandleForm = ref({ rec: null, status: '已处理', reply: '' })
+/* 同一订单的多条售后反馈分组: 最早一条为主条目, 后续为子条目 (↳ 后续反馈 #N)
+ * 组间按组内最新反馈时间倒序 (最新订单在前) */
+const aftersaleRows = computed(() => {
+  const groups = new Map() // order_no → rows
+  for (const a of aftersales.value) {
+    const key = String(a.order_no || ('uid_' + a.uid + '_' + a.id))
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(a)
+  }
+  const rows = []
+  // 组间: 按组内最大 id (最新反馈) 降序
+  const ordered = [...groups.entries()].sort((x, y) => Math.max(...y[1].map(r => Number(r.id) || 0)) - Math.max(...x[1].map(r => Number(r.id) || 0)))
+  for (const [, list] of ordered) {
+    // 组内: 按 id 升序, 最早一条为主条目
+    list.sort((x, y) => (Number(x.id) || 0) - (Number(y.id) || 0))
+    list.forEach((a, i) => {
+      rows.push({ ...a, _isSub: i > 0, _subIdx: i, _groupCount: list.length })
+    })
+  }
+  return rows
+})
 
 async function loadAftersales() {
   aftersales.value = await adminAftersalesList({ status: aftersaleFilter.value })
@@ -3152,6 +3222,7 @@ onMounted(async () => {
 .w-rk-name { flex: 2; min-width: 0; white-space: nowrap; }
 .w-rk-count { width: 120rpx; text-align: center; }
 .w-rk-amount { width: 180rpx; text-align: right; color: #c4753a; font-weight: 600; }
+.sort-th { color: #c4753a; font-weight: 600; }
 
 /* 用户统计条 */
 .user-stats {
@@ -3707,6 +3778,25 @@ onMounted(async () => {
   font-size: 20rpx;
   color: #b3a595;
   margin-top: 4rpx;
+}
+/* 售后管理: 同订单分组 (子条目缩进显示) */
+.tr-sub { background: rgba(196, 117, 58, 0.04); }
+.as-sub-tag {
+  display: block;
+  font-size: 22rpx;
+  color: #c4753a;
+  font-weight: 600;
+  padding-left: 16rpx;
+}
+.as-sub-orderno { padding-left: 16rpx; }
+.as-group-badge {
+  display: inline-block;
+  font-size: 18rpx;
+  color: #8a6a3a;
+  background: rgba(196, 117, 58, 0.12);
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-top: 6rpx;
 }
 .f-text {
   flex: 1;
