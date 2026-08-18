@@ -64,8 +64,10 @@
     </div>
     <div id="success" style="display:none;">
       <div class="ok-icon">✅</div>
-      <div class="title">绑定成功</div>
-      <div class="desc">已开启服务号消息推送。后续订单支付成功、发货通知将通过「真和盛」服务号推送给您。</div>
+      <div class="title" id="succTitle">绑定成功</div>
+      <div class="desc" id="succDesc">已开启服务号消息推送。后续订单支付成功、发货通知将通过「真和盛」服务号推送给您。</div>
+      <button class="btn" id="subBtn" style="margin-top:8px;">📢 开启微信通知提醒</button>
+      <div class="tip" id="subTip">* 点击后跳转微信订阅授权页，点「允许」即开启通知（每次授权可接收 1 条消息）</div>
     </div>
     <div id="error" style="display:none;">
       <div class="ok-icon">⚠️</div>
@@ -89,8 +91,18 @@
 
   var code = q.get('code');
   var state = q.get('state');
+  var act = q.get('act');
 
-  if (code && state === 'bind') {
+  // 订阅授权回调: 用户从订阅授权页点"允许"后跳回
+  if (act === 'sub') {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+    document.getElementById('succTitle').textContent = '通知已开启';
+    document.getElementById('succDesc').textContent = '您已授权「真和盛」服务号向您推送订单、课程、活动消息（每次授权可接收 1 条）。';
+    var sBtn = document.getElementById('subBtn');
+    sBtn.style.display = 'none';
+    document.getElementById('subTip').style.display = 'none';
+  } else if (code && state === 'bind') {
     // 授权回调: 用 code 换 openid 绑定
     document.getElementById('loading').style.display = 'none';
     document.getElementById('success').style.display = 'block';
@@ -101,6 +113,8 @@
         document.getElementById('errMsg').textContent = (res && res.msg) || '绑定失败，请重试';
       } else {
         document.getElementById('success').style.display = 'block';
+        // 绑定成功后引导开启订阅通知
+        bindSubBtn();
       }
     }).catch(function (e) {
       document.getElementById('success').style.display = 'none';
@@ -127,6 +141,29 @@
         btn.textContent = '开始绑定';
         document.getElementById('errMsg').textContent = '网络异常：' + e.message;
         document.getElementById('error').style.display = 'block';
+      });
+    });
+  }
+
+  // 绑定成功后: 绑定"开启微信通知"按钮 → 跳订阅授权页
+  function bindSubBtn() {
+    var sBtn = document.getElementById('subBtn');
+    if (!sBtn) return;
+    sBtn.addEventListener('click', function () {
+      sBtn.disabled = true;
+      sBtn.textContent = '跳转微信授权...';
+      callApi('user.gzhSubscribeUrl', { uid: uid, scene: 1000 }).then(function (res) {
+        if (res.code === 0 && res.data && res.data.url) {
+          location.href = res.data.url;
+        } else {
+          sBtn.disabled = false;
+          sBtn.textContent = '开启微信通知提醒';
+          document.getElementById('succDesc').textContent = (res && res.msg) || '订阅未开启（需先配置订阅通知模板）';
+        }
+      }).catch(function (e) {
+        sBtn.disabled = false;
+        sBtn.textContent = '开启微信通知提醒';
+        document.getElementById('succDesc').textContent = '网络异常：' + e.message;
       });
     });
   }

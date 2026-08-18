@@ -330,7 +330,8 @@ async function getGzhAccessToken() {
 }
 
 /* 发送服务号消息: 用户必须已关注服务号并绑定 gzh_openid
- * 优先一次性订阅消息(subscribe/send, 用户需先授权订阅), 无模板则退模板消息(template/send)
+ * 通道: 服务号「订阅通知」(message/subscribe/send) — 用户需先打开订阅授权链接点一次"允许"
+ * 模板字段名可在 config.local.js GZH_TEMPLATE_FIELDS 配置 (默认 thing1,thing2, 逗号分隔)
  * @param {number} uid 小程序用户 uid
  * @param {string} title 标题
  * @param {string} content 内容
@@ -348,14 +349,16 @@ async function sendGzhMsg(uid, title, content, page) {
     const token = await getGzhAccessToken()
     if (!token) return { sent: false, reason: '服务号token获取失败' }
     const https = require('https')
+    // 模板字段名可配置: GZH_TEMPLATE_FIELDS='thing1,thing2' | 'thing1,time1' ...
+    const fields = (c.GZH_TEMPLATE_FIELDS || 'thing1,thing2').split(',').map((s) => s.trim()).filter(Boolean)
+    const data = {}
+    if (fields[0]) data[fields[0]] = { value: String(title).slice(0, 20) }
+    if (fields[1]) data[fields[1]] = { value: String(content).slice(0, 20) }
     const body = JSON.stringify({
       touser: gzhOpenid,
       template_id: templateId,
       page: page || 'pages/index/index',
-      data: {
-        thing1: { value: String(title).slice(0, 20) },
-        thing2: { value: String(content).slice(0, 20) },
-      },
+      data,
     })
     const res = await new Promise((resolve) => {
       const req = https.request({
@@ -381,6 +384,35 @@ async function sendGzhMsg(uid, title, content, page) {
     console.error('[dy-api] sendGzhMsg 异常:', e.message)
     return { sent: false, error: e.message }
   }
+}
+
+/* 群发服务号消息: 遍历所有已绑定 gzh_openid 的用户逐个发送 (课程/活动广播) */
+async function sendGzhMsgAll(title, content, page) {
+  try {
+    const users = await db.collection('users').where({ gzh_openid: db.command.neq('') }).limit(1000).get()
+    let sent = 0
+    for (const u of users.data || []) {
+      const r = await sendGzhMsg(u.uid, title, content, page)
+      if (r.sent) sent++
+    }
+    return { sent }
+  } catch (e) {
+    console.error('[dy-api] sendGzhMsgAll 异常:', e.message)
+    return { sent: 0, error: e.message }
+  }
+}
+
+/* 生成服务号订阅通知授权链接: 用户在微信内打开点"允许"后, 获得该模板 1 次推送额度 */
+async function gzhSubscribeUrl(data) {
+  const c = require('./config.local')
+  if (!c.GZH_APPID) return fail('服务号未配置')
+  const templateId = c.GZH_TEMPLATE_ORDER || ''
+  if (!templateId) return fail('未配置订阅通知模板ID')
+  const { uid } = data
+  const scene = Number(data.scene) || 1000
+  const redirect = encodeURIComponent(`https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/gzh-bind.html?uid=${uid || ''}&act=sub`)
+  const url = `https://mp.weixin.qq.com/mp/subscribemsg?action=get_confirm&appid=${c.GZH_APPID}&scene=${scene}&template_id=${templateId}&redirect_url=${redirect}&reserved=${Date.now() % 100000}#wechat_redirect`
+  return ok({ url })
 }
 
 /* 绑定服务号 openid: 服务号网页授权 code → 换 openid → 绑定到小程序用户 */
@@ -2044,6 +2076,8 @@ async function wxpayCallback(event) {
           read: false,
           created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
         })
+        // 服务号推送: 订单支付成功 (未绑定/未订阅自动跳过, 不影响主流程)
+        try { await sendGzhMsg(o.uid, '订单支付成功', `订单 ${order_no} 已支付成功`) } catch (e2) {}
       }
     } catch (e) {}
   }
@@ -2336,6 +2370,8 @@ async function orderPayBalance(data) {
       await buyCourse({ uid: Number(uid), course_id: order.course_id })
     } catch (e) {}
   }
+  // 服务号推送: 支付成功 (未绑定/未订阅自动跳过)
+  try { await sendGzhMsg(Number(uid), '订单支付成功', `订单 ${order_no} 已支付成功`) } catch (e2) {}
   return ok({ order_no, balance: String(newBal), message: '支付成功' })
 }
 /* 支付宝支付下单 (预约订单等): 需在后台配置支付宝商户 (appid/私钥), 未配置返回明确提示 */
@@ -2407,6 +2443,8 @@ async function adminPandaoCreate(data) {
   }
   if (!doc.title) return fail('请输入活动标题')
   await db.collection('pandao_sessions').add(doc)
+  // 服务号群发: 新盘道活动 (仅推给已绑定用户, 未绑定/未订阅自动跳过)
+  try { await sendGzhMsgAll('盘道活动', `${String(doc.title).slice(0, 16)} 即将开启，速来报名`, 'pages/index/index') } catch (e2) {}
   return ok({ created: doc })
 }
 
@@ -2696,6 +2734,8 @@ async function adminCourseCreate(data) {
     status: data.status !== false,
   }
   await db.collection('courses').add(doc)
+  // 服务号群发: 新课上线 (仅推给已绑定用户, 未绑定/未订阅自动跳过)
+  try { await sendGzhMsgAll('新课上线', `《${String(data.title || '').slice(0, 16)}》已上架，快来学习吧`, 'pages/course/course') } catch (e2) {}
   return ok(doc)
 }
 
@@ -3156,6 +3196,7 @@ const ROUTES = {
   'user.bindWechatPhone': bindWechatPhone,
   'user.bindGzh': bindGzh,
   'user.gzhAuthUrl': gzhAuthUrl,
+  'user.gzhSubscribeUrl': gzhSubscribeUrl,
   'app.fileUrl': appFileUrl,
   'user.updateEmail': updateEmail,
   'user.bindWechat': bindWechat,
@@ -3345,6 +3386,12 @@ exports.main = async (event = {}) => {
               read: false,
               created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
             })
+            // 服务号推送: 支付成功 (未绑定/未订阅自动跳过, 不影响主流程)
+            try {
+              await sendGzhMsg(o.uid, '订单支付成功', isToolUnlock
+                ? ((o.items && o.items[0] && o.items[0].name) || '玄学工具') + ' 已解锁'
+                : `订单 ${resource.out_trade_no} 已支付成功`)
+            } catch (e2) {}
             // 上报发货信息: 仅课程/虚拟订单支付成功即自动报虚拟发货(免人工);
             // 实体商品订单不在此上报, 等后台发货时上报实体物流(一个支付单仅一次上报机会)
             try {
