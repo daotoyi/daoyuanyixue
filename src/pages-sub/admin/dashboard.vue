@@ -59,7 +59,7 @@
 
           <view class="recent-panel">
             <view class="panel-head">
-              <text class="panel-title">最近订单</text>
+              <text class="panel-title">最近订单<text v-if="recentOrders.length" class="panel-count">（{{ recentOrders.length }} 笔）</text></text>
               <text class="panel-more" @tap="switchModule('orders')">查看全部 ›</text>
             </view>
             <view class="recent-list" v-if="recentOrders.length">
@@ -97,7 +97,7 @@
               </view>
             </view>
             <view class="f-row">
-              <text class="f-label">动态tab</text>
+              <text class="f-label">用户动态</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.show_follow" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
               </view>
@@ -464,6 +464,15 @@
         <view v-else-if="activeModule === 'orderAnalysis'" class="module">
           <view class="module-head">
             <text class="module-title">订单分析</text>
+            <view class="filter-pills">
+              <text
+                v-for="r in analysisRangeOptions"
+                :key="r.value"
+                class="pill"
+                :class="{ on: analysisRange === r.value }"
+                @tap="switchAnalysisRange(r.value)"
+              >{{ r.label }}</text>
+            </view>
           </view>
 
           <!-- 环形图: 按类型·单数分布 -->
@@ -1396,7 +1405,7 @@ function switchModule(key) {
 async function loadModule(key) {
   try {
     if (key === 'overview') {
-      const [s, r] = await Promise.all([adminDashboard(), adminRecentOrders({ limit: 5 })])
+      const [s, r] = await Promise.all([adminDashboard(), adminRecentOrders({ limit: 10 })])
       stats.value = s
       recentOrders.value = r
     } else if (key === 'home') await loadHomeConfig()
@@ -1644,6 +1653,20 @@ async function loadOrders() {
 const analysisPie = ref([])
 const analysisRanking = ref([])
 const analysisProducts = ref([])
+/* 时间范围筛选: all=全部 week=近一周 month=近一月 quarter=近一季度 year=近一年 */
+const analysisRange = ref('all')
+const analysisRangeOptions = [
+  { value: 'all', label: '全部' },
+  { value: 'week', label: '近一周' },
+  { value: 'month', label: '近一月' },
+  { value: 'quarter', label: '近一季度' },
+  { value: 'year', label: '近一年' },
+]
+function switchAnalysisRange(v) {
+  if (analysisRange.value === v) return
+  analysisRange.value = v
+  loadOrderAnalysis()
+}
 /* 产品销售统计排序: key='count'|'amount', dir='desc'|'asc', 默认销售额降序 */
 const productSort = ref({ key: 'amount', dir: 'desc' })
 const analysisProductsSorted = computed(() => {
@@ -1694,7 +1717,7 @@ function pct(val, total) {
 
 async function loadOrderAnalysis() {
   try {
-    const res = await adminOrderAnalysis()
+    const res = await adminOrderAnalysis({ range: analysisRange.value })
     analysisPie.value = res.pieData || []
     analysisRanking.value = res.ranking || []
     analysisProducts.value = res.products || []
@@ -3076,6 +3099,11 @@ onMounted(async () => {
   font-size: 28rpx;
   font-weight: 500;
   color: #42372c;
+}
+.panel-count {
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #a08e7a;
 }
 .panel-more {
   font-size: 22rpx;

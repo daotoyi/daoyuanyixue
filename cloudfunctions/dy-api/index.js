@@ -3034,13 +3034,28 @@ async function adminRecentOrders(data) {
   return ok(res.data)
 }
 
-/* 订单分析: 按类型(商品/课程/AI解盘)统计成交额 + 用户消费排名 */
-async function adminOrderAnalysis() {
+/* 订单分析: 按类型(商品/课程/AI解盘)统计成交额 + 用户消费排名 + 产品销售统计
+ * data.range: 'all'|'week'|'month'|'quarter'|'year' 时间范围过滤 (默认 all 全部)
+ */
+async function adminOrderAnalysis(data) {
+  // 时间范围: week=7天 month=30天 quarter=90天 year=365天
+  const RANGE_DAYS = { week: 7, month: 30, quarter: 90, year: 365 }
+  const rangeKey = (data && data.range) || 'all'
+  const rangeDays = RANGE_DAYS[rangeKey] || 0
+  let rangeStart = 0
+  if (rangeDays) rangeStart = Date.now() - rangeDays * 86400000
+
   // 拉全部已支付订单 (排除待付款/已取消)
   const res = await db.collection('orders')
     .where({ status: _.nin(['待付款', '已取消']) })
     .limit(1000).get()
-  const orders = res.data
+  const orders = rangeStart
+    ? res.data.filter((o) => {
+        // created_at 格式: "2026/8/18 14:30:00" (zh-CN toLocaleString)
+        const t = Date.parse(String(o.created_at || '').replace(/-/g, '/'))
+        return !Number.isNaN(t) && t >= rangeStart
+      })
+    : res.data
 
   // 按类型聚合
   const typeMap = { product: { label: '商品', count: 0, amount: 0 }, course: { label: '课程', count: 0, amount: 0 }, tool_unlock: { label: 'AI解盘', count: 0, amount: 0 } }
