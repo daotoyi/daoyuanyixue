@@ -445,10 +445,13 @@ onShow(async () => {
     const fresh = await userProfile({ uid: userInfo.value.uid })
     if (fresh && fresh.user) {
       userStore.setUserInfo({
+        // 昵称/简介等也以服务端为准 (后台改昵称后本地缓存需同步, 否则个人中心一直显示旧名)
+        nickname: fresh.user.nickname || userInfo.value.nickname,
         avatar: fresh.user.avatar,
         dao_code: fresh.user.dao_code || userInfo.value.dao_code,
         invite_code: fresh.user.invite_code || userInfo.value.invite_code,
         balance: fresh.user.balance || userInfo.value.balance || '0',
+        bio: fresh.user.bio || userInfo.value.bio || '',
       })
     }
   } catch (e) { /* 忽略, 用本地缓存 */ }
