@@ -2,6 +2,39 @@
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 import { initCloudBase } from './api/cloudbase'
 import { initSettings, applyTheme, updateTabBar } from './utils/settings'
+import { useUserStore } from './store/index'
+import { heartbeat } from './api/api'
+
+/* ===== 单点在线心跳 (每 60s 一次) =====
+ * 账号在其他设备登录 → 服务端令牌刷新 → 本机心跳返回 kicked → 强制下线 */
+let _hbTimer = null
+let _hbKicked = false
+async function doHeartbeat() {
+  const userStore = useUserStore()
+  if (!userStore.isLoggedIn || !userStore.userInfo || !userStore.userInfo.uid || _hbKicked) return
+  try {
+    const res = await heartbeat({ uid: userStore.userInfo.uid, token: userStore.token })
+    if (res && res.kicked) {
+      _hbKicked = true
+      userStore.logout()
+      uni.showModal({
+        title: '账号下线',
+        content: '该账号已在其他设备登录，本设备已退出。如非本人操作，请注意账号安全。',
+        showCancel: false,
+        confirmText: '重新登录',
+        success: () => uni.reLaunch({ url: '/pages-sub/login/login' }),
+      })
+      return
+    }
+    if (res && res.token && res.token !== userStore.token) userStore.setToken(res.token)
+    _hbKicked = false
+  } catch (e) { /* 网络波动忽略, 下次心跳重试 */ }
+}
+function startHeartbeat() {
+  if (_hbTimer) clearInterval(_hbTimer)
+  doHeartbeat()
+  _hbTimer = setInterval(doHeartbeat, 60 * 1000)
+}
 
 onLaunch(async () => {
   console.log('App Launch')
@@ -11,6 +44,8 @@ onLaunch(async () => {
   } catch (e) {
     console.error('[CloudBase] 初始化失败', e)
   }
+  // 启动单点在线心跳
+  startHeartbeat()
   // Capacitor App: 返回手势/返回键 → 有历史则返回上一页, 否则最小化 (不退出)
   // #ifdef H5
   if (
@@ -39,6 +74,8 @@ onShow(() => {
   // 每次回前台重新应用主题 (跟随系统可能变化) + 刷新 tabbar 文案 (语言)
   applyTheme()
   updateTabBar()
+  // 回前台立即心跳一次 (检测是否被其他设备踢下线)
+  doHeartbeat()
 })
 
 onHide(() => {

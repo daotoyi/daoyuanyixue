@@ -140,7 +140,7 @@ function goAfterLogin() {
 }
 
 function saveUser(user) {
-  userStore.setToken('demo-token-' + user.uid)
+  userStore.setToken(user.session_token || 'demo-token-' + user.uid)
   userStore.setUserInfo({
     uid: user.uid,
     dao_code: user.dao_code || '',
@@ -249,7 +249,7 @@ async function submit() {
         invite_code: inviteCode.value,
       })
     }
-    userStore.setToken('demo-token-' + user.uid)
+    userStore.setToken(user.session_token || 'demo-token-' + user.uid)
     userStore.setUserInfo({
       uid: user.uid,
       dao_code: user.dao_code || '',

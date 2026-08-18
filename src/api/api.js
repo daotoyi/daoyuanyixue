@@ -165,7 +165,11 @@ export const updateEmail = (params) =>
 export const unbindAccount = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.unbindAccount', params)
 export const setPassword = (params) =>
-  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.setPassword', params)
+  __USE_MOCK__ ? _fromMock(() => ({ kicked: false }))() : _callFunction('user.setPassword', params)
+
+/* 单点在线心跳: 令牌不一致返回 { kicked: true } → 前端强制下线 */
+export const heartbeat = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ kicked: false }))() : _callFunction('user.heartbeat', params)
 
 export const checkUpdate = () =>
   __USE_MOCK__

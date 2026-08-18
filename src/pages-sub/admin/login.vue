@@ -53,7 +53,7 @@ async function doLogin() {
       errMsg.value = user.role === 'staff' ? '员工账号无后台登录权限' : '该账号不是管理员'
       return
     }
-    userStore.setToken('admin-token-' + user.uid)
+    userStore.setToken(user.session_token || 'admin-token-' + user.uid)
     userStore.setUserInfo({
       uid: user.uid,
       nickname: user.nickname,

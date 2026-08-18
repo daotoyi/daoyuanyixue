@@ -258,6 +258,34 @@ async function recommendedMoments(data) {
   return ok(res.data || [])
 }
 
+/* 心跳: 单点在线校验 + 在线状态上报 (前端每 60s 调一次)
+ * - 令牌一致 → 刷新 last_active_at (后台"当前在线"按 5 分钟内活跃统计)
+ * - 令牌不一致 (账号已在其他设备登录) → 返回 kicked, 前端强制下线
+ * - 旧客户端令牌 (demo-token-/admin-token-) → 无感升级为最新令牌, 不踢 */
+async function userHeartbeat(data) {
+  const uid = Number(data.uid)
+  if (!uid) return fail('缺少uid')
+  const u = (await db.collection('users').where({ uid }).limit(1).get()).data[0]
+  if (!u) return ok({ kicked: true, gone: true })
+  const clientToken = String(data.token || '')
+  if (!u.session_token) {
+    // 升级前的老账号: 首次心跳直接签发令牌
+    const t = genSessionToken()
+    await db.collection('users').where({ uid }).update({ session_token: t, last_active_at: Date.now() }).catch(() => {})
+    return ok({ kicked: false, token: t })
+  }
+  if (u.session_token === clientToken) {
+    await db.collection('users').where({ uid }).update({ last_active_at: Date.now() }).catch(() => {})
+    return ok({ kicked: false })
+  }
+  if (!clientToken || clientToken.startsWith('demo-token-') || clientToken.startsWith('admin-token-')) {
+    // 旧版本客户端: 无感采用服务端最新令牌 (重新登录后进入严格单点)
+    await db.collection('users').where({ uid }).update({ last_active_at: Date.now() }).catch(() => {})
+    return ok({ kicked: false, token: u.session_token })
+  }
+  return ok({ kicked: true })
+}
+
 async function userProfile(data) {
   const { uid, viewer_uid } = data
   if (!uid) return fail('缺少用户')
@@ -679,6 +707,11 @@ async function nextDaoCode(role = 'user') {
   return `${prefix}${String(max + 1).padStart(pad, '0')}`
 }
 
+/* 会话令牌: 单点在线 (同一账号同时只允许一个设备, 后登录踢先登录) */
+function genSessionToken() {
+  return require('crypto').randomBytes(16).toString('hex')
+}
+
 async function login(data) {
   const account = data.account || data.phone || ''
   const isEmail = String(account).includes('@')
@@ -698,6 +731,17 @@ async function login(data) {
     safe.dao_code = code
     safe.invite_code = code
   }
+  // 单点在线: 每次登录刷新会话令牌, 旧设备心跳发现不一致即被踢下线
+  const token = genSessionToken()
+  const nowMs = Date.now()
+  const loginTime = new Date(nowMs).toLocaleString('zh-CN', { hour12: false })
+  await db.collection('users').where({ uid: safe.uid }).update({
+    session_token: token,
+    last_login_at: loginTime,
+    last_active_at: nowMs,
+  }).catch(() => {})
+  safe.session_token = token
+  safe.last_login_at = loginTime
   return ok(safe)
 }
 
@@ -736,6 +780,10 @@ async function register(data) {
     invite_code: daoCode,
     inviter_uid: inviter ? inviter.uid : null,
     created_at: new Date().toISOString().slice(0, 10),
+    // 单点在线: 注册即签发会话令牌
+    session_token: genSessionToken(),
+    last_login_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    last_active_at: Date.now(),
   }
   await db.collection('users').add(user)
   // 邀请奖励: 被邀请人获得 8 折优惠券
@@ -1417,6 +1465,10 @@ async function wechatLogin(data) {
       role: 'user',
       invite_code: daoCode,
       created_at: new Date().toISOString().slice(0, 10),
+      // 单点在线: 注册即签发会话令牌
+      session_token: genSessionToken(),
+      last_login_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      last_active_at: Date.now(),
     }
     await db.collection('users').add(user)
   } else if (nickname || avatar || phone) {
@@ -1428,6 +1480,16 @@ async function wechatLogin(data) {
     await db.collection('users').where({ openid }).update(upd)
     user = { ...user, ...upd }
   }
+  // 单点在线: 微信登录同样刷新会话令牌 (踢掉旧设备)
+  const wxToken = genSessionToken()
+  const wxLoginTime = new Date().toLocaleString('zh-CN', { hour12: false })
+  await db.collection('users').where({ uid: user.uid }).update({
+    session_token: wxToken,
+    last_login_at: wxLoginTime,
+    last_active_at: Date.now(),
+  }).catch(() => {})
+  user.session_token = wxToken
+  user.last_login_at = wxLoginTime
   const { password, ...safe } = user
   return ok(safe)
 }
@@ -2641,6 +2703,13 @@ async function adminList(data) {
   if (collection === 'users') {
     const rank = { admin: 0, manager: 1, staff: 2, user: 3 }
     res.data.sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || (a.uid - b.uid))
+    // 在线标记 (5 分钟内心跳过 = 在线) + 剥离敏感字段
+    const nowMs = Date.now()
+    for (const u of res.data) {
+      u._online = !!(u.last_active_at && nowMs - Number(u.last_active_at) < 5 * 60 * 1000)
+      delete u.password
+      delete u.session_token
+    }
     // 头像: cloud:// fileID → 可访问 URL (H5/后台无法直接渲染 cloud://)
     const cloudUsers = res.data.filter((u) => u.avatar && u.avatar.startsWith('cloud://'))
     if (cloudUsers.length) {
@@ -3219,6 +3288,7 @@ const ROUTES = {
   'user.follow': followUser,
   'user.followList': myFollowList,
   'user.profile': userProfile,
+  'user.heartbeat': userHeartbeat,
   'moments.recommended': recommendedMoments,
   'comments.list': listComments,
   'comments.add': addComment,

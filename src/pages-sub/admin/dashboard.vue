@@ -529,6 +529,15 @@
             </view>
           </view>
 
+          <!-- 成交分布汇总 -->
+          <view class="analysis-summary">
+            <text class="as-sum-item">总单数 <text class="as-num">{{ analysisTotalCount }}</text> 单</text>
+            <view class="as-sum-divider"></view>
+            <text class="as-sum-item">总金额 <text class="as-num price">¥{{ analysisTotalAmount.toFixed(2) }}</text></text>
+            <view class="as-sum-divider"></view>
+            <text class="as-sum-item">笔均 <text class="as-num">¥{{ analysisTotalCount ? (analysisTotalAmount / analysisTotalCount).toFixed(2) : '0.00' }}</text></text>
+          </view>
+
           <!-- 产品销售统计 (表头可点击切换排序) -->
           <view class="analysis-section">
             <text class="analysis-sub-title">产品销售统计（{{ analysisProducts.length }} 项）</text>
@@ -630,6 +639,10 @@
             <view class="btn-p sm" v-if="userRole === 'admin'" @click="showCreateUser = true">＋ 新建员工/管理员</view>
           </view>
           <view class="user-stats">
+            <view class="us-item us-online">
+              <text class="us-num">{{ userStats.online }}</text>
+              <text class="us-label">当前在线</text>
+            </view>
             <view class="us-item">
               <text class="us-num">{{ userStats.admin }}</text>
               <text class="us-label">管理员</text>
@@ -663,12 +676,19 @@
                 <image v-if="u.avatar" class="user-td-avatar" :src="u.avatar" mode="aspectFill"></image>
                 <view v-else class="user-td-avatar user-td-avatar-fallback"><text>{{ u.nickname ? u.nickname[0] : '?' }}</text></view>
               </text>
-              <text class="td w-name users-nick">{{ u.nickname }}</text>
+              <text class="td w-name users-nick">
+                <view class="nick-line">
+                  <view v-if="u._online" class="online-dot"></view>
+                  <text class="ellipsis">{{ u.nickname }}</text>
+                </view>
+              </text>
               <text class="td w-no">
                 <view v-if="u.openid" class="cred-tag cred-wx">微信一键登录</view>
                 <view v-else-if="u.email" class="cred-tag cred-mail">{{ u.email }}</view>
                 <view v-else-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
                 <view v-else class="cred-tag cred-none">无凭证</view>
+                <text class="td-sub">注册 {{ u.created_at || '—' }}</text>
+                <text class="td-sub" v-if="u.last_login_at">最近登录 {{ u.last_login_at }}</text>
               </text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
@@ -1298,16 +1318,17 @@ const usersFiltered = computed(() => {
   })
 })
 
-/* 用户统计: 管理员(admin+manager) / 员工(staff) / 用户(user) */
+/* 用户统计: 管理员(admin+manager) / 员工(staff) / 用户(user) / 当前在线(5分钟内心跳) */
 const userStats = computed(() => {
-  let admin = 0, staff = 0, user = 0
+  let admin = 0, staff = 0, user = 0, online = 0
   users.value.forEach((u) => {
     const r = u.role || 'user'
     if (r === 'admin' || r === 'manager') admin++
     else if (r === 'staff') staff++
     else user++
+    if (u._online) online++
   })
-  return { admin, staff, user, total: users.value.length }
+  return { admin, staff, user, total: users.value.length, online }
 })
 
 function vipFilterMenu() {
@@ -3210,6 +3231,22 @@ onMounted(async () => {
   padding-left: 16rpx;
   border-left: 6rpx solid #c4753a;
 }
+/* 成交分布汇总条 */
+.analysis-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  background: #fdf6ea;
+  border: 1rpx solid #f0e3c8;
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  margin: 0 0 20rpx;
+}
+.as-sum-item { font-size: 26rpx; color: #6b5a45; }
+.as-sum-item .as-num { font-size: 32rpx; font-weight: 700; color: #42372c; }
+.as-sum-item .as-num.price { color: #c4753a; }
+.as-sum-divider { width: 1rpx; height: 30rpx; background: #e8dcc4; }
 .pie-wrap {
   display: flex;
   align-items: center;
@@ -3278,6 +3315,19 @@ onMounted(async () => {
   font-size: 22rpx;
   color: #8b7355;
 }
+/* 当前在线: 绿色强调 */
+.us-online { background: #eef6ea; border-color: #d6e8cf; }
+.us-online .us-num { color: #4e7f3a; }
+.us-online .us-label { color: #4e7f3a; }
+.online-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #56a834;
+  box-shadow: 0 0 6rpx rgba(86, 168, 52, 0.8);
+  flex-shrink: 0;
+}
+.nick-line { display: flex; align-items: center; gap: 8rpx; }
 .users-row { min-width: 1720rpx; }
 .w-remark { flex: 1.2; min-width: 240rpx; padding: 0 10rpx; font-size: 22rpx; color: #6b5a45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-tag {
