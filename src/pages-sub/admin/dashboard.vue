@@ -442,7 +442,7 @@
               <text class="td w-ops w-ops-4">操作</text>
             </view>
             <view class="tr" v-for="o in orders" :key="o._id || o.order_no">
-              <text class="td w-no ellipsis">{{ o.order_no }}</text>
+              <text class="td w-no">{{ o.order_no }}</text>
               <text class="td w-user ellipsis">{{ o.nickname || ('UID ' + o.uid) }}</text>
               <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
               <text class="td w-price">¥{{ o.total_price }}</text>
@@ -466,30 +466,55 @@
             <text class="module-title">订单分析</text>
           </view>
 
-          <!-- 饼图: 按类型成交分布 -->
+          <!-- 环形图: 按类型·单数分布 -->
           <view class="analysis-section">
-            <text class="analysis-sub-title">成交分布（按类型）</text>
+            <text class="analysis-sub-title">成交分布（按类型·单数）</text>
             <view class="pie-wrap">
-              <!-- SVG 饼图 -->
               <view class="pie-svg-box">
-                <view v-if="analysisPie.length" class="pie-svg-inner">
-                  <!-- 每段用 conic-gradient 渲染 -->
-                  <view class="pie-disk" :style="{ background: pieGradient }">
-                    <view class="pie-center">
-                      <text class="pie-total-num">{{ analysisTotalCount }}</text>
-                      <text class="pie-total-label">总订单</text>
-                    </view>
-                  </view>
-                </view>
+                <svg v-if="analysisPie.length" class="pie-svg" viewBox="0 0 100 100">
+                  <circle v-for="(s, i) in pieSegments.count" :key="'c'+i"
+                    cx="50" cy="50" r="40" fill="none"
+                    :stroke="s.color" stroke-width="14"
+                    :stroke-dasharray="s.dash" :stroke-dashoffset="s.offset"
+                    transform="rotate(-90 50 50)" />
+                  <text x="50" y="47" text-anchor="middle" class="pie-svg-num">{{ analysisTotalCount }}</text>
+                  <text x="50" y="60" text-anchor="middle" class="pie-svg-label">总订单</text>
+                </svg>
                 <view v-else class="pie-empty"><text>暂无数据</text></view>
               </view>
-              <!-- 图例 -->
               <view class="pie-legend">
                 <view class="legend-row" v-for="(p, i) in analysisPie" :key="p.key">
                   <view class="legend-dot" :style="{ background: pieColors[i % pieColors.length] }"></view>
                   <text class="legend-label">{{ p.label }}</text>
                   <text class="legend-count">{{ p.count }} 单</text>
-                  <text class="legend-amount">¥{{ p.amount.toFixed(2) }}</text>
+                  <text class="legend-amount">{{ pct(p.count, analysisTotalCount) }}</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 环形图: 按类型·金额分布 -->
+          <view class="analysis-section">
+            <text class="analysis-sub-title">成交分布（按类型·金额）</text>
+            <view class="pie-wrap">
+              <view class="pie-svg-box">
+                <svg v-if="analysisPie.length" class="pie-svg" viewBox="0 0 100 100">
+                  <circle v-for="(s, i) in pieSegments.amount" :key="'a'+i"
+                    cx="50" cy="50" r="40" fill="none"
+                    :stroke="s.color" stroke-width="14"
+                    :stroke-dasharray="s.dash" :stroke-dashoffset="s.offset"
+                    transform="rotate(-90 50 50)" />
+                  <text x="50" y="47" text-anchor="middle" class="pie-svg-num">{{ analysisTotalAmount.toFixed(0) }}</text>
+                  <text x="50" y="60" text-anchor="middle" class="pie-svg-label">总金额</text>
+                </svg>
+                <view v-else class="pie-empty"><text>暂无数据</text></view>
+              </view>
+              <view class="pie-legend">
+                <view class="legend-row" v-for="(p, i) in analysisPie" :key="p.key">
+                  <view class="legend-dot" :style="{ background: pieColors[i % pieColors.length] }"></view>
+                  <text class="legend-label">{{ p.label }}</text>
+                  <text class="legend-count">¥{{ p.amount.toFixed(2) }}</text>
+                  <text class="legend-amount">{{ pct(p.amount, analysisTotalAmount) }}</text>
                 </view>
               </view>
             </view>
@@ -1593,19 +1618,32 @@ const analysisPie = ref([])
 const analysisRanking = ref([])
 const pieColors = ['#c4753a', '#6e8b4e', '#8b6a9e', '#b85c5c']
 const analysisTotalCount = computed(() => analysisPie.value.reduce((s, p) => s + p.count, 0))
-const pieGradient = computed(() => {
-  if (!analysisPie.value.length) return ''
-  const total = analysisTotalCount.value || 1
-  let acc = 0
-  const stops = analysisPie.value.map((p, i) => {
-    const start = (acc / total) * 360
-    acc += p.count
-    const end = (acc / total) * 360
-    const color = pieColors[i % pieColors.length]
-    return `${color} ${start}deg ${end}deg`
+const analysisTotalAmount = computed(() => analysisPie.value.reduce((s, p) => s + p.amount, 0))
+const PIE_C = 2 * Math.PI * 40
+const pieSegments = computed(() => {
+  const items = analysisPie.value
+  if (!items.length) return { count: [], amount: [] }
+  const tc = analysisTotalCount.value || 1
+  const ta = analysisTotalAmount.value || 1
+  let accC = 0, accA = 0
+  const count = items.map((p, i) => {
+    const seg = (p.count / tc) * PIE_C
+    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accC }
+    accC += seg
+    return s
   })
-  return `conic-gradient(${stops.join(', ')})`
+  const amount = items.map((p, i) => {
+    const seg = (p.amount / ta) * PIE_C
+    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accA }
+    accA += seg
+    return s
+  })
+  return { count, amount }
 })
+function pct(val, total) {
+  if (!total) return '0%'
+  return ((val / total) * 100).toFixed(1) + '%'
+}
 
 async function loadOrderAnalysis() {
   try {
@@ -3032,7 +3070,7 @@ onMounted(async () => {
   padding: 18rpx 24rpx;
   border-bottom: 1rpx solid #efe7d8;
   /* 手机端表格超宽时横向滑动, 显示更规整 */
-  min-width: 1080rpx;
+  min-width: 1200rpx;
 }
 .tr:last-child {
   border-bottom: none;
@@ -3053,13 +3091,15 @@ onMounted(async () => {
 .td {
   font-size: 24rpx;
   color: #42372c;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 .w-img { width: 76rpx; }
-.w-name { flex: 2; padding: 0 10rpx; min-width: 0; white-space: nowrap; }
-.w-price { width: 120rpx; }
+.w-name { flex: 2; padding: 0 10rpx; min-width: 200rpx; white-space: nowrap; overflow: hidden; }
+.w-price { width: 140rpx; white-space: nowrap; overflow: hidden; }
 .w-stock { width: 130rpx; text-align: center; }
-.w-no { width: 260rpx; font-size: 20rpx; white-space: nowrap; }
-.w-user { width: 160rpx; font-size: 20rpx; white-space: nowrap; padding: 0 6rpx; }
+.w-no { width: 320rpx; font-size: 20rpx; white-space: nowrap; overflow: hidden; }
+.w-user { width: 160rpx; font-size: 20rpx; white-space: nowrap; padding: 0 6rpx; overflow: hidden; }
 
 /* ===== 订单分析 ===== */
 .analysis-section { margin-bottom: 32rpx; }
@@ -3083,33 +3123,12 @@ onMounted(async () => {
   width: 280rpx;
   height: 280rpx;
 }
-.pie-svg-inner {
+.pie-svg {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
 }
-.pie-disk {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.pie-center {
-  width: 130rpx;
-  height: 130rpx;
-  border-radius: 50%;
-  background: #faf6f0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.pie-total-num { font-size: 36rpx; font-weight: 700; color: #42372c; }
-.pie-total-label { font-size: 20rpx; color: #8a7e6e; }
+.pie-svg-num { font-size: 14px; font-weight: 700; fill: #42372c; }
+.pie-svg-label { font-size: 7px; fill: #8a7e6e; }
 .pie-empty {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
@@ -3181,8 +3200,8 @@ onMounted(async () => {
 .user-td-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: #8c5a2b; }
 .users-nick { flex: none; width: 200rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w-price { white-space: nowrap; }
-.w-status { width: 170rpx; text-align: center; white-space: nowrap; }
-.w-ops { width: 340rpx; display: flex; align-items: center; flex-wrap: nowrap; gap: 8rpx; }
+.w-status { width: 170rpx; text-align: center; white-space: nowrap; overflow: hidden; }
+.w-ops { width: 340rpx; display: flex; align-items: center; flex-wrap: nowrap; gap: 8rpx; overflow: hidden; }
 .thumb {
   width: 60rpx;
   height: 60rpx;

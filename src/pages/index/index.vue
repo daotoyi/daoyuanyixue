@@ -699,10 +699,31 @@ async function convertMomentImages(moments) {
 /* 动态分享: 记录当前要分享的动态, 供 onShareAppMessage 读取 */
 let shareMomentId = 0
 let shareMomentText = ''
-/* H5 分享: 复制动态链接 */
+/* H5/APP 分享: APP 端直接打开微信分享, H5 端复制链接 */
 function shareMoment(m) {
   if (!m || !m.id) return uni.showToast({ title: '分享内容暂不可用', icon: 'none' })
   const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/#/pages/index/index?moment=' + m.id
+  const title = (m.content || '').slice(0, 30)
+  const isApp = typeof window !== 'undefined' && !!(window.Capacitor || (window.plus && window.plus.runtime))
+  /* APP 端: 优先使用系统分享面板(含微信), 降级直接打开微信 */
+  if (isApp && navigator.share) {
+    navigator.share({ title: title + ' · 道元易学', text: m.content, url: link }).catch(() => {})
+    return
+  }
+  if (isApp) {
+    /* 复制链接 + 直接打开微信 */
+    uni.setClipboardData({
+      data: link,
+      success: () => {
+        uni.showToast({ title: '链接已复制，正在打开微信', icon: 'none' })
+        setTimeout(() => {
+          try { window.location.href = 'weixin://' } catch (e) {}
+        }, 800)
+      },
+    })
+    return
+  }
+  /* H5 端: 复制动态链接 */
   uni.setClipboardData({
     data: link,
     success: () => uni.showToast({ title: '动态链接已复制，可发给好友', icon: 'none' }),
