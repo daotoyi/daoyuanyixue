@@ -666,6 +666,8 @@
               <text class="td w-name users-nick">昵称</text>
               <text class="td w-no">登录凭证</text>
               <text class="td w-price">道号</text>
+              <text class="td w-time">注册时间</text>
+              <text class="td w-time">最后在线</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
               <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
               <text class="td w-ops">操作</text>
@@ -687,10 +689,15 @@
                 <view v-else-if="u.email" class="cred-tag cred-mail">{{ u.email }}</view>
                 <view v-else-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
                 <view v-else class="cred-tag cred-none">无凭证</view>
-                <text class="td-sub">注册 {{ u.created_at || '—' }}</text>
-                <text class="td-sub" v-if="u.last_login_at">最近登录 {{ u.last_login_at }}</text>
               </text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
+              <text class="td w-time">{{ u.created_at || '—' }}</text>
+              <text class="td w-time">
+                <view class="nick-line">
+                  <view v-if="u._online" class="online-dot"></view>
+                  <text>{{ u.last_active_at || u.last_login_at || '—' }}</text>
+                </view>
+              </text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="userRole === 'admin'">
@@ -3328,7 +3335,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 .nick-line { display: flex; align-items: center; gap: 8rpx; }
-.users-row { min-width: 1720rpx; }
+.users-row { min-width: 2160rpx; }
 .w-remark { flex: 1.2; min-width: 240rpx; padding: 0 10rpx; font-size: 22rpx; color: #6b5a45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-tag {
   display: inline-block;

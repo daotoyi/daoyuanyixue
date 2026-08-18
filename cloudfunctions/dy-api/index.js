@@ -2707,6 +2707,8 @@ async function adminList(data) {
     const nowMs = Date.now()
     for (const u of res.data) {
       u._online = !!(u.last_active_at && nowMs - Number(u.last_active_at) < 5 * 60 * 1000)
+      // 最后在线: ms 时间戳 → 可读字符串 (后台展示用)
+      if (u.last_active_at) u.last_active_at = new Date(Number(u.last_active_at)).toLocaleString('zh-CN', { hour12: false })
       delete u.password
       delete u.session_token
     }
