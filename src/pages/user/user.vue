@@ -327,7 +327,12 @@ function openProfile() {
 }
 
 function editProfile() {
-  profileForm.value = { nickname: userInfo.value.nickname || '', avatar: userInfo.value.avatar || '' }
+  // avatar: 显示用 URL (云存储 fileID 需转换), avatarRaw: 入库用原始 fileID
+  // 先置空 avatar 避免 cloud:// 短暂空白, 转换完成后回填
+  profileForm.value = { nickname: userInfo.value.nickname || '', avatar: '', avatarRaw: userInfo.value.avatar || '' }
+  if (userInfo.value.avatar) {
+    resolveCloudUrl(userInfo.value.avatar).then((u) => { if (u) profileForm.value.avatar = u })
+  }
   showProfile.value = true
 }
 
@@ -347,19 +352,13 @@ function pickAvatar() {
         const upRes = await storage.uploadFile(filePath, cloudPath)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
-        // #ifdef MP-WEIXIN
-        // 小程序: 直接用 cloud:// fileID (wx.cloud 原生渲染, 无需域名白名单)
-        profileForm.value.avatar = String(fileID)
-        // #endif
-        // #ifndef MP-WEIXIN
-        // H5/App: 用真实临时 URL (fileID 转 URL)
-        const url = String(fileID).replace(/^cloud:\/\/[^/]+\//, '')
-        profileForm.value.avatar = url
-        // #endif
+        // 三端统一存 cloud:// fileID (私有桶铁律: 显示时由 resolveCloudUrl 转签名 URL)
+        // 切勿去掉前缀存相对路径 / 切勿存 blob 本地路径 (跨端必失效)
+        profileForm.value.avatarRaw = String(fileID)
+        profileForm.value.avatar = await resolveCloudUrl(String(fileID)).catch(() => String(fileID))
       } catch (e) {
-        // 上传失败则用本地临时路径 (App 内可显示)
-        profileForm.value.avatar = filePath
-        uni.showToast({ title: e.message || '上传失败，已使用本地图片', icon: 'none' })
+        // 上传失败: 不存本地临时路径 (blob 仅当前页面会话有效), 保留原头像
+        uni.showToast({ title: (e && e.message) || '头像上传失败，请重试', icon: 'none' })
       } finally {
         uni.hideLoading()
         uploading.value = false
@@ -374,8 +373,12 @@ async function saveProfile() {
     return
   }
   try {
-    await updateProfile({ uid: userInfo.value.uid, nickname: profileForm.value.nickname, avatar: profileForm.value.avatar })
-    userStore.setUserInfo({ nickname: profileForm.value.nickname, avatar: profileForm.value.avatar })
+    // 入库用 avatarRaw (cloud:// fileID); 未重新上传时 avatarRaw 保持原 fileID
+    const avatarVal = profileForm.value.avatarRaw || ''
+    await updateProfile({ uid: userInfo.value.uid, nickname: profileForm.value.nickname, avatar: avatarVal })
+    userStore.setUserInfo({ nickname: profileForm.value.nickname, avatar: avatarVal })
+    // 顶部头像即时刷新 (avatar 为转换后的显示 URL)
+    if (profileForm.value.avatar) displayAvatar.value = profileForm.value.avatar
     showProfile.value = false
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
