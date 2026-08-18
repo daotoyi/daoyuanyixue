@@ -98,7 +98,7 @@
 1. 登录 [微信开放平台](https://open.weixin.qq.com) → 「管理中心 → 第三方平台 → 创建第三方平台」（需企业主体，按提示填资料）
 2. 创建后拿到：**AppID（component_appid）** 与 **AppSecret（component_secret）**
 3. 在第三方平台「开发配置」中设置：
-   - **授权事件接收 URL**：`https://zhenhesheng-d6gkez7p221305432-1309518368.ap-shanghai.app.tcloudbase.com/dy-api?action=wxmp.authCallback`
+   - **授权事件接收 URL**：`https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api?action=wxmp.authCallback`
    - **消息校验 Token**：自定义一串随机字符（如 `daoyuan2026`）
    - **消息加密 Key（EncodingAESKey）**：点击随机生成
    - 该 URL 需通过微信的 GET 验证（云函数已实现 echostr 解密回显）
