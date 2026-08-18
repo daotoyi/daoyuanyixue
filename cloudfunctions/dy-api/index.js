@@ -575,9 +575,9 @@ async function publishMoment(data) {
     } catch (e) {}
   }
   data.user_name = realName
-  // 动态发布权限检查: 若后台关闭了 allow_publish_moment, 仅超管/管理员可发布
+  // 动态发布权限检查: 若后台关闭了 allow_publish_moment, 仅超管/管理员可发布 (以数据库角色为准)
   try {
-    const userRole = data.opRole || data.role || (uid ? ((await db.collection('users').where({ uid }).limit(1).get()).data[0] || {}).role : '') || 'user'
+    const userRole = await dbUserRole({ uid })
     if (userRole !== 'admin' && userRole !== 'manager') {
       const mRes = await db.collection('settings').where({ group: 'moment' }).limit(1).get()
       const mDoc = mRes.data[0] || {}
@@ -677,7 +677,8 @@ async function register(data) {
   const exists = await db.collection('users').where({ [accountKey]: accountVal }).limit(1).get()
   if (exists.data.length) return fail(isEmail ? '该邮箱已注册' : '该手机号已注册')
   // 道号分配 (按角色: 管理员/员工 ZHSM 系列, 用户 ZHS 系列)
-  const role = data.role || 'user'
+  // 安全: 公开注册只能创建普通用户, 忽略客户端传入的 role (防注册即管理员)
+  const role = 'user'
   let daoCode = await nextDaoCode(role)
   // 邀请人 (按道号/invite_code 匹配)
   let inviter = null
@@ -699,7 +700,7 @@ async function register(data) {
     password: data.password,
     vip_level: 0,
     balance: '0.00',
-    role: data.role || 'user',
+    role: 'user',
     invite_code: daoCode,
     inviter_uid: inviter ? inviter.uid : null,
     created_at: new Date().toISOString().slice(0, 10),
@@ -2503,27 +2504,27 @@ const MANAGER_ROUTES = [
 // 员工允许查询的集合
 const STAFF_COLLECTIONS = ['orders', 'products', 'courses', 'live_streams', 'categories', 'course_categories', 'coupons', 'moments', 'feedbacks']
 
-/* 后台管理员校验: 仅 admin(超管) / manager(管理员) 可登录后台 */
-async function requireAdmin(data) {
-  const role = data.opRole || data.role
-  const uid = data.opUid || data.uid
-  if (role === 'admin' || role === 'manager') return true
-  const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
-  if (user && user.data[0]) {
-    const r = user.data[0].role
-    if (r === 'admin' || r === 'manager') return true
+/** 查数据库真实角色 (安全铁律: 权限一律以数据库为准, 绝不信任客户端传的 opRole/role) */
+async function dbUserRole(data) {
+  const uid = Number(data.opUid || data.uid || data.user_id)
+  if (!uid) return ''
+  try {
+    const res = await db.collection('users').where({ uid }).limit(1).get()
+    return (res.data[0] && res.data[0].role) || ''
+  } catch (e) {
+    return ''
   }
-  return false
 }
 
-/* 员工权限校验: 返回 true 表示放行 */
+/* 后台管理员校验: 仅 admin(超管) / manager(管理员) 可登录后台 (以数据库角色为准) */
+async function requireAdmin(data) {
+  const r = await dbUserRole(data)
+  return r === 'admin' || r === 'manager'
+}
+
+/* 员工权限校验: 返回 true 表示放行 (以数据库角色为准) */
 async function requireStaffAllowed(action, data) {
-  const role = data.opRole || data.role
-  const uid = data.opUid || data.uid
-  const user = uid ? await db.collection('users').where({ uid: Number(uid) }).limit(1).get() : null
-  const realRole = ['admin', 'staff', 'manager'].includes(role)
-    ? role
-    : (user && user.data[0] ? user.data[0].role : '')
+  const realRole = await dbUserRole(data)
   // 超管全部放行
   if (realRole === 'admin') return true
   // 员工(staff): 无后台访问权限 (需求: 仅超管/管理员可访问后台)
@@ -2801,10 +2802,9 @@ async function adminUserCreate(data) {
 }
 
 async function adminUserUpdate(data) {
-  // 设置/解除 超级管理员(admin) 仅超级管理员可操作
+  // 设置/解除 超级管理员(admin) 仅超级管理员可操作 (以数据库角色为准, 不信任 opRole)
   if (data.role === 'admin') {
-    const opUser = await db.collection('users').where({ uid: Number(data.opUid || 0) }).limit(1).get()
-    const opRole = opUser.data[0] ? opUser.data[0].role : (data.opRole || '')
+    const opRole = await dbUserRole(data)
     if (opRole !== 'admin') return fail('只有超级管理员可以任命超级管理员')
   }
   const doc = {}
@@ -2922,9 +2922,8 @@ async function adminUserDelete(data) {
   const res = await db.collection('users').where({ uid: Number(uid) }).limit(1).get()
   if (!res.data.length) return fail('用户不存在')
   if (res.data[0].role === 'admin') {
-    // 只有超级管理员能删管理员, 且不能删自己/其他超管
-    const opUser = await db.collection('users').where({ uid: Number(data.opUid || 0) }).limit(1).get()
-    const opRole = opUser.data[0] ? opUser.data[0].role : (data.opRole || '')
+    // 只有超级管理员能删管理员, 且不能删自己/其他超管 (以数据库角色为准, 不信任 opRole)
+    const opRole = await dbUserRole(data)
     if (opRole !== 'admin') return fail('只有超级管理员可以删除管理员账号')
     if (Number(data.opUid) === Number(uid)) return fail('不能删除自己的账号')
     return fail('超管账号不可删除，可先降级为管理员')
@@ -3042,10 +3041,13 @@ async function adminOrderAnalysis() {
   // 排名: 按消费总额降序
   const ranking = Object.values(userMap).sort((a, b) => b.total - a.total).slice(0, 20)
 
-  const pieData = Object.entries(typeMap).map(([k, v]) => ({
-    key: k, label: v.label, count: v.count,
-    amount: Math.round(v.amount * 100) / 100,
-  }))
+  // 只返回有成交数据的类型 (count/amount 均为 0 的类型不返回, 避免环形图整段为 0 导致只有一种颜色)
+  const pieData = Object.entries(typeMap)
+    .filter(([, v]) => v.count > 0 || v.amount > 0)
+    .map(([k, v]) => ({
+      key: k, label: v.label, count: v.count,
+      amount: Math.round(v.amount * 100) / 100,
+    }))
 
   return ok({ pieData, ranking })
 }
