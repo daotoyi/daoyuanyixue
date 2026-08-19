@@ -462,15 +462,17 @@
               <text class="td w-no">订单号</text>
               <text class="td w-user">用户名</text>
               <text class="td w-name">商品</text>
-              <text class="td w-price">金额</text>
+              <text class="td w-price sortable" @tap="toggleOrderSort('amount')">金额 {{ orderSortArrow('amount') }}</text>
+              <text class="td w-time sortable" @tap="toggleOrderSort('created_at')">下单时间 {{ orderSortArrow('created_at') }}</text>
               <text class="td w-status">状态</text>
               <text class="td w-ops w-ops-4">操作</text>
             </view>
-            <view class="tr" v-for="o in orders" :key="o._id || o.order_no">
+            <view class="tr" v-for="o in sortedOrders" :key="o._id || o.order_no">
               <text class="td w-no">{{ o.order_no }}</text>
               <text class="td w-user ellipsis">{{ o.nickname || ('UID ' + o.uid) }}</text>
               <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
               <text class="td w-price">¥{{ o.total_price }}</text>
+              <text class="td w-time">{{ fmtOrderTime(o.created_at) }}</text>
               <view class="td w-status">
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
@@ -504,7 +506,7 @@
           <view class="analysis-pies">
           <!-- 环形图: 按类型·单数分布 -->
           <view class="analysis-section">
-            <text class="analysis-sub-title">成交分布（按类型·单数）</text>
+            <text class="analysis-sub-title">订单分布（按类型·单数）</text>
             <view class="pie-wrap">
               <view class="pie-svg-box">
                 <svg v-if="analysisPie.length" class="pie-svg" viewBox="0 0 100 100">
@@ -531,7 +533,7 @@
 
           <!-- 环形图: 按类型·金额分布 -->
           <view class="analysis-section">
-            <text class="analysis-sub-title">成交分布（按类型·金额）</text>
+            <text class="analysis-sub-title">订单分布（按类型·金额）</text>
             <view class="pie-wrap">
               <view class="pie-svg-box">
                 <svg v-if="analysisPie.length" class="pie-svg" viewBox="0 0 100 100">
@@ -1713,16 +1715,66 @@ async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
 }
 
-/* 订单分类统计: 商品/课程/AI解盘/预约 各自单数+金额 (从当前已加载订单聚合) */
+/* 订单分类: 兼容历史无 order_type 订单 (course_id 判定) + 订单号前缀 (TL/RC/AP) */
+function classifyOrder(o) {
+  let t = o.order_type || (o.course_id ? 'course' : 'product')
+  const no = String(o.order_no || '')
+  if (!o.order_type) {
+    if (no.startsWith('TL')) t = 'tool_unlock'
+    else if (no.startsWith('RC')) t = 'recharge'
+    else if (no.startsWith('AP')) t = 'appointment'
+  }
+  return t
+}
+
+/* 下单时间: 显示 "M/D HH:mm" (云函数已转东八区, 格式 "2026/8/19 11:12:46") */
+function fmtOrderTime(s) {
+  if (!s) return '-'
+  const m = String(s).match(/(\d+)\/(\d+)\/(\d+) (\d+:\d+)/)
+  return m ? `${m[2]}/${m[3]} ${m[4]}` : String(s).slice(5, 16)
+}
+
+/* 订单排序: 默认按下单时间倒序 (最新在上); 金额/下单时间 表头可切换升降序 */
+const orderSort = ref({ key: 'created_at', dir: 'desc' })
+const sortedOrders = computed(() => {
+  const { key, dir } = orderSort.value
+  const mul = dir === 'asc' ? 1 : -1
+  return [...orders.value].sort((a, b) => {
+    let va, vb
+    if (key === 'amount') {
+      va = Number(a.total_price) || 0
+      vb = Number(b.total_price) || 0
+    } else {
+      // created_at: "2026/8/19 11:12:46" → 时间戳
+      va = Date.parse(String(a.created_at || '').replace(/-/g, '/')) || 0
+      vb = Date.parse(String(b.created_at || '').replace(/-/g, '/')) || 0
+    }
+    return (va - vb) * mul || String(a.order_no || '').localeCompare(String(b.order_no || '')) * mul
+  })
+})
+function toggleOrderSort(key) {
+  if (orderSort.value.key === key) {
+    orderSort.value = { key, dir: orderSort.value.dir === 'desc' ? 'asc' : 'desc' }
+  } else {
+    orderSort.value = { key, dir: 'desc' }
+  }
+}
+function orderSortArrow(key) {
+  if (orderSort.value.key !== key) return '⇅'
+  return orderSort.value.dir === 'desc' ? '↓' : '↑'
+}
+
+/* 订单分类统计: 商品/课程/AI解盘/预约/充值 各自单数+金额 (与订单分析口径一致, 兼容历史订单) */
 const orderTypeStats = computed(() => {
   const types = [
     { key: 'product', label: '商品' },
     { key: 'course', label: '课程' },
     { key: 'tool_unlock', label: 'AI解盘' },
     { key: 'appointment', label: '预约' },
+    { key: 'recharge', label: '充值' },
   ]
   return types.map((t) => {
-    const list = orders.value.filter((o) => o.order_type === t.key)
+    const list = orders.value.filter((o) => classifyOrder(o) === t.key)
     return {
       ...t,
       count: list.length,
@@ -1768,7 +1820,7 @@ function sortArrow(key) {
   if (productSort.value.key !== key) return '⇅'
   return productSort.value.dir === 'desc' ? '↓' : '↑'
 }
-const pieColors = ['#c4753a', '#6e8b4e', '#8b6a9e', '#b85c5c']
+const pieColors = ['#c4753a', '#6e8b4e', '#8b6a9e', '#b85c5c', '#4a7ba6']
 const analysisTotalCount = computed(() => analysisPie.value.reduce((s, p) => s + p.count, 0))
 const analysisTotalAmount = computed(() => analysisPie.value.reduce((s, p) => s + p.amount, 0))
 const PIE_C = 2 * Math.PI * 40
@@ -3493,14 +3545,18 @@ onMounted(async () => {
 .order-type-stats .ots-val { font-size: 22rpx; color: #6b5a45; }
 .order-type-stats .ots-val .price { color: #c4753a; }
 
-/* 订单表格: 列宽自适应, 尽量不横向滑动; 表头随内容同滚 (.table overflow-x:auto 已保证) */
-.orders-table .tr { min-width: 0; }
-.orders-table .w-no { width: 200rpx; }
+/* 订单表格: 列宽紧凑; 列数多时横向滑动, 表头随内容同滚 (.table overflow-x:auto 已保证) */
+.orders-table .tr { min-width: 1560rpx; }
+.orders-table .w-no { width: 240rpx; }
 .orders-table .w-user { width: 120rpx; }
-.orders-table .w-name { flex: 1 1 160rpx; min-width: 140rpx; max-width: 300rpx; }
-.orders-table .w-price { width: 110rpx; }
-.orders-table .w-status { width: 120rpx; }
+.orders-table .w-name { flex: 1 1 180rpx; min-width: 160rpx; max-width: 320rpx; }
+.orders-table .w-price { width: 120rpx; }
+.orders-table .w-time { width: 220rpx; }
+.orders-table .w-status { width: 130rpx; }
 .orders-table .w-ops-4 { width: 460rpx; }
+/* 可排序表头 */
+.orders-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.orders-table .sortable:active { color: #c4753a; }
 .op.danger {
   color: #b04a45;
 }
@@ -4340,10 +4396,12 @@ onMounted(async () => {
   .w-ops-4 { padding-right: 8px; }
   .op-col { width: 60px; }
   /* 订单表格宽屏列宽 (px, 避免商品列空白过宽) */
+  .orders-table .tr { min-width: 0; }
   .orders-table .w-no { width: 130px; }
   .orders-table .w-user { width: 80px; }
   .orders-table .w-name { flex: 1 1 100px; min-width: 100px; max-width: 200px; }
   .orders-table .w-price { width: 70px; }
+  .orders-table .w-time { width: 130px; }
   .orders-table .w-status { width: 80px; }
   .orders-table .w-ops-4 { width: 280px; }
 }

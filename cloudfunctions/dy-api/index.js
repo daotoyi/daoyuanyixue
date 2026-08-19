@@ -15,6 +15,21 @@ const _ = db.command
 const ok = (data) => ({ status: 200, data, msg: 'success' })
 const fail = (msg, status = 400) => ({ status, msg })
 
+/* ---- 时间工具: 云函数服务器时区为 UTC, 展示需转东八区(北京) ---- */
+/* ms 时间戳 → 北京时间字符串 "2026/8/19 11:12:46" */
+function msToCn(ms) {
+  const d = new Date(Number(ms) + 8 * 3600 * 1000)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`
+}
+/* UTC 字符串 "2026/8/19 03:12:46" → 北京时间字符串 (解析失败原样返回) */
+function utcStrToCn(str) {
+  if (!str) return str
+  const t = Date.parse(String(str).replace(/-/g, '/'))
+  if (Number.isNaN(t)) return str
+  return msToCn(t)
+}
+
 /* ============ 商品 ============ */
 
 async function listCategories() {
@@ -2696,6 +2711,9 @@ async function adminList(data) {
   } else if (data.keyword && collection === 'products') {
     res = await query.limit(200).get()
     return ok(res.data.filter((p) => (p.name || '').includes(data.keyword)))
+  } else if (collection === 'orders') {
+    // 订单列表: 默认按下单时间倒序 (最新在最上面)
+    res = await query.orderBy('created_at', 'desc').limit(200).get()
   } else {
     res = await query.limit(200).get()
   }
@@ -2707,8 +2725,10 @@ async function adminList(data) {
     const nowMs = Date.now()
     for (const u of res.data) {
       u._online = !!(u.last_active_at && nowMs - Number(u.last_active_at) < 5 * 60 * 1000)
-      // 最后在线: ms 时间戳 → 可读字符串 (后台展示用)
-      if (u.last_active_at) u.last_active_at = new Date(Number(u.last_active_at)).toLocaleString('zh-CN', { hour12: false })
+      // 最后在线: ms 时间戳 → 东八区可读字符串 (服务器 UTC, 需 +8h)
+      if (u.last_active_at) u.last_active_at = msToCn(u.last_active_at)
+      // 最近登录: 库中为 UTC 字符串 → 东八区
+      if (u.last_login_at) u.last_login_at = utcStrToCn(u.last_login_at)
       delete u.password
       delete u.session_token
     }
@@ -2729,7 +2749,7 @@ async function adminList(data) {
       )
     }
   }
-  // 订单列表: 关联用户昵称 (uid → nickname)
+  // 订单列表: 关联用户昵称 (uid → nickname) + 下单时间转东八区
   if (collection === 'orders' && res.data.length) {
     const uids = [...new Set(res.data.map((o) => o.uid).filter(Boolean))]
     if (uids.length) {
@@ -2737,6 +2757,10 @@ async function adminList(data) {
       const nameMap = {}
       for (const u of usersRes.data) nameMap[String(u.uid)] = u.nickname || u.phone || ('UID ' + u.uid)
       for (const o of res.data) o.nickname = nameMap[String(o.uid)] || ('UID ' + o.uid)
+    }
+    // created_at 为 UTC 字符串 → 东八区 (后台下单时间列展示)
+    for (const o of res.data) {
+      if (o.created_at) o.created_at = utcStrToCn(o.created_at)
     }
   }
   return ok(res.data)
@@ -3116,20 +3140,24 @@ async function adminOrderAnalysis(data) {
   let rangeStart = 0
   if (rangeDays) rangeStart = Date.now() - rangeDays * 86400000
 
-  // 拉全部已支付订单 (排除待付款/已取消)
-  const res = await db.collection('orders')
-    .where({ status: _.nin(['待付款', '已取消']) })
-    .limit(1000).get()
+  // 拉全部订单 (与后台"订单管理·全部"口径一致: 含待付款/已取消, 不做状态过滤)
+  const res = await db.collection('orders').limit(1000).get()
   const orders = rangeStart
     ? res.data.filter((o) => {
-        // created_at 格式: "2026/8/18 14:30:00" (zh-CN toLocaleString)
+        // created_at 格式: "2026/8/18 14:30:00" (zh-CN toLocaleString, UTC)
         const t = Date.parse(String(o.created_at || '').replace(/-/g, '/'))
         return !Number.isNaN(t) && t >= rangeStart
       })
     : res.data
 
-  // 按类型聚合
-  const typeMap = { product: { label: '商品', count: 0, amount: 0 }, course: { label: '课程', count: 0, amount: 0 }, tool_unlock: { label: 'AI解盘', count: 0, amount: 0 } }
+  // 按类型聚合 (商品/课程/AI解盘/预约/充值)
+  const typeMap = {
+    product: { label: '商品', count: 0, amount: 0 },
+    course: { label: '课程', count: 0, amount: 0 },
+    tool_unlock: { label: 'AI解盘', count: 0, amount: 0 },
+    appointment: { label: '预约', count: 0, amount: 0 },
+    recharge: { label: '充值', count: 0, amount: 0 },
+  }
   // 用户消费聚合
   const userMap = {} // uid → { uid, nickname, total, count }
   // 产品销售聚合 (按 items[].name, 排除已退款)
@@ -3141,6 +3169,7 @@ async function adminOrderAnalysis(data) {
     if (!o.order_type) {
       if (no.startsWith('TL')) t = 'tool_unlock'
       else if (no.startsWith('RC')) t = 'recharge'
+      else if (no.startsWith('AP')) t = 'appointment'
     }
     const amt = Number(o.total_price) || 0
     if (typeMap[t]) {
