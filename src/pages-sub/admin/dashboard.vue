@@ -432,14 +432,14 @@
               >{{ s }}</text>
             </view>
           </view>
-          <!-- 预约订单统计 -->
-          <view class="order-appt-stats">
-            <text class="oas-label">预约订单</text>
-            <text class="oas-item">单数 <text class="oas-num">{{ orderApptStats.count }}</text> 单</text>
-            <view class="oas-div"></view>
-            <text class="oas-item">金额 <text class="oas-num price">¥{{ orderApptStats.amount.toFixed(2) }}</text></text>
+          <!-- 订单分类统计: 商品/课程/AI解盘/预约 -->
+          <view class="order-type-stats">
+            <view class="ots-item" v-for="t in orderTypeStats" :key="t.key">
+              <text class="ots-label">{{ t.label }}</text>
+              <text class="ots-val">{{ t.count }}单 / ¥{{ t.amount.toFixed(0) }}</text>
+            </view>
           </view>
-          <view class="table">
+          <view class="table orders-table">
             <view class="tr th">
               <text class="td w-no">订单号</text>
               <text class="td w-user">用户名</text>
@@ -1691,12 +1691,22 @@ async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
 }
 
-/* 预约订单统计: 从当前已加载订单中聚合 (order_type === 'appointment') */
-const orderApptStats = computed(() => {
-  const appt = orders.value.filter((o) => o.order_type === 'appointment')
-  const count = appt.length
-  const amount = appt.reduce((s, o) => s + Number(o.total_price || 0), 0)
-  return { count, amount }
+/* 订单分类统计: 商品/课程/AI解盘/预约 各自单数+金额 (从当前已加载订单聚合) */
+const orderTypeStats = computed(() => {
+  const types = [
+    { key: 'product', label: '商品' },
+    { key: 'course', label: '课程' },
+    { key: 'tool_unlock', label: 'AI解盘' },
+    { key: 'appointment', label: '预约' },
+  ]
+  return types.map((t) => {
+    const list = orders.value.filter((o) => o.order_type === t.key)
+    return {
+      ...t,
+      count: list.length,
+      amount: list.reduce((s, o) => s + Number(o.total_price || 0), 0),
+    }
+  })
 })
 
 /* ===== 订单分析 ===== */
@@ -3441,27 +3451,34 @@ onMounted(async () => {
   visibility: hidden;
   pointer-events: none;
 }
-/* 预约订单统计条 */
-.order-appt-stats {
+/* 订单分类统计条 (商品/课程/AI解盘/预约) */
+.order-type-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin: 0 0 20rpx;
+}
+.order-type-stats .ots-item {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 8rpx;
   background: #f6efe3;
   border: 1rpx solid #e8dcc4;
-  border-radius: 12rpx;
-  padding: 14rpx 20rpx;
-  margin: 0 0 20rpx;
-  flex-wrap: wrap;
+  border-radius: 10rpx;
+  padding: 8rpx 16rpx;
 }
-.order-appt-stats .oas-label {
-  font-size: 24rpx;
-  color: #8c5a2b;
-  font-weight: 600;
-}
-.order-appt-stats .oas-item { font-size: 24rpx; color: #6b5a45; }
-.order-appt-stats .oas-num { font-size: 30rpx; font-weight: 700; color: #42372c; }
-.order-appt-stats .oas-num.price { color: #c4753a; }
-.order-appt-stats .oas-div { width: 1rpx; height: 28rpx; background: #e0d4bc; }
+.order-type-stats .ots-label { font-size: 22rpx; color: #8c5a2b; font-weight: 600; }
+.order-type-stats .ots-val { font-size: 22rpx; color: #6b5a45; }
+.order-type-stats .ots-val .price { color: #c4753a; }
+
+/* 订单表格: 列宽自适应, 尽量不横向滑动; 表头随内容同滚 (.table overflow-x:auto 已保证) */
+.orders-table .tr { min-width: 0; }
+.orders-table .w-no { width: 200rpx; }
+.orders-table .w-user { width: 120rpx; }
+.orders-table .w-name { flex: 1 1 160rpx; min-width: 140rpx; max-width: 300rpx; }
+.orders-table .w-price { width: 110rpx; }
+.orders-table .w-status { width: 120rpx; }
+.orders-table .w-ops-4 { width: 460rpx; }
 .op.danger {
   color: #b04a45;
 }
@@ -4294,13 +4311,19 @@ onMounted(async () => {
   /* 售后搜索框宽屏适配 */
   .as-search-input { height: 36px; font-size: 14px; padding: 0 40px 0 14px; }
   .as-search-clear { width: 22px; height: 22px; line-height: 22px; right: 12px; font-size: 12px; }
-  /* 预约订单统计条宽屏适配 */
-  .order-appt-stats .oas-label { font-size: 13px; }
-  .order-appt-stats .oas-item { font-size: 13px; }
-  .order-appt-stats .oas-num { font-size: 16px; }
+  /* 订单分类统计条宽屏适配 */
+  .order-type-stats .ots-label { font-size: 13px; }
+  .order-type-stats .ots-val { font-size: 13px; }
   /* 订单操作区宽屏: 按钮不裁切, 留右间距 */
   .w-ops-4 { padding-right: 8px; }
   .op-col { width: 60px; }
+  /* 订单表格宽屏列宽 (px, 避免商品列空白过宽) */
+  .orders-table .w-no { width: 130px; }
+  .orders-table .w-user { width: 80px; }
+  .orders-table .w-name { flex: 1 1 100px; min-width: 100px; max-width: 200px; }
+  .orders-table .w-price { width: 70px; }
+  .orders-table .w-status { width: 80px; }
+  .orders-table .w-ops-4 { width: 280px; }
 }
 /* 后台: 保持 1400px 宽 (原有设计), 收拢居中 */
 @media screen and (min-width: 1025px) {

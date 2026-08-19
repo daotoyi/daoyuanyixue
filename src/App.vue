@@ -249,4 +249,34 @@ page {
   font-weight: 600;
   flex-shrink: 0;
 }
+
+/* ==================== H5 专属: 允许复制 + 底部菜单栏宽度对齐 ==================== */
+/* #ifdef H5 */
+/* 允许 H5 界面文本可选中复制 (uni-app 默认可能禁用) */
+page, .uni-page-body, view, text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* 交互元素禁用选中, 避免误触长按弹出选择 */
+button, input, textarea, .btn-p, .op, .pill, .ft, .menu-item, .op-col {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 宽屏: 底部原生 tabbar 与内容面板同宽并居中, 不平铺整个显示器 */
+@media screen and (min-width: 1025px) {
+  .uni-tabbar {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    left: 0;
+    right: 0;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .uni-tabbar {
+    max-width: 1320px;
+  }
+}
+/* #endif */
 </style>
