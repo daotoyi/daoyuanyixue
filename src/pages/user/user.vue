@@ -96,8 +96,8 @@
       </view>
     </view>
 
-    <!-- 玄学工具 (位于我的订单下方) -->
-    <view class="panel">
+    <!-- 玄学工具 (位于我的订单下方, 后台开关控制, 默认关闭) -->
+    <view class="panel" v-if="showTools">
       <view class="panel-head" @tap="goTools('')">
         <text class="panel-title">玄学工具</text>
         <text class="panel-more">更多工具 ›</text>
@@ -200,7 +200,7 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
-import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile } from '../../api/api'
+import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile, getPayConfig } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { APP_FULL_VERSION } from '../../version'
 
@@ -245,6 +245,7 @@ const showInvite = ref(false)
 const showVipSheet = ref(false)
 const uploading = ref(false)
 const profileForm = ref({ nickname: '', avatar: '' })
+const showTools = ref(false) // 玄学工具板块显示开关 (后台控制, 默认关闭)
 
 const orderEntries = [
   { status: '待付款', label: '待付款', icon: '💰' },
@@ -480,6 +481,11 @@ onShow(async () => {
   } catch (e) {
     /* 忽略 */
   }
+  // 加载页面配置 (玄学工具开关等, 默认关闭)
+  try {
+    const cfg = await getPayConfig()
+    showTools.value = cfg.show_tools === true
+  } catch (e) { /* 默认关闭 */ }
 })
 </script>
 

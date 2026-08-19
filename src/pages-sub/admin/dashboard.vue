@@ -74,10 +74,10 @@
           </view>
         </view>
 
-        <!-- ===== 首页管理 ===== -->
+        <!-- ===== 页面管理 ===== -->
         <view v-else-if="activeModule === 'home'" class="module">
           <view class="module-head">
-            <text class="module-title">首页管理</text>
+            <text class="module-title">页面管理</text>
           </view>
           <view class="settings-card">
             <view class="settings-desc">
@@ -157,6 +157,24 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后「推荐」页签将不展示对应内容模块</text>
+              <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
+            </view>
+          </view>
+
+          <!-- 我的页面管理 -->
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">我的管理</text>
+              <text class="sd-text">控制「我的」页面功能板块的显示/隐藏</text>
+            </view>
+            <view class="f-row">
+              <text class="f-label">玄学工具</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_tools" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_tools = $event.detail.value" />
+              </view>
+            </view>
+            <view class="settings-actions">
+              <text class="settings-tip">关闭后「我的」页面将不展示玄学工具板块（默认关闭）</text>
               <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -1277,7 +1295,7 @@ const userStore = useUserStore()
 
 const modules = [
   { key: 'overview', label: '数据概览', icon: '📊' },
-  { key: 'home', label: '首页管理', icon: '🏠' },
+  { key: 'home', label: '页面管理', icon: '🏠' },
   { key: 'products', label: '商品管理', icon: '🛍' },
   { key: 'courses', label: '课程管理', icon: '📚' },
   { key: 'orders', label: '订单管理', icon: '📦' },
@@ -1293,7 +1311,7 @@ const modules = [
 ]
 // 员工权限: 仅概览/商品/课程/订单/直播 (注意: 员工不能登录后台, 此配置保留以防历史会话)
 const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'orderAnalysis', 'lives']
-// 管理员(manager)权限: 概览/首页管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
+// 管理员(manager)权限: 概览/页面管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
 const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'orderAnalysis', 'aftersales', 'coupons', 'lives', 'moments', 'feedbacks']
 const userRole = computed(() => userStore.userInfo.role || 'user')
 /* 课程管理权限: 超管(admin)/管理员(manager)可管理, 员工(staff)只能查看 */
@@ -1475,8 +1493,8 @@ async function loadModule(key) {
   }
 }
 
-/* ===== 首页管理 ===== */
-const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true })
+/* ===== 页面管理 ===== */
+const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, show_tools: false })
 const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
@@ -1570,12 +1588,14 @@ const pdForm = ref(emptyPdForm())
 
 async function loadHomeConfig() {
   try {
-    const [homeRes, recRes] = await Promise.all([
+    const [homeRes, recRes, mypageRes] = await Promise.all([
       adminSettingsGet({ group: 'home' }),
       adminSettingsGet({ group: 'recommend' }).catch(() => ({ configs: {} })),
+      adminSettingsGet({ group: 'mypage' }).catch(() => ({ configs: {} })),
     ])
     const cfg = homeRes.configs || {}
     const rc = recRes.configs || {}
+    const mp = mypageRes.configs || {}
     homeCfg.value = {
       show_recommend: cfg.show_recommend !== '0' && cfg.show_recommend !== false,
       show_publish: cfg.show_publish === '1' || cfg.show_publish === true,
@@ -1587,6 +1607,7 @@ async function loadHomeConfig() {
       rec_show_product: rc.rec_show_product !== '0' && rc.rec_show_product !== false,
       rec_show_course: rc.rec_show_course !== '0' && rc.rec_show_course !== false,
       rec_show_moment: rc.rec_show_moment !== '0' && rc.rec_show_moment !== false,
+      show_tools: mp.show_tools === '1' || mp.show_tools === true,
     }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
@@ -1612,6 +1633,7 @@ async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
     await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0' } })
+    await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
@@ -3602,7 +3624,7 @@ onMounted(async () => {
   color: #42372c;
   line-height: 56rpx;
 }
-/* 首页管理 */
+/* 页面管理 */
 .home-pandao-list {
   margin-bottom: 20rpx;
 }
