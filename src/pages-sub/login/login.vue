@@ -91,12 +91,12 @@
         <view class="wx-auth-row">
           <button class="wx-phone-btn" open-type="getPhoneNumber" @getphonenumber="onGetPhoneNumber">
             <text class="wx-phone-icon">📱</text>
-            <text>{{ wxPhoneBound ? '已绑定手机号：' + wxPhoneMask : '绑定手机号（选填）' }}</text>
+            <text>{{ wxPhoneBound ? '已绑定手机号：' + wxPhoneMask : (wxNeedPhone ? '绑定手机号（必填）' : '绑定手机号（选填）') }}</text>
           </button>
         </view>
         <view class="wx-auth-actions">
           <view class="btn-p plain wx-auth-btn" @click="showWxAuth = false">取消</view>
-          <view class="btn-p wx-auth-btn" @click="doWxLogin">微信登录</view>
+          <view class="btn-p wx-auth-btn" :class="{ 'wx-auth-disabled': wxNeedPhone && !wxPhoneBound }" @click="wxLoginConfirm">{{ wxNeedPhone && !wxPhoneBound ? '请先绑定手机号' : '微信登录' }}</view>
         </view>
       </view></view>
       <!-- #endif -->
@@ -230,6 +230,16 @@ function saveUser(user) {
 }
 
 const showWxAuth = ref(false)
+const wxNeedPhone = ref(false) // 老微信用户未绑定手机号 → 强制绑定后才能登录
+
+/* 授权面板登录按钮: 需绑定手机号时先绑定 */
+function wxLoginConfirm() {
+  if (wxNeedPhone.value && !wxPhoneBound.value) {
+    uni.showToast({ title: '请先点击上方按钮绑定手机号', icon: 'none' })
+    return
+  }
+  doWxLogin()
+}
 
 async function wxLogin() {
   errorMsg.value = ''
@@ -238,14 +248,24 @@ async function wxLogin() {
   try {
     const chk = await wechatCheck()
     if (chk && chk.registered && chk.hasProfile) {
-      // 老用户: 直接登录 (用已有头像昵称, 无需再授权)
+      // 老用户: 用已有头像昵称
       wxNickname.value = chk.nickname || ''
       wxAvatar.value = chk.avatar || ''
       showWxAuth.value = false
+      // 老用户未绑定手机号 → 必须绑定后才能登录
+      if (chk.needPhone) {
+        wxNeedPhone.value = true
+        wxPhoneBound.value = false
+        wxPhone.value = ''
+        showWxAuth.value = true
+        uni.showToast({ title: '请先绑定手机号', icon: 'none' })
+        return
+      }
       await doWxLogin()
       return
     }
   } catch (e) { /* check 失败则弹面板 */ }
+  wxNeedPhone.value = false
   showWxAuth.value = true
   // #endif
   // #ifndef MP-WEIXIN
@@ -260,6 +280,11 @@ async function wxLogin() {
 /* 真正执行微信登录: 已通过授权面板取得头像昵称 */
 async function doWxLogin() {
   errorMsg.value = ''
+  // 老用户强制绑定: 未绑定手机号禁止登录
+  if (wxNeedPhone.value && !wxPhoneBound.value) {
+    uni.showToast({ title: '请先绑定手机号', icon: 'none' })
+    return
+  }
   loading.value = true
   try {
     let profile = { nickname: wxNickname.value || '', avatar: wxAvatar.value || '' }
@@ -491,6 +516,11 @@ async function submit() {
   height: 92rpx;
   font-size: 30rpx;
 }
+/* 需绑定手机号时登录按钮禁用态 */
+.wx-auth-btn.wx-auth-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .wx-auth-row {
   display: flex;
   align-items: center;
@@ -555,6 +585,11 @@ async function submit() {
   flex: 1;
   height: 92rpx;
   font-size: 30rpx;
+}
+/* 需绑定手机号时登录按钮禁用态 */
+.wx-auth-btn.wx-auth-disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 .wx-auth-row {
   display: flex;
