@@ -432,11 +432,11 @@ function calTip(d) {
 // 顶层声明 (模板中的 userStore.isLoggedIn 引用需要)
 const userStore = useUserStore()
 
-// 发布权限: 后台关闭时仅 admin/manager 可发布
+// 发布权限: 后台关闭时仅 admin/manager/operator/viewer 可发布
 const canPublishMoment = computed(() => {
   if (allowPublishMoment.value) return true
   const role = userStore.userInfo.role || ''
-  return role === 'admin' || role === 'manager'
+  return ['admin', 'manager', 'operator', 'viewer'].includes(role)
 })
 
 /* logo 绝对路径 (H5 需运行时 origin, 避免 Vite publicPath=./ 编译成相对路径导致 image 背景 none 不渲染) */

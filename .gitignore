@@ -9,6 +9,7 @@ mobile/android/app/build/
 mobile/android/.gradle/
 mobile/android/local.properties
 mobile/android/app/daoyuan.keystore
+mobile/android/app/keystore.properties
 
 # 系统与 IDE
 .DS_Store

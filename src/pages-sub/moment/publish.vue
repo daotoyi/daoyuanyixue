@@ -58,7 +58,7 @@ onMounted(async () => {
     const allow = cfg.allow_publish_moment !== false
     const us = useUserStore()
     const role = us.userInfo.role || ''
-    const isAdmin = role === 'admin' || role === 'manager'
+    const isAdmin = ['admin', 'manager', 'operator', 'viewer'].includes(role)
     canPublish.value = allow || isAdmin
   } catch (e) { /* 默认允许 */ }
 })

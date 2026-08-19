@@ -26,7 +26,7 @@
           <text class="au-avatar">{{ userStore.userInfo.nickname ? userStore.userInfo.nickname[0] : '管' }}</text>
           <view class="au-info" v-if="!sidebarCollapsed">
             <text class="au-name">{{ userStore.userInfo.nickname }}</text>
-            <text class="au-role">{{ userRole === 'admin' ? '超级管理员' : (userRole === 'staff' ? '内部员工' : '管理员') }}</text>
+            <text class="au-role">{{ ROLE_LABEL[userRole] || '管理员' }}</text>
           </view>
         </view>
       </view>
@@ -68,6 +68,7 @@
                 <text class="rr-items ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
                 <text class="rr-price">¥{{ o.total_price }}</text>
                 <text class="rr-status">{{ o.status }}</text>
+                <text class="rr-time">{{ fmtOrderTime(o.created_at) }}</text>
               </view>
             </view>
             <view class="recent-empty" v-else>暂无订单</view>
@@ -116,7 +117,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
-              <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
 
@@ -157,7 +158,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后「推荐」页签将不展示对应内容模块</text>
-              <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
 
@@ -175,7 +176,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后「我的」页面将不展示玄学工具板块（默认关闭）</text>
-              <view class="btn-p sm" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
         </view>
@@ -199,7 +200,7 @@
                   </text>
                   <text class="home-pd-meta">{{ pd.day }} {{ pd.time }} · {{ pd.place }} · ¥{{ pd.price }}</text>
                 </view>
-                <view class="home-pd-ops">
+                <view class="home-pd-ops" v-if="canWrite">
                   <text class="op" @tap="editPandaoSession(pd)">编辑</text>
                   <text class="op danger" @tap="deletePandaoSession(pd)">删除</text>
                 </view>
@@ -231,7 +232,7 @@
             <view class="f-row">
               <text class="f-label">封面图</text>
               <view class="f-input-wrap">
-                <view class="f-row-inline">
+                <view class="f-row-inline" v-if="canWrite">
                   <view class="btn-p plain sm" @click="uploadPandaoCover">上传封面</view>
                   <image class="cover-preview" v-if="pdForm.cover" :src="pdForm._coverUrl || pdForm.cover" mode="aspectFill" @tap="previewPandaoCover"></image>
                   <text class="f-label-sm" v-if="pdForm.cover" @tap="pdForm.cover = ''">移除</text>
@@ -245,7 +246,7 @@
             </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
             <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea" v-model="pdForm.content" placeholder="详情页活动介绍（可换行）" /></view>
-            <view class="settings-actions">
+            <view class="settings-actions" v-if="canWrite">
               <view class="btn-p plain sm" v-if="pdForm.id" @click="pdForm = emptyPdForm()">取消编辑</view>
               <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
             </view>
@@ -261,7 +262,7 @@
                 <view class="home-pd-info">
                   <text class="home-pd-title">{{ fp.weekday !== undefined ? '星期' + ['日','一','二','三','四','五','六'][fp.weekday] + ' ' : '' }}{{ fp.name }}<text v-if="fp.enabled === false" class="home-pd-status st-end">（已取消）</text></text>
                 </view>
-                <view class="home-pd-ops">
+                <view class="home-pd-ops" v-if="canWrite">
                   <text class="op" @tap="editFixedPandao(i)">编辑</text>
                   <text class="op" @tap="toggleFixedPandao(i)">{{ fp.enabled === false ? '恢复固定' : '取消固定' }}</text>
                   <text class="op danger" @tap="removeFixedPandao(i)">删除</text>
@@ -287,7 +288,7 @@
                 <text class="pill" :class="{ on: fpForm.type === 'offline' }" @tap="fpForm.type = 'offline'">线下</text>
               </view>
             </view>
-            <view class="settings-actions">
+            <view class="settings-actions" v-if="canWrite">
               <view class="btn-p plain sm" v-if="fpForm._idx >= 0" @click="cancelEditFixedPandao">取消编辑</view>
               <view class="btn-p sm" @click="addFixedPandao">{{ fpForm._idx >= 0 ? '保存修改' : '添加固定活动' }}</view>
             </view>
@@ -300,7 +301,7 @@
           <view class="cate-panel" :class="{ collapsed: cateCollapsed }">
             <view class="cate-panel-head">
               <text class="cate-panel-title" v-if="!cateCollapsed">商品分类</text>
-              <text class="cate-add" v-if="!cateCollapsed" @tap="openCateForm('products')">＋ 新建</text>
+              <text class="cate-add" v-if="!cateCollapsed && canWrite" @tap="openCateForm('products')">＋ 新建</text>
               <text class="cate-toggle" @tap="cateCollapsed = !cateCollapsed">{{ cateCollapsed ? '›' : '‹' }}</text>
             </view>
             <scroll-view scroll-y class="cate-panel-list">
@@ -313,7 +314,7 @@
               >
                 <text class="cate-row-name ellipsis">{{ c.name }}</text>
                 <text class="cate-row-badge" :class="c.is_show === false ? 'off' : ''">{{ c.is_show === false ? '隐藏' : '显示' }}</text>
-                <view class="cate-row-ops" @tap.stop>
+                <view class="cate-row-ops" @tap.stop v-if="canWrite">
                   <text class="cate-op" @tap="moveCate(c, -1, 'products')">↑</text>
                   <text class="cate-op" @tap="moveCate(c, 1, 'products')">↓</text>
                   <text class="cate-op" @tap="openCateForm('products', c)">编</text>
@@ -328,7 +329,7 @@
           <view class="cate-main">
             <view class="module-head">
               <text class="module-title">{{ productActiveCateName }} · 商品（{{ productGrouped[productActiveCate] ? productGrouped[productActiveCate].length : 0 }}）</text>
-              <view class="btn-p sm" @click="openProductForm()">＋ 新增商品</view>
+              <view class="btn-p sm" v-if="canWrite" @click="openProductForm()">＋ 新增商品</view>
             </view>
             <view class="table">
               <view class="tr th">
@@ -346,10 +347,10 @@
                 <text class="td w-price">¥{{ p.price }}</text>
                 <text class="td w-stock">{{ p.stock }}</text>
                 <text class="td w-status" :class="p.is_show === false ? 'off' : 'on'">{{ p.is_show === false ? '已下架' : '已上架' }}</text>
-                <view class="td w-rec ops">
+                <view class="td w-rec ops" v-if="canWrite">
                   <text class="op" :class="p.home_recommend === true ? 'rec-on' : ''" @tap="toggleProductHome(p)">{{ p.home_recommend === true ? '★推荐' : '推荐' }}</text>
                 </view>
-                <view class="td w-ops ops">
+                <view class="td w-ops ops" v-if="canWrite">
                   <text class="op" @tap="openProductForm(p)">编辑</text>
                   <text class="op" @tap="toggleProduct(p)">{{ p.is_show === false ? '上架' : '下架' }}</text>
                   <text class="op danger" @tap="deleteProduct(p)">删除</text>
@@ -368,7 +369,7 @@
           <view class="cate-panel" :class="{ collapsed: cateCollapsed }">
             <view class="cate-panel-head">
               <text class="cate-panel-title" v-if="!cateCollapsed">课程分类</text>
-              <text class="cate-add" v-if="!cateCollapsed" @tap="openCateForm('courses')">＋ 新建</text>
+              <text class="cate-add" v-if="!cateCollapsed && canManageCourses" @tap="openCateForm('courses')">＋ 新建</text>
               <text class="cate-toggle" @tap="cateCollapsed = !cateCollapsed">{{ cateCollapsed ? '›' : '‹' }}</text>
             </view>
             <scroll-view scroll-y class="cate-panel-list">
@@ -381,7 +382,7 @@
               >
                 <text class="cate-row-name ellipsis">{{ c.name }}</text>
                 <text class="cate-row-badge" :class="c.is_show === false ? 'off' : ''">{{ c.is_show === false ? '隐藏' : '显示' }}</text>
-                <view class="cate-row-ops" @tap.stop>
+                <view class="cate-row-ops" @tap.stop v-if="canManageCourses">
                   <text class="cate-op" @tap="moveCate(c, -1, 'courses')">↑</text>
                   <text class="cate-op" @tap="moveCate(c, 1, 'courses')">↓</text>
                   <text class="cate-op" @tap="openCateForm('courses', c)">编</text>
@@ -412,7 +413,7 @@
                 <text class="td w-price">¥{{ c.price }}</text>
                 <text class="td w-stock">{{ c.lessons_count }}</text>
                 <text class="td w-status" :class="c.status === false || c.status === 'off' ? 'off' : 'on'">{{ c.status === false || c.status === 'off' ? '已下架' : '已上架' }}</text>
-                <view class="td w-rec ops">
+                <view class="td w-rec ops" v-if="canManageCourses">
                   <text class="op" :class="c.home_recommend === true ? 'rec-on' : ''" @tap="toggleCourseHome(c)">{{ c.home_recommend === true ? '★推荐' : '推荐' }}</text>
                 </view>
                 <view class="td w-ops ops" v-if="canManageCourses">
@@ -477,7 +478,7 @@
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
               </view>
-              <view class="td w-ops w-ops-4 ops">
+              <view class="td w-ops w-ops-4 ops" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
                 <text class="op op-col" :class="{ hide: o.status !== '待发货' }" @tap="openShip(o)">发货</text>
                 <text class="op op-col danger" :class="{ hide: o.status === '已退款' || o.status === '已完成' || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
@@ -658,7 +659,7 @@
               </view>
               <text class="td w-time">{{ a.created_at }}</text>
               <text class="td w-status" :class="a.status === '待处理' ? 'st-wait' : (a.status === '处理中' ? 'st-doing' : 'st-done')">{{ a.status }}</text>
-              <view class="td w-ops ops">
+              <view class="td w-ops ops" v-if="canWrite">
                 <text class="op" @tap="openAftersaleHandle(a)">处理</text>
                 <text class="op danger" @tap="deleteAftersale(a)">删除</text>
               </view>
@@ -703,7 +704,7 @@
               <text class="td w-time">注册时间</text>
               <text class="td w-time">最后在线</text>
               <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
-              <text class="td w-status" @tap="roleFilterMenu">{{ { admin: '超级管理员', staff: '员工', user: '用户', '全部': '角色' }[roleFilter] || '角色' }} ▾</text>
+              <text class="td w-status" @tap="roleFilterMenu">{{ ROLE_LABEL[roleFilter] || '角色' }} ▾</text>
               <text class="td w-ops">操作</text>
               <text class="td w-remark">备注</text>
             </view>
@@ -733,12 +734,12 @@
                 </view>
               </text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
-              <text class="td w-status">{{ { admin: '超级管理员', staff: '员工', manager: '管理员', user: '用户' }[u.role] || '用户' }}</text>
-              <view class="td w-ops ops" v-if="userRole === 'admin'">
+              <text class="td w-status">{{ ROLE_LABEL[u.role] || '用户' }}</text>
+              <view class="td w-ops ops" v-if="canManageUsers">
                 <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
                 <text class="op" @tap="openEditUser(u)">编辑</text>
               </view>
-              <text class="td w-remark ellipsis" @tap="openEditUser(u)">{{ u.remark || '—' }}</text>
+              <text class="td w-remark ellipsis" @tap="canManageUsers && openEditUser(u)">{{ u.remark || '—' }}</text>
             </view>
           </view>
         </view>
@@ -747,7 +748,7 @@
         <view v-else-if="activeModule === 'lives'" class="module">
           <view class="module-head">
             <text class="module-title">直播管理（{{ lives.length }}）</text>
-            <view class="btn-p sm" @click="openLiveForm()">＋ 新增直播</view>
+            <view class="btn-p sm" v-if="canWrite" @click="openLiveForm()">＋ 新增直播</view>
           </view>
           <view class="table">
             <view class="tr th">
@@ -764,7 +765,7 @@
               <text class="td w-name">{{ l.anchor }}</text>
               <text class="td w-time">{{ l.start_time || '-' }}</text>
               <text class="td w-status" :class="'ls-' + l.status">{{ { live: '直播中', upcoming: '未开始', ended: '已结束' }[l.status] || l.status }}</text>
-              <view class="td w-ops ops">
+              <view class="td w-ops ops" v-if="canWrite">
                 <text class="op" @tap="openLiveForm(l)">编辑</text>
               </view>
             </view>
@@ -780,7 +781,7 @@
           <view class="moment-cfg-row">
             <text class="moment-cfg-label">允许发布动态</text>
             <switch :checked="momentCfg.allow_publish_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="momentCfg.allow_publish_moment = $event.detail.value" />
-            <view class="btn-p sm moment-cfg-save" @click="saveMomentConfig">保存</view>
+            <view class="btn-p sm moment-cfg-save" v-if="canWrite" @click="saveMomentConfig">保存</view>
           </view>
           <text class="settings-tip" style="margin-bottom: 20rpx;">关闭后，普通用户和员工无法发布动态，仅超管/管理员可发布</text>
           <view class="table">
@@ -796,7 +797,7 @@
               <text class="td w-name ellipsis">{{ m.content }}</text>
               <text class="td w-time">{{ m.created_at || '-' }}</text>
               <text class="td w-status" :class="m.is_recommended ? 'on' : 'off'">{{ m.is_recommended ? '已精选' : '未精选' }}</text>
-              <view class="td w-ops ops">
+              <view class="td w-ops ops" v-if="canWrite">
                 <text class="op op-fixed" @tap="auditMoment(m)">{{ m.is_recommended ? '取消精选' : '精选' }}</text>
                 <text class="op danger" @tap="deleteMoment(m)">删除</text>
               </view>
@@ -808,7 +809,7 @@
         <view v-else-if="activeModule === 'coupons'" class="module">
           <view class="module-head">
             <text class="module-title">优惠券管理（{{ coupons.length }}）</text>
-            <view class="btn-p sm" @click="openCouponForm()">＋ 新增优惠券</view>
+            <view class="btn-p sm" v-if="canWrite" @click="openCouponForm()">＋ 新增优惠券</view>
           </view>
           <view class="table">
             <view class="tr th">
@@ -823,7 +824,7 @@
               <text class="td w-price" style="color:#8c5a2b; white-space:nowrap">{{ c.discount }}</text>
               <text class="td w-stock" style="white-space:nowrap">{{ c.expire_at }}</text>
               <text class="td w-status">{{ c.status === 'valid' ? '有效' : '失效' }}</text>
-              <view class="td w-ops ops">
+              <view class="td w-ops ops" v-if="canWrite">
                 <text class="op" @tap="openCouponForm(c)">编辑</text>
                 <text class="op danger" @tap="deleteCoupon(c)">删除</text>
               </view>
@@ -854,7 +855,7 @@
               </view>
               <text class="td w-time">{{ f.created_at }}</text>
               <text class="td w-status" :class="f.status === '待处理' ? 'st-wait' : 'st-done'">{{ f.status }}</text>
-              <view class="td w-ops ops">
+              <view class="td w-ops ops" v-if="canWrite">
                 <text class="op" @tap="openFeedbackReply(f)">回复</text>
                 <text class="op danger" @tap="deleteFeedback(f)">删除</text>
               </view>
@@ -909,7 +910,7 @@
 
             <view class="settings-actions">
               <text class="settings-tip">敏感字段保存后不显示明文，留空保存则保持原值</text>
-              <view class="btn-p sm" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存配置' }}</view>
+              <view class="btn-p sm" v-if="canManageSettings" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存配置' }}</view>
             </view>
           </view>
 
@@ -921,7 +922,7 @@
             </view>
             <view class="f-row">
               <text class="f-label">绑定小程序</text>
-              <view class="f-input-wrap"><view class="btn-p sm" @click="openWxmpBind"><text>＋ 绑定小程序</text></view></view>
+              <view class="f-input-wrap" v-if="canManageSettings"><view class="btn-p sm" @click="openWxmpBind"><text>＋ 绑定小程序</text></view></view>
             </view>
             <view class="table" v-if="wxmpList.length" style="margin-top: 16rpx">
               <view class="tr th">
@@ -936,7 +937,7 @@
                 <text class="td w-name ellipsis">{{ m.appid }}</text>
                 <text class="td w-time">{{ m.bound_at }}</text>
                 <text class="td w-status" :class="m.status === 'authorized' ? 'st-done' : 'st-wait'">{{ m.status === 'authorized' ? '已接管' : '已取消' }}</text>
-                <view class="td w-ops ops">
+                <view class="td w-ops ops" v-if="canManageSettings">
                   <text class="op" @tap="wxmpQr(m)">体验码</text>
                   <text class="op" @tap="wxmpUp(m)">上传开发版</text>
                   <text class="op" @tap="wxmpAudit(m)">提审</text>
@@ -1316,8 +1317,16 @@ const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'orderAnalys
 // 管理员(manager)权限: 概览/页面管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
 const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'orderAnalysis', 'aftersales', 'coupons', 'lives', 'moments', 'feedbacks']
 const userRole = computed(() => userStore.userInfo.role || 'user')
-/* 课程管理权限: 超管(admin)/管理员(manager)可管理, 员工(staff)只能查看 */
-const canManageCourses = computed(() => ['admin', 'manager'].includes(userRole.value))
+/* 角色中文名 */
+const ROLE_LABEL = { admin: '超级管理员', operator: '操作管理员', manager: '管理员', viewer: '普通管理员', staff: '内部员工', user: '普通用户' }
+/* 写操作权限: 超管(admin)/操作管理员(operator) 可写; 普通管理员(viewer) 全站只读 */
+const canWrite = computed(() => ['admin', 'operator'].includes(userRole.value))
+/* 课程管理权限: 超管(admin)/管理员(manager)/操作管理员(operator) 可管理, 员工(staff)/普通管理员(viewer) 只能查看 */
+const canManageCourses = computed(() => ['admin', 'manager', 'operator'].includes(userRole.value))
+/* 用户管理: 仅超管可写 (操作管理员/普通管理员 只读) */
+const canManageUsers = computed(() => userRole.value === 'admin')
+/* 系统设置: 仅超管可写 */
+const canManageSettings = computed(() => userRole.value === 'admin')
 const visibleModules = computed(() => {
   if (userRole.value === 'staff') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))
@@ -1325,6 +1334,7 @@ const visibleModules = computed(() => {
   if (userRole.value === 'manager') {
     return modules.filter((m) => MANAGER_MODULES.includes(m.key))
   }
+  // admin(超管)/operator(操作管理员)/viewer(普通管理员): 全部模块可见
   return modules
 })
 const activeModule = ref('overview')
@@ -1359,12 +1369,12 @@ const usersFiltered = computed(() => {
   })
 })
 
-/* 用户统计: 管理员(admin+manager) / 员工(staff) / 用户(user) / 当前在线(5分钟内心跳) */
+/* 用户统计: 管理员(admin+manager+operator+viewer) / 员工(staff) / 用户(user) / 当前在线(5分钟内心跳) */
 const userStats = computed(() => {
   let admin = 0, staff = 0, user = 0, online = 0
   users.value.forEach((u) => {
     const r = u.role || 'user'
-    if (r === 'admin' || r === 'manager') admin++
+    if (r === 'admin' || r === 'manager' || r === 'operator' || r === 'viewer') admin++
     else if (r === 'staff') staff++
     else user++
     if (u._online) online++
@@ -1382,9 +1392,9 @@ function vipFilterMenu() {
 }
 function roleFilterMenu() {
   uni.showActionSheet({
-    itemList: ['全部', '超级管理员', '管理员', '员工', '用户'],
+    itemList: ['全部', '超级管理员', '操作管理员', '管理员', '普通管理员', '员工', '用户'],
     success: (r) => {
-      roleFilter.value = ['全部', 'admin', 'manager', 'staff', 'user'][r.tapIndex]
+      roleFilter.value = ['全部', 'admin', 'operator', 'manager', 'viewer', 'staff', 'user'][r.tapIndex]
     },
   })
 }
@@ -1745,9 +1755,9 @@ const sortedOrders = computed(() => {
       va = Number(a.total_price) || 0
       vb = Number(b.total_price) || 0
     } else {
-      // created_at: "2026/8/19 11:12:46" → 时间戳
-      va = Date.parse(String(a.created_at || '').replace(/-/g, '/')) || 0
-      vb = Date.parse(String(b.created_at || '').replace(/-/g, '/')) || 0
+      // 优先用云函数附加的时间戳 _ts, 回退解析 created_at 字符串
+      va = a._ts || Date.parse(String(a.created_at || '').replace(/-/g, '/')) || 0
+      vb = b._ts || Date.parse(String(b.created_at || '').replace(/-/g, '/')) || 0
     }
     return (va - vb) * mul || String(a.order_no || '').localeCompare(String(b.order_no || '')) * mul
   })
@@ -2102,16 +2112,20 @@ const showAssignId = ref(false)
 const showCreateUser = ref(false)
 const createForm = ref({ phone: '', nickname: '', password: '123456', role: 'staff' })
 const assignForm = ref({ uid: null, dao_code: '', role: 'user', nickname: '' })
-/* 编辑弹窗角色: 超级管理员(仅超管可任命)/管理员/内部员工/普通用户(超管可降级) */
+/* 编辑弹窗角色: 超级管理员(仅超管可任命)/操作管理员/管理员/普通管理员/内部员工/普通用户(超管可降级) */
 const editRoleOptions = [
   { value: 'admin', label: '超级管理员' },
+  { value: 'operator', label: '操作管理员' },
   { value: 'manager', label: '管理员' },
+  { value: 'viewer', label: '普通管理员' },
   { value: 'staff', label: '内部员工' },
   { value: 'user', label: '普通用户' },
 ]
 /* 新建员工/管理员角色 */
 const createRoleOptions = [
   { value: 'staff', label: '内部员工' },
+  { value: 'viewer', label: '普通管理员' },
+  { value: 'operator', label: '操作管理员' },
   { value: 'manager', label: '管理员' },
   { value: 'admin', label: '超级管理员' },
 ]
@@ -2969,8 +2983,8 @@ function clearSettingsSecret(f) {
 }
 
 onMounted(async () => {
-  // 仅超级管理员(admin)/管理员(manager)可访问后台; 员工(staff)/普通用户(user)拒绝
-  if (!userStore.isLoggedIn || (userStore.userInfo.role !== 'admin' && userStore.userInfo.role !== 'manager')) {
+  // 仅 admin(超管)/manager(管理员)/operator(操作管理员)/viewer(普通管理员) 可访问后台; 员工(staff)/普通用户(user)拒绝
+  if (!userStore.isLoggedIn || !['admin', 'manager', 'operator', 'viewer'].includes(userStore.userInfo.role)) {
     uni.redirectTo({ url: '/pages-sub/admin/login' })
     return
   }
@@ -3289,6 +3303,14 @@ onMounted(async () => {
   text-align: center;
   font-size: 22rpx;
   color: #8c5a2b;
+}
+.rr-time {
+  width: 150rpx;
+  text-align: right;
+  font-size: 20rpx;
+  color: #b3a595;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .recent-empty {
   text-align: center;

@@ -653,7 +653,7 @@ async function publishMoment(data) {
   // 动态发布权限检查: 若后台关闭了 allow_publish_moment, 仅超管/管理员可发布 (以数据库角色为准)
   try {
     const userRole = await dbUserRole({ uid })
-    if (userRole !== 'admin' && userRole !== 'manager') {
+    if (!['admin', 'manager', 'operator', 'viewer'].includes(userRole)) {
       const mRes = await db.collection('settings').where({ group: 'moment' }).limit(1).get()
       const mDoc = mRes.data[0] || {}
       if (mDoc.allow_publish_moment !== '1' && mDoc.allow_publish_moment !== true) {
@@ -710,7 +710,7 @@ async function listCoupons() {
 /* 生成道号: ZHSM001 = 管理员(昊辰), 普通用户 ZHS00001 起 */
 async function nextDaoCode(role = 'user') {
   // 管理员/员工/受限管理员 → ZHSM 系列; 普通用户 → ZHS 系列
-  const prefix = ['admin', 'staff', 'manager'].includes(role) ? 'ZHSM' : 'ZHS'
+  const prefix = ['admin', 'staff', 'manager', 'operator', 'viewer'].includes(role) ? 'ZHSM' : 'ZHS'
   const pad = prefix === 'ZHSM' ? 3 : 5
   const res = await db.collection('users').orderBy('dao_code', 'desc').limit(200).get()
   let max = 0
@@ -2194,7 +2194,7 @@ async function reportShippingInfo(outTradeNo, transactionId, openid, opts = {}) 
       order_key: {
         order_number_type: 2,
         transaction_id: transactionId || '',
-        mchid: '1116271440',
+        mchid: (require('./config.local').WXPAY_MCHID) || '',
         out_trade_no: outTradeNo,
       },
       logistics_type: logisticsType, // 1实体物流 3虚拟商品
@@ -2235,10 +2235,10 @@ async function buyCourse(data) {
 async function myCourses(data) {
   const { uid } = data
   if (!uid) return ok([])
-  // 内部角色 (超管/管理员/员工) 免费看全部课程
+  // 内部角色 (超管/管理员/操作管理员/普通管理员/员工) 免费看全部课程
   const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
   const role = u && u.role
-  if (role === 'admin' || role === 'manager' || role === 'staff') {
+  if (role === 'admin' || role === 'manager' || role === 'operator' || role === 'viewer' || role === 'staff') {
     const all = await db.collection('courses').limit(200).get()
     return ok(all.data.map((c) => ({ ...c, progress: 100, _status: '学习中', _favorited: false, _owned: true })))
   }
@@ -2632,21 +2632,50 @@ async function dbUserRole(data) {
   }
 }
 
-/* 后台管理员校验: 仅 admin(超管) / manager(管理员) 可登录后台 (以数据库角色为准) */
+// 普通管理员(viewer)只读操作白名单: 仅查询/统计类接口, 任何写操作(增删改/发货/审核/保存等)一律拒绝
+const VIEWER_ROUTES = [
+  'admin.dashboard',
+  'admin.list',
+  'admin.recentOrders',
+  'admin.orderAnalysis',
+  'admin.settings.get',
+  'admin.categories.list',
+  'admin.logistics.list',
+  'admin.feedbacks.list',
+  'admin.aftersales.list',
+]
+
+// 操作管理员(operator)禁止的操作: 用户管理 + 系统设置 + 数据库运维 (其余全放行)
+const OPERATOR_BLOCKED = [
+  'admin.users.create',
+  'admin.users.update',
+  'admin.users.delete',
+  'admin.renumberUids',
+  'admin.assignDaoCodes',
+  'admin.recalcVip',
+  'admin.settings.save',
+  'admin.db.createCollection',
+]
+
+/* 后台管理员校验: admin(超管)/manager(管理员)/operator(操作管理员)/viewer(普通管理员) 可登录后台 (以数据库角色为准) */
 async function requireAdmin(data) {
   const r = await dbUserRole(data)
-  return r === 'admin' || r === 'manager'
+  return r === 'admin' || r === 'manager' || r === 'operator' || r === 'viewer'
 }
 
-/* 员工权限校验: 返回 true 表示放行 (以数据库角色为准) */
+/* 管理员权限细分校验: 返回 true 表示放行 (以数据库角色为准) */
 async function requireStaffAllowed(action, data) {
   const realRole = await dbUserRole(data)
   // 超管全部放行
   if (realRole === 'admin') return true
   // 员工(staff): 无后台访问权限 (需求: 仅超管/管理员可访问后台)
   if (realRole === 'staff') return false
+  // 普通管理员(viewer): 仅只读操作, 无任何修改权限
+  if (realRole === 'viewer') return VIEWER_ROUTES.includes(action)
+  // 操作管理员(operator): 除 用户管理/系统设置/运维 外的全部操作权限
+  if (realRole === 'operator') return !OPERATOR_BLOCKED.includes(action)
   if (realRole !== 'manager') return false
-  // 管理员(manager): 课程管理 + 首页管理/优惠券/动态/反馈
+  // 旧管理员(manager): 课程管理 + 首页管理/优惠券/动态/反馈 (向后兼容)
   if (MANAGER_ROUTES.includes(action)) return true
   // admin.list: 仅管理员允许指定集合
   if (action === 'admin.list' && data.collection && STAFF_COLLECTIONS.includes(data.collection)) return true
@@ -2655,26 +2684,46 @@ async function requireStaffAllowed(action, data) {
 
 async function adminDashboard() {
   const [orders, users, products, courses] = await Promise.all([
-    db.collection('orders').limit(500).get(),
-    db.collection('users').limit(500).get(),
-    db.collection('products').limit(500).get(),
-    db.collection('courses').limit(500).get(),
+    db.collection('orders').limit(1000).get(),
+    db.collection('users').limit(1000).get(),
+    db.collection('products').limit(1000).get(),
+    db.collection('courses').limit(1000).get(),
   ])
-  const today = new Date().toISOString().slice(0, 10)
-  const todayOrders = orders.data.filter((o) => o.created_at && o.created_at.includes('2026-08-04') || String(o.created_at).startsWith('2026/8/4'))
+  // 东八区今日 00:00 ~ 明日 00:00 对应的 UTC 时间戳 (服务器时区为 UTC, 需 +8h)
+  const cnToday = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+  const todayStartUtc = Date.parse(cnToday + 'T00:00:00Z') - 8 * 3600 * 1000
+  const tomorrowStartUtc = todayStartUtc + 86400000
+  let todayOrders = 0
+  let todaySales = 0
+  for (const o of orders.data) {
+    const t = Date.parse(String(o.created_at || '').replace(/-/g, '/'))
+    if (Number.isNaN(t)) continue
+    if (t >= todayStartUtc && t < tomorrowStartUtc) {
+      todayOrders++
+      if (o.status !== '待付款') todaySales += parseFloat(o.total_price || 0)
+    }
+  }
   const totalSales = orders.data
     .filter((o) => o.status !== '待付款')
     .reduce((s, o) => s + parseFloat(o.total_price || 0), 0)
   const courseSales = courses.data.reduce((s, c) => s + (c.students_count || 0), 0)
+  // 真实总数 (count API 全量精确, 不受 limit 影响)
+  let totalOrders = orders.data.length
+  let totalUsers = users.data.length
+  try {
+    const [co, cu] = await Promise.all([
+      db.collection('orders').count(),
+      db.collection('users').count(),
+    ])
+    totalOrders = co.total
+    totalUsers = cu.total
+  } catch (e) { /* count 失败回退 limit 数量 */ }
   return ok({
-    todayOrders: todayOrders.length,
-    todaySales: todayOrders
-      .filter((o) => o.status !== '待付款')
-      .reduce((s, o) => s + parseFloat(o.total_price || 0), 0)
-      .toFixed(2),
-    totalOrders: orders.data.length,
+    todayOrders,
+    todaySales: todaySales.toFixed(2),
+    totalOrders,
     totalSales: totalSales.toFixed(2),
-    totalUsers: users.data.length,
+    totalUsers,
     totalProducts: products.data.length,
     totalCourses: courses.data.length,
     courseSales,
@@ -2719,7 +2768,7 @@ async function adminList(data) {
   }
   // 用户列表: 管理员 > 受限管理员 > 员工 > 用户, 同级按 uid 升序
   if (collection === 'users') {
-    const rank = { admin: 0, manager: 1, staff: 2, user: 3 }
+    const rank = { admin: 0, operator: 1, manager: 1, viewer: 1, staff: 2, user: 3 }
     res.data.sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || (a.uid - b.uid))
     // 在线标记 (5 分钟内心跳过 = 在线) + 剥离敏感字段
     const nowMs = Date.now()
@@ -2749,7 +2798,7 @@ async function adminList(data) {
       )
     }
   }
-  // 订单列表: 关联用户昵称 (uid → nickname) + 下单时间转东八区
+  // 订单列表: 关联用户昵称 (uid → nickname) + 下单时间转东八区 + 时间戳字段
   if (collection === 'orders' && res.data.length) {
     const uids = [...new Set(res.data.map((o) => o.uid).filter(Boolean))]
     if (uids.length) {
@@ -2758,10 +2807,16 @@ async function adminList(data) {
       for (const u of usersRes.data) nameMap[String(u.uid)] = u.nickname || u.phone || ('UID ' + u.uid)
       for (const o of res.data) o.nickname = nameMap[String(o.uid)] || ('UID ' + o.uid)
     }
-    // created_at 为 UTC 字符串 → 东八区 (后台下单时间列展示)
     for (const o of res.data) {
-      if (o.created_at) o.created_at = utcStrToCn(o.created_at)
+      if (o.created_at) {
+        // 先解析时间戳 (UTC 字符串), 再转东八区展示; _ts 供前端排序
+        const t = Date.parse(String(o.created_at).replace(/-/g, '/'))
+        if (!Number.isNaN(t)) o._ts = t
+        o.created_at = utcStrToCn(o.created_at)
+      }
     }
+    // JS 按下单时间戳降序 (最新在上; 避免字符串字典序因无前导零小时错乱)
+    res.data.sort((a, b) => (b._ts || 0) - (a._ts || 0))
   }
   return ok(res.data)
 }
@@ -2907,8 +2962,8 @@ async function adminOrderDelete(data) {
 async function adminUserCreate(data) {
   // 仅超级管理员可调用 (requireStaffAllowed: 不在 STAFF_ROUTES, staff/manager 会被拒)
   const { phone, nickname, role } = data
-  // 支持创建: admin(超管, 仅超管)/manager(管理员)/staff(员工)
-  const targetRole = ['admin', 'manager', 'staff'].includes(role) ? role : 'staff'
+  // 支持创建: admin(超管, 仅超管)/manager(管理员)/operator(操作管理员)/viewer(普通管理员)/staff(员工)
+  const targetRole = ['admin', 'manager', 'operator', 'viewer', 'staff'].includes(role) ? role : 'staff'
   if (!phone || !/^1\d{10}$/.test(String(phone))) return fail('请输入正确的手机号')
   if (!nickname) return fail('请输入昵称')
   const exists = await db.collection('users').where({ phone: String(phone) }).limit(1).get()
@@ -3125,8 +3180,30 @@ async function adminCouponDelete(data) {
 }
 
 async function adminRecentOrders(data) {
-  const res = await db.collection('orders').orderBy('created_at', 'desc').limit(Number(data.limit) || 5).get()
-  return ok(res.data)
+  const limit = Number(data.limit) || 5
+  // 拉取最近一批订单后 JS 按时间戳降序 (created_at 为 UTC 字符串, 数据库 orderBy 是字典序,
+  // 无前导零的小时(0-9点)会排序错乱, 必须在 JS 中解析时间戳排序)
+  const res = await db.collection('orders').limit(200).get()
+  const list = res.data
+    .map((o) => {
+      const t = Date.parse(String(o.created_at || '').replace(/-/g, '/'))
+      return { ...o, _ts: Number.isNaN(t) ? 0 : t }
+    })
+    .sort((a, b) => b._ts - a._ts)
+    .slice(0, limit)
+  // 关联用户昵称
+  const uids = [...new Set(list.map((o) => o.uid).filter(Boolean))]
+  if (uids.length) {
+    const usersRes = await db.collection('users').where({ uid: _.in(uids) }).limit(200).get()
+    const nameMap = {}
+    for (const u of usersRes.data) nameMap[String(u.uid)] = u.nickname || u.phone || ('UID ' + u.uid)
+    for (const o of list) o.nickname = nameMap[String(o.uid)] || ('UID ' + o.uid)
+  }
+  // created_at 转东八区
+  for (const o of list) {
+    if (o.created_at) o.created_at = utcStrToCn(o.created_at)
+  }
+  return ok(list)
 }
 
 /* 订单分析: 按类型(商品/课程/AI解盘)统计成交额 + 用户消费排名 + 产品销售统计
