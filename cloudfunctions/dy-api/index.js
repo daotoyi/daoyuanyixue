@@ -1542,6 +1542,70 @@ async function bindWechatPhone(data) {
   return ok({ phone })
 }
 
+/* 手机号快捷登录 (小程序 getPhoneNumber → 微信实名手机号 → 登录/未注册自动注册) */
+async function phoneLogin(data) {
+  const { code } = data
+  if (!code) return fail('缺少授权码')
+  const at = await getWxAccessToken()
+  if (!at) return fail('获取凭证失败，请检查 AppSecret / IP 白名单')
+  const https = require('https')
+  const body = JSON.stringify({ code })
+  const phoneRes = await new Promise((resolve) => {
+    const req = https.request(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${at}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let d = ''
+      res.on('data', (c) => (d += c))
+      res.on('end', () => { try { resolve(JSON.parse(d)) } catch (e) { resolve({}) } })
+    })
+    req.on('error', () => resolve({}))
+    req.write(body)
+    req.end()
+  })
+  const phone = phoneRes && phoneRes.phone_info && phoneRes.phone_info.purePhoneNumber
+  if (!phone) return fail((phoneRes && phoneRes.errmsg) || '获取手机号失败')
+  const openid = getWxOpenId()
+  // 按手机号查账号 (微信实名手机号可信, 直接登录该账号)
+  let user = (await db.collection('users').where({ phone }).limit(1).get()).data[0]
+  if (!user) {
+    // 未注册 → 自动注册普通用户
+    const maxUid = await db.collection('users').orderBy('uid', 'desc').limit(1).get()
+    const uid = maxUid.data.length ? (maxUid.data[0].uid || 0) + 1 : 1
+    const daoCode = await nextDaoCode('user')
+    const nowIso = new Date().toISOString().slice(0, 10)
+    user = {
+      uid,
+      dao_code: daoCode,
+      nickname: `道友${phone.slice(-4)}`,
+      avatar: '',
+      phone,
+      email: '',
+      password: '',
+      vip_level: 0,
+      balance: '0.00',
+      role: 'user',
+      invite_code: daoCode,
+      inviter_uid: null,
+      created_at: nowIso,
+      last_login_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      last_active_at: Date.now(),
+    }
+    await db.collection('users').add(user)
+  }
+  // 绑定 openid + 刷新会话 (单点在线)
+  const token = genSessionToken()
+  const nowMs = Date.now()
+  const loginTime = new Date(nowMs).toLocaleString('zh-CN', { hour12: false })
+  const upd = { session_token: token, last_login_at: loginTime, last_active_at: nowMs }
+  if (openid) upd.openid = openid
+  await db.collection('users').where({ uid: user.uid }).update(upd).catch(() => {})
+  const { password: _pw, ...safe } = user
+  safe.session_token = token
+  safe.last_login_at = loginTime
+  return ok(safe)
+}
+
 async function updatePhone(data) {
   const { uid, phone, password } = data
   if (!uid) return fail('请先登录')
@@ -3349,6 +3413,7 @@ async function appPayConfig() {
       show_pandao: homeDoc.show_pandao !== '0', // 首页盘道tab, 默认显示
       show_live: homeDoc.show_live === '1' || homeDoc.show_live === true || false, // 首页直播入口, 默认隐藏
       show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
+      show_wechat_login: homeDoc.show_wechat_login === '1' || homeDoc.show_wechat_login === true || false, // 登录页显示微信一键登录, 默认隐藏
       pandao_fixed: Array.isArray(pandaoDoc.fixed) && pandaoDoc.fixed.length ? pandaoDoc.fixed : DEFAULT_PANDAO_FIXED, // 固定盘道活动(周几+老师)
       // 首页-推荐页展示模块 (直播默认隐藏, 其余默认显示)
       rec_show_live: recDoc.rec_show_live === '1' || recDoc.rec_show_live === true || false,
@@ -3362,7 +3427,7 @@ async function appPayConfig() {
       show_tools: mypageDoc.show_tools === '1' || mypageDoc.show_tools === true || false,
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: false })
   }
 }
 
@@ -3405,6 +3470,7 @@ const ROUTES = {
   'coupons.list': listCoupons,
   'user.login': login,
   'user.register': register,
+  'user.phoneLogin': phoneLogin,
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,
   'user.bindWechatPhone': bindWechatPhone,

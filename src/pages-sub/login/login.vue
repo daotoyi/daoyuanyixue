@@ -34,16 +34,46 @@
 
       <view class="btn-p" @click="submit">{{ mode === 'login' ? '登 录' : '注 册' }}</view>
 
-      <!-- 微信一键登录 -->
+      <!-- 其他登录方式 -->
       <view class="wx-divider">
         <view class="wx-line"></view>
         <text class="wx-text">其他登录方式</text>
         <view class="wx-line"></view>
       </view>
-      <view class="wx-login" @tap="wxLogin">
+      <!-- 手机号快捷登录: 小程序端微信 getPhoneNumber 授权, H5/APP 弹窗输入手机号+密码 -->
+      <!-- #ifdef MP-WEIXIN -->
+      <button class="wx-login wx-login-btn" open-type="getPhoneNumber" @getphonenumber="onPhoneQuickLogin">
+        <text class="wx-icon">📱</text>
+        <text class="wx-name">手机号快捷登录</text>
+      </button>
+      <!-- #endif -->
+      <!-- #ifndef MP-WEIXIN -->
+      <view class="wx-login" @tap="showPhoneQuick = true">
+        <text class="wx-icon">📱</text>
+        <text class="wx-name">手机号快捷登录</text>
+      </view>
+      <!-- #endif -->
+      <!-- 微信一键登录: 后台「页面管理-登录设置」开关打开时显示 (与手机号快捷登录上下排列) -->
+      <view class="wx-login" v-if="showWechatLogin" @tap="wxLogin">
         <text class="wx-icon">💬</text>
         <text class="wx-name">微信一键登录</text>
       </view>
+
+      <!-- 手机号快捷登录弹窗 (H5/APP): 手机号 + 密码 -->
+      <view class="pp-mask" v-if="showPhoneQuick" @tap="showPhoneQuick = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
+        <view class="sheet-title">手机号快捷登录</view>
+        <view class="wx-auth-row">
+          <input class="wx-nick-input" type="text" v-model="quickPhone" placeholder="请输入手机号" maxlength="11" />
+        </view>
+        <view class="wx-auth-row">
+          <input class="wx-nick-input" type="password" v-model="quickPwd" placeholder="请输入密码" />
+        </view>
+        <view class="wx-auth-actions">
+          <view class="btn-p plain wx-auth-btn" @click="showPhoneQuick = false">取消</view>
+          <view class="btn-p wx-auth-btn" @click="doPhoneQuickLogin">登录</view>
+        </view>
+      </view></view>
+
       <!-- 小程序: 微信授权面板 (chooseAvatar 微信头像 + nickname 微信昵称, 点登录后弹出) -->
       <!-- #ifdef MP-WEIXIN -->
       <view class="pp-mask" v-if="showWxAuth" @tap="showWxAuth = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
@@ -78,7 +108,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { login, register, wechatLogin, wechatCheck, bindWechatPhone } from '../../api/api'
+import { login, register, wechatLogin, wechatCheck, bindWechatPhone, phoneLogin, getPayConfig } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { useUserStore } from '../../store/index'
 
@@ -126,7 +156,53 @@ onLoad((options) => {
     inviteCode.value = String(options.invite)
     mode.value = 'register'
   }
+  // 后台「登录设置」开关: 控制微信一键登录是否显示 (默认隐藏)
+  getPayConfig().then((cfg) => {
+    if (cfg) showWechatLogin.value = !!cfg.show_wechat_login
+  }).catch(() => {})
 })
+
+/* 手机号快捷登录 (H5/APP 弹窗输入) */
+const showPhoneQuick = ref(false)
+const quickPhone = ref('')
+const quickPwd = ref('')
+const showWechatLogin = ref(false)
+async function doPhoneQuickLogin() {
+  if (!quickPhone.value || !quickPwd.value) {
+    uni.showToast({ title: '请输入手机号和密码', icon: 'none' })
+    return
+  }
+  loading.value = true
+  try {
+    const user = await login({ phone: quickPhone.value, password: quickPwd.value })
+    saveUser(user)
+    showPhoneQuick.value = false
+    uni.showToast({ title: '登录成功', icon: 'success' })
+    setTimeout(goAfterLogin, 500)
+  } catch (e) {
+    errorMsg.value = e.message || '登录失败'
+  } finally {
+    loading.value = false
+  }
+}
+/* 手机号快捷登录 (小程序 getPhoneNumber → 后端换取手机号 → 登录/自动注册) */
+async function onPhoneQuickLogin(e) {
+  if (!e || !e.detail || !e.detail.code) {
+    uni.showToast({ title: '未授权手机号', icon: 'none' })
+    return
+  }
+  loading.value = true
+  try {
+    const user = await phoneLogin({ code: e.detail.code })
+    saveUser(user)
+    uni.showToast({ title: '登录成功', icon: 'success' })
+    setTimeout(goAfterLogin, 500)
+  } catch (e2) {
+    errorMsg.value = e2.message || '登录失败'
+  } finally {
+    loading.value = false
+  }
+}
 
 
 /* 登录成功跳转: 有上一页则返回, 无(直接打开/刷新登录页)则回首页 */
@@ -523,6 +599,23 @@ async function submit() {
   border-radius: 999rpx;
   background: #f8f3ea;
   border: 1rpx solid #efe7d8;
+}
+/* 小程序 button 复用登录按钮样式: 重置 button 默认边框/背景/内边距 */
+.wx-login-btn {
+  width: 100%;
+  box-sizing: border-box;
+  line-height: normal;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+}
+.wx-login-btn::after {
+  border: none;
+}
+/* 两个登录按钮上下排列时保持间距 */
+.wx-login + .wx-login {
+  margin-top: 20rpx;
 }
 .wx-icon {
   font-size: 34rpx;

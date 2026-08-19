@@ -115,6 +115,12 @@
                 <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
             </view>
+            <view class="f-row">
+              <text class="f-label">登录设置</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_wechat_login" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_wechat_login = $event.detail.value" />
+              </view>
+            </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
               <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
@@ -1453,8 +1459,12 @@ async function loadProductCates() {
   productGrouped.value = g
 }
 
+/* 后台课程管理默认隐藏的分类 (预置空分类, 上线课程后再显示) */
+const HIDDEN_COURSE_CATES = ['八字命理', '奇门遁甲', '六爻预测', '风水堪舆']
 async function loadCourseCates() {
-  const cats = await adminCateList({ type: 'courses' })
+  let cats = await adminCateList({ type: 'courses' })
+  // 默认隐藏预置分类: 分类栏不显示, 避免空分类干扰
+  cats = cats.filter((c) => !HIDDEN_COURSE_CATES.includes(c.name))
   courseCates.value = cats
   if (cats.length && !courseCates.value.some((c) => c.id === courseActiveCate.value)) {
     courseActiveCate.value = cats[0].id
@@ -1505,7 +1515,7 @@ async function loadModule(key) {
 }
 
 /* ===== 页面管理 ===== */
-const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, show_tools: false })
+const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, show_tools: false })
 const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
@@ -1613,6 +1623,7 @@ async function loadHomeConfig() {
       show_pandao: cfg.show_pandao !== '0' && cfg.show_pandao !== false,
       show_live: cfg.show_live === '1' || cfg.show_live === true,
       show_follow: cfg.show_follow === '1' || cfg.show_follow === true,
+      show_wechat_login: cfg.show_wechat_login === '1' || cfg.show_wechat_login === true,
       rec_show_live: rc.rec_show_live !== '0' && rc.rec_show_live !== false,
       rec_show_pandao: rc.rec_show_pandao !== '0' && rc.rec_show_pandao !== false,
       rec_show_product: rc.rec_show_product !== '0' && rc.rec_show_product !== false,
@@ -1642,7 +1653,7 @@ async function loadPandaoConfig() {
 
 async function saveHomeConfig() {
   try {
-    await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0' } })
+    await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0', show_wechat_login: homeCfg.value.show_wechat_login ? '1' : '0' } })
     await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0' } })
     await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })

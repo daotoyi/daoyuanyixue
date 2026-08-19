@@ -2,8 +2,8 @@
  * 自动生成: 版本与 Git 保持一致 (构建前由 scripts/gen-version.js 更新)
  * 请勿手动修改
  */
-export const APP_VERSION = 'v1.11.173'
-export const APP_COMMIT = '7943dd1'
+export const APP_VERSION = 'v1.11.174'
+export const APP_COMMIT = 'bdb92b9'
 export const APP_BRANCH = 'main'
 export const APP_BUILD_DATE = '2026-08-19'
-export const APP_FULL_VERSION = 'v1.11.173 (7943dd1)'
+export const APP_FULL_VERSION = 'v1.11.174 (bdb92b9)'
