@@ -12,6 +12,27 @@
       </view>
     </view>
 
+    <!-- 元宝充值记录 -->
+    <view class="rc-records" v-if="type === 'balance'">
+      <view class="rr-head">
+        <text class="rr-title">充值记录</text>
+        <text class="rr-total" v-if="rechargeList.length">共 {{ rechargeList.length }} 笔</text>
+      </view>
+      <view class="rr-list" v-if="rechargeList.length">
+        <view class="rr-row" v-for="o in rechargeList" :key="o._id || o.order_no">
+          <view class="rr-left">
+            <text class="rr-no">订单号：{{ o.order_no }}</text>
+            <text class="rr-time">时间：{{ fmtUtcTime(o.created_at) }}</text>
+          </view>
+          <view class="rr-right">
+            <text class="rr-amt">+{{ (Number(o.total_price) || 0).toFixed(2) }} 元<text class="rr-points">（{{ (Number(o.total_price) || 0) * 10 }} 元宝）</text></text>
+            <text class="rr-status" :class="{ paid: o.status === '已支付' || o.status === '已完成' }">{{ o.status }}</text>
+          </view>
+        </view>
+      </view>
+      <view class="rr-empty" v-else>暂无充值记录</view>
+    </view>
+
     <!-- 优惠券 -->
     <view class="coupon-list" v-else-if="type === 'coupon'">
       <view class="coupon-card" v-for="c in list" :key="c.id">
@@ -83,20 +104,36 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { getMyCoupons, getMyFavorites, getMyFootprints, rechargeCreate } from '../../api/api'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { getMyCoupons, getMyFavorites, getMyFootprints, rechargeCreate, getOrders } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo)
 const type = ref('balance')
 const list = ref([])
+const rechargeList = ref([]) // 元宝充值记录
+
+/* UTC 字符串 → 东八区显示 (服务器生成时间为 UTC, Date.UTC 构造避免浏览器本地时区干扰) */
+function fmtUtcTime(s) {
+  if (!s) return '-'
+  const m = String(s).match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(?::(\d+))?/)
+  if (!m) return s
+  const [, y, mo, d, h, mi, se] = m
+  const t = Date.UTC(+y, +mo - 1, +d, +h, +mi, +(se || 0)) + 8 * 3600 * 1000
+  const dt = new Date(t)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${dt.getUTCFullYear()}/${dt.getUTCMonth() + 1}/${dt.getUTCDate()} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`
+}
 
 onLoad((options) => {
   type.value = options.type || 'balance'
   uni.setNavigationBarTitle({
     title: { balance: '我的元宝', coupon: '我的优惠券', favorite: '我的收藏', footprint: '我的足迹' }[type.value] || '我的',
   })
+})
+// 充值/支付后返回自动刷新记录
+onShow(() => {
   load()
 })
 
@@ -104,7 +141,11 @@ async function load() {
   const uid = userInfo.value.uid
   if (!uid) return
   try {
-    if (type.value === 'coupon') list.value = await getMyCoupons({ uid })
+    if (type.value === 'balance') {
+      // 充值记录: 充值订单 (order_type=recharge 或订单号 RC 前缀)
+      const orders = await getOrders({ uid })
+      rechargeList.value = (orders || []).filter((o) => o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || '')))
+    } else if (type.value === 'coupon') list.value = await getMyCoupons({ uid })
     else if (type.value === 'favorite') list.value = await getMyFavorites({ uid })
     else if (type.value === 'footprint') list.value = await getMyFootprints({ uid })
   } catch (e) {
@@ -209,6 +250,82 @@ async function confirmRecharge() {
   font-size: 22rpx;
   color: rgba(254, 251, 246, 0.6);
   margin-bottom: 30rpx;
+}
+
+/* 充值记录 */
+.rc-records {
+  margin-top: 24rpx;
+  background: #fefbf6;
+  border-radius: 16rpx;
+  border: 1rpx solid #efe7d8;
+  padding: 24rpx;
+}
+.rr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.rr-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #42372c;
+}
+.rr-total {
+  font-size: 22rpx;
+  color: #b3a595;
+}
+.rr-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-top: 1rpx solid #f0e8da;
+}
+.rr-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
+}
+.rr-no {
+  font-size: 24rpx;
+  color: #42372c;
+}
+.rr-time {
+  font-size: 20rpx;
+  color: #b3a595;
+}
+.rr-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
+}
+.rr-amt {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #8c5a2b;
+}
+.rr-points {
+  font-size: 20rpx;
+  color: #b3a595;
+  font-weight: 400;
+}
+.rr-status {
+  font-size: 20rpx;
+  color: #b04a45;
+}
+.rr-status.paid {
+  color: #6e7f5a;
+}
+.rr-empty {
+  padding: 50rpx 0;
+  text-align: center;
+  font-size: 24rpx;
+  color: #b3a595;
 }
 
 /* 优惠券 */
