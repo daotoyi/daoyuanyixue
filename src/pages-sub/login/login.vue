@@ -17,7 +17,7 @@
 
       <view class="field">
         <text class="field-label">手机号 / 邮箱</text>
-        <input class="field-input" v-model="phone" type="number" maxlength="11" placeholder="手机号或邮箱" />
+        <input class="field-input" v-model="phone" type="text" maxlength="50" placeholder="手机号或邮箱" />
       </view>
 
       <view class="field">

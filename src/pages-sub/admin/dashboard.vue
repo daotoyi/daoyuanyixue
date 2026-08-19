@@ -432,6 +432,13 @@
               >{{ s }}</text>
             </view>
           </view>
+          <!-- 预约订单统计 -->
+          <view class="order-appt-stats">
+            <text class="oas-label">预约订单</text>
+            <text class="oas-item">单数 <text class="oas-num">{{ orderApptStats.count }}</text> 单</text>
+            <view class="oas-div"></view>
+            <text class="oas-item">金额 <text class="oas-num price">¥{{ orderApptStats.amount.toFixed(2) }}</text></text>
+          </view>
           <view class="table">
             <view class="tr th">
               <text class="td w-no">订单号</text>
@@ -1683,6 +1690,14 @@ async function deletePandaoSession(pd) {
 async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
 }
+
+/* 预约订单统计: 从当前已加载订单中聚合 (order_type === 'appointment') */
+const orderApptStats = computed(() => {
+  const appt = orders.value.filter((o) => o.order_type === 'appointment')
+  const count = appt.length
+  const amount = appt.reduce((s, o) => s + Number(o.total_price || 0), 0)
+  return { count, amount }
+})
 
 /* ===== 订单分析 ===== */
 const analysisPie = ref([])
@@ -3411,9 +3426,12 @@ onMounted(async () => {
   width: 150rpx;
   text-align: center;
 }
-/* 订单操作: 固定 4 列, 未显示的操作用 visibility 占位, 同一操作各行动画对齐 */
+/* 订单操作: 固定 4 列, 未显示的操作用 visibility 占位, 同一操作各行动画对齐
+   overflow: visible 防止"删除"按钮被裁切; 表格 .table 已有 overflow-x:auto 可横向滑动 */
 .w-ops-4 {
   width: 470rpx;
+  overflow: visible;
+  padding-right: 12rpx;
 }
 .op-col {
   width: 108rpx;
@@ -3423,6 +3441,27 @@ onMounted(async () => {
   visibility: hidden;
   pointer-events: none;
 }
+/* 预约订单统计条 */
+.order-appt-stats {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: #f6efe3;
+  border: 1rpx solid #e8dcc4;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  margin: 0 0 20rpx;
+  flex-wrap: wrap;
+}
+.order-appt-stats .oas-label {
+  font-size: 24rpx;
+  color: #8c5a2b;
+  font-weight: 600;
+}
+.order-appt-stats .oas-item { font-size: 24rpx; color: #6b5a45; }
+.order-appt-stats .oas-num { font-size: 30rpx; font-weight: 700; color: #42372c; }
+.order-appt-stats .oas-num.price { color: #c4753a; }
+.order-appt-stats .oas-div { width: 1rpx; height: 28rpx; background: #e0d4bc; }
 .op.danger {
   color: #b04a45;
 }
@@ -4255,6 +4294,13 @@ onMounted(async () => {
   /* 售后搜索框宽屏适配 */
   .as-search-input { height: 36px; font-size: 14px; padding: 0 40px 0 14px; }
   .as-search-clear { width: 22px; height: 22px; line-height: 22px; right: 12px; font-size: 12px; }
+  /* 预约订单统计条宽屏适配 */
+  .order-appt-stats .oas-label { font-size: 13px; }
+  .order-appt-stats .oas-item { font-size: 13px; }
+  .order-appt-stats .oas-num { font-size: 16px; }
+  /* 订单操作区宽屏: 按钮不裁切, 留右间距 */
+  .w-ops-4 { padding-right: 8px; }
+  .op-col { width: 60px; }
 }
 /* 后台: 保持 1400px 宽 (原有设计), 收拢居中 */
 @media screen and (min-width: 1025px) {
