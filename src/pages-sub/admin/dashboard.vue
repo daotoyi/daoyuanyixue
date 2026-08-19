@@ -691,44 +691,44 @@
           </view>
           <view class="table">
             <view class="tr th users-row">
-              <text class="td w-avatar-cell">头像</text>
-              <text class="td w-name users-nick">昵称</text>
-              <text class="td w-no">登录凭证</text>
-              <text class="td w-price">道号</text>
-              <text class="td w-time">注册时间</text>
-              <text class="td w-time">最后在线</text>
-              <text class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</text>
-              <text class="td w-status" @tap="roleFilterMenu">{{ ROLE_LABEL[roleFilter] || '角色' }} ▾</text>
-              <text class="td w-ops">操作</text>
-              <text class="td w-remark">备注</text>
+              <view class="td w-avatar-cell">头像</view>
+              <view class="td w-name users-nick">昵称</view>
+              <view class="td w-no">登录凭证</view>
+              <view class="td w-price">道号</view>
+              <view class="td w-time">注册时间</view>
+              <view class="td w-time">最后在线</view>
+              <view class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</view>
+              <view class="td w-status" @tap="roleFilterMenu">{{ ROLE_LABEL[roleFilter] || '角色' }} ▾</view>
+              <view class="td w-ops">操作</view>
+              <view class="td w-remark">备注</view>
             </view>
             <view class="tr users-row" v-for="u in usersFiltered" :key="u._id || u.uid">
-              <text class="td w-avatar-cell">
+              <view class="td w-avatar-cell">
                 <image v-if="u.avatar" class="user-td-avatar" :src="u.avatar" mode="aspectFill"></image>
                 <view v-else class="user-td-avatar user-td-avatar-fallback"><text>{{ u.nickname ? u.nickname[0] : '?' }}</text></view>
-              </text>
-              <text class="td w-name users-nick">
+              </view>
+              <view class="td w-name users-nick">
                 <view class="nick-line">
                   <view v-if="u._online" class="online-dot"></view>
                   <text class="ellipsis">{{ u.nickname }}</text>
                 </view>
-              </text>
-              <text class="td w-no">
+              </view>
+              <view class="td w-no">
                 <view v-if="u.openid" class="cred-tag cred-wx">微信一键登录</view>
                 <view v-else-if="u.email" class="cred-tag cred-mail">{{ u.email }}</view>
                 <view v-else-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
                 <view v-else class="cred-tag cred-none">无凭证</view>
-              </text>
-              <text class="td w-price">{{ u.dao_code || '-' }}</text>
-              <text class="td w-time">{{ u.created_at || '—' }}</text>
-              <text class="td w-time">{{ u.last_active_at || u.last_login_at || '—' }}</text>
-              <text class="td w-price">VIP{{ u.vip_level }}</text>
-              <text class="td w-status">{{ ROLE_LABEL[u.role] || '用户' }}</text>
+              </view>
+              <view class="td w-price">{{ u.dao_code || '-' }}</view>
+              <view class="td w-time">{{ u.created_at || '—' }}</view>
+              <view class="td w-time">{{ u.last_active_at || u.last_login_at || '—' }}</view>
+              <view class="td w-price">VIP{{ u.vip_level }}</view>
+              <view class="td w-status">{{ ROLE_LABEL[u.role] || '用户' }}</view>
               <view class="td w-ops ops" v-if="canManageUsers">
                 <!-- 所有用户行: 编辑 (弹窗内含 删除用户 / 修改道号) -->
                 <text class="op" @tap="openEditUser(u)">编辑</text>
               </view>
-              <text class="td w-remark ellipsis" @tap="canManageUsers && openEditUser(u)">{{ u.remark || '—' }}</text>
+              <view class="td w-remark ellipsis" @tap="canManageUsers && openEditUser(u)">{{ u.remark || '—' }}</view>
             </view>
           </view>
         </view>
@@ -1345,12 +1345,27 @@ const orders = ref([])
 const users = ref([])
 const vipFilter = ref('全部')
 const roleFilter = ref('全部')
+/* 角色排序优先级: 超级管理员 > 操作管理员 > 管理员 > 员工 > 用户 */
+const ROLE_ORDER = { admin: 0, operator: 1, manager: 2, staff: 3, user: 4 }
 const usersFiltered = computed(() => {
-  return users.value.filter((u) => {
-    if (vipFilter.value !== '全部' && String(u.vip_level) !== vipFilter.value) return false
-    if (roleFilter.value !== '全部' && (u.role || 'user') !== roleFilter.value) return false
-    return true
-  })
+  return users.value
+    .filter((u) => {
+      if (vipFilter.value !== '全部' && String(u.vip_level) !== vipFilter.value) return false
+      if (roleFilter.value !== '全部' && (u.role || 'user') !== roleFilter.value) return false
+      return true
+    })
+    .sort((a, b) => {
+      const ra = ROLE_ORDER[a.role] ?? ROLE_ORDER.user
+      const rb = ROLE_ORDER[b.role] ?? ROLE_ORDER.user
+      if (ra !== rb) return ra - rb
+      // 同角色内按道号排列 (数字部分优先, 保证 ZHS1 < ZHS10)
+      const da = String(a.dao_code || '').replace(/\D/g, '')
+      const db = String(b.dao_code || '').replace(/\D/g, '')
+      const na = da ? Number(da) : 0
+      const nb = db ? Number(db) : 0
+      if (na !== nb) return na - nb
+      return String(a.dao_code || '').localeCompare(String(b.dao_code || ''))
+    })
 })
 
 /* 用户统计: 管理员(admin+manager+operator) / 员工(staff) / 用户(user) / 当前在线(5分钟内心跳) */
@@ -3341,6 +3356,8 @@ onMounted(async () => {
 }
 .tr.th {
   background: #faf3e9;
+  width: max-content;
+  min-width: 100%;
 }
 .th .td {
   font-weight: 500;
