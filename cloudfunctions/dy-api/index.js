@@ -1422,6 +1422,7 @@ async function wechatCheck(data) {
   return ok({
     registered: true,
     hasProfile: !!(user.avatar && user.nickname),
+    needPhone: !user.phone, // 老微信用户未绑定手机号 → 重新登录必须绑定
     uid: user.uid,
     nickname: user.nickname || '',
     avatar: user.avatar || '',
@@ -1494,6 +1495,10 @@ async function wechatLogin(data) {
     if (phone) upd.phone = String(phone)
     await db.collection('users').where({ openid }).update(upd)
     user = { ...user, ...upd }
+  }
+  // 老用户重新登录: 未绑定手机号必须绑定后才能登录 (防止无手机号账号长期游离)
+  if (!user.phone && !phone) {
+    return fail('请先绑定手机号后登录')
   }
   // 单点在线: 微信登录同样刷新会话令牌 (踢掉旧设备)
   const wxToken = genSessionToken()
