@@ -727,12 +727,7 @@
               </text>
               <text class="td w-price">{{ u.dao_code || '-' }}</text>
               <text class="td w-time">{{ u.created_at || '—' }}</text>
-              <text class="td w-time">
-                <view class="nick-line">
-                  <view v-if="u._online" class="online-dot"></view>
-                  <text>{{ u.last_active_at || u.last_login_at || '—' }}</text>
-                </view>
-              </text>
+              <text class="td w-time">{{ u.last_active_at || u.last_login_at || '—' }}</text>
               <text class="td w-price">VIP{{ u.vip_level }}</text>
               <text class="td w-status">{{ ROLE_LABEL[u.role] || '用户' }}</text>
               <view class="td w-ops ops" v-if="canManageUsers">
@@ -1737,11 +1732,11 @@ function classifyOrder(o) {
   return t
 }
 
-/* 下单时间: 显示 "M/D HH:mm" (云函数已转东八区, 格式 "2026/8/19 11:12:46") */
+/* 下单时间: 显示完整 "2026/8/19 12:30" (云函数已转东八区, 格式 "2026/8/19 11:12:46") */
 function fmtOrderTime(s) {
   if (!s) return '-'
   const m = String(s).match(/(\d+)\/(\d+)\/(\d+) (\d+:\d+)/)
-  return m ? `${m[2]}/${m[3]} ${m[4]}` : String(s).slice(5, 16)
+  return m ? `${m[1]}/${m[2]}/${m[3]} ${m[4]}` : String(s)
 }
 
 /* 订单排序: 默认按下单时间倒序 (最新在上); 金额/下单时间 表头可切换升降序 */
@@ -3478,7 +3473,9 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 .nick-line { display: flex; align-items: center; gap: 8rpx; }
-.users-row { min-width: 2160rpx; }
+.users-row { min-width: 2320rpx; }
+/* 用户表时间列: 加宽保证 "2026/8/19 11:12:46" 完整一行显示 */
+.users-row .w-time { width: 300rpx; flex: none; white-space: nowrap; }
 .w-remark { flex: 1.2; min-width: 240rpx; padding: 0 10rpx; font-size: 22rpx; color: #6b5a45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cred-tag {
   display: inline-block;
@@ -3573,7 +3570,7 @@ onMounted(async () => {
 .orders-table .w-user { width: 120rpx; }
 .orders-table .w-name { flex: 1 1 180rpx; min-width: 160rpx; max-width: 320rpx; }
 .orders-table .w-price { width: 120rpx; }
-.orders-table .w-time { width: 220rpx; }
+.orders-table .w-time { width: 280rpx; }
 .orders-table .w-status { width: 130rpx; }
 .orders-table .w-ops-4 { width: 460rpx; }
 /* 可排序表头 */
@@ -4423,7 +4420,7 @@ onMounted(async () => {
   .orders-table .w-user { width: 80px; }
   .orders-table .w-name { flex: 1 1 100px; min-width: 100px; max-width: 200px; }
   .orders-table .w-price { width: 70px; }
-  .orders-table .w-time { width: 130px; }
+  .orders-table .w-time { width: 160px; }
   .orders-table .w-status { width: 80px; }
   .orders-table .w-ops-4 { width: 280px; }
 }
