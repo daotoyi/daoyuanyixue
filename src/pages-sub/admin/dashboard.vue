@@ -475,6 +475,8 @@
             </view>
           </view>
 
+          <!-- 成交分布: 单数 + 金额 (PC左右并列, 移动端上下排列) -->
+          <view class="analysis-pies">
           <!-- 环形图: 按类型·单数分布 -->
           <view class="analysis-section">
             <text class="analysis-sub-title">成交分布（按类型·单数）</text>
@@ -527,6 +529,7 @@
                 </view>
               </view>
             </view>
+          </view>
           </view>
 
           <!-- 成交分布汇总 -->
@@ -592,6 +595,10 @@
                 @tap="aftersaleFilter = s; loadAftersales()"
               >{{ s }}</text>
             </view>
+          </view>
+          <view class="as-search-bar">
+            <input class="as-search-input" type="text" placeholder="搜索用户名 / 订单号" v-model="aftersaleKeyword" confirm-type="search" />
+            <text v-if="aftersaleKeyword" class="as-search-clear" @tap="aftersaleKeyword = ''">✕</text>
           </view>
           <view class="table">
             <view class="tr th">
@@ -1807,14 +1814,23 @@ function deleteFeedback(f) {
 /* ===== 售后管理 ===== */
 const aftersales = ref([])
 const aftersaleFilter = ref('全部')
+const aftersaleKeyword = ref('')
 const aftersaleStatusOptions = ['全部', '待处理', '处理中', '已处理']
 const showAftersaleHandle = ref(false)
 const asHandleForm = ref({ rec: null, status: '已处理', reply: '' })
 /* 同一订单的多条售后反馈分组: 最早一条为主条目, 后续为子条目 (↳ 后续反馈 #N)
  * 组间按组内最新反馈时间倒序 (最新订单在前) */
 const aftersaleRows = computed(() => {
+  const kw = (aftersaleKeyword.value || '').trim().toLowerCase()
+  const list = kw
+    ? aftersales.value.filter((a) => {
+        const nick = (a.nickname || '').toLowerCase()
+        const ord = String(a.order_no || '').toLowerCase()
+        return nick.includes(kw) || ord.includes(kw)
+      })
+    : aftersales.value
   const groups = new Map() // order_no → rows
-  for (const a of aftersales.value) {
+  for (const a of list) {
     const key = String(a.order_no || ('uid_' + a.uid + '_' + a.id))
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key).push(a)
@@ -1822,11 +1838,11 @@ const aftersaleRows = computed(() => {
   const rows = []
   // 组间: 按组内最大 id (最新反馈) 降序
   const ordered = [...groups.entries()].sort((x, y) => Math.max(...y[1].map(r => Number(r.id) || 0)) - Math.max(...x[1].map(r => Number(r.id) || 0)))
-  for (const [, list] of ordered) {
+  for (const [, glist] of ordered) {
     // 组内: 按 id 升序, 最早一条为主条目
-    list.sort((x, y) => (Number(x.id) || 0) - (Number(y.id) || 0))
-    list.forEach((a, i) => {
-      rows.push({ ...a, _isSub: i > 0, _subIdx: i, _groupCount: list.length })
+    glist.sort((x, y) => (Number(x.id) || 0) - (Number(y.id) || 0))
+    glist.forEach((a, i) => {
+      rows.push({ ...a, _isSub: i > 0, _subIdx: i, _groupCount: glist.length })
     })
   }
   return rows
@@ -3238,6 +3254,12 @@ onMounted(async () => {
   padding-left: 16rpx;
   border-left: 6rpx solid #c4753a;
 }
+/* 成交分布: 单数+金额 双饼图容器 (移动端纵向, PC横向) */
+.analysis-pies {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 /* 成交分布汇总条 */
 .analysis-summary {
   display: flex;
@@ -3857,6 +3879,39 @@ onMounted(async () => {
   color: #b3a595;
   margin-top: 4rpx;
 }
+/* 售后管理: 搜索框 */
+.as-search-bar {
+  position: relative;
+  margin: 0 0 20rpx;
+  display: flex;
+  align-items: center;
+}
+.as-search-input {
+  flex: 1;
+  height: 64rpx;
+  padding: 0 60rpx 0 20rpx;
+  font-size: 26rpx;
+  color: #42372c;
+  background: #fdf6ea;
+  border: 1rpx solid #e8dcc4;
+  border-radius: 32rpx;
+  outline: none;
+}
+.as-search-input::placeholder { color: #b3a48c; }
+.as-search-clear {
+  position: absolute;
+  right: 20rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 40rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #9e8f78;
+  background: #efe7d8;
+  border-radius: 50%;
+}
 /* 售后管理: 单元格内次要信息行 / 弹窗只读文本 / 回复回显 */
 .td-sub {
   display: block;
@@ -4191,6 +4246,15 @@ onMounted(async () => {
   .cate-op { font-size: 12px; }
   /* 表头字号 */
   .th { font-size: 13px; padding: 10px 10px; }
+  /* 成交分布双饼图: PC/横屏左右并列 */
+  .analysis-pies {
+    flex-direction: row;
+    gap: 16px;
+  }
+  .analysis-pies .analysis-section { flex: 1; min-width: 0; }
+  /* 售后搜索框宽屏适配 */
+  .as-search-input { height: 36px; font-size: 14px; padding: 0 40px 0 14px; }
+  .as-search-clear { width: 22px; height: 22px; line-height: 22px; right: 12px; font-size: 12px; }
 }
 /* 后台: 保持 1400px 宽 (原有设计), 收拢居中 */
 @media screen and (min-width: 1025px) {
