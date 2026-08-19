@@ -2657,7 +2657,7 @@ const OPERATOR_BLOCKED = [
   'admin.db.createCollection',
 ]
 
-/* 后台管理员校验: admin(超管)/manager(管理员)/operator(操作管理员)/viewer(普通管理员) 可登录后台 (以数据库角色为准) */
+/* 后台管理员校验: admin(超管)/manager(管理员)/operator(操作管理员)/viewer(历史兼容) 可登录后台 (以数据库角色为准) */
 async function requireAdmin(data) {
   const r = await dbUserRole(data)
   return r === 'admin' || r === 'manager' || r === 'operator' || r === 'viewer'
@@ -2670,16 +2670,13 @@ async function requireStaffAllowed(action, data) {
   if (realRole === 'admin') return true
   // 员工(staff): 无后台访问权限 (需求: 仅超管/管理员可访问后台)
   if (realRole === 'staff') return false
-  // 普通管理员(viewer): 仅只读操作, 无任何修改权限
+  // 普通管理员(viewer, 历史角色兼容): 仅只读操作, 无任何修改权限
   if (realRole === 'viewer') return VIEWER_ROUTES.includes(action)
   // 操作管理员(operator): 除 用户管理/系统设置/运维 外的全部操作权限
   if (realRole === 'operator') return !OPERATOR_BLOCKED.includes(action)
   if (realRole !== 'manager') return false
-  // 旧管理员(manager): 课程管理 + 首页管理/优惠券/动态/反馈 (向后兼容)
-  if (MANAGER_ROUTES.includes(action)) return true
-  // admin.list: 仅管理员允许指定集合
-  if (action === 'admin.list' && data.collection && STAFF_COLLECTIONS.includes(data.collection)) return true
-  return false
+  // 管理员(manager): 仅查看后台数据, 任何修改/写操作一律拒绝 (只读)
+  return VIEWER_ROUTES.includes(action)
 }
 
 async function adminDashboard() {
@@ -2962,8 +2959,8 @@ async function adminOrderDelete(data) {
 async function adminUserCreate(data) {
   // 仅超级管理员可调用 (requireStaffAllowed: 不在 STAFF_ROUTES, staff/manager 会被拒)
   const { phone, nickname, role } = data
-  // 支持创建: admin(超管, 仅超管)/manager(管理员)/operator(操作管理员)/viewer(普通管理员)/staff(员工)
-  const targetRole = ['admin', 'manager', 'operator', 'viewer', 'staff'].includes(role) ? role : 'staff'
+  // 支持创建: admin(超管, 仅超管)/manager(管理员, 只读)/operator(操作管理员)/staff(员工)
+  const targetRole = ['admin', 'manager', 'operator', 'staff'].includes(role) ? role : 'staff'
   if (!phone || !/^1\d{10}$/.test(String(phone))) return fail('请输入正确的手机号')
   if (!nickname) return fail('请输入昵称')
   const exists = await db.collection('users').where({ phone: String(phone) }).limit(1).get()

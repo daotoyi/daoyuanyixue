@@ -1037,6 +1037,16 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
+  /* 弹窗: 与页面屏对齐居中, 不铺满整个显示器 */
+  .popup-sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 520px;
+    border-radius: 24rpx;
+    margin-bottom: 30rpx;
+  }
 }
 @media screen and (min-width: 1440px) {
   .user-page {

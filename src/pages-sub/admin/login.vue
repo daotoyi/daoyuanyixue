@@ -49,7 +49,7 @@ async function doLogin() {
   loading.value = true
   try {
     const user = await login({ phone: phone.value, password: password.value })
-    if (!['admin', 'manager', 'operator', 'viewer'].includes(user.role)) {
+    if (!['admin', 'manager', 'operator'].includes(user.role)) {
       errMsg.value = user.role === 'staff' ? '员工账号无后台登录权限' : '该账号不是管理员'
       return
     }

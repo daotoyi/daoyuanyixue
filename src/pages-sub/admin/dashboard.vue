@@ -510,15 +510,12 @@
             <text class="analysis-sub-title">订单分布（按类型·单数）</text>
             <view class="pie-wrap">
               <view class="pie-svg-box">
-                <svg v-if="analysisPie.length" class="pie-svg" viewBox="0 0 100 100">
-                  <circle v-for="(s, i) in pieSegments.count" :key="'c'+i"
-                    cx="50" cy="50" r="40" fill="none"
-                    :stroke="s.color" stroke-width="14"
-                    :stroke-dasharray="s.dash" :stroke-dashoffset="s.offset"
-                    transform="rotate(-90 50 50)" />
-                  <text x="50" y="47" text-anchor="middle" class="pie-svg-num">{{ analysisTotalCount }}</text>
-                  <text x="50" y="60" text-anchor="middle" class="pie-svg-label">总订单</text>
-                </svg>
+                <view v-if="analysisPie.length" class="pie-ring" :style="ringStyle('count')">
+                  <view class="pie-ring-hole">
+                    <text class="pie-svg-num">{{ analysisTotalCount }}</text>
+                    <text class="pie-svg-label">总订单</text>
+                  </view>
+                </view>
                 <view v-else class="pie-empty"><text>暂无数据</text></view>
               </view>
               <view class="pie-legend">
@@ -537,15 +534,12 @@
             <text class="analysis-sub-title">订单分布（按类型·金额）</text>
             <view class="pie-wrap">
               <view class="pie-svg-box">
-                <svg v-if="analysisPie.length" class="pie-svg" viewBox="0 0 100 100">
-                  <circle v-for="(s, i) in pieSegments.amount" :key="'a'+i"
-                    cx="50" cy="50" r="40" fill="none"
-                    :stroke="s.color" stroke-width="14"
-                    :stroke-dasharray="s.dash" :stroke-dashoffset="s.offset"
-                    transform="rotate(-90 50 50)" />
-                  <text x="50" y="47" text-anchor="middle" class="pie-svg-num">{{ analysisTotalAmount.toFixed(0) }}</text>
-                  <text x="50" y="60" text-anchor="middle" class="pie-svg-label">总金额</text>
-                </svg>
+                <view v-if="analysisPie.length" class="pie-ring" :style="ringStyle('amount')">
+                  <view class="pie-ring-hole">
+                    <text class="pie-svg-num">{{ analysisTotalAmount.toFixed(0) }}</text>
+                    <text class="pie-svg-label">总金额</text>
+                  </view>
+                </view>
                 <view v-else class="pie-empty"><text>暂无数据</text></view>
               </view>
               <view class="pie-legend">
@@ -1309,16 +1303,14 @@ const modules = [
 ]
 // 员工权限: 仅概览/商品/课程/订单/直播 (注意: 员工不能登录后台, 此配置保留以防历史会话)
 const STAFF_MODULES = ['overview', 'products', 'courses', 'orders', 'orderAnalysis', 'lives']
-// 管理员(manager)权限: 概览/页面管理/商品/课程/订单/优惠券/直播/动态/反馈 (用户管理/系统设置仅超管)
-const MANAGER_MODULES = ['overview', 'home', 'products', 'courses', 'orders', 'orderAnalysis', 'aftersales', 'coupons', 'lives', 'moments', 'feedbacks']
 const userRole = computed(() => userStore.userInfo.role || 'user')
 /* 角色中文名 */
-const ROLE_LABEL = { admin: '超级管理员', operator: '操作管理员', manager: '管理员', viewer: '普通管理员', staff: '内部员工', user: '普通用户' }
-/* 写操作权限: 超管(admin)/操作管理员(operator) 可写; 普通管理员(viewer) 全站只读 */
+const ROLE_LABEL = { admin: '超级管理员', operator: '操作管理员', manager: '管理员', staff: '内部员工', user: '普通用户' }
+/* 写操作权限: 超管(admin)/操作管理员(operator) 可写; 管理员(manager) 全站只读 */
 const canWrite = computed(() => ['admin', 'operator'].includes(userRole.value))
-/* 课程管理权限: 超管(admin)/管理员(manager)/操作管理员(operator) 可管理, 员工(staff)/普通管理员(viewer) 只能查看 */
-const canManageCourses = computed(() => ['admin', 'manager', 'operator'].includes(userRole.value))
-/* 用户管理: 仅超管可写 (操作管理员/普通管理员 只读) */
+/* 课程管理权限: 超管(admin)/操作管理员(operator) 可管理, 管理员(manager)/员工(staff) 只能查看 */
+const canManageCourses = computed(() => ['admin', 'operator'].includes(userRole.value))
+/* 用户管理: 仅超管可写 (操作管理员/管理员 只读) */
 const canManageUsers = computed(() => userRole.value === 'admin')
 /* 系统设置: 仅超管可写 */
 const canManageSettings = computed(() => userRole.value === 'admin')
@@ -1326,10 +1318,7 @@ const visibleModules = computed(() => {
   if (userRole.value === 'staff') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))
   }
-  if (userRole.value === 'manager') {
-    return modules.filter((m) => MANAGER_MODULES.includes(m.key))
-  }
-  // admin(超管)/operator(操作管理员)/viewer(普通管理员): 全部模块可见
+  // admin(超管)/operator(操作管理员)/manager(管理员只读): 全部模块可见, 写权限由 canWrite/canManageUsers/canManageSettings 控制
   return modules
 })
 const activeModule = ref('overview')
@@ -1364,12 +1353,12 @@ const usersFiltered = computed(() => {
   })
 })
 
-/* 用户统计: 管理员(admin+manager+operator+viewer) / 员工(staff) / 用户(user) / 当前在线(5分钟内心跳) */
+/* 用户统计: 管理员(admin+manager+operator) / 员工(staff) / 用户(user) / 当前在线(5分钟内心跳) */
 const userStats = computed(() => {
   let admin = 0, staff = 0, user = 0, online = 0
   users.value.forEach((u) => {
     const r = u.role || 'user'
-    if (r === 'admin' || r === 'manager' || r === 'operator' || r === 'viewer') admin++
+    if (r === 'admin' || r === 'manager' || r === 'operator') admin++
     else if (r === 'staff') staff++
     else user++
     if (u._online) online++
@@ -1387,9 +1376,9 @@ function vipFilterMenu() {
 }
 function roleFilterMenu() {
   uni.showActionSheet({
-    itemList: ['全部', '超级管理员', '操作管理员', '管理员', '普通管理员', '员工', '用户'],
+    itemList: ['全部', '超级管理员', '操作管理员', '管理员', '员工', '用户'],
     success: (r) => {
-      roleFilter.value = ['全部', 'admin', 'operator', 'manager', 'viewer', 'staff', 'user'][r.tapIndex]
+      roleFilter.value = ['全部', 'admin', 'operator', 'manager', 'staff', 'user'][r.tapIndex]
     },
   })
 }
@@ -1837,18 +1826,30 @@ const pieSegments = computed(() => {
   let accC = 0, accA = 0
   const count = items.map((p, i) => {
     const seg = (p.count / tc) * PIE_C
-    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accC }
+    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accC, angle: seg * 3.6 }
     accC += seg
     return s
   })
   const amount = items.map((p, i) => {
     const seg = (p.amount / ta) * PIE_C
-    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accA }
+    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accA, angle: seg * 3.6 }
     accA += seg
     return s
   })
   return { count, amount }
 })
+/* 环形图背景: conic-gradient (微信小程序不支持 <svg> 渲染, 用 CSS 渐变跨端显示饼图) */
+function ringStyle(kind) {
+  const segs = kind === 'count' ? pieSegments.value.count : pieSegments.value.amount
+  if (!segs.length) return ''
+  let acc = 0
+  const parts = segs.map((s) => {
+    const start = acc
+    acc += s.angle
+    return `${s.color} ${start}deg ${acc}deg`
+  })
+  return `background: conic-gradient(${parts.join(', ')});`
+}
 function pct(val, total) {
   if (!total) return '0%'
   return ((val / total) * 100).toFixed(1) + '%'
@@ -2107,19 +2108,17 @@ const showAssignId = ref(false)
 const showCreateUser = ref(false)
 const createForm = ref({ phone: '', nickname: '', password: '123456', role: 'staff' })
 const assignForm = ref({ uid: null, dao_code: '', role: 'user', nickname: '' })
-/* 编辑弹窗角色: 超级管理员(仅超管可任命)/操作管理员/管理员/普通管理员/内部员工/普通用户(超管可降级) */
+/* 编辑弹窗角色: 超级管理员(仅超管可任命)/操作管理员/管理员(只读)/内部员工/普通用户(超管可降级) */
 const editRoleOptions = [
   { value: 'admin', label: '超级管理员' },
   { value: 'operator', label: '操作管理员' },
   { value: 'manager', label: '管理员' },
-  { value: 'viewer', label: '普通管理员' },
   { value: 'staff', label: '内部员工' },
   { value: 'user', label: '普通用户' },
 ]
 /* 新建员工/管理员角色 */
 const createRoleOptions = [
   { value: 'staff', label: '内部员工' },
-  { value: 'viewer', label: '普通管理员' },
   { value: 'operator', label: '操作管理员' },
   { value: 'manager', label: '管理员' },
   { value: 'admin', label: '超级管理员' },
@@ -2978,8 +2977,8 @@ function clearSettingsSecret(f) {
 }
 
 onMounted(async () => {
-  // 仅 admin(超管)/manager(管理员)/operator(操作管理员)/viewer(普通管理员) 可访问后台; 员工(staff)/普通用户(user)拒绝
-  if (!userStore.isLoggedIn || !['admin', 'manager', 'operator', 'viewer'].includes(userStore.userInfo.role)) {
+  // 仅 admin(超管)/manager(管理员,只读)/operator(操作管理员) 可访问后台; 员工(staff)/普通用户(user)拒绝
+  if (!userStore.isLoggedIn || !['admin', 'manager', 'operator'].includes(userStore.userInfo.role)) {
     uni.redirectTo({ url: '/pages-sub/admin/login' })
     return
   }
@@ -3240,6 +3239,12 @@ onMounted(async () => {
   border: 1rpx solid #efe7d8;
   overflow: hidden;
 }
+/* 最近订单: 手机/小程序窄屏可左右滑动 */
+.recent-list {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.recent-list::-webkit-scrollbar { display: none; }
 .panel-head {
   display: flex;
   align-items: center;
@@ -3267,6 +3272,7 @@ onMounted(async () => {
   padding: 20rpx 30rpx;
   border-bottom: 1rpx solid #efe7d8;
   gap: 20rpx;
+  min-width: 900rpx;
 }
 .recent-row:last-child {
   border-bottom: none;
@@ -3395,17 +3401,39 @@ onMounted(async () => {
 .pie-wrap {
   display: flex;
   align-items: center;
-  gap: 40rpx;
-  padding: 20rpx;
+  gap: 24rpx;
+  padding: 12rpx;
+  overflow-x: auto;
 }
 .pie-svg-box {
   flex-shrink: 0;
-  width: 280rpx;
-  height: 280rpx;
+  width: 200rpx;
+  height: 200rpx;
 }
 .pie-svg {
   width: 100%;
   height: 100%;
+}
+/* CSS 环形图 (conic-gradient): 小程序/H5 通用, 替代不兼容小程序的 <svg> */
+.pie-ring {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+.pie-ring-hole {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 68%;
+  height: 68%;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .pie-svg-num { font-size: 14px; font-weight: 700; fill: #42372c; }
 .pie-svg-label { font-size: 7px; fill: #8a7e6e; }
@@ -3416,17 +3444,18 @@ onMounted(async () => {
   border: 4rpx dashed #ddd;
   color: #ccc; font-size: 24rpx;
 }
-.pie-legend { flex: 1; }
+.pie-legend { flex: 1; min-width: 300rpx; }
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  padding: 10rpx 0;
+  gap: 10rpx;
+  padding: 8rpx 0;
+  white-space: nowrap;
 }
-.legend-dot { width: 20rpx; height: 20rpx; border-radius: 50%; flex-shrink: 0; }
-.legend-label { font-size: 26rpx; color: #42372c; min-width: 100rpx; }
-.legend-count { font-size: 24rpx; color: #8a7e6e; }
-.legend-amount { font-size: 26rpx; color: #c4753a; font-weight: 600; margin-left: auto; }
+.legend-dot { width: 18rpx; height: 18rpx; border-radius: 50%; flex-shrink: 0; }
+.legend-label { font-size: 22rpx; color: #42372c; min-width: 76rpx; overflow: hidden; text-overflow: ellipsis; }
+.legend-count { font-size: 22rpx; color: #8a7e6e; }
+.legend-amount { font-size: 22rpx; color: #c4753a; font-weight: 600; margin-left: auto; }
 .w-rank { width: 80rpx; text-align: center; font-weight: 600; color: #8a7e6e; }
 .rank-top { color: #c4753a; font-size: 28rpx; }
 .w-rk-name { flex: 2; min-width: 0; white-space: nowrap; }
