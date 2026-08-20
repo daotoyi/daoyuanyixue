@@ -242,6 +242,6 @@ export async function getAuth() {
 export const CLOUDBASE_CONFIG = {
   envId: ENV_ID,
   region: REGION,
-  staticDomain: 'cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com',
+  staticDomain: 'club.zhenhesheng.cn',
   storageDomain: '', // 云存储文件URL: 小程序用 cloud://fileID, H5 用 getTempFileURL 获取
 }

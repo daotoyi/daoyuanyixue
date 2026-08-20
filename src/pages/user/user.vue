@@ -209,7 +209,7 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 const userInfo = computed(() => userStore.userInfo)
 
 const daoCode = computed(() => userInfo.value.dao_code || userInfo.value.invite_code || '')
-const inviteLink = computed(() => `https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/download/?invite=${daoCode.value}`)
+const inviteLink = computed(() => `https://club.zhenhesheng.cn/download/?invite=${daoCode.value}`)
 
 // 会员等级: 按累计消费 (储值/购买) 自动划分 (8档: <1000/1000/3000/5000/10000/30000/50000/100000)
 const vipLevel = computed(() => {
