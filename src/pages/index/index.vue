@@ -1542,6 +1542,92 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
+  /* 盘道活动卡片: 两列网格, 避免全宽扁长条 (左右太宽/上下太矮/封面裁切) */
+  .pandao-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    padding: 24px;
+  }
+  .pandao-card {
+    margin-bottom: 0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .pandao-cover {
+    height: auto;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 16px;
+  }
+  .pandao-badge {
+    width: 84px;
+    height: 84px;
+    font-size: 24px;
+    border-radius: 14px;
+  }
+  .pandao-title {
+    font-size: 22px;
+  }
+  .pandao-time,
+  .pandao-place {
+    font-size: 15px;
+    margin-top: 8px;
+  }
+  .pandao-desc {
+    font-size: 14px;
+    margin-top: 10px;
+    line-height: 1.6;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+  }
+  .pandao-foot {
+    margin-top: auto;
+    padding-top: 18px;
+  }
+  .pandao-price {
+    font-size: 26px;
+  }
+  .pandao-btn {
+    font-size: 16px;
+    padding: 10px 30px;
+  }
+  /* 推荐页横滑卡片 (直播/盘道/商品/课程): PC 放大, 比例协调 */
+  .rec-live-card,
+  .rec-pd-card,
+  .rec-prod-card,
+  .rec-course-card {
+    width: 280px;
+    padding: 14px;
+    margin-right: 20px;
+  }
+  .rec-live-img,
+  .rec-pd-img,
+  .rec-prod-img,
+  .rec-course-img {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .rec-live-title,
+  .rec-prod-name,
+  .rec-course-title,
+  .rec-pd-title {
+    font-size: 18px;
+    margin-top: 12px;
+  }
+  .rec-live-time,
+  .rec-pd-time,
+  .rec-pd-meta,
+  .rec-pd-badge {
+    font-size: 14px;
+  }
+  .rec-pd-price,
+  .rec-prod-price,
+  .rec-course-price {
+    font-size: 20px;
+  }
 }
 @media screen and (min-width: 1440px) {
   .home-page {
