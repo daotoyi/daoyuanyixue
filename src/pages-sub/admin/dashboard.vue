@@ -1863,14 +1863,16 @@ const pieSegments = computed(() => {
   const ta = analysisTotalAmount.value || 1
   let accC = 0, accA = 0
   const count = items.map((p, i) => {
-    const seg = (p.count / tc) * PIE_C
-    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accC, angle: seg * 3.6 }
+    const ratio = p.count / tc
+    const seg = ratio * PIE_C
+    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accC, angle: ratio * 360 }
     accC += seg
     return s
   })
   const amount = items.map((p, i) => {
-    const seg = (p.amount / ta) * PIE_C
-    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accA, angle: seg * 3.6 }
+    const ratio = p.amount / ta
+    const seg = ratio * PIE_C
+    const s = { color: pieColors[i % pieColors.length], dash: `${seg} ${PIE_C - seg}`, offset: -accA, angle: ratio * 360 }
     accA += seg
     return s
   })

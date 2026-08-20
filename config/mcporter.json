@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "cloudbase": {
-      "command": "npx",
-      "args": ["-y", "@cloudbase/cloudbase-mcp@latest"],
+      "command": "/Users/wenhua/.workbuddy/binaries/node/versions/22.22.2/bin/node",
+      "args": ["/Users/wenhua/.workbuddy/binaries/node/workspace/node_modules/@cloudbase/cloudbase-mcp/dist/cli.cjs"],
       "description": "CloudBase MCP",
       "lifecycle": "keep-alive"
     }
