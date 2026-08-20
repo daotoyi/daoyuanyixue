@@ -103,7 +103,7 @@ async function loadDetail() {
 
 /* H5 分享: 复制链接 */
 function shareH5() {
-  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/#/pages-sub/pandao/detail?id=' + sessionId.value
+  const link = 'https://club.zhenhesheng.cn/h5/#/pages-sub/pandao/detail?id=' + sessionId.value
   uni.setClipboardData({
     data: link,
     success: () => uni.showToast({ title: '链接已复制，可发给好友', icon: 'none' }),

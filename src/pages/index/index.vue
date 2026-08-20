@@ -548,7 +548,7 @@ function bindGzhNotify() {
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
-  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/gzh-bind.html?uid=' + (us.userInfo.uid || 0)
+  const link = 'https://club.zhenhesheng.cn/gzh-bind.html?uid=' + (us.userInfo.uid || 0)
   // #ifdef MP-WEIXIN
   // 跳「真和盛文化」服务号主页 (gh_94b2620c3a83 服务号原始ID, 需已关联/同主体, 基础库 3.7.10+)
   if (wx && wx.openOfficialAccountProfile) {
@@ -702,7 +702,7 @@ let shareMomentText = ''
 /* H5/APP 分享: APP 端直接打开微信分享, H5 端复制链接 */
 function shareMoment(m) {
   if (!m || !m.id) return uni.showToast({ title: '分享内容暂不可用', icon: 'none' })
-  const link = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/#/pages/index/index?moment=' + m.id
+  const link = 'https://club.zhenhesheng.cn/h5/#/pages/index/index?moment=' + m.id
   const title = (m.content || '').slice(0, 30)
   const isApp = typeof window !== 'undefined' && !!(window.Capacitor || (window.plus && window.plus.runtime))
   /* APP 端: 优先使用系统分享面板(含微信), 降级直接打开微信 */
