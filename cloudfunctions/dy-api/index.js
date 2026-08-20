@@ -730,14 +730,24 @@ function genSessionToken() {
 async function login(data) {
   const account = data.account || data.phone || ''
   const isEmail = String(account).includes('@')
-  const cond = isEmail ? { email: String(account).toLowerCase(), password: data.password } : { phone: String(account), password: data.password }
-  const res = await db
-    .collection('users')
-    .where(cond)
-    .limit(1)
-    .get()
+  let res
+  if (isEmail) {
+    res = await db
+      .collection('users')
+      .where({ email: String(account).toLowerCase(), password: data.password })
+      .limit(1)
+      .get()
+  } else {
+    // 手机号 / 道号 均可登录 (道号忽略大小写)
+    const acc = String(account).trim()
+    res = await db
+      .collection('users')
+      .where(_.or([{ phone: acc, password: data.password }, { dao_code: acc.toUpperCase(), password: data.password }]))
+      .limit(1)
+      .get()
+  }
   const user = res.data[0]
-  if (!user) return fail('手机号或密码不正确')
+  if (!user) return fail('账号或密码不正确')
   const { password, ...safe } = user
   // 老用户补发道号 (按角色: 管理员/员工 ZHSM, 用户 ZHS)
   if (!safe.dao_code) {

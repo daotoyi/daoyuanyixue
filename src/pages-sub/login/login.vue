@@ -16,8 +16,8 @@
       </view>
 
       <view class="field">
-        <text class="field-label">手机号 / 邮箱</text>
-        <input class="field-input" v-model="phone" type="text" maxlength="50" placeholder="手机号或邮箱" />
+        <text class="field-label">{{ mode === 'login' ? '手机号 / 邮箱 / 道号' : '手机号 / 邮箱' }}</text>
+        <input class="field-input" v-model="phone" type="text" maxlength="50" :placeholder="mode === 'login' ? '手机号、邮箱或道号' : '手机号或邮箱'" />
       </view>
 
       <view class="field">
@@ -63,7 +63,7 @@
       <view class="pp-mask" v-if="showPhoneQuick" @tap="showPhoneQuick = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
         <view class="sheet-title">手机号快捷登录</view>
         <view class="wx-auth-row">
-          <input class="wx-nick-input" type="text" v-model="quickPhone" placeholder="请输入手机号" maxlength="11" />
+          <input class="wx-nick-input" type="text" v-model="quickPhone" placeholder="请输入手机号或道号" maxlength="50" />
         </view>
         <view class="wx-auth-row">
           <input class="wx-nick-input" type="password" v-model="quickPwd" placeholder="请输入密码" />
@@ -330,7 +330,13 @@ async function submit() {
   errorMsg.value = ''
   const acct = phone.value.trim()
   const isEmail = acct.includes('@')
-  if (!isEmail && !/^1\d{10}$/.test(acct)) {
+  // 登录: 手机号 / 邮箱 / 道号; 注册: 手机号 / 邮箱 (注册时还没有道号)
+  if (!isEmail && mode.value === 'login') {
+    if (!/^1\d{10}$/.test(acct) && !/^[A-Za-z0-9]{3,20}$/.test(acct)) {
+      errorMsg.value = '请输入正确的手机号、邮箱或道号'
+      return
+    }
+  } else if (!isEmail && !/^1\d{10}$/.test(acct)) {
     errorMsg.value = '请输入正确的手机号或邮箱'
     return
   }
