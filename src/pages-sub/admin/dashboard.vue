@@ -115,14 +115,24 @@
                 <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
             </view>
+            <view class="settings-actions">
+              <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
+              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
+            </view>
+          </view>
+
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">登录设置</text>
+              <text class="sd-text">开启后登录注册页显示「微信一键登录」，与「手机号快捷登录」上下排列（默认关闭）</text>
+            </view>
             <view class="f-row">
-              <text class="f-label">登录设置</text>
+              <text class="f-label">显示微信一键登录</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.show_wechat_login" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_wechat_login = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
-              <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
               <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -344,8 +354,8 @@
                 <text class="td w-price">售价</text>
                 <text class="td w-stock">库存</text>
                 <text class="td w-status">状态</text>
-                <text class="td w-rec">首页推荐</text>
-                <text class="td w-ops">操作</text>
+                <text class="td w-rec" v-if="canWrite">首页推荐</text>
+                <text class="td w-ops" v-if="canWrite">操作</text>
               </view>
               <view class="tr" v-for="p in productGrouped[productActiveCate] || []" :key="p.id">
                 <image class="td w-img thumb" :src="p.images && p.images[0]" mode="aspectFill"></image>
@@ -411,8 +421,8 @@
                 <text class="td w-price">价格</text>
                 <text class="td w-stock">课时</text>
                 <text class="td w-status">等级</text>
-                <text class="td w-rec">首页推荐</text>
-                <text class="td w-ops">操作</text>
+                <text class="td w-rec" v-if="canManageCourses">首页推荐</text>
+                <text class="td w-ops" v-if="canManageCourses">操作</text>
               </view>
               <view class="tr" v-for="c in courseGrouped[courseActiveCate] || []" :key="c.id">
                 <text class="td w-name ellipsis">{{ c.title }}</text>
@@ -472,7 +482,7 @@
               <text class="td w-price sortable" @tap="toggleOrderSort('amount')">金额 {{ orderSortArrow('amount') }}</text>
               <text class="td w-time sortable" @tap="toggleOrderSort('created_at')">下单时间 {{ orderSortArrow('created_at') }}</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops w-ops-4">操作</text>
+              <text class="td w-ops w-ops-4" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="o in sortedOrders" :key="o._id || o.order_no">
               <text class="td w-no">{{ o.order_no }}</text>
@@ -634,7 +644,7 @@
               <text class="td w-name">售后内容</text>
               <text class="td w-time">时间</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops">操作</text>
+              <text class="td w-ops" v-if="canWrite">操作</text>
             </view>
             <view class="tr" :class="{ 'tr-sub': a._isSub }" v-for="a in aftersaleRows" :key="a.id">
               <view class="td w-no">
@@ -705,7 +715,7 @@
               <view class="td w-time">最后在线</view>
               <view class="td w-price" @tap="vipFilterMenu">{{ vipFilter === '全部' ? 'VIP' : 'VIP' + vipFilter }} ▾</view>
               <view class="td w-status" @tap="roleFilterMenu">{{ ROLE_LABEL[roleFilter] || '角色' }} ▾</view>
-              <view class="td w-ops">操作</view>
+              <view class="td w-ops" v-if="canManageUsers">操作</view>
               <view class="td w-remark">备注</view>
             </view>
             <view class="tr users-row" v-for="u in usersFiltered" :key="u._id || u.uid">
@@ -752,7 +762,7 @@
               <text class="td w-name">主播</text>
               <text class="td w-time">开始时间</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops">操作</text>
+              <text class="td w-ops" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="l in lives" :key="l.id">
               <image class="td w-img thumb" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
@@ -785,7 +795,7 @@
               <text class="td w-name">内容</text>
               <text class="td w-time">时间</text>
               <text class="td w-status">精选</text>
-              <text class="td w-ops">操作</text>
+              <text class="td w-ops" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="m in moments" :key="m._id || m.id">
               <text class="td w-name">{{ m.user_name }}</text>
@@ -812,7 +822,7 @@
               <text class="td w-price">优惠</text>
               <text class="td w-stock">有效期</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops">操作</text>
+              <text class="td w-ops" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="c in coupons" :key="c.id">
               <text class="td w-name">{{ c.name }}</text>
@@ -838,7 +848,7 @@
               <text class="td w-name">反馈内容</text>
               <text class="td w-time">时间</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops">操作</text>
+              <text class="td w-ops" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="f in feedbacks" :key="f.id">
               <text class="td w-no ellipsis">{{ f.nickname || ('UID ' + f.uid) }} {{ f.dao_code ? '(' + f.dao_code + ')' : '' }}</text>
@@ -925,7 +935,7 @@
                 <text class="td w-name">AppID</text>
                 <text class="td w-time">绑定时间</text>
                 <text class="td w-status">状态</text>
-                <text class="td w-ops">操作</text>
+                <text class="td w-ops" v-if="canManageSettings">操作</text>
               </view>
               <view class="tr" v-for="m in wxmpList" :key="m.appid">
                 <text class="td w-no ellipsis">{{ m.nickname || m.appid }}</text>
@@ -3367,8 +3377,6 @@ onMounted(async () => {
 }
 .tr.th {
   background: #faf3e9;
-  width: max-content;
-  min-width: 100%;
 }
 .th .td {
   font-weight: 500;
