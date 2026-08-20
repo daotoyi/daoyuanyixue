@@ -730,24 +730,24 @@ function genSessionToken() {
 async function login(data) {
   const account = data.account || data.phone || ''
   const isEmail = String(account).includes('@')
-  let res
+  let user
   if (isEmail) {
-    res = await db
-      .collection('users')
-      .where({ email: String(account).toLowerCase(), password: data.password })
-      .limit(1)
-      .get()
+    user = (await db.collection('users').where({ email: String(account).toLowerCase() }).limit(1).get()).data[0]
   } else {
     // 手机号 / 道号 均可登录 (道号忽略大小写)
     const acc = String(account).trim()
-    res = await db
-      .collection('users')
-      .where(_.or([{ phone: acc, password: data.password }, { dao_code: acc.toUpperCase(), password: data.password }]))
-      .limit(1)
-      .get()
+    user = (await db.collection('users').where(_.or([{ phone: acc }, { dao_code: acc.toUpperCase() }])).limit(1).get()).data[0]
   }
-  const user = res.data[0]
   if (!user) return fail('账号或密码不正确')
+  // 密码校验: 已设密码按密码; 未设密码(微信一键登录老用户) 默认密码 123456
+  const inputPwd = String(data.password || '')
+  const valid = user.password ? user.password === inputPwd : inputPwd === '123456'
+  if (!valid) return fail('账号或密码不正确')
+  // 微信老用户首次用默认密码登录: 落库密码, 之后可修改
+  if (!user.password) {
+    await db.collection('users').where({ uid: user.uid }).update({ password: '123456' }).catch(() => {})
+    user.password = '123456'
+  }
   const { password, ...safe } = user
   // 老用户补发道号 (按角色: 管理员/员工 ZHSM, 用户 ZHS)
   if (!safe.dao_code) {
