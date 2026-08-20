@@ -4038,3 +4038,28 @@ async function wxmpRelease(data) {
   return ok({ released: true, appid })
 }
 
+/* ============================================================
+ * CORS 包装: HTTP 网关触发时统一附加跨域响应头
+ * (Web 安全域名套餐受限无法配置, 故在函数层返回 CORS 头)
+ * 小程序 callFunction 触发 (无 httpMethod) 保持原返回, 不受影响
+ * ============================================================ */
+const __rawMain = exports.main
+exports.main = async (event = {}) => {
+  if (event && event.httpMethod) {
+    const corsHeaders = {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Cloudbase-Env',
+      'Access-Control-Max-Age': '86400',
+    }
+    if (event.httpMethod === 'OPTIONS') {
+      return { statusCode: 204, headers: corsHeaders, body: '' }
+    }
+    const result = await __rawMain(event)
+    const statusCode = (result && typeof result.status === 'number') ? result.status : 200
+    return { statusCode, headers: corsHeaders, body: JSON.stringify(result) }
+  }
+  return __rawMain(event)
+}
+
