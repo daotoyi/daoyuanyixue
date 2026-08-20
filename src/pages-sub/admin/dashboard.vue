@@ -123,22 +123,6 @@
 
           <view class="settings-card">
             <view class="settings-desc">
-              <text class="sd-title">登录设置</text>
-              <text class="sd-text">开启后登录注册页显示「微信一键登录」，与「手机号快捷登录」上下排列（默认关闭）</text>
-            </view>
-            <view class="f-row">
-              <text class="f-label">显示微信一键登录</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_wechat_login" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_wechat_login = $event.detail.value" />
-              </view>
-            </view>
-            <view class="settings-actions">
-              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
-            </view>
-          </view>
-
-          <view class="settings-card">
-            <view class="settings-desc">
               <text class="sd-title">首页-推荐页展示</text>
               <text class="sd-text">控制「推荐」页签中展示的内容模块（默认全部显示）</text>
             </view>
@@ -192,6 +176,24 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后「我的」页面将不展示玄学工具板块（默认关闭）</text>
+              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
+            </view>
+          </view>
+
+          <!-- 登录设置 -->
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">登录设置</text>
+              <text class="sd-text">开启后登录注册页显示「微信一键登录」，与「手机号快捷登录」上下排列（默认关闭）</text>
+            </view>
+            <view class="f-row">
+              <text class="f-label">显示微信一键登录</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_wechat_login" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_wechat_login = $event.detail.value" />
+              </view>
+            </view>
+            <view class="settings-actions">
+              <text class="settings-tip">默认关闭，开启后与手机号快捷登录上下排列</text>
               <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
