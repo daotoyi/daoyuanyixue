@@ -119,16 +119,16 @@
       <div><span>◆</span>社区：易友动态 · 直播讲堂</div>
     </div>
 
-    <a class="btn" id="downloadBtn" disabled href="javascript:void(0)">正在准备下载…</a>
-    <div class="tip">
-      若按钮未亮起，请直接点击下方备用链接<br />
-      <a href="../apk/daoyuan-v1.11.180.apk" style="color:#854d0e">直接下载 APK</a>
-    </div>
+  <a class="btn" id="downloadBtn" disabled href="javascript:void(0)">正在准备下载…</a>
+  <div class="tip">
+    若按钮未亮起，请直接点击下方备用链接<br />
+    <a href="https://zhenhesheng.cn/apk/daoyuan-v1.11.180.apk" style="color:#854d0e">直接下载 APK</a>
   </div>
+</div>
 
-  <script>
-    // APK 路径约定: /apk/daoyuan-v1.11.180.apk (下载页位于 /download/, 需上跳一级)
-    var apkUrl = '../apk/daoyuan-v1.11.180.apk'
+<script>
+  // APK 路径约定: 绝对路径 zhenhesheng.cn/apk/daoyuan-v1.11.180.apk (主域名映射静态托管根, 各域名访问均可下载)
+  var apkUrl = 'https://zhenhesheng.cn/apk/daoyuan-v1.11.180.apk'
     var btn = document.getElementById('downloadBtn')
     var xhr = new XMLHttpRequest()
     xhr.open('HEAD', apkUrl, true)
