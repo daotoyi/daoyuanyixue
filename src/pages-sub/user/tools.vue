@@ -121,7 +121,7 @@
         <template v-if="form.bazi.mode === 'solar' || form.bazi.mode === 'lunar'">
           <view class="tp-row">
             <text class="tp-label">真太阳时</text>
-            <switch :checked="form.bazi.trueSolar" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
+            <switch :checked="form.bazi.trueSolar" color="#c41e3a" style="transform: scale(0.7)" @change="(e) => (form.bazi.trueSolar = e.detail.value)" />
           </view>
           <template v-if="form.bazi.trueSolar">
             <view class="tp-row">
@@ -145,7 +145,7 @@
         <!-- 当前时间起局: 仅奇门保留 (紫微/八字用出生时间排盘) -->
         <view class="tp-row tp-now-row" v-if="activeTool === 'qimen'">
           <text class="tp-label">当前时间</text>
-          <switch :checked="form.bazi.useNow" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.useNow = e.detail.value)" />
+          <switch :checked="form.bazi.useNow" color="#c41e3a" style="transform: scale(0.7)" @change="(e) => (form.bazi.useNow = e.detail.value)" />
           <text class="tp-save-tip">开启后以当前时间起局（忽略上方时间）</text>
         </view>
 
@@ -191,7 +191,7 @@
 
         <view class="tp-row">
           <text class="tp-label">保存排盘</text>
-          <switch :checked="form.bazi.saveHistory" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.bazi.saveHistory = e.detail.value)" />
+          <switch :checked="form.bazi.saveHistory" color="#c41e3a" style="transform: scale(0.7)" @change="(e) => (form.bazi.saveHistory = e.detail.value)" />
           <text class="tp-save-tip">开启后每次排盘自动存入历史</text>
         </view>
         <view class="btn-fill btn-pp" @tap="runPaipan"><text>开始排盘</text></view>
@@ -316,7 +316,7 @@
         <!-- 当前时间起盘: 默认开启, 用当下日期+时刻 -->
         <view class="tp-row tp-now-row">
           <text class="tp-label">当前时间</text>
-          <switch :checked="form.liuren.useNow" color="#8c5a2b" style="transform: scale(0.7)" @change="(e) => (form.liuren.useNow = e.detail.value)" />
+          <switch :checked="form.liuren.useNow" color="#c41e3a" style="transform: scale(0.7)" @change="(e) => (form.liuren.useNow = e.detail.value)" />
           <text class="tp-save-tip">开启后以当前日期时刻起盘（默认开启）</text>
         </view>
         <view class="tp-row">
@@ -705,7 +705,7 @@ function payWithBalance({ title, tool, applyFn }) {
     title,
     content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
-    confirmColor: '#8c5a2b',
+    confirmColor: '#c41e3a',
     success: (r) => {
       if (!r.confirm) return
       uni.showLoading({ title: '解锁中...', mask: true })
@@ -723,7 +723,7 @@ function payWithBalance({ title, tool, applyFn }) {
                 title: '元宝不足',
                 content: '元宝不足，解锁需 9 元宝，请先充值。是否前往充值？',
                 confirmText: '去充值',
-                confirmColor: '#8c5a2b',
+                confirmColor: '#c41e3a',
                 cancelText: '取消',
                 success: (rr) => {
                   if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
@@ -824,7 +824,7 @@ function askLyAI() {
                 title: '元宝不足',
                 content: '元宝不足，AI 提问需 5 元宝，请先充值。是否前往充值？',
                 confirmText: '去充值',
-                confirmColor: '#8c5a2b',
+                confirmColor: '#c41e3a',
                 cancelText: '取消',
                 success: (rr) => {
                   if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
@@ -983,7 +983,7 @@ function askLrAI() {
                 title: '元宝不足',
                 content: '元宝不足，AI 提问需 5 元宝，请先充值。是否前往充值？',
                 confirmText: '去充值',
-                confirmColor: '#8c5a2b',
+                confirmColor: '#c41e3a',
                 cancelText: '取消',
                 success: (rr) => {
                   if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
@@ -1162,7 +1162,7 @@ function editToolHistoryRemark(rec) {
     editable: true,
     placeholderText: '输入备注…',
     confirmText: '保存',
-    confirmColor: '#8c5a2b',
+    confirmColor: '#c41e3a',
     success: (r) => {
       if (!r.confirm) return
       rec.remark = (r.content || '').trim()
@@ -1413,12 +1413,12 @@ function runLiuren() {
 <style lang="scss" scoped>
 .tools-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .tool-tabs {
-  background: #fefbf6;
+  background: #fffafa;
   white-space: nowrap;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .tool-tab-inner {
   display: inline-flex;
@@ -1431,9 +1431,9 @@ function runLiuren() {
   gap: 8rpx;
   padding: 12rpx 26rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 /* 图标/文字统一行高, 避免 emoji 基线差异导致 tab 上下不齐 */
 .tool-tab text {
@@ -1442,22 +1442,22 @@ function runLiuren() {
   vertical-align: middle;
 }
 .tool-tab.on {
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
   font-weight: 500;
 }
 .tool-body {
   padding: 24rpx;
 }
 .tool-panel {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 30rpx;
 }
 .tp-title {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 24rpx;
   line-height: 1.6;
 }
@@ -1469,37 +1469,37 @@ function runLiuren() {
 .tp-label {
   width: 170rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   flex-shrink: 0;
 }
 .tp-save-tip {
   margin-left: 14rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   flex: 1;
 }
 /* 奇门预测事件输入框 */
 .tp-event-input {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 0 20rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .tp-event-ph {
-  color: #b3a595;
+  color: #8a857c;
 }
 .tp-picker {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   display: flex;
   align-items: center;
 }
@@ -1513,18 +1513,18 @@ function runLiuren() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 3rpx;
 }
 .btn-pp {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 
 /* 八字 */
 .bazi-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
 }
 .br-grid {
   display: flex;
@@ -1536,29 +1536,29 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 18rpx 0;
 }
 .br-title {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .br-gan {
   font-size: 44rpx;
   font-weight: 600;
-  color: #8c5a2b;
+  color: #c41e3a;
   margin-top: 8rpx;
 }
 .br-zhi {
   font-size: 36rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .br-wx {
   margin-top: 6rpx;
   font-size: 20rpx;
   color: #6e7f5a;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 0 14rpx;
   border-radius: 999rpx;
 }
@@ -1568,25 +1568,25 @@ function runLiuren() {
 }
 .br-k {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 .br-v {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   font-weight: 500;
 }
 .br-tip {
   margin-top: 16rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 /* 六爻 */
 .ly-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
 }
 .ly-head {
   display: flex;
@@ -1596,15 +1596,15 @@ function runLiuren() {
 .ly-name {
   font-size: 40rpx;
   font-weight: 600;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .ly-cname {
   margin-left: 20rpx;
   font-size: 26rpx;
-  color: #b04a45;
+  color: #9c1630;
 }
 .ly-lines {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 10rpx 20rpx;
 }
@@ -1613,21 +1613,21 @@ function runLiuren() {
   align-items: center;
   justify-content: space-between;
   padding: 12rpx 0;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .ly-line:last-child {
   border-bottom: none;
 }
 .ly-idx {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .ly-mark {
   font-size: 28rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .ly-mark.moving {
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 600;
 }
 
@@ -1639,7 +1639,7 @@ function runLiuren() {
   gap: 12rpx;
 }
 .zw-cell {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 14rpx 8rpx;
   display: flex;
@@ -1648,17 +1648,17 @@ function runLiuren() {
   min-height: 130rpx;
 }
 .zw-cell.ming {
-  background: #faf3e9;
-  border: 2rpx solid #8c5a2b;
+  background: #fbe9ec;
+  border: 2rpx solid #c41e3a;
 }
 .zw-name {
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .zw-star {
   margin-top: 6rpx;
   font-size: 20rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 
 /* 奇门 */
@@ -1669,7 +1669,7 @@ function runLiuren() {
   gap: 12rpx;
 }
 .qm-cell {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 16rpx 8rpx;
   display: flex;
@@ -1680,22 +1680,22 @@ function runLiuren() {
   position: absolute;
   margin-left: -90rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .qm-palace {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   font-weight: 500;
 }
 .qm-door {
   margin-top: 6rpx;
   font-size: 24rpx;
-  color: #b04a45;
+  color: #9c1630;
 }
 .qm-star {
   margin-top: 4rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 /* 六壬 */
@@ -1710,7 +1710,7 @@ function runLiuren() {
 }
 .lr-col {
   width: calc((100% - 44rpx) / 4);
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 12rpx 0;
   display: flex;
@@ -1719,13 +1719,13 @@ function runLiuren() {
 }
 .lr-tian {
   font-size: 28rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
 }
 .lr-di {
   margin-top: 4rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 /* ===== 八字输入 (问真) ===== */
@@ -1763,7 +1763,7 @@ function runLiuren() {
 }
 .tp-gz-label {
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 8rpx;
 }
 /* 四柱: 左侧手动输入(完整干支) + 右侧干支联动下拉 */
@@ -1773,7 +1773,7 @@ function runLiuren() {
   width: 100%;
   border: 1rpx solid #d8ccb8;
   border-radius: 10rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   overflow: hidden;
 }
 .tp-gz-input {
@@ -1782,10 +1782,10 @@ function runLiuren() {
   padding: 0 8rpx;
   font-size: 28rpx;
   text-align: center;
-  color: #42372c;
+  color: #2a2a2a;
   min-width: 0;
 }
-.tp-gz-ph { color: #b3a595; font-size: 26rpx; }
+.tp-gz-ph { color: #8a857c; font-size: 26rpx; }
 .tp-gz-drop {
   width: 64rpx;
   height: 60rpx;
@@ -1795,13 +1795,13 @@ function runLiuren() {
   gap: 2rpx;
   background: #f5efe3;
   border-left: 1rpx solid #e6dcca;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-size: 22rpx;
   flex-shrink: 0;
 }
 .tp-gz-caret {
   font-size: 16rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .tp-seg {
   display: flex;
@@ -1810,19 +1810,19 @@ function runLiuren() {
 .tsg {
   padding: 10rpx 26rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   border: 2rpx solid transparent;
 }
 .tsg.on {
-  background: #8c5a2b;
-  color: #fefbf6;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  color: #fffafa;
+  border-color: #c41e3a;
 }
 .tp-tip {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   margin: -4rpx 0 14rpx 0;
   padding-left: 190rpx;
 }
@@ -1831,7 +1831,7 @@ function runLiuren() {
 .wz-result {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
 }
 
 /* 顶部: 农历 + 阳历 + 元男/元女 */
@@ -1839,7 +1839,7 @@ function runLiuren() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #4e3420, #6e4a26);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   border-radius: 12rpx;
   padding: 18rpx 24rpx;
   margin-bottom: 20rpx;
@@ -1866,7 +1866,7 @@ function runLiuren() {
 .wz-yuan {
   font-size: 34rpx;
   font-weight: 600;
-  color: #c4a484;
+  color: #b8860b;
 }
 .wz-daymaster {
   margin-top: 4rpx;
@@ -1881,35 +1881,35 @@ function runLiuren() {
   flex-direction: column;
   align-items: center;
   gap: 2rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
   padding-top: 8rpx;
   width: 100%;
 }
 .wz-ny {
   font-size: 17rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .wz-zs {
   font-size: 17rpx;
-  color: #857563;
+  color: #55524c;
 }
 .wz-kw {
   font-size: 17rpx;
   color: #6e7f5a;
 }
 .wz-kw.on {
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 500;
 }
 .wz-ss-list {
   font-size: 16rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   text-align: center;
 }
 
 /* 地支藏干独立模块 */
 .wz-canggan {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 16rpx;
   margin-bottom: 20rpx;
@@ -1923,7 +1923,7 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 10rpx;
   padding: 10rpx 2rpx;
 }
@@ -1949,7 +1949,7 @@ function runLiuren() {
 .wz-cg-ss {
   margin-left: 6rpx;
   font-size: 16rpx;
-  color: #857563;
+  color: #55524c;
 }
 .wz-grid {
   display: flex;
@@ -1961,20 +1961,20 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 14rpx 4rpx;
-  border-top: 6rpx solid #8c5a2b;
+  border-top: 6rpx solid #c41e3a;
 }
 .wz-title {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .wz-ss {
   margin-top: 6rpx;
   font-size: 20rpx;
-  color: #8c5a2b;
-  background: #faf3e9;
+  color: #c41e3a;
+  background: #fbe9ec;
   padding: 0 10rpx;
   border-radius: 6rpx;
 }
@@ -1994,7 +1994,7 @@ function runLiuren() {
 
 /* 五行统计 */
 .wz-wxbar {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 12rpx;
   padding: 20rpx;
   margin-bottom: 20rpx;
@@ -2015,7 +2015,7 @@ function runLiuren() {
 .wz-wx-bar {
   flex: 1;
   height: 14rpx;
-  background: #efe7d8;
+  background: #e8e2da;
   border-radius: 7rpx;
   margin: 0 14rpx;
   overflow: hidden;
@@ -2032,13 +2032,13 @@ function runLiuren() {
 .wz-wx-num {
   width: 60rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   text-align: right;
 }
 
 /* 元信息 */
 .wz-meta {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
   margin-bottom: 20rpx;
@@ -2050,12 +2050,12 @@ function runLiuren() {
 .wz-mk {
   width: 100rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .wz-mv {
   flex: 1;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
   font-weight: 500;
 }
 
@@ -2067,7 +2067,7 @@ function runLiuren() {
   display: block;
   font-size: 24rpx;
   font-weight: 500;
-  color: #8c5a2b;
+  color: #c41e3a;
   margin-bottom: 12rpx;
 }
 .wz-dy-row {
@@ -2079,14 +2079,14 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #faf3e9;
-  border: 1rpx solid #efe7d8;
+  background: #fbe9ec;
+  border: 1rpx solid #e8e2da;
   border-radius: 10rpx;
   padding: 10rpx 16rpx;
 }
 .wz-dy-age {
   font-size: 18rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .wz-dy-gan,
 .wz-dy-zhi {
@@ -2098,24 +2098,24 @@ function runLiuren() {
 .wz-dy-ss {
   margin-top: 4rpx;
   font-size: 18rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .wz-dy-item.on {
-  border-color: #8c5a2b;
-  background: #faf3e9;
+  border-color: #c41e3a;
+  background: #fbe9ec;
   box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.35);
 }
 
 /* 大运展开: 流年 */
 .wz-dy-years {
   margin-top: 16rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 16rpx;
 }
 .wz-dy-year-head {
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
   margin-bottom: 10rpx;
 }
@@ -2128,18 +2128,18 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 10rpx;
   padding: 8rpx 2rpx;
 }
 .wz-ln-item.on {
-  border-color: #b04a45;
-  background: #faf3e9;
+  border-color: #9c1630;
+  background: #fbe9ec;
 }
 .wz-ln-year {
   font-size: 16rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .wz-ln-gan,
 .wz-ln-zhi {
@@ -2149,13 +2149,13 @@ function runLiuren() {
 }
 .wz-ln-ss {
   font-size: 16rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 
 /* 流月 */
 .wz-ln-months {
   margin-top: 14rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
   padding-top: 12rpx;
 }
 .wz-ym-grid {
@@ -2167,14 +2167,14 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 8rpx;
   padding: 6rpx 2rpx;
 }
 .wz-ym-name {
   font-size: 16rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .wz-ym-gan,
 .wz-ym-zhi {
@@ -2184,26 +2184,26 @@ function runLiuren() {
 }
 .wz-ym-ss {
   font-size: 15rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 
 /* 流年 */
 .wz-ln-box {
   display: flex;
   align-items: center;
-  background: #4e3420;
+  background: #9c1630;
   border-radius: 12rpx;
   padding: 20rpx 24rpx;
 }
 .wz-ln-name {
   font-size: 40rpx;
   font-weight: 600;
-  color: #857563;
+  color: #55524c;
 }
 .wz-ln-ss {
   margin-left: 20rpx;
   font-size: 22rpx;
-  color: #c4a484;
+  color: #b8860b;
 }
 .wz-ln-wx {
   margin-left: auto;
@@ -2219,22 +2219,22 @@ function runLiuren() {
 .tg {
   padding: 12rpx 40rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   border: 2rpx solid transparent;
 }
 .tg.on {
-  background: #8c5a2b;
-  color: #fefbf6;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  color: #fffafa;
+  border-color: #c41e3a;
 }
 
 /* ===== AI 解盘 ===== */
 .jp-section {
   margin-top: 30rpx;
   padding-top: 26rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
 }
 .jp-head {
   margin-bottom: 18rpx;
@@ -2243,21 +2243,21 @@ function runLiuren() {
   display: block;
   font-size: 30rpx;
   font-weight: 600;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .jp-summary {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.7;
-  background: #faf3e9;
+  background: #fbe9ec;
   border-radius: 10rpx;
   padding: 16rpx 20rpx;
 }
 .jp-block {
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
   overflow: hidden;
@@ -2275,19 +2275,19 @@ function runLiuren() {
   margin-left: 14rpx;
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .jp-free-tag {
   font-size: 20rpx;
   color: #6e7f5a;
-  background: #faf3e9;
+  background: #fbe9ec;
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
 }
 .jp-paid-tag {
   font-size: 20rpx;
-  color: #b04a45;
-  background: #faf3e9;
+  color: #9c1630;
+  background: #fbe9ec;
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
 }
@@ -2297,7 +2297,7 @@ function runLiuren() {
 .jp-arrow {
   margin-left: 12rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .jp-content {
   padding: 6rpx 24rpx 24rpx;
@@ -2305,7 +2305,7 @@ function runLiuren() {
 .jp-para {
   display: block;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.8;
   margin-bottom: 12rpx;
 }
@@ -2313,13 +2313,13 @@ function runLiuren() {
   padding: 20rpx;
   text-align: center;
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .jp-ai-tag {
   display: block;
   text-align: right;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .jp-lock {
   padding: 10rpx 24rpx 26rpx;
@@ -2332,7 +2332,7 @@ function runLiuren() {
   display: block;
   margin: 10rpx 0 20rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .btn-fill {
   display: flex;
@@ -2340,13 +2340,13 @@ function runLiuren() {
   justify-content: center;
 }
 .btn-fill text {
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-pay {
   height: 76rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 .btn-pay text {
   font-size: 26rpx;
@@ -2356,19 +2356,19 @@ function runLiuren() {
 .pp-block-head {
   font-size: 26rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
   margin-bottom: 14rpx;
   padding-bottom: 10rpx;
   border-bottom: 1rpx dashed #e6dcca;
 }
 .ly-result { margin-top: 30rpx; }
 .ly-head { display: flex; align-items: baseline; flex-wrap: wrap; margin-bottom: 14rpx; }
-.ly-name { font-size: 44rpx; font-weight: 700; color: #8c5a2b; }
-.ly-gong { margin-left: 14rpx; font-size: 22rpx; color: #857563; }
-.ly-cname { margin-left: auto; font-size: 26rpx; color: #b04a45; font-weight: 500; }
+.ly-name { font-size: 44rpx; font-weight: 700; color: #c41e3a; }
+.ly-gong { margin-left: 14rpx; font-size: 22rpx; color: #55524c; }
+.ly-cname { margin-left: auto; font-size: 26rpx; color: #9c1630; font-weight: 500; }
 /* 卦象 (六爻自下而上) */
 .ly-xiang {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 12rpx;
   padding: 12rpx 20rpx;
@@ -2378,32 +2378,32 @@ function runLiuren() {
   display: flex;
   align-items: center;
   padding: 10rpx 0;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
   position: relative;
 }
 .ly-yao:last-child { border-bottom: none; }
-.ly-yao-idx { width: 84rpx; font-size: 20rpx; color: #b3a595; flex-shrink: 0; }
+.ly-yao-idx { width: 84rpx; font-size: 20rpx; color: #8a857c; flex-shrink: 0; }
 .ly-yao-line { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
-.ly-bar { height: 10rpx; border-radius: 5rpx; background: #4e3420; width: 140rpx; }
+.ly-bar { height: 10rpx; border-radius: 5rpx; background: #9c1630; width: 140rpx; }
 .ly-bar.yin {
   background: transparent;
-  background-image: linear-gradient(to right, #4e3420 0 56rpx, transparent 56rpx 84rpx, #4e3420 84rpx 140rpx);
+  background-image: linear-gradient(to right, #9c1630 0 56rpx, transparent 56rpx 84rpx, #9c1630 84rpx 140rpx);
   background-size: 140rpx 10rpx;
   background-repeat: no-repeat;
 }
-.ly-dong { position: absolute; right: 20rpx; font-size: 24rpx; font-weight: 700; color: #b04a45; }
-.ly-yao-tag { width: 250rpx; font-size: 20rpx; color: #857563; text-align: right; flex-shrink: 0; }
+.ly-dong { position: absolute; right: 20rpx; font-size: 24rpx; font-weight: 700; color: #9c1630; }
+.ly-yao-tag { width: 250rpx; font-size: 20rpx; color: #55524c; text-align: right; flex-shrink: 0; }
 .ly-yao-sw {
   position: absolute;
   left: 2rpx;
   font-size: 18rpx;
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 600;
 }
 .ly-yao.shi .ly-yao-line { background: rgba(140, 90, 43, 0.06); border-radius: 6rpx; }
 .ly-meta {
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 10rpx 20rpx;
   margin-bottom: 16rpx;
@@ -2412,7 +2412,7 @@ function runLiuren() {
 /* ===== 六壬完整盘 ===== */
 .lr-result { margin-top: 30rpx; }
 .lr-meta {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 12rpx;
   padding: 12rpx 20rpx;
@@ -2423,8 +2423,8 @@ function runLiuren() {
   display: flex;
   align-items: stretch;
   gap: 10rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 16rpx;
   margin-bottom: 16rpx;
@@ -2434,39 +2434,39 @@ function runLiuren() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 10rpx 4rpx;
 }
-.lr-ke-name { font-size: 18rpx; color: #b3a595; }
-.lr-ke-shang { margin-top: 6rpx; font-size: 32rpx; font-weight: 700; color: #8c5a2b; }
-.lr-ke-di { margin-top: 2rpx; font-size: 22rpx; color: #857563; }
+.lr-ke-name { font-size: 18rpx; color: #8a857c; }
+.lr-ke-shang { margin-top: 6rpx; font-size: 32rpx; font-weight: 700; color: #c41e3a; }
+.lr-ke-di { margin-top: 2rpx; font-size: 22rpx; color: #55524c; }
 .lr-chuan { display: flex; flex-direction: column; justify-content: center; gap: 8rpx; flex-shrink: 0; }
-.lr-chuan-t { font-size: 20rpx; color: #b04a45; font-weight: 600; }
-.lr-chuan-z { margin-left: 6rpx; font-size: 28rpx; color: #4e3420; }
+.lr-chuan-t { font-size: 20rpx; color: #9c1630; font-weight: 600; }
+.lr-chuan-z { margin-left: 6rpx; font-size: 28rpx; color: #9c1630; }
 /* 天地盘 (带天将) */
 .lr-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 16rpx;
   margin-bottom: 14rpx;
 }
 .lr-col {
   width: calc((100% - 44rpx) / 4);
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 10rpx 0;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.lr-tian { font-size: 30rpx; color: #8c5a2b; font-weight: 700; }
+.lr-tian { font-size: 30rpx; color: #c41e3a; font-weight: 700; }
 .lr-jiang { margin-top: 2rpx; font-size: 18rpx; color: #6e7f5a; }
-.lr-di { margin-top: 2rpx; font-size: 20rpx; color: #b3a595; }
+.lr-di { margin-top: 2rpx; font-size: 20rpx; color: #8a857c; }
 
 /* 保存按钮 (填充色, 六爻/六壬共用) */
 /* 六爻/六壬 历史弹窗 */
@@ -2484,7 +2484,7 @@ function runLiuren() {
 .tp-hist-btn {
   flex-shrink: 0;
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   background: #f1e7d3;
   border: 1rpx solid #e5d5b8;
   border-radius: 999rpx;
@@ -2502,7 +2502,7 @@ function runLiuren() {
 .tp-sheet {
   width: 640rpx;
   max-height: 74vh;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 20rpx;
   overflow: hidden;
 }
@@ -2519,8 +2519,8 @@ function runLiuren() {
 .th-item {
   display: flex;
   align-items: center;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 18rpx 20rpx;
 }
@@ -2533,8 +2533,8 @@ function runLiuren() {
   align-items: baseline;
   gap: 14rpx;
 }
-.th-time { font-size: 20rpx; color: #b3a595; }
-.th-gz { display: block; font-size: 26rpx; font-weight: 600; color: #8c5a2b; margin-top: 6rpx; word-break: break-all; }
+.th-time { font-size: 20rpx; color: #8a857c; }
+.th-gz { display: block; font-size: 26rpx; font-weight: 600; color: #c41e3a; margin-top: 6rpx; word-break: break-all; }
 /* 四柱两行 (天干/地支 + 五行色) */
 .th-gz-bazi { display: flex; flex-direction: column; margin-top: 4rpx; }
 .th-gz-bazi .hz-line { display: flex; gap: 18rpx; line-height: 1.5; }
@@ -2544,9 +2544,9 @@ function runLiuren() {
 .wx-earth { color: #8d6e3f; }
 .wx-metal { color: #d4a017; }
 .wx-water { color: #1565c0; }
-.th-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
+.th-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #55524c; word-break: break-all; }
 .th-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
-.th-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
+.th-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #c41e3a; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 .th-ops {
   display: flex;
   flex-direction: column;
@@ -2566,21 +2566,21 @@ function runLiuren() {
 .th-edit { background: #f0f4ee; border: 1rpx solid #d8e4d4; }
 .th-edit text { color: #4e7d43; }
 .th-del { background: #fdf1f0; border: 1rpx solid #efd8d4; }
-.th-del text { color: #b04a45; }
-.th-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
+.th-del text { color: #9c1630; }
+.th-empty { text-align: center; font-size: 22rpx; color: #8a857c; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
 /* 保存此盘弹窗 (六爻/六壬备注) */
-.sheet-title { text-align: center; font-size: 30rpx; font-weight: 500; color: #42372c; margin-bottom: 24rpx; }
+.sheet-title { text-align: center; font-size: 30rpx; font-weight: 500; color: #2a2a2a; margin-bottom: 24rpx; }
 .ts-save-sheet { padding: 30rpx 30rpx 40rpx; }
 .ts-save-input {
   height: 88rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 0 24rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
-.ts-save-ph { color: #b3a595; }
+.ts-save-ph { color: #8a857c; }
 .ts-save-ops { display: flex; gap: 20rpx; margin-top: 30rpx; }
 .ts-save-btn {
   flex: 1;
@@ -2592,47 +2592,47 @@ function runLiuren() {
 }
 .ts-save-btn text { font-size: 28rpx; }
 .ts-cancel { background: #f1e7d3; }
-.ts-cancel text { color: #8c5a2b; }
-.ts-confirm { background: linear-gradient(135deg, #b04a45, #8c3228); }
-.ts-confirm text { color: #fefbf6; }
+.ts-cancel text { color: #c41e3a; }
+.ts-confirm { background: linear-gradient(135deg, #9c1630, #6b1022); }
+.ts-confirm text { color: #fffafa; }
 .qm-save {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 84rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   margin-top: 20rpx;
 }
-.qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
+.qm-save text { font-size: 28rpx; color: #fffafa; letter-spacing: 3rpx; font-weight: 500; }
 /* AI 智能问答 (六爻/六壬, 参考八字) */
-.qm-c-ph { color: #b3a595; }
+.qm-c-ph { color: #8a857c; }
 .ai-q-row { display: flex; gap: 14rpx; align-items: center; }
 .ai-q-input {
   flex: 1;
   height: 72rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 12rpx;
   padding: 0 18rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .btn-ask {
   flex-shrink: 0;
   height: 72rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
   padding: 0 28rpx;
 }
-.btn-ask text { font-size: 24rpx; color: #fefbf6; font-weight: 500; }
+.btn-ask text { font-size: 24rpx; color: #fffafa; font-weight: 500; }
 .ai-q-answer {
   margin-top: 14rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
   border-radius: 10rpx;
   padding: 16rpx 18rpx;
 }
-.ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #b04a45; }
+.ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #9c1630; }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {
   .tools-page {

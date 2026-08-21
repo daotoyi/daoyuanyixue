@@ -2,7 +2,7 @@
   <view class="detail-page">
     <!-- 图片轮播 -->
     <view class="swiper-wrap" v-if="product">
-      <swiper class="swiper" indicator-dots :indicator-active-color="'#8c5a2b'" indicator-color="rgba(255,255,255,0.5)" circular>
+      <swiper class="swiper" indicator-dots :indicator-active-color="'#c41e3a'" indicator-color="rgba(255,255,255,0.5)" circular>
         <swiper-item v-for="(img, i) in product.images" :key="i">
           <image class="swiper-img" :src="img" mode="aspectFill" @tap="preview(i)"></image>
         </swiper-item>
@@ -144,7 +144,7 @@ function buyNow() {
 <style lang="scss" scoped>
 .detail-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding-bottom: 140rpx;
 }
 
@@ -172,9 +172,9 @@ function buyNow() {
 
 .info-card {
   margin: -24rpx 24rpx 0;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 20rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 30rpx;
   position: relative;
 }
@@ -185,38 +185,38 @@ function buyNow() {
 .price {
   font-size: 44rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
 }
 .otprice {
   font-size: 24rpx;
-  color: #b3a595;
+  color: #8a857c;
   text-decoration: line-through;
   margin-left: 14rpx;
 }
 .sales {
   margin-left: auto;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .p-name {
   display: block;
   margin-top: 16rpx;
   font-size: 34rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .p-desc {
   display: block;
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   line-height: 1.6;
 }
 
 .attrs {
   margin-top: 24rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
   padding: 20rpx 24rpx;
 }
@@ -227,12 +227,12 @@ function buyNow() {
 .attr-key {
   width: 140rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 .attr-val {
   flex: 1;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 
 /* 购买数量 (板块化) */
@@ -241,20 +241,20 @@ function buyNow() {
   align-items: center;
   margin-top: 24rpx;
   padding: 24rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
 }
 .qty-label {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   font-weight: 500;
 }
 .qty-ctrl {
   display: flex;
   align-items: center;
   margin-left: 30rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   border-radius: 999rpx;
   overflow: hidden;
 }
@@ -264,11 +264,11 @@ function buyNow() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .qty-btn text {
   font-size: 30rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .qty-btn.off {
   opacity: 0.4;
@@ -278,12 +278,12 @@ function buyNow() {
   text-align: center;
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .qty-stock {
   margin-left: 24rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 /* 饱满红心 (CSS 绘制) */
@@ -297,7 +297,7 @@ function buyNow() {
 .heart {
   width: 34rpx;
   height: 34rpx;
-  background: #857563;
+  background: #55524c;
   transform: rotate(45deg);
   position: relative;
   border-radius: 5rpx;
@@ -334,7 +334,7 @@ function buyNow() {
   100% { transform: rotate(45deg) scale(1); }
 }
 .collect-label.on {
-  color: #b04a45;
+  color: #9c1630;
 }
 
 /* 底部操作栏 (框效果) */
@@ -345,8 +345,8 @@ function buyNow() {
   bottom: 0;
   display: flex;
   align-items: center;
-  background: #fefbf6;
-  border-top: 2rpx solid #efe7d8;
+  background: #fffafa;
+  border-top: 2rpx solid #e8e2da;
   box-shadow: 0 -6rpx 20rpx rgba(78, 52, 32, 0.08);
   padding: 20rpx 24rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
@@ -360,14 +360,14 @@ function buyNow() {
 }
 .collect-icon {
   font-size: 40rpx;
-  color: #857563;
+  color: #55524c;
 }
 .collect-icon.on {
-  color: #b04a45;
+  color: #9c1630;
 }
 .collect-label {
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
 }
 .act-btns {
   flex: 1;
@@ -386,14 +386,14 @@ function buyNow() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-cart {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 .btn-buy {
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

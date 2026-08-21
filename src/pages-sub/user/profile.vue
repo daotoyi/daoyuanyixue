@@ -244,16 +244,16 @@ async function submitMomentComment(m) {
 <style lang="scss" scoped>
 .profile-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 20rpx 24rpx 60rpx;
 }
 .profile-head {
   display: flex;
   align-items: center;
   gap: 24rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 30rpx 24rpx;
 }
 .ph-avatar-img,
@@ -263,7 +263,7 @@ async function submitMomentComment(m) {
   border-radius: 50%;
 }
 .ph-avatar-fallback {
-  background: #8c5a2b;
+  background: #c41e3a;
   color: #fff;
   font-size: 48rpx;
   display: flex;
@@ -290,7 +290,7 @@ async function submitMomentComment(m) {
   color: #a08b6f;
 }
 .ph-follow-btn {
-  background: #8c5a2b;
+  background: #c41e3a;
   color: #fff;
   font-size: 26rpx;
   padding: 12rpx 32rpx;
@@ -301,9 +301,9 @@ async function submitMomentComment(m) {
 }
 .profile-stats {
   display: flex;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   margin-top: 20rpx;
   padding: 20rpx 0;
 }
@@ -325,9 +325,9 @@ async function submitMomentComment(m) {
 }
 .profile-list {
   margin-top: 20rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 10rpx 24rpx;
 }
 .pl-moment {
@@ -340,7 +340,7 @@ async function submitMomentComment(m) {
 }
 .plm-user {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: bold;
 }
 .plm-time {
@@ -382,7 +382,7 @@ async function submitMomentComment(m) {
 .plm-comments {
   margin-top: 12rpx;
   padding-top: 12rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
 }
 .cmt-list {
   max-height: 320rpx;
@@ -396,10 +396,10 @@ async function submitMomentComment(m) {
   line-height: 1.5;
   padding: 6rpx 0;
 }
-.cmt-user { color: #8c5a2b; font-weight: 500; }
-.cmt-text { color: #42372c; }
-.cmt-time { color: #b3a595; font-size: 20rpx; margin-left: 12rpx; }
-.cmt-empty { color: #b3a595; font-size: 24rpx; padding: 10rpx 0; }
+.cmt-user { color: #c41e3a; font-weight: 500; }
+.cmt-text { color: #2a2a2a; }
+.cmt-time { color: #8a857c; font-size: 20rpx; margin-left: 12rpx; }
+.cmt-empty { color: #8a857c; font-size: 24rpx; padding: 10rpx 0; }
 .cmt-input-row {
   display: flex;
   align-items: center;
@@ -409,24 +409,24 @@ async function submitMomentComment(m) {
 .cmt-input {
   flex: 1;
   height: 60rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border: 1rpx solid #e6dcca;
   border-radius: 30rpx;
   padding: 0 24rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .plm-cmt-btn {
   flex-shrink: 0;
   height: 60rpx;
   padding: 0 30rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .plm-act {
   display: flex;
@@ -452,7 +452,7 @@ async function submitMomentComment(m) {
   border-radius: 50%;
 }
 .plu-avatar-fallback {
-  background: #8c5a2b;
+  background: #c41e3a;
   color: #fff;
   font-size: 32rpx;
   display: flex;

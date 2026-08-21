@@ -38,7 +38,7 @@ const logoUrl = computed(() => {
 <style lang="scss" scoped>
 .about-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #4e3420 0%, #4e3420 380rpx, #f8f3ea 380rpx);
+  background: linear-gradient(180deg, #9c1630 0%, #9c1630 380rpx, #f8f5f0 380rpx);
 }
 .about-head {
   display: flex;
@@ -49,7 +49,7 @@ const logoUrl = computed(() => {
 .about-seal {
   width: 150rpx;
   height: 150rpx;
-  border: 3rpx solid #c4a484;
+  border: 3rpx solid #b8860b;
   border-radius: 20rpx;
   display: flex;
   align-items: center;
@@ -65,7 +65,7 @@ const logoUrl = computed(() => {
   font-size: 40rpx;
   font-weight: 500;
   letter-spacing: 8rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .about-slogan {
   margin-top: 14rpx;
@@ -76,7 +76,7 @@ const logoUrl = computed(() => {
 .about-version {
   margin-top: 20rpx;
   font-size: 22rpx;
-  color: #c4a484;
+  color: #b8860b;
   background: rgba(196, 164, 132, 0.15);
   padding: 6rpx 24rpx;
   border-radius: 999rpx;
@@ -84,15 +84,15 @@ const logoUrl = computed(() => {
 
 .about-info {
   margin: 0 24rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   overflow: hidden;
 }
 .info-row {
   display: flex;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .info-row:last-child {
   border-bottom: none;
@@ -100,13 +100,13 @@ const logoUrl = computed(() => {
 .info-label {
   width: 170rpx;
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   flex-shrink: 0;
 }
 .info-value {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -118,12 +118,12 @@ const logoUrl = computed(() => {
   align-items: center;
   margin-top: 60rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .foot-sub {
   margin-top: 10rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

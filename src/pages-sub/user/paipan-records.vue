@@ -207,7 +207,7 @@ function removeRecord(rec) {
     title: '删除记录',
     content: '确定删除这条排盘记录吗？',
     confirmText: '删除',
-    confirmColor: '#b04a45',
+    confirmColor: '#9c1630',
     success: (r) => {
       if (!r.confirm) return
       const idx = list.value.findIndex((x) => x === rec || (x.ts === rec.ts && x.gzText === rec.gzText))
@@ -226,7 +226,7 @@ function confirmClear() {
     title: '清空记录',
     content: `确定清空${filter.value === 'all' ? '全部' : TOOL_NAME[filter.value] || ''}排盘记录吗？`,
     confirmText: '清空',
-    confirmColor: '#b04a45',
+    confirmColor: '#9c1630',
     success: (r) => {
       if (!r.confirm) return
       if (filter.value === 'all') {
@@ -246,14 +246,14 @@ function confirmClear() {
 <style lang="scss" scoped>
 .rec-page {
   min-height: 100vh;
-  background: #faf3e9;
+  background: #fbe9ec;
   padding-bottom: 60rpx;
 }
 /* 工具筛选 tab */
 .rec-tabs {
   white-space: nowrap;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -268,11 +268,11 @@ function confirmClear() {
   gap: 8rpx;
   padding: 22rpx 24rpx;
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   position: relative;
 }
 .rec-tab.on {
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 600;
 }
 .rec-tab.on::after {
@@ -283,7 +283,7 @@ function confirmClear() {
   bottom: 0;
   height: 4rpx;
   border-radius: 4rpx;
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 /* 记录列表 */
 .rec-list {
@@ -295,8 +295,8 @@ function confirmClear() {
 .rec-item {
   display: flex;
   align-items: center;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
   padding: 20rpx;
 }
@@ -326,20 +326,20 @@ function confirmClear() {
   display: block;
   margin-top: 10rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   flex-shrink: 0;
 }
 .rec-gz {
   font-size: 26rpx;
   font-weight: 600;
-  color: #8c5a2b;
+  color: #c41e3a;
   word-break: break-all;
 }
 .rec-label {
   display: block;
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   word-break: break-all;
 }
 .rec-remark {
@@ -357,7 +357,7 @@ function confirmClear() {
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   background: #f1e7d3;
   border-radius: 8rpx;
   padding: 6rpx 12rpx;
@@ -392,12 +392,12 @@ function confirmClear() {
 }
 .rec-del text {
   font-size: 22rpx;
-  color: #b04a45;
+  color: #9c1630;
 }
 .rec-empty {
   text-align: center;
   font-size: 24rpx;
-  color: #b3a595;
+  color: #8a857c;
   line-height: 1.8;
   padding: 100rpx 0;
   white-space: pre-line;
@@ -409,7 +409,7 @@ function confirmClear() {
 }
 .rec-clear {
   font-size: 24rpx;
-  color: #b04a45;
+  color: #9c1630;
   border: 1rpx solid #efd8d4;
   border-radius: 999rpx;
   padding: 12rpx 40rpx;
@@ -447,7 +447,7 @@ function confirmClear() {
 }
 .rec-sheet {
   width: 620rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 20rpx;
 }
 .edit-sheet {
@@ -457,20 +457,20 @@ function confirmClear() {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 24rpx;
 }
 .edit-remark-input {
   height: 88rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 0 24rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .edit-remark-ph {
-  color: #b3a595; /* 灰字占位符, 点击自动清除 */
+  color: #8a857c; /* 灰字占位符, 点击自动清除 */
 }
 .edit-sheet-ops {
   display: flex;
@@ -487,7 +487,7 @@ function confirmClear() {
 }
 .edit-btn text { font-size: 28rpx; }
 .edit-cancel { background: #f1e7d3; }
-.edit-cancel text { color: #8c5a2b; }
-.edit-confirm { background: linear-gradient(135deg, #b04a45, #8c3228); }
-.edit-confirm text { color: #fefbf6; }
+.edit-cancel text { color: #c41e3a; }
+.edit-confirm { background: linear-gradient(135deg, #9c1630, #6b1022); }
+.edit-confirm text { color: #fffafa; }
 </style>

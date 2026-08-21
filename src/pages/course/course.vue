@@ -133,7 +133,7 @@ onShow(async () => {
 <style lang="scss" scoped>
 .course-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 
 .course-body {
@@ -145,7 +145,7 @@ onShow(async () => {
 /* 左侧分类 */
 .cate-side {
   width: 168rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
   border-right: 2rpx solid rgba(140, 90, 43, 0.35);
   box-shadow: 1rpx 0 0 rgba(140, 90, 43, 0.12) inset;
   flex-shrink: 0;
@@ -158,7 +158,7 @@ onShow(async () => {
   justify-content: center;
 }
 .cate-item.active {
-  background: #fefbf6;
+  background: #fffafa;
 }
 .cate-indicator {
   position: absolute;
@@ -168,21 +168,21 @@ onShow(async () => {
   width: 6rpx;
   height: 40rpx;
   border-radius: 3rpx;
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 .cate-name {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
 }
 .cate-item.active .cate-name {
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
 }
 
 /* 右侧课程 */
 .course-side {
   flex: 1;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .course-section {
   padding: 24rpx;
@@ -195,19 +195,19 @@ onShow(async () => {
 .section-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
 }
 .section-sub {
   margin-left: auto;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 .course-card {
   display: flex;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   overflow: hidden;
   margin-bottom: 20rpx;
 }
@@ -228,11 +228,11 @@ onShow(async () => {
   padding: 4rpx 16rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .lv-basic { background: #6e7f5a; }
-.lv-inter { background: #8c5a2b; }
-.lv-senior { background: #b04a45; }
+.lv-inter { background: #c41e3a; }
+.lv-senior { background: #9c1630; }
 
 .course-body-inner {
   flex: 1;
@@ -244,7 +244,7 @@ onShow(async () => {
 .course-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.6;
   word-break: break-all;
 }
@@ -253,18 +253,18 @@ onShow(async () => {
   align-items: center;
   margin-top: 10rpx;
 }
-.teacher-icon { font-size: 20rpx; color: #857563; }
+.teacher-icon { font-size: 20rpx; color: #55524c; }
 .teacher-name {
   margin-left: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .course-stats {
   display: flex;
   align-items: center;
   margin-top: 8rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .stat-dot {
   margin: 0 8rpx;
@@ -279,11 +279,11 @@ onShow(async () => {
 .course-price {
   font-size: 32rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
 }
 .course-otprice {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   text-decoration: line-through;
   margin-left: 10rpx;
   margin-right: auto;
@@ -296,10 +296,10 @@ onShow(async () => {
   align-items: center;
 }
 .section-empty .empty-icon { font-size: 64rpx; }
-.section-empty .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #b3a595; }
+.section-empty .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #8a857c; }
 .course-bottom {
   text-align: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 22rpx;
   padding: 30rpx 0 40rpx;
   letter-spacing: 2rpx;

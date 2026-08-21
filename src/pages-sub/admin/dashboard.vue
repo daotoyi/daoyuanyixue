@@ -88,31 +88,31 @@
             <view class="f-row">
               <text class="f-label">精选推荐</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_recommend" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_recommend = $event.detail.value" />
+                <switch :checked="homeCfg.show_recommend" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_recommend = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">发布动态</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_publish" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_publish = $event.detail.value" />
+                <switch :checked="homeCfg.show_publish" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_publish = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">用户动态</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_follow" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
+                <switch :checked="homeCfg.show_follow" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">盘道入口</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_pandao" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_pandao = $event.detail.value" />
+                <switch :checked="homeCfg.show_pandao" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_pandao = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">直播入口</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
+                <switch :checked="homeCfg.show_live" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
@@ -129,31 +129,31 @@
             <view class="f-row">
               <text class="f-label">推荐页·直播</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.rec_show_live" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_live = $event.detail.value" />
+                <switch :checked="homeCfg.rec_show_live" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_live = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">推荐页·盘道</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.rec_show_pandao" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_pandao = $event.detail.value" />
+                <switch :checked="homeCfg.rec_show_pandao" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_pandao = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">推荐页·商品</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.rec_show_product" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_product = $event.detail.value" />
+                <switch :checked="homeCfg.rec_show_product" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_product = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">推荐页·课程</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.rec_show_course" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_course = $event.detail.value" />
+                <switch :checked="homeCfg.rec_show_course" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_course = $event.detail.value" />
               </view>
             </view>
             <view class="f-row">
               <text class="f-label">推荐页·动态</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.rec_show_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.rec_show_moment = $event.detail.value" />
+                <switch :checked="homeCfg.rec_show_moment" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_moment = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
@@ -171,7 +171,7 @@
             <view class="f-row">
               <text class="f-label">玄学工具</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_tools" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_tools = $event.detail.value" />
+                <switch :checked="homeCfg.show_tools" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_tools = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
@@ -189,7 +189,7 @@
             <view class="f-row">
               <text class="f-label">显示微信一键登录</text>
               <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_wechat_login" color="#8c5a2b" style="transform: scale(0.85)" @change="homeCfg.show_wechat_login = $event.detail.value" />
+                <switch :checked="homeCfg.show_wechat_login" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_wechat_login = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
@@ -787,7 +787,7 @@
           <!-- 发布权限开关: 标签+开关+保存 一行显示 -->
           <view class="moment-cfg-row">
             <text class="moment-cfg-label">允许发布动态</text>
-            <switch :checked="momentCfg.allow_publish_moment" color="#8c5a2b" style="transform: scale(0.85)" @change="momentCfg.allow_publish_moment = $event.detail.value" />
+            <switch :checked="momentCfg.allow_publish_moment" color="#c41e3a" style="transform: scale(0.85)" @change="momentCfg.allow_publish_moment = $event.detail.value" />
             <view class="btn-p sm moment-cfg-save" v-if="canWrite" @click="saveMomentConfig">保存</view>
           </view>
           <text class="settings-tip" style="margin-bottom: 20rpx;">关闭后，普通用户和员工无法发布动态，仅超管/管理员可发布</text>
@@ -828,7 +828,7 @@
             </view>
             <view class="tr" v-for="c in coupons" :key="c.id">
               <text class="td w-name">{{ c.name }}</text>
-              <text class="td w-price" style="color:#8c5a2b; white-space:nowrap">{{ c.discount }}</text>
+              <text class="td w-price" style="color:#c41e3a; white-space:nowrap">{{ c.discount }}</text>
               <text class="td w-stock" style="white-space:nowrap">{{ c.expire_at }}</text>
               <text class="td w-status">{{ c.status === 'valid' ? '有效' : '失效' }}</text>
               <view class="td w-ops ops" v-if="canWrite">
@@ -896,7 +896,7 @@
                 <switch
                   v-if="f.type === 'switch'"
                   :checked="settingsForm[f.key] === '1' || settingsForm[f.key] === true"
-                  color="#8c5a2b"
+                  color="#c41e3a"
                   style="transform: scale(0.85)"
                   @change="settingsForm[f.key] = $event.detail.value ? '1' : '0'"
                 />
@@ -2132,7 +2132,7 @@ async function wxmpPub(m) {
     title: '发布上线',
     content: `确定将 ${m.appid} 的已审核版本发布上线吗？（正式生效）`,
     confirmText: '发布',
-    confirmColor: '#b04a45',
+    confirmColor: '#9c1630',
     success: async (r) => {
       if (!r.confirm) return
       try {
@@ -2756,13 +2756,13 @@ function deleteUser(form) {
       : '确定删除用户 ' + (form.nickname || form.dao_code || form.uid) + ' 吗？将同时清除其订单/收藏/足迹等数据，不可恢复！',
     showCancel: !isAdminUser,
     confirmText: isAdminUser ? '知道了' : '删除',
-    confirmColor: '#b04a45',
+    confirmColor: '#9c1630',
     success: (r) => {
       if (!r.confirm || isAdminUser) return
       uni.showModal({
         title: '再次确认',
         content: '删除后不可恢复，请再次确认！',
-        confirmColor: '#b04a45',
+        confirmColor: '#9c1630',
         success: async (r2) => {
           if (!r2.confirm) return
           try {
@@ -3032,7 +3032,7 @@ onMounted(async () => {
 .admin-dash {
   height: 100vh;
   display: flex;
-  background: #faf3e9;
+  background: #fbe9ec;
   overflow: hidden;
 }
 /* u-popup 脱离 flex 占位 (H5 下 popup 根元素 static, 会挤占 main 宽度) */
@@ -3047,7 +3047,7 @@ onMounted(async () => {
 .sidebar {
   width: 210rpx;
   height: 100vh;
-  background: #4e3420;
+  background: #9c1630;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -3064,12 +3064,12 @@ onMounted(async () => {
   transform: translateY(-50%);
   width: 36rpx;
   height: 64rpx;
-  background: #4e3420;
+  background: #9c1630;
   border-radius: 0 12rpx 12rpx 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #c4a484;
+  color: #b8860b;
   font-size: 26rpx;
   z-index: 5;
 }
@@ -3084,7 +3084,7 @@ onMounted(async () => {
 .logo-seal {
   width: 72rpx;
   height: 72rpx;
-  border: 2rpx solid #c4a484;
+  border: 2rpx solid #b8860b;
   border-radius: 12rpx;
   display: flex;
   align-items: center;
@@ -3094,11 +3094,11 @@ onMounted(async () => {
 }
 .logo-seal text {
   font-size: 40rpx;
-  color: #c4a484;
+  color: #b8860b;
 }
 .logo-name {
   font-size: 28rpx;
-  color: #857563;
+  color: #55524c;
   letter-spacing: 4rpx;
 }
 .logo-sub {
@@ -3123,7 +3123,7 @@ onMounted(async () => {
   background: rgba(201, 169, 106, 0.18);
 }
 .menu-item.active .menu-label {
-  color: #c4a484;
+  color: #b8860b;
   font-weight: 500;
 }
 .menu-icon {
@@ -3148,8 +3148,8 @@ onMounted(async () => {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  background: #c4a484;
-  color: #4e3420;
+  background: #b8860b;
+  color: #9c1630;
   font-size: 26rpx;
   display: flex;
   align-items: center;
@@ -3162,7 +3162,7 @@ onMounted(async () => {
 }
 .au-name {
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .au-role {
   font-size: 18rpx;
@@ -3182,13 +3182,13 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 40rpx;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .tb-title {
   font-size: 32rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
 }
 .tb-actions {
   display: flex;
@@ -3196,11 +3196,11 @@ onMounted(async () => {
 }
 .tb-link {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   white-space: nowrap;
 }
 .tb-link.danger {
-  color: #b04a45;
+  color: #9c1630;
 }
 
 .content {
@@ -3226,7 +3226,7 @@ onMounted(async () => {
 .module-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
 }
 .filter-pills {
   display: flex;
@@ -3236,15 +3236,15 @@ onMounted(async () => {
   padding: 8rpx 24rpx;
   margin-left: 12rpx;
   border-radius: 999rpx;
-  background: #efe7d8;
+  background: #e8e2da;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .pill.on {
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
 }
 
 /* 概览 */
@@ -3254,9 +3254,9 @@ onMounted(async () => {
   gap: 16rpx;
 }
 .stat-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 14rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 22rpx 14rpx;
   display: flex;
   flex-direction: column;
@@ -3266,19 +3266,19 @@ onMounted(async () => {
 .stat-num {
   font-size: 36rpx;
   font-weight: 500;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .stat-label {
   margin-top: 8rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 .recent-panel {
   margin-top: 30rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   overflow: hidden;
 }
 /* 最近订单: 手机/小程序窄屏可左右滑动 */
@@ -3292,12 +3292,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .panel-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .panel-count {
   font-size: 22rpx;
@@ -3306,13 +3306,13 @@ onMounted(async () => {
 }
 .panel-more {
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .recent-row {
   display: flex;
   align-items: center;
   padding: 20rpx 30rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
   gap: 20rpx;
   min-width: 900rpx;
 }
@@ -3322,7 +3322,7 @@ onMounted(async () => {
 .rr-no {
   width: 240rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3331,7 +3331,7 @@ onMounted(async () => {
 .rr-items {
   flex: 1;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .rr-price {
   width: 110rpx;
@@ -3339,34 +3339,34 @@ onMounted(async () => {
   font-size: 24rpx;
   white-space: nowrap;
   flex-shrink: 0;
-  color: #b04a45;
+  color: #9c1630;
 }
 .rr-status {
   width: 100rpx;
   text-align: center;
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .rr-time {
   width: 150rpx;
   text-align: right;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .recent-empty {
   text-align: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 24rpx;
   padding: 40rpx;
 }
 
 /* 表格 */
 .table {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -3374,7 +3374,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 18rpx 24rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
   /* 手机端表格超宽时横向滑动, 显示更规整 */
   min-width: 1200rpx;
 }
@@ -3382,11 +3382,11 @@ onMounted(async () => {
   border-bottom: none;
 }
 .tr.th {
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 .th .td {
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
   font-size: 24rpx;
   /* 表头列间竖线, 区分边界 */
   border-left: 1rpx solid rgba(201, 169, 106, 0.35);
@@ -3396,7 +3396,7 @@ onMounted(async () => {
 }
 .td {
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -3413,7 +3413,7 @@ onMounted(async () => {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 20rpx;
   padding-left: 16rpx;
   border-left: 6rpx solid #c4753a;
@@ -3437,7 +3437,7 @@ onMounted(async () => {
   margin: 0 0 20rpx;
 }
 .as-sum-item { font-size: 26rpx; color: #6b5a45; }
-.as-sum-item .as-num { font-size: 32rpx; font-weight: 700; color: #42372c; }
+.as-sum-item .as-num { font-size: 32rpx; font-weight: 700; color: #2a2a2a; }
 .as-sum-item .as-num.price { color: #c4753a; }
 .as-sum-divider { width: 1rpx; height: 30rpx; background: #e8dcc4; }
 .pie-wrap {
@@ -3477,7 +3477,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
 }
-.pie-svg-num { font-size: 14px; font-weight: 700; fill: #42372c; }
+.pie-svg-num { font-size: 14px; font-weight: 700; fill: #2a2a2a; }
 .pie-svg-label { font-size: 7px; fill: #8a7e6e; }
 .pie-empty {
   width: 100%; height: 100%;
@@ -3495,7 +3495,7 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .legend-dot { width: 18rpx; height: 18rpx; border-radius: 50%; flex-shrink: 0; }
-.legend-label { font-size: 22rpx; color: #42372c; min-width: 76rpx; overflow: hidden; text-overflow: ellipsis; }
+.legend-label { font-size: 22rpx; color: #2a2a2a; min-width: 76rpx; overflow: hidden; text-overflow: ellipsis; }
 .legend-count { font-size: 22rpx; color: #8a7e6e; }
 .legend-amount { font-size: 22rpx; color: #c4753a; font-weight: 600; margin-left: auto; }
 .w-rank { width: 80rpx; text-align: center; font-weight: 600; color: #8a7e6e; }
@@ -3563,8 +3563,8 @@ onMounted(async () => {
 .cred-phone { background: #f3e5f5; color: #6a1b9a; }
 .cred-none { background: #f5f5f5; color: #9e9e9e; }
 .w-avatar-cell { flex: none; width: 90rpx; display: flex; align-items: center; justify-content: center; }
-.user-td-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; overflow: hidden; background: #efe7d8; }
-.user-td-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: #8c5a2b; }
+.user-td-avatar { width: 56rpx; height: 56rpx; border-radius: 50%; overflow: hidden; background: #e8e2da; }
+.user-td-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 26rpx; color: #c41e3a; }
 .users-nick { flex: none; width: 200rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .w-price { white-space: nowrap; }
 .w-status { width: 170rpx; text-align: center; white-space: nowrap; overflow: hidden; }
@@ -3573,7 +3573,7 @@ onMounted(async () => {
   width: 60rpx;
   height: 60rpx;
   border-radius: 8rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 /* 反馈图片缩略图 */
 .fb-imgs {
@@ -3586,11 +3586,11 @@ onMounted(async () => {
   width: 120rpx;
   height: 120rpx;
   border-radius: 8rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 .op {
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   padding: 4rpx 10rpx;
   white-space: nowrap;
   flex-shrink: 0;
@@ -3631,7 +3631,7 @@ onMounted(async () => {
   border-radius: 10rpx;
   padding: 8rpx 16rpx;
 }
-.order-type-stats .ots-label { font-size: 22rpx; color: #8c5a2b; font-weight: 600; }
+.order-type-stats .ots-label { font-size: 22rpx; color: #c41e3a; font-weight: 600; }
 .order-type-stats .ots-val { font-size: 22rpx; color: #6b5a45; }
 .order-type-stats .ots-val .price { color: #c4753a; }
 
@@ -3648,7 +3648,7 @@ onMounted(async () => {
 .orders-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .orders-table .sortable:active { color: #c4753a; }
 .op.danger {
-  color: #b04a45;
+  color: #9c1630;
 }
 /* 首页推荐列 + 推荐高亮 */
 .w-rec { width: 150rpx; display: flex; align-items: center; justify-content: center; }
@@ -3657,10 +3657,10 @@ onMounted(async () => {
   font-weight: 600;
 }
 .on { color: #6e7f5a; }
-.off { color: #b04a45; }
-.ls-live { color: #b04a45; }
-.ls-upcoming { color: #8c5a2b; }
-.ls-ended { color: #857563; }
+.off { color: #9c1630; }
+.ls-live { color: #9c1630; }
+.ls-upcoming { color: #c41e3a; }
+.ls-ended { color: #55524c; }
 .ellipsis {
   overflow: hidden;
   white-space: nowrap;
@@ -3678,20 +3678,20 @@ onMounted(async () => {
   margin-right: 16rpx;
   margin-bottom: 12rpx;
   border-radius: 999rpx;
-  background: #efe7d8;
+  background: #e8e2da;
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
 }
 .settings-tab.on {
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
   font-weight: 500;
 }
 .cover-preview {
   width: 140rpx;
   height: 90rpx;
   border-radius: 8rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
 }
 /* 上传封面: 按钮+预览 同行 */
 .f-row-inline {
@@ -3701,7 +3701,7 @@ onMounted(async () => {
 }
 .f-label-sm {
   font-size: 22rpx;
-  color: #b04a45;
+  color: #9c1630;
   white-space: nowrap;
 }
 /* 盘道场次列表封面缩略图 */
@@ -3711,7 +3711,7 @@ onMounted(async () => {
   border-radius: 10rpx;
   margin-right: 16rpx;
   flex-shrink: 0;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .filter-row {
   display: flex;
@@ -3722,19 +3722,19 @@ onMounted(async () => {
 }
 .filter-label {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-right: 6rpx;
 }
 .filter-pill {
   font-size: 22rpx;
   padding: 6rpx 18rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
-  color: #857563;
+  background: #f8f5f0;
+  color: #55524c;
 }
 .filter-pill.on {
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
 }
 .filter-row {
   display: flex;
@@ -3745,29 +3745,29 @@ onMounted(async () => {
 }
 .filter-label {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-right: 6rpx;
 }
 .filter-pill {
   font-size: 22rpx;
   padding: 6rpx 18rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
-  color: #857563;
+  background: #f8f5f0;
+  color: #55524c;
 }
 .filter-pill.on {
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
 }
 
 
 .f-input.ph {
-  color: #b3a595;
+  color: #8a857c;
 }
 /* 表单只读文本(如自动同步的星期) */
 .f-label-plain {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 56rpx;
 }
 /* 页面管理 */
@@ -3814,9 +3814,9 @@ onMounted(async () => {
 }
 
 .settings-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 30rpx;
   /* 手机端设置表单横向滑动 */
   overflow-x: auto;
@@ -3841,17 +3841,17 @@ onMounted(async () => {
   align-items: baseline;
   margin-bottom: 28rpx;
   padding-bottom: 20rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .sd-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
   margin-right: 20rpx;
 }
 .sd-text {
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .f-input-wrap {
   flex: 1;
@@ -3866,7 +3866,7 @@ onMounted(async () => {
   position: absolute;
   right: 16rpx;
   font-size: 20rpx;
-  color: #b04a45;
+  color: #9c1630;
   padding: 8rpx;
 }
 .settings-actions {
@@ -3875,11 +3875,11 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 30rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
 }
 .settings-tip {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   flex: 1;
   margin-right: 20rpx;
 }
@@ -3891,7 +3891,7 @@ onMounted(async () => {
 }
 .moment-cfg-label {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   margin-right: 16rpx;
   flex-shrink: 0;
 }
@@ -3909,9 +3909,9 @@ onMounted(async () => {
 }
 .cate-panel {
   width: 260rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3923,7 +3923,7 @@ onMounted(async () => {
 }
 .cate-toggle {
   font-size: 30rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   padding: 0 10rpx;
 }
 .cate-panel.collapsed .cate-panel-list,
@@ -3935,19 +3935,19 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 24rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .cate-panel-title {
   font-size: 26rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
 }
 .cate-add {
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   padding: 4rpx 12rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .cate-panel-list {
   flex: 1;
@@ -3957,32 +3957,32 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   padding: 18rpx 20rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
   gap: 8rpx;
 }
 .cate-row.active {
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .cate-row-name {
   flex: 1;
   min-width: 0;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .cate-row.active .cate-row-name {
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
 }
 .cate-row-badge {
   font-size: 18rpx;
   color: #6e7f5a;
-  background: #faf3e9;
+  background: #fbe9ec;
   padding: 2rpx 10rpx;
   border-radius: 999rpx;
 }
 .cate-row-badge.off {
-  color: #b04a45;
-  background: #faf3e9;
+  color: #9c1630;
+  background: #fbe9ec;
 }
 .cate-row-ops {
   display: none;
@@ -3993,13 +3993,13 @@ onMounted(async () => {
 }
 .cate-op {
   font-size: 18rpx;
-  color: #8c5a2b;
-  background: #f8f3ea;
+  color: #c41e3a;
+  background: #f8f5f0;
   padding: 2rpx 8rpx;
   border-radius: 6rpx;
 }
 .cate-op.danger {
-  color: #b04a45;
+  color: #9c1630;
 }
 .cate-main {
   flex: 1;
@@ -4007,7 +4007,7 @@ onMounted(async () => {
 }
 .table-empty {
   text-align: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 24rpx;
   padding: 60rpx 0;
 }
@@ -4016,7 +4016,7 @@ onMounted(async () => {
 .attr-editor {
   margin-bottom: 20rpx;
   padding: 20rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
 }
 .attr-head {
@@ -4028,11 +4028,11 @@ onMounted(async () => {
 .attr-title {
   font-size: 24rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .attr-add {
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .attr-row {
   display: flex;
@@ -4043,22 +4043,22 @@ onMounted(async () => {
 .attr-input {
   flex: 1;
   height: 64rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 10rpx;
   padding: 0 18rpx;
   font-size: 24rpx;
-  color: #42372c;
-  border: 1rpx solid #efe7d8;
+  color: #2a2a2a;
+  border: 1rpx solid #e8e2da;
 }
 .attr-del {
   font-size: 24rpx;
-  color: #b04a45;
+  color: #9c1630;
   padding: 8rpx 10rpx;
 }
 .attr-empty {
   text-align: center;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
   padding: 16rpx 0;
 }
 
@@ -4073,34 +4073,34 @@ onMounted(async () => {
 .f-pills .pill {
   padding: 8rpx 22rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   border: 2rpx solid transparent;
 }
 .f-pills .pill.on {
-  color: #8c5a2b;
-  border-color: #8c5a2b;
-  background: #faf3e9;
+  color: #c41e3a;
+  border-color: #c41e3a;
+  background: #fbe9ec;
   font-weight: 500;
 }
 .f-static {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
-.st-unpaid { color: #b04a45; font-weight: 500; }
-.st-wait { color: #ba7517; font-weight: 500; }
+.st-unpaid { color: #9c1630; font-weight: 500; }
+.st-wait { color: #c41e3a; font-weight: 500; }
 .st-done { color: #6e7f5a; font-weight: 500; }
-.st-doing { color: #8c5a2b; font-weight: 500; }
-.st-unshipped { color: #8c5a2b; font-weight: 500; }
-.st-unreceived { color: #ba7517; font-weight: 500; }
+.st-doing { color: #c41e3a; font-weight: 500; }
+.st-unshipped { color: #c41e3a; font-weight: 500; }
+.st-unreceived { color: #c41e3a; font-weight: 500; }
 .st-done { color: #6e7f5a; font-weight: 500; }
-.st-refunded { color: #857563; font-weight: 500; }
+.st-refunded { color: #55524c; font-weight: 500; }
 .td-logis {
   display: block;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   margin-top: 4rpx;
 }
 /* 售后管理: 搜索框 */
@@ -4115,7 +4115,7 @@ onMounted(async () => {
   height: 64rpx;
   padding: 0 60rpx 0 20rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   background: #fdf6ea;
   border: 1rpx solid #e8dcc4;
   border-radius: 32rpx;
@@ -4133,14 +4133,14 @@ onMounted(async () => {
   text-align: center;
   font-size: 24rpx;
   color: #9e8f78;
-  background: #efe7d8;
+  background: #e8e2da;
   border-radius: 50%;
 }
 /* 售后管理: 单元格内次要信息行 / 弹窗只读文本 / 回复回显 */
 .td-sub {
   display: block;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   margin-top: 4rpx;
 }
 /* 售后管理: 同订单分组 (子条目缩进显示) */
@@ -4165,19 +4165,19 @@ onMounted(async () => {
 .f-text {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.5;
   word-break: break-all;
 }
 .as-reply-echo {
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 /* 时间列: 单行显示 */
 .w-time {
   width: 220rpx;
   white-space: nowrap;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 /* 弹窗表单 */
@@ -4191,7 +4191,7 @@ onMounted(async () => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 24rpx;
 }
 .f-row {
@@ -4205,7 +4205,7 @@ onMounted(async () => {
   flex-direction: column;
 }
 .ep-item {
-  background: #faf3e9;
+  background: #fbe9ec;
   border: 1rpx solid #e6dcca;
   border-radius: 12rpx;
   padding: 12rpx;
@@ -4225,7 +4225,7 @@ onMounted(async () => {
   height: 44rpx;
   border-radius: 50%;
   background: #efe3cd;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-size: 22rpx;
   display: flex;
   align-items: center;
@@ -4237,17 +4237,17 @@ onMounted(async () => {
 }
 .ep-op {
   font-size: 26rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   padding: 4rpx 10rpx;
   flex-shrink: 0;
 }
 .ep-op.danger {
-  color: #b04a45;
+  color: #9c1630;
 }
 /* 课时 免费/付费 切换 */
 .ep-free {
   font-size: 22rpx;
-  color: #b04a45;
+  color: #9c1630;
   border: 1rpx solid #d9a29e;
   border-radius: 8rpx;
   padding: 4rpx 14rpx;
@@ -4261,26 +4261,26 @@ onMounted(async () => {
 .f-label {
   width: 150rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 72rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 0 20rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .f-textarea {
   flex: 1;
   height: 120rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 14rpx 20rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 /* 课程表单: 标题/描述输入框加大 */
 .f-title {
@@ -4303,8 +4303,8 @@ onMounted(async () => {
   height: 34rpx;
   line-height: 34rpx;
   text-align: center;
-  background: #b04a45;
-  color: #fefbf6;
+  background: #9c1630;
+  color: #fffafa;
   font-size: 20rpx;
   border-radius: 50%;
   z-index: 3;
@@ -4317,9 +4317,9 @@ onMounted(async () => {
   justify-content: center;
   border: 2rpx dashed #d8ccb8;
   border-radius: 10rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-size: 22rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 /* 小程序接管 */
 .btn-add {
@@ -4328,16 +4328,16 @@ onMounted(async () => {
   justify-content: center;
   height: 60rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
   padding: 0 28rpx;
   margin-left: auto;
 }
-.btn-add text { font-size: 24rpx; color: #fefbf6; }
-.wxmp-tip { font-size: 22rpx; color: #857563; margin-bottom: 16rpx; line-height: 1.6; }
-.wxmp-bind-tip { font-size: 22rpx; color: #b3a595; margin-top: 16rpx; line-height: 1.6; }
-.wxmp-strong { color: #b04a45; }
-.wxmp-auth { margin-top: 20rpx; background: #faf3e9; border-radius: 12rpx; padding: 18rpx; }
-.wxmp-auth-tip { display: block; font-size: 22rpx; color: #857563; margin-bottom: 8rpx; }
+.btn-add text { font-size: 24rpx; color: #fffafa; }
+.wxmp-tip { font-size: 22rpx; color: #55524c; margin-bottom: 16rpx; line-height: 1.6; }
+.wxmp-bind-tip { font-size: 22rpx; color: #8a857c; margin-top: 16rpx; line-height: 1.6; }
+.wxmp-strong { color: #9c1630; }
+.wxmp-auth { margin-top: 20rpx; background: #fbe9ec; border-radius: 12rpx; padding: 18rpx; }
+.wxmp-auth-tip { display: block; font-size: 22rpx; color: #55524c; margin-bottom: 8rpx; }
 .wxmp-auth-url {
   display: block;
   font-size: 20rpx;
@@ -4352,13 +4352,13 @@ onMounted(async () => {
   justify-content: center;
   height: 68rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
   margin-top: 14rpx;
 }
-.btn-copy text { font-size: 24rpx; color: #fefbf6; }
+.btn-copy text { font-size: 24rpx; color: #fffafa; }
 .qr-sheet { text-align: center; }
 .wxmp-qr-img { width: 400rpx; margin: 20rpx auto; display: block; }
-.wxmp-qr-tip { font-size: 22rpx; color: #b3a595; margin: 30rpx 0; }
+.wxmp-qr-tip { font-size: 22rpx; color: #8a857c; margin: 30rpx 0; }
 .f-pills {
   display: flex;
   flex: 1;

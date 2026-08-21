@@ -175,7 +175,7 @@ function startLearn() {
 <style lang="scss" scoped>
 .cd-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding-bottom: 140rpx;
 }
 
@@ -194,11 +194,11 @@ function startLearn() {
   padding: 6rpx 22rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .lv-basic { background: #6e7f5a; }
-.lv-inter { background: #8c5a2b; }
-.lv-senior { background: #b04a45; }
+.lv-inter { background: #c41e3a; }
+.lv-senior { background: #9c1630; }
 .cover-title {
   position: absolute;
   left: 24rpx;
@@ -206,14 +206,14 @@ function startLearn() {
   bottom: 24rpx;
   font-size: 36rpx;
   font-weight: 500;
-  color: #fefbf6;
+  color: #fffafa;
   text-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.5);
 }
 
 .card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 26rpx;
   margin: 20rpx 24rpx 0;
 }
@@ -224,25 +224,25 @@ function startLearn() {
 .price {
   font-size: 44rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
 }
 .otprice {
   font-size: 24rpx;
-  color: #b3a595;
+  color: #8a857c;
   text-decoration: line-through;
   margin-left: 14rpx;
 }
 .students {
   margin-left: auto;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .teacher-row {
   display: flex;
   align-items: center;
   margin-top: 24rpx;
   padding-top: 24rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
 }
 .teacher-info {
   margin-left: 20rpx;
@@ -250,25 +250,25 @@ function startLearn() {
 .ti-intro {
   font-size: 26rpx;
   line-height: 1.7;
-  color: #42372c;
+  color: #2a2a2a;
   padding: 16rpx 4rpx;
 }
 .ti-courses {
   margin: 10rpx 0 24rpx;
   padding-top: 16rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
 }
 .ti-courses-label {
   display: block;
   font-size: 26rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
   margin-bottom: 10rpx;
 }
 .ti-course {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   line-height: 1.8;
 }
 .ti-close {
@@ -280,53 +280,53 @@ function startLearn() {
 .teacher-name {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .teacher-sub {
   display: block;
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
   margin-top: 4rpx;
 }
 
 .card-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 16rpx;
 }
 .desc {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   line-height: 1.7;
 }
 .outline {
   margin-top: 24rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
   padding-top: 10rpx;
 }
 .lesson {
   display: flex;
   align-items: center;
   padding: 18rpx 0;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .lesson-idx {
   width: 48rpx;
   height: 48rpx;
   border-radius: 10rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .lesson-name {
   flex: 1;
   margin-left: 16rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .lesson-lock {
   font-size: 26rpx;
@@ -335,7 +335,7 @@ function startLearn() {
   text-align: center;
   padding: 20rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 /* 底部购买栏 (框效果) */
@@ -347,8 +347,8 @@ function startLearn() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fefbf6;
-  border-top: 2rpx solid #efe7d8;
+  background: #fffafa;
+  border-top: 2rpx solid #e8e2da;
   box-shadow: 0 -6rpx 20rpx rgba(78, 52, 32, 0.08);
   padding: 20rpx 24rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
@@ -357,7 +357,7 @@ function startLearn() {
 .buy-price {
   font-size: 40rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
 }
 .buy-left {
   display: flex;
@@ -365,7 +365,7 @@ function startLearn() {
 }
 .buy-origin {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
   text-decoration: line-through;
   margin-left: 12rpx;
 }
@@ -382,14 +382,14 @@ function startLearn() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-buy {
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 .btn-learn {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

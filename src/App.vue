@@ -88,30 +88,38 @@ onHide(() => {
 /* ---- 主题 CSS 变量 (浅色默认 / 深色覆盖) ----
    同时挂 :root 与 page: App 端 WebView 无 page 元素, 必须 :root 兜底 */
 :root {
-  --dy-page: #f8f3ea;      /* 页面背景 */
-  --dy-card: #fefbf6;      /* 卡片/面板底 */
-  --dy-soft: #faf3e9;      /* 通用浅底(选中态/侧栏) */
-  --dy-text: #42372c;      /* 主文字 */
-  --dy-sub: #857563;       /* 次级文字 */
-  --dy-faint: #b3a595;     /* 浅文字/占位 */
-  --dy-line: #efe7d8;      /* 边框/分隔线 */
-  --dy-mask: rgba(254, 251, 246, 0.6); /* 遮罩(选中态) */
+  --dy-red: #c41e3a;           /* 中国红 (主色) */
+  --dy-red-deep: #9c1630;      /* 深红 */
+  --dy-gold: #b8860b;          /* 鎏金点缀 */
+  --dy-page: #f8f5f0;          /* 页面背景 (米白) */
+  --dy-card: #fffafa;          /* 卡片/面板底 */
+  --dy-soft: #fbe9ec;          /* 通用浅底(选中态/侧栏) */
+  --dy-text: #2a2a2a;          /* 主文字 */
+  --dy-sub: #55524c;           /* 次级文字 */
+  --dy-faint: #8a857c;         /* 浅文字/占位 */
+  --dy-line: #e8e2da;          /* 边框/分隔线 */
+  --dy-chip-bg: #fbe9ec;       /* 标签/芯片背景 */
+  --dy-mask: rgba(255, 250, 250, 0.6); /* 遮罩(选中态) */
 }
 page {
-  --dy-page: #f8f3ea;
-  --dy-card: #fefbf6;
-  --dy-soft: #faf3e9;
-  --dy-text: #42372c;
-  --dy-sub: #857563;
-  --dy-faint: #b3a595;
-  --dy-line: #efe7d8;
-  --dy-mask: rgba(254, 251, 246, 0.6);
+  --dy-red: #c41e3a;
+  --dy-red-deep: #9c1630;
+  --dy-gold: #b8860b;
+  --dy-page: #f8f5f0;
+  --dy-card: #fffafa;
+  --dy-soft: #fbe9ec;
+  --dy-text: #2a2a2a;
+  --dy-sub: #55524c;
+  --dy-faint: #8a857c;
+  --dy-line: #e8e2da;
+  --dy-chip-bg: #fbe9ec;
+  --dy-mask: rgba(255, 250, 250, 0.6);
 
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
     'Hiragino Sans GB', 'STSong', 'SimSun', 'Noto Serif SC', serif;
   font-size: 28rpx;
-  color: #42372c;
-  background-color: #f8f3ea;
+  color: #2a2a2a;
+  background-color: #f8f5f0;
 }
 
 /* 通用容器 */
@@ -120,7 +128,7 @@ page {
   box-sizing: border-box;
 }
 .page-paper {
-  background-color: #fefbf6;
+  background-color: #fffafa;
   min-height: 100vh;
 }
 
@@ -139,25 +147,25 @@ page {
 .flex-column { display: flex; flex-direction: column; }
 
 /* 主题色 */
-.text-primary { color: #8c5a2b; }
-.text-gold { color: #c4a484; }
-.text-ink { color: #42372c; }
-.text-grey { color: #857563; }
-.text-cinnabar { color: #b04a45; }
-.bg-paper { background-color: #fefbf6; }
-.bg-cream { background-color: #f8f3ea; }
+.text-primary { color: var(--dy-red); }
+.text-gold { color: var(--dy-gold); }
+.text-ink { color: #2a2a2a; }
+.text-grey { color: #55524c; }
+.text-cinnabar { color: #c41e3a; }
+.bg-paper { background-color: #fffafa; }
+.bg-cream { background-color: #f8f5f0; }
 
 /* 卡片 */
 .card {
-  background-color: #fefbf6;
+  background-color: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid var(--dy-line);
 }
 
 /* 分隔线 */
 .divider {
   height: 1rpx;
-  background-color: #efe7d8;
+  background-color: var(--dy-line);
 }
 
 /* 安全区域 */
@@ -185,8 +193,8 @@ page {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: var(--dy-red);
+  color: #fffafa;
   border-radius: 999rpx;
   padding: 14rpx 44rpx;
   font-size: 28rpx;
@@ -195,12 +203,12 @@ page {
 .btn-p.sm { padding: 8rpx 28rpx; font-size: 24rpx; }
 .btn-p.plain {
   background: transparent;
-  color: #857563;
-  border: 1rpx solid #d8ccb8;
+  color: #55524c;
+  border: 1rpx solid #e8e2da;
 }
-.btn-p.danger { background: #b04a45; }
+.btn-p.danger { background: #9c1630; }
 .btn-p.success { background: #6e7f5a; }
-.btn-p.warn { background: #ba7517; }
+.btn-p.warn { background: var(--dy-red-deep); }
 .btn-p:active { opacity: 0.85; }
 
 /* 弹层 (mask + sheet) */
@@ -216,7 +224,7 @@ page {
 .pp-sheet {
   width: 100%;
   max-width: 750rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 24rpx 24rpx 0 0;
   padding: 30rpx 30rpx 60rpx;
   box-sizing: border-box;
@@ -230,7 +238,7 @@ page {
 .empty-tip {
   padding: 60rpx 30rpx;
   text-align: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 26rpx;
   line-height: 1.6;
 }
@@ -243,8 +251,8 @@ page {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
-  background: #efe7d8;
-  color: #8c5a2b;
+  background: #e8e2da;
+  color: #c41e3a;
   font-size: 24rpx;
   font-weight: 600;
   flex-shrink: 0;

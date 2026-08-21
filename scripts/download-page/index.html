@@ -110,6 +110,34 @@
       color: #b4a89a;
       line-height: 1.8;
     }
+    /* 微信内提示遮罩 */
+    .wechat-tip {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      z-index: 999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .wechat-tip.show { display: flex; }
+    .wechat-tip .arrow-icon {
+      font-size: 60px;
+      margin-bottom: 16px;
+    }
+    .wechat-tip p {
+      color: #fff;
+      font-size: 16px;
+      line-height: 1.8;
+      text-align: center;
+      max-width: 320px;
+    }
+    .wechat-tip .highlight {
+      color: #ffc107;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -118,7 +146,7 @@
     <div class="brand">真和盛</div>
     <div class="name">道元易学</div>
     <div class="sub">观天道 · 明人事 · 致中和</div>
-    <div class="version">Android v1.11.182</div>
+    <div class="version">Android v1.11.184</div>
 
     <div class="features">
       <div><span>◆</span>商城：开运饰品 · 香薰禅修 · 文房茶道</div>
@@ -126,11 +154,29 @@
       <div><span>◆</span>社区：易友动态 · 直播讲堂</div>
     </div>
 
-  <a class="btn" id="downloadBtn" href="https://zhenhesheng.cn/apk/daoyuan-v1.11.182.apk">下载安卓 APP</a>
-  <div class="tip">
-    若按钮无法点击，请直接点击下方备用链接<br />
-    <a href="https://zhenhesheng.cn/apk/daoyuan-v1.11.182.apk" style="color:#854d0e">直接下载 APK</a>
+    <a class="btn" id="downloadBtn" href="https://zhenhesheng.cn/apk/daoyuan-v1.11.184.apk">下载安卓 APP</a>
+    <div class="tip">
+      若按钮无法点击，请直接点击下方备用链接<br />
+      <a href="https://zhenhesheng.cn/apk/daoyuan-v1.11.184.apk" style="color:#854d0e">直接下载 APK</a>
+    </div>
   </div>
-</div>
+
+  <!-- 微信内提示遮罩 -->
+  <div class="wechat-tip" id="wechatTip">
+    <div class="arrow-icon">↗️</div>
+    <p>微信扫码后无法直接下载 APP</p>
+    <p>请点击右上角 <span class="highlight">「···」三个点</span></p>
+    <p>选择 <span class="highlight">「在浏览器打开」</span></p>
+    <p>即可正常下载安装包</p>
+  </div>
+
+  <script>
+    // 检测微信环境：扫码进入则显示提示
+    var ua = navigator.userAgent.toLowerCase();
+    var isInWechat = /micromessenger/i.test(navigator.userAgent);
+    if (isInWechat) {
+      document.getElementById('wechatTip').classList.add('show');
+    }
+  </script>
 </body>
 </html>

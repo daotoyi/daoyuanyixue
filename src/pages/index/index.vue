@@ -512,7 +512,7 @@ async function bookPandao(pd) {
       title: '取消预约',
       content: '确定取消该场次的预约吗？已支付的费用将自动原路退回。',
       confirmText: '取消预约',
-      confirmColor: '#b04a45',
+      confirmColor: '#9c1630',
       success: async (res) => {
         if (!res.confirm) return
         try {
@@ -951,19 +951,19 @@ onShow(async () => {
 <style lang="scss" scoped>
 .home-page {
   min-height: 100vh;
-  background-color: #f8f3ea;
+  background-color: #f8f5f0;
 }
 
 /* 品牌横幅 */
 .banner {
   position: relative;
   padding: 40rpx 40rpx 36rpx;
-  background: linear-gradient(135deg, #4e3420 0%, #6e4a26 55%, #8c5a2b 100%);
+  background: linear-gradient(135deg, #9c1630 0%, #6b1022 55%, #c41e3a 100%);
 }
 .banner-title {
   font-size: 52rpx;
   font-weight: 500;
-  color: #857563;
+  color: #55524c;
   letter-spacing: 8rpx;
 }
 .banner-sub {
@@ -979,7 +979,7 @@ onShow(async () => {
   transform: translateY(-50%);
   width: 88rpx;
   height: 88rpx;
-  border: 2rpx solid #c4a484;
+  border: 2rpx solid #b8860b;
   border-radius: 12rpx;
   display: flex;
   align-items: center;
@@ -994,8 +994,8 @@ onShow(async () => {
 /* 子频道 */
 .channel-tabs {
   display: flex;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .channel-tab {
   position: relative;
@@ -1003,10 +1003,10 @@ onShow(async () => {
   text-align: center;
   padding: 24rpx 0 20rpx;
   font-size: 28rpx;
-  color: #857563;
+  color: #55524c;
 }
 .channel-tab.active {
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
 }
 .tab-line {
@@ -1017,7 +1017,7 @@ onShow(async () => {
   width: 48rpx;
   height: 6rpx;
   border-radius: 3rpx;
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 
 /* 动态流 */
@@ -1028,11 +1028,11 @@ onShow(async () => {
   padding: 20rpx 24rpx;
 }
 .moment-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 20rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
 }
 .moment-head {
   display: flex;
@@ -1042,8 +1042,8 @@ onShow(async () => {
   width: 64rpx;
   height: 64rpx;
   border-radius: 50%;
-  background: #efe7d8;
-  color: #8c5a2b;
+  background: #e8e2da;
+  color: #c41e3a;
   font-size: 28rpx;
   display: flex;
   align-items: center;
@@ -1058,18 +1058,18 @@ onShow(async () => {
 .moment-name {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .moment-time {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   margin-top: 4rpx;
 }
 .moment-content {
   margin: 20rpx 0;
   font-size: 28rpx;
   line-height: 1.7;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .moment-images {
   display: flex;
@@ -1094,7 +1094,7 @@ onShow(async () => {
   align-items: center;
   margin-top: 16rpx;
   padding-top: 16rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
 }
 .act {
   display: flex;
@@ -1105,10 +1105,10 @@ onShow(async () => {
   font-size: 32rpx;
   margin-right: 8rpx;
 }
-.act-icon.liked { color: #b04a45; }
+.act-icon.liked { color: #9c1630; }
 .act-num {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 .act-share {
   margin-left: auto;
@@ -1132,14 +1132,14 @@ onShow(async () => {
 .moment-del {
   margin-left: auto;
   font-size: 22rpx;
-  color: #b04a45;
+  color: #9c1630;
   padding: 6rpx 14rpx;
 }
 /* 评论展开区 */
 .moment-comments {
   margin-top: 16rpx;
   padding: 16rpx 20rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
 }
 .cmt-list { max-height: 320rpx; overflow-y: auto; }
@@ -1151,10 +1151,10 @@ onShow(async () => {
   line-height: 1.5;
   padding: 6rpx 0;
 }
-.cmt-user { color: #8c5a2b; font-weight: 500; }
-.cmt-text { color: #42372c; }
-.cmt-time { color: #b3a595; font-size: 20rpx; margin-left: 12rpx; }
-.cmt-empty { color: #b3a595; font-size: 24rpx; padding: 10rpx 0; }
+.cmt-user { color: #c41e3a; font-weight: 500; }
+.cmt-text { color: #2a2a2a; }
+.cmt-time { color: #8a857c; font-size: 20rpx; margin-left: 12rpx; }
+.cmt-empty { color: #8a857c; font-size: 24rpx; padding: 10rpx 0; }
 .cmt-input-row {
   display: flex;
   align-items: center;
@@ -1164,12 +1164,12 @@ onShow(async () => {
 .cmt-input {
   flex: 1;
   height: 60rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border: 1rpx solid #e6dcca;
   border-radius: 30rpx;
   padding: 0 24rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 /* 发布动态悬浮按钮 (右下角) */
 .fab-publish {
@@ -1182,7 +1182,7 @@ onShow(async () => {
   gap: 8rpx;
   padding: 20rpx 30rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
   box-shadow: 0 8rpx 24rpx rgba(78, 52, 32, 0.35);
 }
 .fab-icon {
@@ -1191,7 +1191,7 @@ onShow(async () => {
 }
 .fab-text {
   font-size: 26rpx;
-  color: #fefbf6;
+  color: #fffafa;
   font-weight: 500;
 }
 
@@ -1200,8 +1200,8 @@ onShow(async () => {
 .pandao-cal {
   margin: 20rpx 24rpx 0;
   padding: 24rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
 }
 .cal-head {
@@ -1230,21 +1230,21 @@ onShow(async () => {
 .cal-tab {
   padding: 8rpx 20rpx;
   font-size: 22rpx;
-  color: #857563;
-  background: #f8f3ea;
+  color: #55524c;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 999rpx;
 }
 .cal-tab.active {
-  color: #fefbf6;
-  background: #8c5a2b;
-  border-color: #8c5a2b;
+  color: #fffafa;
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
 .cal-week-head {
   display: flex;
   margin-top: 20rpx;
   padding-bottom: 12rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .cal-week-head text {
   flex: 1;
@@ -1270,7 +1270,7 @@ onShow(async () => {
 }
 .cal-day {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .cal-cell.today .cal-day {
   color: #c0392b;
@@ -1284,7 +1284,7 @@ onShow(async () => {
   padding: 2rpx 10rpx;
   border-radius: 999rpx;
   font-size: 18rpx;
-  color: #fefbf6;
+  color: #fffafa;
   line-height: 1.4;
 }
 /* 线上分享 (周二梁坤/周日张灃): 青蓝 */
@@ -1293,7 +1293,7 @@ onShow(async () => {
 }
 /* 线下通州总部 (周三/周六): 棕金 */
 .d-offline .cal-tag {
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 .cal-legend {
   margin-top: 16rpx;
@@ -1319,7 +1319,7 @@ onShow(async () => {
   background: #3f6fae;
 }
 .dot-offline {
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 .lg-text {
   font-size: 20rpx;
@@ -1330,9 +1330,9 @@ onShow(async () => {
   padding: 20rpx 24rpx;
 }
 .pandao-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
@@ -1345,7 +1345,7 @@ onShow(async () => {
   width: 88rpx;
   height: 88rpx;
   border-radius: 12rpx;
-  background: linear-gradient(135deg, #8c5a2b, #b8860b);
+  background: linear-gradient(135deg, #c41e3a, #b8860b);
   color: #fff;
   font-size: 26rpx;
   font-weight: bold;
@@ -1390,7 +1390,7 @@ onShow(async () => {
   color: #c0392b;
 }
 .pandao-btn {
-  background: #8c5a2b;
+  background: #c41e3a;
   color: #fff;
   font-size: 26rpx;
   padding: 12rpx 32rpx;
@@ -1447,11 +1447,11 @@ onShow(async () => {
   padding: 20rpx 24rpx;
 }
 .live-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
   overflow: hidden;
   margin-bottom: 24rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
 }
 .live-cover {
   position: relative;
@@ -1469,11 +1469,11 @@ onShow(async () => {
   padding: 6rpx 20rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
-.st-live { background: #b04a45; }
-.st-upcoming { background: #8c5a2b; }
-.st-ended { background: #857563; }
+.st-live { background: #9c1630; }
+.st-upcoming { background: #c41e3a; }
+.st-ended { background: #55524c; }
 .live-viewers {
   position: absolute;
   right: 20rpx;
@@ -1491,7 +1491,7 @@ onShow(async () => {
 .live-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.5;
 }
 .live-meta {
@@ -1499,7 +1499,7 @@ onShow(async () => {
   justify-content: space-between;
   margin-top: 12rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .live-actions {
   margin-top: 20rpx;
@@ -1514,14 +1514,14 @@ onShow(async () => {
   padding: 0 26rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
-  color: #fefbf6;
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  color: #fffafa;
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 .live-btn.ok { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
 .live-btn.plain {
   background: none;
   border: 1rpx solid #d8ccb8;
-  color: #857563;
+  color: #55524c;
 }
 .live-btn text { font-size: 24rpx; }
 
@@ -1532,7 +1532,7 @@ onShow(async () => {
   align-items: center;
 }
 .empty-icon { font-size: 64rpx; }
-.empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #b3a595; }
+.empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #8a857c; }
 
 /* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
 @media screen and (min-width: 1025px) {
@@ -1652,11 +1652,11 @@ onShow(async () => {
 .rec-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .rec-more {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .rec-scroll {
   white-space: nowrap;
@@ -1670,8 +1670,8 @@ onShow(async () => {
   flex-direction: column;
   width: 220rpx;
   margin-right: 16rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 14rpx;
   padding: 12rpx;
   vertical-align: top;
@@ -1682,7 +1682,7 @@ onShow(async () => {
   width: 100%;
   height: 130rpx;
   border-radius: 10rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .rec-live-title,
 .rec-prod-name,
@@ -1691,13 +1691,13 @@ onShow(async () => {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .rec-live-time {
   display: block;
   margin-top: 6rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
 }
 .rec-live-status {
   display: inline-block;
@@ -1709,11 +1709,11 @@ onShow(async () => {
 }
 .rec-live-status.st-live { background: #fdece8; color: #c0392b; }
 .rec-live-status.st-upcoming { background: #fdf3e2; color: #b07a2a; }
-.rec-live-status.st-ended { background: #efeadf; color: #857563; }
+.rec-live-status.st-ended { background: #efeadf; color: #55524c; }
 .rec-pd-badge {
   align-self: flex-start;
   font-size: 20rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   background: #f5efe3;
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
@@ -1722,13 +1722,13 @@ onShow(async () => {
   display: block;
   margin-top: 6rpx;
   font-size: 20rpx;
-  color: #857563;
+  color: #55524c;
 }
 .rec-pd-meta {
   display: block;
   margin-top: 6rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .rec-pd-price,
 .rec-prod-price,
@@ -1737,7 +1737,7 @@ onShow(async () => {
   margin-top: 8rpx;
   font-size: 26rpx;
   font-weight: 600;
-  color: #b04a45;
+  color: #9c1630;
 }
 .ellipsis-1 {
   overflow: hidden;
@@ -1758,14 +1758,14 @@ onShow(async () => {
   height: 220rpx;
   border-radius: 12rpx;
   margin-bottom: 14rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .rec-pd-img {
   width: 100%;
   height: 130rpx;
   border-radius: 10rpx;
   margin-bottom: 8rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 
 /* 动态精选卡片 */
@@ -1774,8 +1774,8 @@ onShow(async () => {
   flex-direction: column;
   width: 280rpx;
   margin-right: 16rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 14rpx;
   padding: 12rpx;
   vertical-align: top;
@@ -1784,14 +1784,14 @@ onShow(async () => {
   width: 100%;
   height: 150rpx;
   border-radius: 10rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   overflow: hidden;
 }
 .rec-moment-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 40rpx;
   background: #f5efe3;
 }
@@ -1799,7 +1799,7 @@ onShow(async () => {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.5;
   min-height: 72rpx;
 }
@@ -1811,7 +1811,7 @@ onShow(async () => {
 }
 .rec-moment-user {
   font-size: 20rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   max-width: 160rpx;
   overflow: hidden;
   white-space: nowrap;
@@ -1819,7 +1819,7 @@ onShow(async () => {
 }
 .rec-moment-likes {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 

@@ -48,7 +48,7 @@
         <text class="line-label">元宝抵扣</text>
         <view class="balance-right">
           <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount + '（用 ' + usedPoints + ' 元宝）' : '可用 ' + balance + ' 元宝（10元宝=1元）' }}</text>
-          <switch :checked="balanceUsed" color="#8c5a2b" style="transform: scale(0.8)" @change="toggleBalance" />
+          <switch :checked="balanceUsed" color="#c41e3a" style="transform: scale(0.8)" @change="toggleBalance" />
         </view>
       </view>
 
@@ -140,7 +140,7 @@
         <view class="af-row"><text class="af-label">姓名</text><input class="f-input" v-model="addrForm.name" placeholder="收货人姓名" /></view>
         <view class="af-row"><text class="af-label">手机号</text><input class="f-input" v-model="addrForm.phone" type="number" maxlength="11" placeholder="收货人手机号" /></view>
         <view class="af-row" style="align-items: flex-start"><text class="af-label">详细地址</text><textarea class="f-textarea" v-model="addrForm.detail" placeholder="省市区 + 详细地址" /></view>
-        <view class="af-row"><text class="af-label">设为默认</text><switch :checked="addrForm.is_default" color="#8c5a2b" style="transform: scale(0.8)" @change="addrForm.is_default = $event.detail.value" /></view>
+        <view class="af-row"><text class="af-label">设为默认</text><switch :checked="addrForm.is_default" color="#c41e3a" style="transform: scale(0.8)" @change="addrForm.is_default = $event.detail.value" /></view>
         <view class="btn-p" style="margin-top: 20rpx" @tap="saveAddress" :class="{ disabled: savingAddr }">{{ savingAddr ? '保存中...' : '保存地址' }}</view>
       </view>
     </view></view>
@@ -483,14 +483,14 @@ async function submitOrder() {
 <style lang="scss" scoped>
 .checkout-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 20rpx 24rpx 160rpx;
 }
 
 .card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
@@ -503,11 +503,11 @@ async function submitOrder() {
 .card-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .card-count {
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 /* 地址 */
@@ -525,18 +525,18 @@ async function submitOrder() {
 .addr-name {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .addr-phone {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-left: 16rpx;
 }
 .addr-default {
   margin-left: 16rpx;
   font-size: 20rpx;
-  color: #8c5a2b;
-  border: 1rpx solid #c4a484;
+  color: #c41e3a;
+  border: 1rpx solid #b8860b;
   border-radius: 6rpx;
   padding: 0 10rpx;
 }
@@ -544,16 +544,16 @@ async function submitOrder() {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 .addr-empty {
   flex: 1;
   font-size: 28rpx;
-  color: #857563;
+  color: #55524c;
 }
 .addr-arrow {
   font-size: 36rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 /* 商品清单 */
@@ -565,7 +565,7 @@ async function submitOrder() {
   width: 120rpx;
   height: 120rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .co-info {
   flex: 1;
@@ -573,7 +573,7 @@ async function submitOrder() {
 }
 .co-name {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.4;
 }
 .co-row {
@@ -585,11 +585,11 @@ async function submitOrder() {
 .co-price {
   font-size: 28rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
 }
 .co-qty {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 /* 行 */
@@ -598,25 +598,25 @@ async function submitOrder() {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .co-row-line:last-child {
   border-bottom: none;
 }
 .line-label {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .line-value {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
 }
 .line-value.on {
-  color: #b04a45;
+  color: #9c1630;
 }
 .line-arrow {
   font-size: 32rpx;
-  color: #857563;
+  color: #55524c;
   margin-left: 10rpx;
 }
 .balance-right {
@@ -644,22 +644,22 @@ async function submitOrder() {
 .pay-name {
   flex: 1;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .pay-check {
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  border: 2rpx solid #857563;
+  border: 2rpx solid #55524c;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .pay-check.on {
-  background: #8c5a2b;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
 
 /* 提交栏 */
@@ -671,8 +671,8 @@ async function submitOrder() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fefbf6;
-  border-top: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-top: 1rpx solid #e8e2da;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   z-index: 10;
@@ -683,12 +683,12 @@ async function submitOrder() {
 }
 .st-label {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 .st-price {
   font-size: 40rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
   margin-left: 8rpx;
 }
 .st-origin {
@@ -709,11 +709,11 @@ async function submitOrder() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-submit {
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 
 /* 优惠券弹窗 */
@@ -728,13 +728,13 @@ async function submitOrder() {
 .sheet-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .coupon-item {
   display: flex;
   align-items: center;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 24rpx;
   margin-bottom: 16rpx;
@@ -745,28 +745,28 @@ async function submitOrder() {
 .coupon-name {
   font-size: 28rpx;
   font-weight: 500;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .coupon-desc {
   display: block;
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .coupon-check {
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  border: 2rpx solid #857563;
+  border: 2rpx solid #55524c;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .coupon-check.on {
-  background: #8c5a2b;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {
@@ -795,7 +795,7 @@ async function submitOrder() {
 }
 .addr-add-btn {
   font-size: 26rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .addr-list {
   max-height: 560rpx;
@@ -803,14 +803,14 @@ async function submitOrder() {
 }
 .addr-item {
   position: relative;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 20rpx 80rpx 20rpx 20rpx;
   margin-bottom: 16rpx;
 }
 .addr-item.on {
-  border-color: #8c5a2b;
+  border-color: #c41e3a;
   background: #f5ecdb;
 }
 .addr-item-top {
@@ -820,7 +820,7 @@ async function submitOrder() {
 .addr-name {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-right: 16rpx;
 }
 .addr-phone {
@@ -830,7 +830,7 @@ async function submitOrder() {
 }
 .addr-default {
   font-size: 20rpx;
-  color: #b04a45;
+  color: #9c1630;
   border: 1rpx solid #d9a29e;
   border-radius: 6rpx;
   padding: 2rpx 10rpx;
@@ -838,7 +838,7 @@ async function submitOrder() {
 }
 .addr-del {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .addr-check {
   position: absolute;
@@ -855,13 +855,13 @@ async function submitOrder() {
   color: #fff;
 }
 .addr-check.on {
-  background: #8c5a2b;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
 .addr-none {
   padding: 60rpx 0;
   text-align: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 26rpx;
 }
 .af-row {
@@ -872,13 +872,13 @@ async function submitOrder() {
 .af-label {
   width: 140rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   flex-shrink: 0;
 }
 .af-row .f-input,
 .af-row .f-textarea {
   flex: 1;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 0 20rpx;
   font-size: 26rpx;

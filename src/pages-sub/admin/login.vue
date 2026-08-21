@@ -78,7 +78,7 @@ async function doLogin() {
 <style lang="scss" scoped>
 .admin-login {
   min-height: 100vh;
-  background: linear-gradient(170deg, #4e3420 0%, #6e4a26 45%, #f8f3ea 100%);
+  background: linear-gradient(170deg, #9c1630 0%, #6b1022 45%, #f8f5f0 100%);
   padding: 80rpx 48rpx;
 }
 .brand {
@@ -90,7 +90,7 @@ async function doLogin() {
 .seal {
   width: 130rpx;
   height: 130rpx;
-  border: 3rpx solid #c4a484;
+  border: 3rpx solid #b8860b;
   border-radius: 16rpx;
   display: flex;
   align-items: center;
@@ -100,13 +100,13 @@ async function doLogin() {
 }
 .seal-char {
   font-size: 72rpx;
-  color: #c4a484;
+  color: #b8860b;
 }
 .brand-name {
   font-size: 40rpx;
   font-weight: 500;
   letter-spacing: 6rpx;
-  color: #857563;
+  color: #55524c;
 }
 .brand-sub {
   margin-top: 14rpx;
@@ -116,7 +116,7 @@ async function doLogin() {
 }
 
 .form {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 24rpx;
   padding: 44rpx 36rpx;
   box-shadow: 0 10rpx 40rpx rgba(69, 26, 3, 0.2);
@@ -127,19 +127,19 @@ async function doLogin() {
 .label {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 12rpx;
 }
 .input {
   height: 88rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 14rpx;
   padding: 0 26rpx;
   font-size: 28rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .err {
-  color: #b04a45;
+  color: #9c1630;
   font-size: 24rpx;
   margin: -8rpx 0 20rpx;
 }
@@ -147,7 +147,7 @@ async function doLogin() {
   margin-top: 32rpx;
   text-align: center;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

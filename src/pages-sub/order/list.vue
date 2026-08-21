@@ -334,7 +334,7 @@ async function batchDelete() {
     title: '批量删除',
     content: `确定删除选中的 ${selected.value.length} 个订单吗？删除后不可恢复。`,
     confirmText: '删除',
-    confirmColor: '#b04a45',
+    confirmColor: '#9c1630',
     success: async (res) => {
       if (!res.confirm) return
       const uid = useUserStore().userInfo.uid
@@ -367,7 +367,7 @@ async function doDelete(o) {
     title: '删除订单',
     content: `确定删除订单 ${o.order_no} 吗？删除后不可恢复。`,
     confirmText: '删除',
-    confirmColor: '#b04a45',
+    confirmColor: '#9c1630',
     success: async (res) => {
       if (!res.confirm) return
       try {
@@ -387,13 +387,13 @@ async function doDelete(o) {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 
 /* 状态筛选: 紧凑彩色按钮 + 右上角数量 */
 .filter-bar {
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .filter-inner {
   display: flex;
@@ -427,49 +427,49 @@ async function doDelete(o) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #efe7d8;
+  border: 2rpx solid #e8e2da;
 }
 .ot-badge text {
   font-size: 18rpx;
-  color: #fefbf6;
+  color: #fffafa;
   font-weight: 500;
 }
 /* 每个状态固定颜色 */
-.ot-all { border-color: #857563; background: #faf3e9; }
-.ot-all .ot-label { color: #857563; }
-.ot-all .ot-badge { background: #857563; }
-.ot-all.active { background: #857563; }
-.ot-all.active .ot-label { color: #fefbf6; }
+.ot-all { border-color: #55524c; background: #fbe9ec; }
+.ot-all .ot-label { color: #55524c; }
+.ot-all .ot-badge { background: #55524c; }
+.ot-all.active { background: #55524c; }
+.ot-all.active .ot-label { color: #fffafa; }
 
-.ot-unpaid { border-color: #b04a45; background: #faf3e9; }
-.ot-unpaid .ot-label { color: #b04a45; }
-.ot-unpaid .ot-badge { background: #b04a45; }
-.ot-unpaid.active { background: #b04a45; }
-.ot-unpaid.active .ot-label { color: #fefbf6; }
+.ot-unpaid { border-color: #9c1630; background: #fbe9ec; }
+.ot-unpaid .ot-label { color: #9c1630; }
+.ot-unpaid .ot-badge { background: #9c1630; }
+.ot-unpaid.active { background: #9c1630; }
+.ot-unpaid.active .ot-label { color: #fffafa; }
 
-.ot-unshipped { border-color: #8c5a2b; background: #faf3e9; }
-.ot-unshipped .ot-label { color: #8c5a2b; }
-.ot-unshipped .ot-badge { background: #8c5a2b; }
-.ot-unshipped.active { background: #8c5a2b; }
-.ot-unshipped.active .ot-label { color: #fefbf6; }
+.ot-unshipped { border-color: #c41e3a; background: #fbe9ec; }
+.ot-unshipped .ot-label { color: #c41e3a; }
+.ot-unshipped .ot-badge { background: #c41e3a; }
+.ot-unshipped.active { background: #c41e3a; }
+.ot-unshipped.active .ot-label { color: #fffafa; }
 
-.ot-unreceived { border-color: #ba7517; background: #faf3e9; }
-.ot-unreceived .ot-label { color: #ba7517; }
-.ot-unreceived .ot-badge { background: #ba7517; }
-.ot-unreceived.active { background: #ba7517; }
-.ot-unreceived.active .ot-label { color: #fefbf6; }
+.ot-unreceived { border-color: #c41e3a; background: #fbe9ec; }
+.ot-unreceived .ot-label { color: #c41e3a; }
+.ot-unreceived .ot-badge { background: #c41e3a; }
+.ot-unreceived.active { background: #c41e3a; }
+.ot-unreceived.active .ot-label { color: #fffafa; }
 
-.ot-done { border-color: #6e7f5a; background: #faf3e9; }
+.ot-done { border-color: #6e7f5a; background: #fbe9ec; }
 .ot-done .ot-label { color: #6e7f5a; }
 .ot-done .ot-badge { background: #6e7f5a; }
 .ot-done.active { background: #6e7f5a; }
-.ot-done.active .ot-label { color: #fefbf6; }
+.ot-done.active .ot-label { color: #fffafa; }
 
-.ot-refunded { border-color: #857563; background: #faf3e9; }
-.ot-refunded .ot-label { color: #857563; }
-.ot-refunded .ot-badge { background: #857563; }
-.ot-refunded.active { background: #857563; }
-.ot-refunded.active .ot-label { color: #fefbf6; }
+.ot-refunded { border-color: #55524c; background: #fbe9ec; }
+.ot-refunded .ot-label { color: #55524c; }
+.ot-refunded .ot-badge { background: #55524c; }
+.ot-refunded.active { background: #55524c; }
+.ot-refunded.active .ot-label { color: #fffafa; }
 
 .order-scroll {
   flex: 1;
@@ -478,9 +478,9 @@ async function doDelete(o) {
   padding: 20rpx 24rpx;
 }
 .order-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
@@ -489,7 +489,7 @@ async function doDelete(o) {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 16rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 /* 类型筛选: 商品/课程/充值/AI解盘/预约 (浅色小标签) */
 .type-bar {
@@ -503,14 +503,14 @@ async function doDelete(o) {
   padding: 8rpx 26rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
-  color: #857563;
-  background: #fefbf6;
+  color: #55524c;
+  background: #fffafa;
   border: 1rpx solid #d9c39a;
 }
 .type-tab.on {
-  background: #8c5a2b;
-  color: #fefbf6;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  color: #fffafa;
+  border-color: #c41e3a;
 }
 
 /* 批量删除操作条 */
@@ -524,28 +524,28 @@ async function doDelete(o) {
 }
 .batch-enter {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   padding: 8rpx 24rpx;
   border: 1rpx solid #d9c39a;
   border-radius: 999rpx;
-  background: #fefbf6;
+  background: #fffafa;
 }
 /* 时间排序切换: 靠右 */
 .sort-toggle {
   margin-left: auto;
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   padding: 8rpx 22rpx;
   border: 1rpx solid #d9c39a;
   border-radius: 999rpx;
-  background: #fefbf6;
+  background: #fffafa;
 }
 .batch-act {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .batch-act.batch-del {
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 600;
 }
 /* 勾选框 */
@@ -554,7 +554,7 @@ async function doDelete(o) {
   height: 40rpx;
   border-radius: 50%;
   border: 2rpx solid #d9c39a;
-  background: #fefbf6;
+  background: #fffafa;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -563,13 +563,13 @@ async function doDelete(o) {
 }
 .card-check text {
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .card-check text.on {
   color: #fff;
 }
 .card-check text.on {
-  background: #8c5a2b;
+  background: #c41e3a;
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -579,17 +579,17 @@ async function doDelete(o) {
 }
 .order-no {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .order-status {
   font-size: 24rpx;
   font-weight: 500;
 }
-.st-unpaid { color: #b04a45; }
-.st-unshipped { color: #8c5a2b; }
-.st-unreceived { color: #ba7517; }
+.st-unpaid { color: #9c1630; }
+.st-unshipped { color: #c41e3a; }
+.st-unreceived { color: #c41e3a; }
 .st-done { color: #6e7f5a; }
-.st-refunded { color: #857563; }
+.st-refunded { color: #55524c; }
 /* 状态按钮: 实心彩色 */
 .btn-fill {
   flex-shrink: 0;
@@ -603,14 +603,14 @@ async function doDelete(o) {
 }
 .btn-fill text {
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 1rpx;
 }
 .btn-pay {
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 .btn-confirm {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 .btn-cancel {
   background: linear-gradient(135deg, #7a6a52, #5f513c);
@@ -626,21 +626,21 @@ async function doDelete(o) {
   height: 64rpx;
   padding: 0 28rpx;
   border-radius: 999rpx;
-  border: 2rpx solid #ba7517;
+  border: 2rpx solid #c41e3a;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .btn-after text {
   font-size: 24rpx;
-  color: #ba7517;
+  color: #c41e3a;
   letter-spacing: 1rpx;
 }
 .btn-after.hasrecord {
-  background: #ba7517;
+  background: #c41e3a;
 }
 .btn-after.hasrecord text {
-  color: #fefbf6;
+  color: #fffafa;
 }
 
 /* 删除订单: 细描边弱化, 不喧宾夺主 */
@@ -657,7 +657,7 @@ async function doDelete(o) {
 }
 .btn-del text {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   letter-spacing: 1rpx;
 }
 
@@ -672,7 +672,7 @@ async function doDelete(o) {
   width: 100rpx;
   height: 100rpx;
   border-radius: 10rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .oi-info {
   flex: 1;
@@ -683,13 +683,13 @@ async function doDelete(o) {
 }
 .oi-name {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.4;
 }
 .oi-price {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 .order-foot {
@@ -697,11 +697,11 @@ async function doDelete(o) {
   align-items: center;
   justify-content: space-between;
   padding-top: 16rpx;
-  border-top: 1rpx solid #efe7d8;
+  border-top: 1rpx solid #e8e2da;
 }
 .of-time {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .of-right {
   display: flex;
@@ -710,7 +710,7 @@ async function doDelete(o) {
 }
 .of-total {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 
 .empty {

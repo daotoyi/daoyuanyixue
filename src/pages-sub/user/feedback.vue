@@ -104,39 +104,39 @@ async function submit() {
 <style lang="scss" scoped>
 .fb-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 24rpx;
 }
 .fb-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
 .fb-label {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 14rpx;
 }
 .fb-textarea {
   width: 100%;
   height: 240rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.6;
 }
 .fb-count {
   display: block;
   text-align: right;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .fb-input {
   height: 80rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 /* 图片九宫格 (最多3张) */
 .fb-imgs {
@@ -153,7 +153,7 @@ async function submit() {
   width: 160rpx;
   height: 160rpx;
   border-radius: 12rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 .fb-img-del {
   position: absolute;
@@ -176,7 +176,7 @@ async function submit() {
   height: 160rpx;
   border-radius: 12rpx;
   border: 2rpx dashed #d9c39a;
-  background: #faf3e9;
+  background: #fbe9ec;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -185,12 +185,12 @@ async function submit() {
 }
 .fb-img-add-icon {
   font-size: 48rpx;
-  color: #b3a595;
+  color: #8a857c;
   line-height: 1;
 }
 .fb-img-add-text {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .btn-fill {
   height: 88rpx;
@@ -201,11 +201,11 @@ async function submit() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-submit {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

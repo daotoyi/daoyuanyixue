@@ -198,7 +198,7 @@ async function confirmRecharge() {
 <style lang="scss" scoped>
 .assets-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 24rpx;
 }
 
@@ -207,7 +207,7 @@ async function confirmRecharge() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(160deg, #4e3420, #8c5a2b);
+  background: linear-gradient(160deg, #9c1630, #c41e3a);
   border-radius: 20rpx;
   padding: 60rpx 40rpx;
   position: relative;
@@ -230,7 +230,7 @@ async function confirmRecharge() {
 .bc-num {
   font-size: 72rpx;
   font-weight: 500;
-  color: #857563;
+  color: #55524c;
   margin: 16rpx 0;
 }
 .bc-unit {
@@ -255,9 +255,9 @@ async function confirmRecharge() {
 /* 充值记录 */
 .rc-records {
   margin-top: 24rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
 }
 .rr-head {
@@ -269,11 +269,11 @@ async function confirmRecharge() {
 .rr-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .rr-total {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .rr-row {
   display: flex;
@@ -290,11 +290,11 @@ async function confirmRecharge() {
 }
 .rr-no {
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .rr-time {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .rr-right {
   display: flex;
@@ -307,16 +307,16 @@ async function confirmRecharge() {
 .rr-amt {
   font-size: 28rpx;
   font-weight: 600;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .rr-points {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
   font-weight: 400;
 }
 .rr-status {
   font-size: 20rpx;
-  color: #b04a45;
+  color: #9c1630;
 }
 .rr-status.paid {
   color: #6e7f5a;
@@ -325,16 +325,16 @@ async function confirmRecharge() {
   padding: 50rpx 0;
   text-align: center;
   font-size: 24rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 /* 优惠券 */
 .coupon-card {
   display: flex;
   align-items: center;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 26rpx;
   margin-bottom: 20rpx;
 }
@@ -345,13 +345,13 @@ async function confirmRecharge() {
   display: block;
   font-size: 40rpx;
   font-weight: 600;
-  color: #b04a45;
+  color: #9c1630;
 }
 .coupon-name {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .coupon-right {
   text-align: right;
@@ -363,21 +363,21 @@ async function confirmRecharge() {
   font-weight: 500;
 }
 .coupon-status.used {
-  color: #b3a595;
+  color: #8a857c;
 }
 .coupon-expire {
   display: block;
   margin-top: 8rpx;
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 /* 收藏/足迹 */
 .fav-card {
   display: flex;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 20rpx;
   margin-bottom: 20rpx;
 }
@@ -385,7 +385,7 @@ async function confirmRecharge() {
   width: 140rpx;
   height: 140rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   flex-shrink: 0;
 }
 .fav-info {
@@ -396,14 +396,14 @@ async function confirmRecharge() {
 }
 .fav-name {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.4;
 }
 .fav-price {
   margin-top: auto;
   font-size: 30rpx;
   font-weight: 500;
-  color: #b04a45;
+  color: #9c1630;
 }
 
 .empty {
@@ -422,19 +422,19 @@ async function confirmRecharge() {
 }
 .rc-pop {
   width: 600rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 24rpx;
   padding: 40rpx 36rpx 32rpx;
 }
 .rc-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
   text-align: center;
 }
 .rc-sub {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
   text-align: center;
   margin: 8rpx 0 28rpx;
 }
@@ -448,7 +448,7 @@ async function confirmRecharge() {
   box-sizing: border-box;
   border: 2rpx solid #e6dcca;
   border-radius: 14rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 20rpx 0;
   display: flex;
   flex-direction: column;
@@ -456,21 +456,21 @@ async function confirmRecharge() {
   gap: 6rpx;
 }
 .rc-item.on {
-  border-color: #8c5a2b;
+  border-color: #c41e3a;
   background: #fdf6ec;
   box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.15);
 }
 .rc-num {
   font-size: 32rpx;
   font-weight: 600;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .rc-points {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .rc-item.on .rc-points {
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .rc-custom {
   padding: 12rpx 0;
@@ -479,11 +479,11 @@ async function confirmRecharge() {
   width: 100%;
   text-align: center;
   font-size: 30rpx;
-  color: #42372c;
+  color: #2a2a2a;
   height: 56rpx;
 }
 .rc-ph {
-  color: #b3a595;
+  color: #8a857c;
   font-size: 26rpx;
 }
 .rc-actions {

@@ -125,12 +125,12 @@ async function confirmShip() {
 <style lang="scss" scoped>
 .lg-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 24rpx;
   padding-bottom: 160rpx;
 }
 .lg-order {
-  background: #4e3420;
+  background: #9c1630;
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 20rpx;
@@ -138,35 +138,35 @@ async function confirmShip() {
 .lg-order-no {
   display: block;
   font-size: 24rpx;
-  color: #c4a484;
+  color: #b8860b;
 }
 .lg-order-item {
   display: block;
   margin-top: 8rpx;
   font-size: 26rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .lg-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin-bottom: 20rpx;
 }
 .lg-label {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 14rpx;
 }
 .lg-input {
   height: 88rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 30rpx;
   letter-spacing: 2rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .lg-detect {
   display: block;
@@ -187,13 +187,13 @@ async function confirmShip() {
   flex-direction: column;
   align-items: center;
   padding: 24rpx 0;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   border: 2rpx solid transparent;
 }
 .lg-item.on {
-  border-color: #8c5a2b;
-  background: #faf3e9;
+  border-color: #c41e3a;
+  background: #fbe9ec;
 }
 .lg-icon {
   width: 56rpx;
@@ -202,7 +202,7 @@ async function confirmShip() {
 .lg-name {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .lg-check {
   position: absolute;
@@ -211,8 +211,8 @@ async function confirmShip() {
   width: 30rpx;
   height: 30rpx;
   border-radius: 50%;
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
   font-size: 20rpx;
   display: flex;
   align-items: center;
@@ -220,7 +220,7 @@ async function confirmShip() {
 }
 .lg-tip {
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   line-height: 1.7;
 }
 .lg-footer {
@@ -228,8 +228,8 @@ async function confirmShip() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fefbf6;
-  border-top: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-top: 1rpx solid #e8e2da;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
 }
@@ -242,11 +242,11 @@ async function confirmShip() {
 }
 .btn-fill text {
   font-size: 30rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 3rpx;
 }
 .btn-ship {
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

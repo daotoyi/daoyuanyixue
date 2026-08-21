@@ -1096,7 +1096,7 @@ function askAI() {
                 title: '元宝不足',
                 content: '元宝不足，AI 提问需 5 元宝，请先充值。是否前往充值？',
                 confirmText: '去充值',
-                confirmColor: '#8c5a2b',
+                confirmColor: '#c41e3a',
                 cancelText: '取消',
                 success: (rr) => {
                   if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
@@ -1683,7 +1683,7 @@ function editHistoryRemark(rec) {
     editable: true,
     placeholderText: '输入备注…',
     confirmText: '保存',
-    confirmColor: '#8c5a2b',
+    confirmColor: '#c41e3a',
     success: (r) => {
       if (!r.confirm) return
       rec.remark = (r.content || '').trim()
@@ -1869,7 +1869,7 @@ function payWithBalance({ title, tool, applyFn }) {
     title,
     content: '将从元宝扣除 9 元宝，是否继续？',
     confirmText: '确认解锁',
-    confirmColor: '#8c5a2b',
+    confirmColor: '#c41e3a',
     success: (r) => {
       if (!r.confirm) return
       uni.showLoading({ title: '解锁中...', mask: true })
@@ -1887,7 +1887,7 @@ function payWithBalance({ title, tool, applyFn }) {
                 title: '元宝不足',
                 content: '元宝不足，解锁需 9 元宝，请先充值。是否前往充值？',
                 confirmText: '去充值',
-                confirmColor: '#8c5a2b',
+                confirmColor: '#c41e3a',
                 cancelText: '取消',
                 success: (rr) => {
                   if (rr.confirm) uni.navigateTo({ url: '/pages-sub/user/assets' })
@@ -1935,7 +1935,7 @@ function applyJpUnlock() {
 <style lang="scss" scoped>
 .pp-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding-bottom: 60rpx;
 }
 /* 顶部 */
@@ -1943,7 +1943,7 @@ function applyJpUnlock() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #4e3420, #6e4a26);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   border-radius: 0 0 20rpx 20rpx;
   padding: 22rpx 30rpx;
 }
@@ -1951,7 +1951,7 @@ function applyJpUnlock() {
 .pp-lunar { font-size: 30rpx; font-weight: 600; color: #f0e6cd; }
 .pp-solar { margin-top: 4rpx; font-size: 20rpx; color: rgba(240, 230, 205, 0.7); }
 .pp-top-gender { display: flex; flex-direction: column; align-items: flex-end; }
-.pp-yuan { font-size: 36rpx; font-weight: 600; color: #c4a484; }
+.pp-yuan { font-size: 36rpx; font-weight: 600; color: #b8860b; }
 .pp-dm { margin-top: 4rpx; font-size: 20rpx; color: rgba(240, 230, 205, 0.7); }
 .pp-top-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10rpx; }
 .pp-history-btn {
@@ -1969,8 +1969,8 @@ function applyJpUnlock() {
   display: flex;
   gap: 14rpx;
   padding: 20rpx 24rpx;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .pp-tab {
   display: flex;
@@ -1978,21 +1978,21 @@ function applyJpUnlock() {
   gap: 6rpx;
   padding: 12rpx 24rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 .pp-tab.on {
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
   font-weight: 500;
 }
 .pp-body { padding: 24rpx; }
 
 /* 板块 */
 .pp-block {
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
   padding: 20rpx;
   margin-bottom: 20rpx;
@@ -2000,7 +2000,7 @@ function applyJpUnlock() {
 .pp-block-head {
   font-size: 26rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
   margin-bottom: 14rpx;
   padding-bottom: 10rpx;
   border-bottom: 1rpx dashed #e6dcca;
@@ -2015,7 +2015,7 @@ function applyJpUnlock() {
   border: 2rpx solid #d8ccb8;
   border-radius: 12rpx;
   overflow: hidden;
-  background: #fefbf6;
+  background: #fffafa;
   min-width: 100%;
   width: max-content;
 }
@@ -2026,26 +2026,26 @@ function applyJpUnlock() {
   padding: 14rpx 4rpx;
   text-align: center;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   border-left: 1rpx solid #e6dcca;
 }
 .pp-cell.pp-label {
   flex: 0 0 110rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   font-weight: 500;
   border-left: none;
 }
 .pp-head .pp-cell {
   background: #f5efe3;
   font-weight: 600;
-  color: #4e3420;
+  color: #9c1630;
   font-size: 24rpx;
 }
 /* 联动列 (大运/流年/流月/流日/流时) 高亮区分 */
-.pp-head .pp-cell.ex-dayun { background: #f0e6cd; color: #8c5a2b; }
-.pp-head .pp-cell.ex-liunian { background: #efe5d3; color: #b04a45; }
+.pp-head .pp-cell.ex-dayun { background: #f0e6cd; color: #c41e3a; }
+.pp-head .pp-cell.ex-liunian { background: #efe5d3; color: #9c1630; }
 .pp-head .pp-cell.ex-liuyue { background: #e6dcca; color: #6e7f5a; }
 .pp-head .pp-cell.ex-liuri { background: #ece6f2; color: #7a5c9e; }
 .pp-head .pp-cell.ex-liushi { background: #f5efe3; color: #3f6f8c; }
@@ -2062,7 +2062,7 @@ function applyJpUnlock() {
 /* 五行小图标 (干支旁) */
 .pp-wx-icon { font-size: 20rpx !important; font-weight: 400 !important; margin-right: 2rpx; }
 .pp-gan, .pp-zhi { display: flex; align-items: center; justify-content: center; }
-.pp-ss { font-size: 22rpx; color: #8c5a2b; }
+.pp-ss { font-size: 22rpx; color: #c41e3a; }
 
 /* 表格化板块 (藏干/星运/自坐/空亡/神煞): 与四柱表同款框线, 去周边留白 */
 .pp-block.pp-tbl {
@@ -2070,7 +2070,7 @@ function applyJpUnlock() {
   border: 2rpx solid #d8ccb8;
   border-radius: 12rpx;
   overflow: hidden;
-  background: #fefbf6;
+  background: #fffafa;
   min-width: 100%;
   width: max-content;
 }
@@ -2084,29 +2084,29 @@ function applyJpUnlock() {
 /* 藏干 */
 .pp-cg-item { display: flex; align-items: center; justify-content: center; font-size: 22rpx; margin-bottom: 2rpx; }
 .pp-cg-gan { font-weight: 500; font-size: 24rpx; }
-.pp-cg-ss { margin-left: 6rpx; font-size: 15rpx; color: #857563; }
+.pp-cg-ss { margin-left: 6rpx; font-size: 15rpx; color: #55524c; }
 
 /* 星运/自坐/空亡 与 神煞 板块 */
 .pp-meta-grid {
   overflow: hidden;
 }
-.pp-mv { font-size: 22rpx; color: #42372c; }
-.pp-kw-on { color: #b04a45; font-weight: 600; }
-.pp-ss-list { font-size: 20rpx; color: #8c5a2b; line-height: 1.6; }
+.pp-mv { font-size: 22rpx; color: #2a2a2a; }
+.pp-kw-on { color: #9c1630; font-weight: 600; }
+.pp-ss-list { font-size: 20rpx; color: #c41e3a; line-height: 1.6; }
 .pp-ss-item { display: block; white-space: nowrap; }
 
 /* 五行 */
 .pp-wx { display: flex; align-items: center; margin-bottom: 10rpx; }
 .pp-wx:last-child { margin-bottom: 0; }
 .pp-wx-name { width: 60rpx; font-size: 22rpx; font-weight: 500; }
-.pp-wx-bar { flex: 1; height: 14rpx; background: #efe7d8; border-radius: 7rpx; margin: 0 14rpx; overflow: hidden; }
+.pp-wx-bar { flex: 1; height: 14rpx; background: #e8e2da; border-radius: 7rpx; margin: 0 14rpx; overflow: hidden; }
 .pp-wx-fill { height: 100%; border-radius: 7rpx; }
 .pp-wx-fill.wx-wood { background: #2e7d32; }
 .pp-wx-fill.wx-fire { background: #c62828; }
 .pp-wx-fill.wx-earth { background: #8d6e3f; }
 .pp-wx-fill.wx-metal { background: #d4a017; }
 .pp-wx-fill.wx-water { background: #1565c0; }
-.pp-wx-num { width: 60rpx; font-size: 22rpx; color: #857563; text-align: right; }
+.pp-wx-num { width: 60rpx; font-size: 22rpx; color: #55524c; text-align: right; }
 
 /* 大运/流年/流月/流日/流时 (一行, 超紧凑, 干支框约减半) */
 .pp-dy-row { display: inline-flex; gap: 3rpx; padding: 2rpx; }
@@ -2114,98 +2114,98 @@ function applyJpUnlock() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #faf3e9;
-  border: 1rpx solid #efe7d8;
+  background: #fbe9ec;
+  border: 1rpx solid #e8e2da;
   border-radius: 10rpx;
   padding: 2rpx 4rpx;
   min-width: 54rpx;
 }
-.pp-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
-.pp-dy-age { font-size: 11rpx; color: #b3a595; line-height: 1.25; white-space: pre-line; text-align: center; }
+.pp-dy-item.on { border-color: #c41e3a; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
+.pp-dy-age { font-size: 11rpx; color: #8a857c; line-height: 1.25; white-space: pre-line; text-align: center; }
 /* 干支上下排列 + 右侧一字十神 */
 .pp-gz-stack { display: flex; flex-direction: column; align-items: center; margin-top: 1rpx; }
 .pp-gz-line { display: flex; align-items: center; }
 .pp-dy-gan, .pp-dy-zhi { font-size: 22rpx; font-weight: 500; line-height: 1.25; }
-.pp-ss-right { margin-left: 2rpx; font-size: 11rpx; color: #b3a595; white-space: nowrap; }
+.pp-ss-right { margin-left: 2rpx; font-size: 11rpx; color: #8a857c; white-space: nowrap; }
 .pp-expand {
   margin-top: 8rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 10rpx;
   padding: 8rpx;
 }
-.pp-expand-head { font-size: 20rpx; color: #8c5a2b; font-weight: 500; margin-bottom: 6rpx; }
+.pp-expand-head { font-size: 20rpx; color: #c41e3a; font-weight: 500; margin-bottom: 6rpx; }
 
 /* 当前流年 */
-.pp-ln-box { display: flex; align-items: center; background: #4e3420; border-radius: 12rpx; padding: 20rpx 24rpx; }
+.pp-ln-box { display: flex; align-items: center; background: #9c1630; border-radius: 12rpx; padding: 20rpx 24rpx; }
 .pp-ln-name { font-size: 40rpx; font-weight: 600; color: #f0e6cd; }
-.pp-ln-ss { margin-left: 20rpx; font-size: 22rpx; color: #c4a484; }
+.pp-ln-ss { margin-left: 20rpx; font-size: 22rpx; color: #b8860b; }
 .pp-ln-wx { margin-left: auto; font-size: 20rpx; color: rgba(240, 230, 205, 0.6); }
 
 /* 八字格局 */
-.pp-gj-box { background: #f8f3ea; border-radius: 12rpx; padding: 20rpx 24rpx; }
+.pp-gj-box { background: #f8f5f0; border-radius: 12rpx; padding: 20rpx 24rpx; }
 .pp-gj-main { display: flex; align-items: center; gap: 16rpx; margin-bottom: 12rpx; }
-.pp-gj-name { font-size: 40rpx; font-weight: 700; color: #8c5a2b; }
-.pp-gj-tag { font-size: 22rpx; color: #b04a45; background: #f5e6d8; border-radius: 8rpx; padding: 4rpx 14rpx; }
+.pp-gj-name { font-size: 40rpx; font-weight: 700; color: #c41e3a; }
+.pp-gj-tag { font-size: 22rpx; color: #9c1630; background: #f5e6d8; border-radius: 8rpx; padding: 4rpx 14rpx; }
 .pp-gj-row { display: flex; align-items: flex-start; padding: 8rpx 0; border-bottom: 1rpx dashed #e8ddca; }
 .pp-gj-row:last-of-type { border-bottom: none; }
-.pp-gj-label { flex-shrink: 0; width: 90rpx; font-size: 22rpx; color: #8c5a2b; font-weight: 500; }
-.pp-gj-val { flex: 1; font-size: 24rpx; color: #42372c; line-height: 1.5; }
+.pp-gj-label { flex-shrink: 0; width: 90rpx; font-size: 22rpx; color: #c41e3a; font-weight: 500; }
+.pp-gj-val { flex: 1; font-size: 24rpx; color: #2a2a2a; line-height: 1.5; }
 
 /* 袁天罡称骨 */
-.pp-cg-box { background: #f8f3ea; border-radius: 12rpx; padding: 20rpx 24rpx; }
+.pp-cg-box { background: #f8f5f0; border-radius: 12rpx; padding: 20rpx 24rpx; }
 .pp-cg-main { display: flex; align-items: baseline; gap: 16rpx; margin-bottom: 12rpx; }
-.pp-cg-weight { font-size: 48rpx; font-weight: 700; color: #8c5a2b; }
-.pp-cg-sub { font-size: 22rpx; color: #b3a595; }
+.pp-cg-weight { font-size: 48rpx; font-weight: 700; color: #c41e3a; }
+.pp-cg-sub { font-size: 22rpx; color: #8a857c; }
 .pp-cg-detail { display: flex; background: #fff; border-radius: 10rpx; padding: 12rpx 0; margin-bottom: 12rpx; }
 /* ⚠️ 用 pp-cg-cell 而非 pp-cg-item: 避免与四柱藏干(pp-cg-item)类名冲突, 覆盖藏干横排样式 */
-.pp-cg-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; border-right: 1rpx solid #efe7d8; }
+.pp-cg-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4rpx; border-right: 1rpx solid #e8e2da; }
 .pp-cg-cell:last-child { border-right: none; }
-.pp-cg-d-label { font-size: 20rpx; color: #b3a595; }
-.pp-cg-d-val { font-size: 26rpx; color: #42372c; font-weight: 500; }
+.pp-cg-d-label { font-size: 20rpx; color: #8a857c; }
+.pp-cg-d-val { font-size: 26rpx; color: #2a2a2a; font-weight: 500; }
 .pp-cg-duanyu { background: #fff8ef; border-left: 6rpx solid #c9a36a; border-radius: 8rpx; padding: 16rpx 18rpx; }
 .pp-cg-duanyu-text { font-size: 26rpx; color: #6b4a2a; line-height: 1.7; }
 
-.pp-tip { font-size: 20rpx; color: #b3a595; margin-top: 10rpx; }
-.pp-tip2 { font-size: 20rpx; color: #b3a595; margin-top: 12rpx; line-height: 1.5; }
-.pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }
+.pp-tip { font-size: 20rpx; color: #8a857c; margin-top: 10rpx; }
+.pp-tip2 { font-size: 20rpx; color: #8a857c; margin-top: 12rpx; line-height: 1.5; }
+.pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #e8e2da; }
 .pp-rel-row:last-of-type { border-bottom: none; }
-.pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #8c5a2b; font-weight: 500; }
+.pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #c41e3a; font-weight: 500; }
 .pp-rel-list { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; min-width: 0; }
-.pp-rel-chip { display: flex; align-items: baseline; background: #f8f3ea; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
-.pp-rel-name { font-size: 22rpx; color: #42372c; font-weight: 500; }
-.pp-rel-sym { font-size: 20rpx; color: #b3a595; }
+.pp-rel-chip { display: flex; align-items: baseline; background: #f8f5f0; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
+.pp-rel-name { font-size: 22rpx; color: #2a2a2a; font-weight: 500; }
+.pp-rel-sym { font-size: 20rpx; color: #8a857c; }
 .pp-rel-desc { font-size: 22rpx; color: #c9a9a9; }
-.pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
-.pp-rel-src { font-size: 18rpx; color: #b3a595; }
-.pp-tip2 { font-size: 20rpx; color: #b3a595; margin-top: 12rpx; line-height: 1.5; }
-.pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #efe7d8; }
+.pp-rel-desc.hit { color: #9c1630; font-weight: 500; }
+.pp-rel-src { font-size: 18rpx; color: #8a857c; }
+.pp-tip2 { font-size: 20rpx; color: #8a857c; margin-top: 12rpx; line-height: 1.5; }
+.pp-rel-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #e8e2da; }
 .pp-rel-row:last-of-type { border-bottom: none; }
-.pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #8c5a2b; font-weight: 500; }
+.pp-rel-kind { flex-shrink: 0; width: 80rpx; font-size: 24rpx; color: #c41e3a; font-weight: 500; }
 .pp-rel-list { flex: 1; display: flex; flex-wrap: wrap; gap: 12rpx; min-width: 0; }
-.pp-rel-chip { display: flex; align-items: baseline; background: #f8f3ea; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
-.pp-rel-name { font-size: 22rpx; color: #42372c; font-weight: 500; }
-.pp-rel-sym { font-size: 20rpx; color: #b3a595; }
+.pp-rel-chip { display: flex; align-items: baseline; background: #f8f5f0; border-radius: 10rpx; padding: 8rpx 16rpx; gap: 8rpx; }
+.pp-rel-name { font-size: 22rpx; color: #2a2a2a; font-weight: 500; }
+.pp-rel-sym { font-size: 20rpx; color: #8a857c; }
 .pp-rel-desc { font-size: 22rpx; color: #c9a9a9; }
-.pp-rel-desc.hit { color: #b04a45; font-weight: 500; }
-.pp-rel-src { font-size: 18rpx; color: #b3a595; }
+.pp-rel-desc.hit { color: #9c1630; font-weight: 500; }
+.pp-rel-src { font-size: 18rpx; color: #8a857c; }
 
 /* 排盘历史弹窗 */
 .hist-sheet { padding: 30rpx 30rpx 60rpx; max-height: 70vh; }
-.sheet-title { text-align: center; font-size: 30rpx; font-weight: 500; color: #42372c; margin-bottom: 24rpx; }
+.sheet-title { text-align: center; font-size: 30rpx; font-weight: 500; color: #2a2a2a; margin-bottom: 24rpx; }
 .hist-list { display: flex; flex-direction: column; gap: 14rpx; }
 .hist-item {
   display: flex;
   align-items: center;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 18rpx 20rpx;
 }
 .hist-main { flex: 1; min-width: 0; }
 .hist-top { display: flex; align-items: baseline; gap: 14rpx; }
-.hist-time { font-size: 20rpx; color: #b3a595; flex-shrink: 0; }
-.hist-gz { font-size: 26rpx; font-weight: 600; color: #8c5a2b; }
-.hist-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #857563; word-break: break-all; }
+.hist-time { font-size: 20rpx; color: #8a857c; flex-shrink: 0; }
+.hist-gz { font-size: 26rpx; font-weight: 600; color: #c41e3a; }
+.hist-label { display: block; margin-top: 6rpx; font-size: 20rpx; color: #55524c; word-break: break-all; }
 .hist-del {
   width: 56rpx;
   height: 56rpx;
@@ -2218,10 +2218,10 @@ function applyJpUnlock() {
   justify-content: center;
   flex-shrink: 0;
 }
-.hist-del text { font-size: 22rpx; color: #b04a45; }
-.hist-empty { text-align: center; font-size: 22rpx; color: #b3a595; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
+.hist-del text { font-size: 22rpx; color: #9c1630; }
+.hist-empty { text-align: center; font-size: 22rpx; color: #8a857c; line-height: 1.8; padding: 40rpx 0; white-space: pre-line; }
 /* 工具标签 */
-.hist-tag { font-size: 20rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; }
+.hist-tag { font-size: 20rpx; color: #c41e3a; background: #f1e7d3; border-radius: 6rpx; padding: 2rpx 10rpx; flex-shrink: 0; }
 /* 历史操作按钮组 */
 .hist-ops { display: flex; flex-direction: column; gap: 10rpx; margin-left: 12rpx; flex-shrink: 0; }
 .hist-edit {
@@ -2241,20 +2241,20 @@ function applyJpUnlock() {
 /* 备注 */
 .hist-remark { display: block; margin-top: 8rpx; font-size: 22rpx; color: #4e7d43; background: #f0f4ee; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 /* 奇门预测事件 (另起一行) */
-.hist-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #8c5a2b; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
+.hist-event { display: block; margin-top: 8rpx; font-size: 22rpx; color: #c41e3a; background: #f1e7d3; border-radius: 8rpx; padding: 6rpx 12rpx; word-break: break-all; }
 /* 保存此盘备注弹窗 */
 .save-sheet { padding: 30rpx 30rpx 40rpx; }
 .save-remark-input {
   height: 88rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 0 24rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .save-remark-ph {
-  color: #b3a595; /* 灰色占位符 */
+  color: #8a857c; /* 灰色占位符 */
 }
 .save-sheet-ops {
   display: flex;
@@ -2271,9 +2271,9 @@ function applyJpUnlock() {
 }
 .save-btn text { font-size: 28rpx; }
 .save-cancel { background: #f1e7d3; }
-.save-cancel text { color: #8c5a2b; }
-.save-confirm { background: linear-gradient(135deg, #b04a45, #8c3228); }
-.save-confirm text { color: #fefbf6; }
+.save-cancel text { color: #c41e3a; }
+.save-confirm { background: linear-gradient(135deg, #9c1630, #6b1022); }
+.save-confirm text { color: #fffafa; }
 
 /* 五行色 */
 .wx-wood { color: #2e7d32; }
@@ -2287,21 +2287,21 @@ function applyJpUnlock() {
 .qm-content-row {
   display: flex;
   align-items: center;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 10rpx 18rpx;
   margin-bottom: 16rpx;
 }
-.qm-c-label { font-size: 22rpx; color: #857563; flex-shrink: 0; margin-right: 14rpx; }
-.qm-c-input { flex: 1; font-size: 24rpx; color: #42372c; height: 56rpx; }
-.qm-c-ph { color: #b3a595; }
+.qm-c-label { font-size: 22rpx; color: #55524c; flex-shrink: 0; margin-right: 14rpx; }
+.qm-c-input { flex: 1; font-size: 24rpx; color: #2a2a2a; height: 56rpx; }
+.qm-c-ph { color: #8a857c; }
 /* 头部: 农历+阳历 + 旬首/局数 */
 .qm-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #4e3420, #6e4a26);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   border-radius: 12rpx;
   padding: 16rpx 22rpx;
   margin-bottom: 16rpx;
@@ -2310,34 +2310,34 @@ function applyJpUnlock() {
 .qm-lunar { font-size: 26rpx; font-weight: 600; color: #f0e6cd; }
 .qm-solar { margin-top: 4rpx; font-size: 18rpx; color: rgba(240, 230, 205, 0.7); }
 .qm-head-r { display: flex; flex-direction: column; align-items: flex-end; }
-.qm-xun { font-size: 24rpx; font-weight: 600; color: #c4a484; }
+.qm-xun { font-size: 24rpx; font-weight: 600; color: #b8860b; }
 .qm-ju { margin-top: 4rpx; font-size: 18rpx; color: rgba(240, 230, 205, 0.7); }
 /* 元信息 */
 .qm-meta {
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 14rpx 20rpx;
   margin-bottom: 16rpx;
 }
 .qm-meta-row { display: flex; padding: 6rpx 0; }
-.qm-mk { width: 110rpx; font-size: 22rpx; color: #857563; flex-shrink: 0; }
-.qm-mv { flex: 1; font-size: 24rpx; color: #42372c; font-weight: 500; }
+.qm-mk { width: 110rpx; font-size: 22rpx; color: #55524c; flex-shrink: 0; }
+.qm-mv { flex: 1; font-size: 24rpx; color: #2a2a2a; font-weight: 500; }
 /* 四柱 4列: 柱名 + 干/支上下排 + 空亡 */
 .qm-sz-grid { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6rpx; }
 .qm-sz-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 8rpx;
   padding: 8rpx 4rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
 }
-.qm-sz-p { font-size: 18rpx; color: #b3a595; }
+.qm-sz-p { font-size: 18rpx; color: #8a857c; }
 .qm-sz-gan { margin-top: 4rpx; font-size: 28rpx; font-weight: 700; line-height: 1.2; }
 .qm-sz-zhi { font-size: 28rpx; font-weight: 700; line-height: 1.2; }
-.qm-sz-kong { margin-top: 4rpx; font-size: 20rpx; font-weight: 600; color: #b04a45; white-space: nowrap; }
+.qm-sz-kong { margin-top: 4rpx; font-size: 20rpx; font-weight: 600; color: #9c1630; white-space: nowrap; }
 .qm-sz-kong-col { background: #fdf1f0; border-color: #efd8d4; }
 /* 局数/值符/值使/马星 2行4列 */
 .qm-key-grid {
@@ -2352,8 +2352,8 @@ function applyJpUnlock() {
   flex: 1;
   text-align: center;
   font-size: 20rpx;
-  color: #857563;
-  background: #faf3e9;
+  color: #55524c;
+  background: #fbe9ec;
   padding: 8rpx 0;
 }
 .qm-key-val {
@@ -2361,7 +2361,7 @@ function applyJpUnlock() {
   text-align: center;
   font-size: 24rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
   padding: 8rpx 0;
 }
 .qm-key-label + .qm-key-label { border-left: 1rpx solid #e6dcca; }
@@ -2375,24 +2375,24 @@ function applyJpUnlock() {
   justify-content: center;
   height: 68rpx;
   border-radius: 999rpx;
-  background: #efe7d8;
+  background: #e8e2da;
   border: 1rpx solid #d8ccb8;
 }
-.qm-toggle text { font-size: 24rpx; color: #857563; }
-.qm-toggle.on { background: linear-gradient(135deg, #8c5a2b, #6e4a26); border-color: #8c5a2b; }
-.qm-toggle.on text { color: #fefbf6; font-weight: 500; }
+.qm-toggle text { font-size: 24rpx; color: #55524c; }
+.qm-toggle.on { background: linear-gradient(135deg, #c41e3a, #6b1022); border-color: #c41e3a; }
+.qm-toggle.on text { color: #fffafa; font-weight: 500; }
 /* 九宫盘 (元素分布: 宫名顶中/八神左上/长生右上/宫位中上/天盘地支居中/门左下/星右下/格局底部) */
 .qm-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
   padding: 16rpx;
 }
 .qm-cell {
-  background: #f8f3ea;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 10rpx;
   min-height: 210rpx;
@@ -2406,7 +2406,7 @@ function applyJpUnlock() {
   right: 0;
   text-align: center;
   font-size: 18rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .qm-shen {
   position: absolute;
@@ -2422,7 +2422,7 @@ function applyJpUnlock() {
   top: 6rpx;
   right: 8rpx;
   font-size: 17rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   z-index: 2;
 }
 .qm-palace {
@@ -2433,7 +2433,7 @@ function applyJpUnlock() {
   text-align: center;
   font-size: 22rpx;
   font-weight: 600;
-  color: #4e3420;
+  color: #9c1630;
 }
 .qm-tian-di {
   position: absolute;
@@ -2452,7 +2452,7 @@ function applyJpUnlock() {
   bottom: 36rpx;
   left: 8rpx;
   font-size: 22rpx;
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 500;
 }
 .qm-star {
@@ -2460,7 +2460,7 @@ function applyJpUnlock() {
   bottom: 36rpx;
   right: 8rpx;
   font-size: 18rpx;
-  color: #857563;
+  color: #55524c;
 }
 /* 格局标注 (颜色) */
 .qm-ge {
@@ -2474,8 +2474,8 @@ function applyJpUnlock() {
   gap: 4rpx;
   z-index: 2;
 }
-.qm-ge text { font-size: 16rpx; padding: 1rpx 8rpx; border-radius: 6rpx; color: #fefbf6; }
-.ge-red { background: #b04a45; }
+.qm-ge text { font-size: 16rpx; padding: 1rpx 8rpx; border-radius: 6rpx; color: #fffafa; }
+.ge-red { background: #9c1630; }
 .ge-orange { background: #d98e32; }
 .ge-purple { background: #7a5c9e; }
 .ge-darkred { background: #8c1f18; }
@@ -2485,15 +2485,15 @@ function applyJpUnlock() {
   display: flex;
   flex-wrap: wrap;
   gap: 20rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 14rpx 20rpx;
   margin-top: 14rpx;
 }
-.qm-lg-item { display: flex; align-items: center; font-size: 20rpx; color: #857563; }
+.qm-lg-item { display: flex; align-items: center; font-size: 20rpx; color: #55524c; }
 .ge-dot { width: 22rpx; height: 22rpx; border-radius: 50%; margin-right: 8rpx; }
-.ge-dot.ge-red { background: #b04a45; }
+.ge-dot.ge-red { background: #9c1630; }
 .ge-dot.ge-orange { background: #d98e32; }
 .ge-dot.ge-purple { background: #7a5c9e; }
 .ge-dot.ge-darkred { background: #8c1f18; }
@@ -2505,44 +2505,44 @@ function applyJpUnlock() {
   justify-content: center;
   height: 84rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   margin-top: 20rpx;
 }
-.qm-save text { font-size: 28rpx; color: #fefbf6; letter-spacing: 3rpx; font-weight: 500; }
+.qm-save text { font-size: 28rpx; color: #fffafa; letter-spacing: 3rpx; font-weight: 500; }
 /* AI 智能问答 */
 .ai-q-row { display: flex; gap: 14rpx; align-items: center; }
 .ai-q-input {
   flex: 1;
   height: 72rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 12rpx;
   padding: 0 18rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .btn-ask {
   flex-shrink: 0;
   height: 72rpx;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
   padding: 0 28rpx;
 }
-.btn-ask text { font-size: 24rpx; color: #fefbf6; font-weight: 500; }
+.btn-ask text { font-size: 24rpx; color: #fffafa; font-weight: 500; }
 .ai-q-answer {
   margin-top: 14rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
   border-radius: 10rpx;
   padding: 16rpx 18rpx;
 }
-.ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #b04a45; }
+.ai-q-tip { margin-top: 10rpx; font-size: 20rpx; color: #9c1630; }
 
 /* 紫微 (三合派 4x3 盘面) */
 .zw-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #4e3420, #6e4a26);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   border-radius: 12rpx;
   padding: 16rpx 22rpx;
   margin-bottom: 16rpx;
@@ -2551,7 +2551,7 @@ function applyJpUnlock() {
 .zw-lunar { font-size: 26rpx; font-weight: 600; color: #f0e6cd; }
 .zw-solar { margin-top: 4rpx; font-size: 18rpx; color: rgba(240, 230, 205, 0.7); }
 .zw-head-r { display: flex; flex-direction: column; align-items: flex-end; }
-.zw-ju { font-size: 22rpx; font-weight: 600; color: #c4a484; }
+.zw-ju { font-size: 22rpx; font-weight: 600; color: #b8860b; }
 .zw-info { margin-top: 4rpx; font-size: 17rpx; color: rgba(240, 230, 205, 0.7); }
 /* 盘面 */
 .zw-pan {
@@ -2562,8 +2562,8 @@ function applyJpUnlock() {
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(4, 1fr);
   gap: 6rpx;
-  background: #fefbf6;
-  border: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border: 1rpx solid #e8e2da;
   border-radius: 16rpx;
   padding: 12rpx;
   margin-bottom: 10rpx;
@@ -2581,7 +2581,7 @@ function applyJpUnlock() {
 .zw-cell {
   position: relative;
   z-index: 2;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border: 1rpx solid #e6dcca;
   border-radius: 10rpx;
   display: flex;
@@ -2591,7 +2591,7 @@ function applyJpUnlock() {
   overflow: hidden;
 }
 .zw-cell.on {
-  border: 2rpx solid #8c5a2b;
+  border: 2rpx solid #c41e3a;
   box-shadow: 0 0 0 3rpx rgba(140, 90, 43, 0.25);
   background: #faf0e0;
 }
@@ -2601,68 +2601,68 @@ function applyJpUnlock() {
   right: 6rpx;
   bottom: 3rpx;
   font-size: 16rpx;
-  color: #b3a595;
+  color: #8a857c;
   z-index: 2;
 }
-.zw-pname { font-size: 19rpx; font-weight: 600; color: #42372c; margin-top: 1rpx; }
-.zw-pname.on { color: #b04a45; }
+.zw-pname { font-size: 19rpx; font-weight: 600; color: #2a2a2a; margin-top: 1rpx; }
+.zw-pname.on { color: #9c1630; }
 /* 星曜: 顶部竖排, 主星(棕金)/吉星(绿)/煞星(红)/平星(灰蓝), 四化星(紫) */
 .zw-stars { display: flex; flex-direction: column; align-items: center; margin-top: 1rpx; width: 100%; }
 .zw-star { font-size: 17rpx; font-weight: 500; line-height: 1.4; }
-.zw-star.st-main { color: #8c5a2b; }
+.zw-star.st-main { color: #c41e3a; }
 .zw-star.st-ji { color: #2e7d32; }
-.zw-star.st-sha { color: #b04a45; }
+.zw-star.st-sha { color: #9c1630; }
 .zw-star.st-ping { color: #3f6f8c; }
 .zw-star.sh4 { color: #7a5c9e; }
 .zw-sh { font-size: 15rpx; font-weight: 600; margin-left: 1rpx; }
 .zw-sh.sh-lu { color: #2e7d32; }
 .zw-sh.sh-quan { color: #7a5c9e; }
 .zw-sh.sh-ke { color: #3f6f8c; }
-.zw-sh.sh-ji { color: #b04a45; }
+.zw-sh.sh-ji { color: #9c1630; }
 /* 亮度状态 (庙红/旺橙/得绿/利青/平灰/不深灰/陷蓝灰) */
 .zw-lv { font-size: 14rpx; margin-left: 2rpx; }
-.zw-lv.lv-miao { color: #b04a45; }
+.zw-lv.lv-miao { color: #9c1630; }
 .zw-lv.lv-wang { color: #d98e32; }
 .zw-lv.lv-de { color: #2e7d32; }
 .zw-lv.lv-li { color: #3f6f8c; }
 .zw-lv.lv-ping { color: #a99a85; }
-.zw-lv.lv-bu { color: #857563; }
+.zw-lv.lv-bu { color: #55524c; }
 .zw-lv.lv-xian { color: #7a8ba3; }
 /* 联动高亮标记 (大限金/流年红/流月绿/流日蓝) */
 .zw-tag {
   font-size: 14rpx;
-  color: #fefbf6;
+  color: #fffafa;
   border-radius: 6rpx;
   padding: 0 8rpx;
   margin-top: 1rpx;
   line-height: 1.6;
 }
-.zw-tag.dy { background: #8c5a2b; }
-.zw-tag.ln { background: #b04a45; }
+.zw-tag.dy { background: #c41e3a; }
+.zw-tag.ln { background: #9c1630; }
 .zw-tag.mm { background: #2e7d32; }
 .zw-tag.dd { background: #3f6f8c; }
-.zw-cell.dyOn { border: 2rpx solid #8c5a2b; }
-.zw-cell.lnOn { border: 2rpx solid #b04a45; }
+.zw-cell.dyOn { border: 2rpx solid #c41e3a; }
+.zw-cell.lnOn { border: 2rpx solid #9c1630; }
 .zw-cell.mmOn { border: 2rpx solid #2e7d32; }
 .zw-cell.ddOn { border: 2rpx solid #3f6f8c; }
-.zw-dayun { font-size: 15rpx; color: #b3a595; margin-top: auto; }
-.zw-tip { font-size: 18rpx; color: #b3a595; margin-bottom: 14rpx; }
+.zw-dayun { font-size: 15rpx; color: #8a857c; margin-top: auto; }
+.zw-tip { font-size: 18rpx; color: #8a857c; margin-bottom: 14rpx; }
 /* 大限/流年/流月/流日 联动 (窄格, 自动换行) */
 .zw-dy-row { display: flex; flex-wrap: wrap; gap: 6rpx; padding: 2rpx; }
 .zw-dy-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #faf3e9;
-  border: 1rpx solid #efe7d8;
+  background: #fbe9ec;
+  border: 1rpx solid #e8e2da;
   border-radius: 8rpx;
   padding: 3rpx 4rpx;
   min-width: 62rpx;
   box-sizing: border-box;
 }
-.zw-dy-item.on { border-color: #8c5a2b; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
-.zw-dy-age { font-size: 13rpx; color: #b3a595; white-space: nowrap; }
-.zw-dy-gong { margin-top: 2rpx; font-size: 16rpx; font-weight: 500; color: #42372c; white-space: nowrap; }
+.zw-dy-item.on { border-color: #c41e3a; box-shadow: 0 0 0 2rpx rgba(140, 90, 43, 0.3); }
+.zw-dy-age { font-size: 13rpx; color: #8a857c; white-space: nowrap; }
+.zw-dy-gong { margin-top: 2rpx; font-size: 16rpx; font-weight: 500; color: #2a2a2a; white-space: nowrap; }
 
 /* ===== AI 解盘 ===== */
 .jp-section { margin-top: 10rpx; }
@@ -2672,33 +2672,33 @@ function applyJpUnlock() {
   display: flex;
   align-items: center;
   padding: 18rpx 20rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 .jp-block-icon { font-size: 28rpx; margin-right: 12rpx; }
-.jp-block-name { flex: 1; font-size: 26rpx; color: #42372c; font-weight: 500; }
+.jp-block-name { flex: 1; font-size: 26rpx; color: #2a2a2a; font-weight: 500; }
 .jp-free-tag { font-size: 18rpx; color: #6e7f5a; background: #f2f5ec; padding: 2rpx 12rpx; border-radius: 999rpx; }
-.jp-paid-tag { font-size: 18rpx; color: #b04a45; background: #fdf1f0; padding: 2rpx 12rpx; border-radius: 999rpx; }
+.jp-paid-tag { font-size: 18rpx; color: #9c1630; background: #fdf1f0; padding: 2rpx 12rpx; border-radius: 999rpx; }
 .jp-unlocked { color: #6e7f5a; background: #f2f5ec; }
-.jp-arrow { font-size: 20rpx; color: #b3a595; margin-left: 10rpx; }
+.jp-arrow { font-size: 20rpx; color: #8a857c; margin-left: 10rpx; }
 .jp-content { padding: 18rpx 20rpx; }
-.jp-para { display: block; font-size: 24rpx; color: #42372c; line-height: 1.8; margin-bottom: 12rpx; }
-.jp-ai-loading { font-size: 22rpx; color: #8c5a2b; margin-bottom: 10rpx; }
-.jp-ai-tag { display: block; font-size: 18rpx; color: #b3a595; margin-top: 6rpx; }
+.jp-para { display: block; font-size: 24rpx; color: #2a2a2a; line-height: 1.8; margin-bottom: 12rpx; }
+.jp-ai-loading { font-size: 22rpx; color: #c41e3a; margin-bottom: 10rpx; }
+.jp-ai-tag { display: block; font-size: 18rpx; color: #8a857c; margin-top: 6rpx; }
 .jp-lock { padding: 10rpx 20rpx 22rpx; text-align: center; }
 .jp-lock-icon { font-size: 40rpx; display: block; }
-.jp-lock-tip { display: block; font-size: 22rpx; color: #857563; margin: 8rpx 0 14rpx; }
+.jp-lock-tip { display: block; font-size: 22rpx; color: #55524c; margin: 8rpx 0 14rpx; }
 .btn-fill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
   padding: 14rpx 40rpx;
 }
-.btn-fill text { font-size: 26rpx; color: #fefbf6; font-weight: 500; }
+.btn-fill text { font-size: 26rpx; color: #fffafa; font-weight: 500; }
 .br-line { display: flex; margin: 14rpx 0 4rpx; padding: 0 10rpx; }
-.br-k { font-size: 22rpx; color: #857563; }
-.br-v { font-size: 24rpx; color: #42372c; font-weight: 500; }
+.br-k { font-size: 22rpx; color: #55524c; }
+.br-v { font-size: 24rpx; color: #2a2a2a; font-weight: 500; }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {
   .pp-page {

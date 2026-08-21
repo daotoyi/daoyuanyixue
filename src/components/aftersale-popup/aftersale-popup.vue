@@ -173,23 +173,23 @@ async function submit() {
   max-width: 900px;
   max-height: 82vh;
   overflow-y: auto;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 28rpx 28rpx 0 0;
   padding: 32rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
 }
 .as-title {
   font-size: 34rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
   text-align: center;
 }
 .as-sub {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
   text-align: center;
   padding-bottom: 18rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .as-items {
   margin-left: 8rpx;
@@ -200,8 +200,8 @@ async function submit() {
   margin-top: 18rpx;
 }
 .as-his-item {
-  background: #faf3e9;
-  border: 1rpx solid #efe7d8;
+  background: #fbe9ec;
+  border: 1rpx solid #e8e2da;
   border-radius: 14rpx;
   padding: 18rpx;
   margin-bottom: 14rpx;
@@ -213,20 +213,20 @@ async function submit() {
 }
 .as-his-time {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .as-his-status {
   font-size: 20rpx;
   font-weight: 500;
 }
-.hs-wait { color: #b04a45; }
-.hs-doing { color: #ba7517; }
+.hs-wait { color: #9c1630; }
+.hs-doing { color: #c41e3a; }
 .hs-done { color: #6e7f5a; }
 .as-his-content {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.6;
 }
 .as-his-imgs {
@@ -248,12 +248,12 @@ async function submit() {
 }
 .as-his-reply-label {
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
 }
 .as-his-reply-text {
   font-size: 22rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.5;
 }
 /* 表单 */
@@ -263,17 +263,17 @@ async function submit() {
 .as-label {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 12rpx;
 }
 .as-textarea {
   width: 100%;
   height: 200rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.6;
-  background: #faf3e9;
-  border: 1rpx solid #efe7d8;
+  background: #fbe9ec;
+  border: 1rpx solid #e8e2da;
   border-radius: 12rpx;
   padding: 16rpx;
   box-sizing: border-box;
@@ -293,7 +293,7 @@ async function submit() {
   width: 150rpx;
   height: 150rpx;
   border-radius: 12rpx;
-  background: #faf3e9;
+  background: #fbe9ec;
 }
 .as-img-del {
   position: absolute;
@@ -316,7 +316,7 @@ async function submit() {
   height: 150rpx;
   border-radius: 12rpx;
   border: 2rpx dashed #d9c39a;
-  background: #faf3e9;
+  background: #fbe9ec;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -325,12 +325,12 @@ async function submit() {
 }
 .as-img-add-icon {
   font-size: 44rpx;
-  color: #b3a595;
+  color: #8a857c;
   line-height: 1;
 }
 .as-img-add-text {
   font-size: 20rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .btn-fill {
   margin-top: 26rpx;
@@ -342,10 +342,10 @@ async function submit() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .as-submit {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 </style>

@@ -337,7 +337,7 @@ function goShop() {
 <style lang="scss" scoped>
 .od-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding-bottom: 140rpx;
 }
 
@@ -346,15 +346,15 @@ function goShop() {
   display: flex;
   flex-direction: column;
 }
-.sb-unpaid { background: linear-gradient(135deg, #6b1f1f, #b04a45); }
-.sb-unshipped { background: linear-gradient(135deg, #6e4a26, #8c5a2b); }
-.sb-unreceived { background: linear-gradient(135deg, #7a5610, #ba7517); }
+.sb-unpaid { background: linear-gradient(135deg, #6b1f1f, #9c1630); }
+.sb-unshipped { background: linear-gradient(135deg, #6b1022, #c41e3a); }
+.sb-unreceived { background: linear-gradient(135deg, #7a5610, #c41e3a); }
 .sb-done { background: linear-gradient(135deg, #3d4a26, #6e7f5a); }
-.sb-refunded { background: linear-gradient(135deg, #5a5144, #857563); }
+.sb-refunded { background: linear-gradient(135deg, #5a5144, #55524c); }
 .sb-status {
   font-size: 44rpx;
   font-weight: 500;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .sb-tip {
   margin-top: 12rpx;
@@ -363,34 +363,34 @@ function goShop() {
 }
 
 .card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin: 0 24rpx 20rpx;
 }
 .card-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 16rpx;
 }
 
 .addr-name {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .addr-phone {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-left: 16rpx;
 }
 .addr-detail {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 .oi {
@@ -401,7 +401,7 @@ function goShop() {
   width: 120rpx;
   height: 120rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .oi-info {
   flex: 1;
@@ -409,7 +409,7 @@ function goShop() {
 }
 .oi-name {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.4;
 }
 .oi-row {
@@ -419,12 +419,12 @@ function goShop() {
 }
 .oi-price {
   font-size: 28rpx;
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 500;
 }
 .oi-qty {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 .row {
@@ -434,18 +434,18 @@ function goShop() {
 }
 .rk {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
 }
 .rv {
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .row.total .rk {
-  color: #42372c;
+  color: #2a2a2a;
   font-weight: 500;
 }
 .rv.red {
-  color: #b04a45;
+  color: #9c1630;
   font-weight: 500;
   font-size: 30rpx;
 }
@@ -453,14 +453,14 @@ function goShop() {
 /* 支付方式选择 (预约订单): 微信默认/支付宝默认隐藏 */
 .pay-methods {
   margin: 20rpx 24rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 20rpx 24rpx;
 }
 .pm-title {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
   margin-bottom: 14rpx;
 }
@@ -503,7 +503,7 @@ function goShop() {
 .pm-name {
   flex: 1;
   font-size: 28rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .pm-check {
   width: 40rpx;
@@ -514,16 +514,16 @@ function goShop() {
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .pm-check.on {
-  background: #8c5a2b;
-  border-color: #8c5a2b;
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
 .pm-more {
   padding: 12rpx 0 4rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 .action-bar {
@@ -531,8 +531,8 @@ function goShop() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fefbf6;
-  border-top: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-top: 1rpx solid #e8e2da;
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   display: flex;
@@ -551,17 +551,17 @@ function goShop() {
 }
 .btn-fill text {
   font-size: 28rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-pay {
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 .btn-confirm {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 .btn-shop {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 .btn-cancel {
   background: linear-gradient(135deg, #9a9a9a, #777);
@@ -578,21 +578,21 @@ function goShop() {
   height: 84rpx;
   padding: 0 48rpx;
   border-radius: 999rpx;
-  border: 2rpx solid #ba7517;
+  border: 2rpx solid #c41e3a;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .btn-after text {
   font-size: 28rpx;
-  color: #ba7517;
+  color: #c41e3a;
   letter-spacing: 2rpx;
 }
 .btn-after.hasrecord {
-  background: #ba7517;
+  background: #c41e3a;
 }
 .btn-after.hasrecord text {
-  color: #fefbf6;
+  color: #fffafa;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

@@ -136,14 +136,14 @@ async function doPublish() {
 <style lang="scss" scoped>
 .publish-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 20rpx 24rpx;
 }
 
 .input-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
 }
 .content-input {
@@ -151,28 +151,28 @@ async function doPublish() {
   height: 280rpx;
   font-size: 28rpx;
   line-height: 1.7;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .ph {
-  color: #b3a595;
+  color: #8a857c;
 }
 .char-count {
   text-align: right;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
   margin-top: 8rpx;
 }
 
 .img-section {
   margin-top: 24rpx;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
 }
 .section-label {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 20rpx;
   display: block;
 }
@@ -208,7 +208,7 @@ async function doPublish() {
 .img-add {
   width: 200rpx;
   height: 200rpx;
-  border: 2rpx dashed #857563;
+  border: 2rpx dashed #55524c;
   border-radius: 12rpx;
   display: flex;
   flex-direction: column;
@@ -217,11 +217,11 @@ async function doPublish() {
 }
 .add-plus {
   font-size: 56rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .add-text {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 .publish-btn {
@@ -240,7 +240,7 @@ async function doPublish() {
 }
 .disabled-text {
   font-size: 28rpx;
-  color: #857563;
+  color: #55524c;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

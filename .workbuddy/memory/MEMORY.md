@@ -59,6 +59,15 @@
 - **版本迭代 (2026-08-07 13:30 用户最新要求)**: **每次提交都升小版本** — 每次改动完成提交前先 `node scripts/bump-version.js && node scripts/gen-version.js` (patch+1), 再构建提交推送; 当前 v1.10.6
 - **构建策略 (2026-08-07 18:25 用户约定)**: 每次迭代**同步构建 H5 + 小程序并部署**; **APP(APK) 单独提需求才构建**, 不随每次迭代自动构建
 
+## 静态托管路径布局 (铁律 2026-08-21)
+
+- 根路径 `/` = **官网** (official-site/, 19文件, 首页 index.html="真和盛 | 道家文化传承")
+- `/h5/` = 道元易学 H5 应用 (dist/build/h5/)
+- `/download/` = APK 下载页 | `/apk/` = APK 文件
+- **铁律**: 根路径 index.html = 官网首页; 下载页只能传 /download/, **绝不能传根路径** (曾因覆盖导致官网首页变下载页)
+- club.zhenhesheng.cn 根 → 官网 index.html 里 JS 判断 club 域名自动跳 /h5/
+- 上传: manageHosting action=upload localPath=<目录> cloudPath=/ (官网) 或 /h5/ (应用)
+
 ## APP(APK) 构建流程 (2026-08-11 确立)
 
 - mobile/ 是 **Capacitor** 工程 (capacitor.config.json: appId=cn.codebuddy.zhs.workbuddy, appName=道元易学, webDir=../dist/build/h5)

@@ -380,7 +380,7 @@ async function submit() {
 <style lang="scss" scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #4e3420 0%, #6e4a26 40%, #f8f3ea 100%);
+  background: linear-gradient(180deg, #9c1630 0%, #6b1022 40%, #f8f5f0 100%);
   padding: 60rpx 40rpx 80rpx;
 }
 
@@ -393,7 +393,7 @@ async function submit() {
 .brand-seal {
   width: 120rpx;
   height: 120rpx;
-  border: 3rpx solid #c4a484;
+  border: 3rpx solid #b8860b;
   border-radius: 16rpx;
   display: flex;
   align-items: center;
@@ -403,19 +403,19 @@ async function submit() {
 }
 .seal-char {
   font-size: 68rpx;
-  color: #c4a484;
+  color: #b8860b;
 }
 .brand-sub {
   font-size: 30rpx;
   letter-spacing: 8rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
   margin-bottom: 8rpx;
 }
 .brand-name {
   font-size: 44rpx;
   letter-spacing: 10rpx;
-  color: #857563;
+  color: #55524c;
   font-weight: 500;
 }
 .brand-slogan {
@@ -426,7 +426,7 @@ async function submit() {
 }
 
 .form-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 24rpx;
   padding: 40rpx 36rpx;
   box-shadow: 0 8rpx 40rpx rgba(69, 26, 3, 0.15);
@@ -434,18 +434,18 @@ async function submit() {
 .form-tabs {
   display: flex;
   margin-bottom: 40rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .ft {
   flex: 1;
   text-align: center;
   padding-bottom: 20rpx;
   font-size: 30rpx;
-  color: #857563;
+  color: #55524c;
   position: relative;
 }
 .ft.on {
-  color: #8c5a2b;
+  color: #c41e3a;
   font-weight: 500;
 }
 .ft.on::after {
@@ -457,7 +457,7 @@ async function submit() {
   width: 64rpx;
   height: 6rpx;
   border-radius: 3rpx;
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 
 .field {
@@ -466,20 +466,20 @@ async function submit() {
 .field-label {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 12rpx;
 }
 .field-input {
   height: 88rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 14rpx;
   padding: 0 26rpx;
   font-size: 28rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 
 .err-text {
-  color: #b04a45;
+  color: #9c1630;
   font-size: 24rpx;
   margin: -10rpx 0 20rpx;
 }
@@ -492,7 +492,7 @@ async function submit() {
 .demo-tip {
   margin-top: 40rpx;
   padding-top: 30rpx;
-  border-top: 1rpx dashed #efe7d8;
+  border-top: 1rpx dashed #e8e2da;
 }
 
 /* 微信登录 */
@@ -504,12 +504,12 @@ async function submit() {
 .wx-line {
   flex: 1;
   height: 1rpx;
-  background: #efe7d8;
+  background: #e8e2da;
 }
 .wx-text {
   margin: 0 20rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .wx-auth-sheet { padding: 40rpx 40rpx 60rpx; }
 .wx-auth-actions {
@@ -533,7 +533,7 @@ async function submit() {
   gap: 24rpx;
   margin: 24rpx 0;
 }
-.wx-auth-hint { font-size: 24rpx; color: #857563; flex: 1; }
+.wx-auth-hint { font-size: 24rpx; color: #55524c; flex: 1; }
 .wx-avatar-btn {
   flex-shrink: 0;
   width: 96rpx;
@@ -542,7 +542,7 @@ async function submit() {
   margin: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: #efe7d8;
+  background: #e8e2da;
   border: none;
   line-height: normal;
 }
@@ -557,7 +557,7 @@ async function submit() {
   flex: 1;
   height: 72rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
   background: #f6efe3;
   border-radius: 12rpx;
   display: flex;
@@ -576,8 +576,8 @@ async function submit() {
   flex: 1;
   height: 72rpx;
   font-size: 26rpx;
-  color: #42372c;
-  background: #fefbf6;
+  color: #2a2a2a;
+  background: #fffafa;
   border-radius: 12rpx;
   padding: 0 20rpx;
 }
@@ -603,7 +603,7 @@ async function submit() {
   gap: 24rpx;
   margin: 24rpx 0;
 }
-.wx-auth-hint { font-size: 24rpx; color: #857563; flex: 1; }
+.wx-auth-hint { font-size: 24rpx; color: #55524c; flex: 1; }
 .wx-avatar-btn {
   flex-shrink: 0;
   width: 96rpx;
@@ -612,7 +612,7 @@ async function submit() {
   margin: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: #efe7d8;
+  background: #e8e2da;
   border: none;
   line-height: normal;
 }
@@ -627,8 +627,8 @@ async function submit() {
   flex: 1;
   height: 72rpx;
   font-size: 26rpx;
-  color: #42372c;
-  background: #fefbf6;
+  color: #2a2a2a;
+  background: #fffafa;
   border-radius: 12rpx;
   padding: 0 20rpx;
 }
@@ -638,8 +638,8 @@ async function submit() {
   justify-content: center;
   height: 88rpx;
   border-radius: 999rpx;
-  background: #f8f3ea;
-  border: 1rpx solid #efe7d8;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
 }
 /* 小程序 button 复用登录按钮样式: 重置 button 默认边框/背景/内边距 */
 .wx-login-btn {
@@ -664,7 +664,7 @@ async function submit() {
 }
 .wx-name {
   font-size: 28rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {

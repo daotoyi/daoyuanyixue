@@ -26,38 +26,38 @@ const sections = [
 <style lang="scss" scoped>
 .doc-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 30rpx;
 }
 .doc-block {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 26rpx;
   margin-bottom: 20rpx;
 }
 .doc-title {
   font-size: 34rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   display: block;
 }
 .doc-update {
   display: block;
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .doc-h {
   font-size: 28rpx;
   font-weight: 500;
-  color: #8c5a2b;
+  color: #c41e3a;
   display: block;
   margin-bottom: 12rpx;
 }
 .doc-p {
   font-size: 25rpx;
-  color: #857563;
+  color: #55524c;
   line-height: 1.9;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */

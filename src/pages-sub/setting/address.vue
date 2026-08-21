@@ -37,7 +37,7 @@
         <view class="f-row"><text class="f-label">详细地址</text><textarea class="f-textarea" v-model="form.detail" placeholder="街道、门牌号等" /></view>
         <view class="f-row">
           <text class="f-label">设为默认</text>
-          <switch :checked="form.is_default" @change="(e) => form.is_default = e.detail.value" color="#8c5a2b"/>
+          <switch :checked="form.is_default" @change="(e) => form.is_default = e.detail.value" color="#c41e3a"/>
         </view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showForm = false">取消</view>
@@ -119,13 +119,13 @@ onMounted(load)
 <style lang="scss" scoped>
 .address-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 24rpx 24rpx 160rpx;
 }
 .addr-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 26rpx;
   margin-bottom: 20rpx;
 }
@@ -137,24 +137,24 @@ onMounted(load)
 .addr-name {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .addr-phone {
   font-size: 26rpx;
-  color: #857563;
+  color: #55524c;
   margin-left: 20rpx;
 }
 .addr-tag {
   margin-left: auto;
   font-size: 20rpx;
-  color: #8c5a2b;
-  background: #f8f3ea;
+  color: #c41e3a;
+  background: #f8f5f0;
   padding: 2rpx 14rpx;
   border-radius: 999rpx;
 }
 .addr-detail {
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   line-height: 1.6;
 }
 .addr-ops {
@@ -165,10 +165,10 @@ onMounted(load)
 }
 .addr-op {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .addr-op.danger {
-  color: #b04a45;
+  color: #9c1630;
 }
 .empty {
   padding-top: 100rpx;
@@ -188,7 +188,7 @@ onMounted(load)
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 24rpx;
 }
 .f-row {
@@ -199,26 +199,26 @@ onMounted(load)
 .f-label {
   width: 150rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .f-textarea {
   flex: 1;
   height: 120rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 16rpx 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .sheet-actions {
   display: flex;

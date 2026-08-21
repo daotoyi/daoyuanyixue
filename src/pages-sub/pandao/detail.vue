@@ -123,7 +123,7 @@ async function bookNow() {
       title: '取消预约',
       content: '确定取消该场次的预约吗？',
       confirmText: '取消预约',
-      confirmColor: '#b04a45',
+      confirmColor: '#9c1630',
       success: async (res) => {
         if (!res.confirm) return
         try {
@@ -154,7 +154,7 @@ async function bookNow() {
 <style lang="scss" scoped>
 .pd-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 20rpx 24rpx 160rpx;
 }
 /* PC 宽屏: 详情卡片限宽居中, 封面 16:9 协调比例 (避免左右太宽/上下太矮/图片裁切) */
@@ -189,9 +189,9 @@ async function bookNow() {
   }
 }
 .pd-card {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 30rpx 24rpx;
 }
 .pd-cover {
@@ -199,7 +199,7 @@ async function bookNow() {
   height: 300rpx;
   border-radius: 12rpx;
   margin-bottom: 20rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
 }
 .pd-badge-row {
   display: flex;
@@ -207,7 +207,7 @@ async function bookNow() {
   justify-content: space-between;
 }
 .pd-badge {
-  background: linear-gradient(135deg, #8c5a2b, #b8860b);
+  background: linear-gradient(135deg, #c41e3a, #b8860b);
   color: #fff;
   font-size: 24rpx;
   font-weight: bold;
@@ -258,9 +258,9 @@ async function bookNow() {
   font-size: 30rpx;
 }
 .pd-content {
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 24rpx;
   margin-top: 20rpx;
 }
@@ -304,7 +304,7 @@ async function bookNow() {
   right: 0;
   bottom: 0;
   padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
-  background: #f8f3ea;
+  background: #f8f5f0;
   display: flex;
   gap: 20rpx;
   align-items: center;
@@ -312,7 +312,7 @@ async function bookNow() {
 }
 .pd-book-btn {
   width: 260rpx;
-  background: #8c5a2b;
+  background: #c41e3a;
   color: #fff;
   font-size: 26rpx;
   font-weight: bold;

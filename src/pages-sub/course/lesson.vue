@@ -99,7 +99,7 @@ function goBuy() {
 <style>
 .ls-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding-bottom: 60rpx;
 }
 .ls-head {
@@ -109,7 +109,7 @@ function goBuy() {
   display: block;
   font-size: 34rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .ls-sub {
   display: block;
@@ -130,7 +130,7 @@ function goBuy() {
 .ls-empty {
   margin: 60rpx 24rpx 0;
   padding: 80rpx 0;
-  background: #fefbf6;
+  background: #fffafa;
   border: 1rpx dashed #d9c39a;
   border-radius: 16rpx;
   text-align: center;
@@ -144,8 +144,8 @@ function goBuy() {
 }
 .ls-btn {
   padding: 16rpx 40rpx;
-  background: #8c5a2b;
-  color: #fefbf6;
+  background: #c41e3a;
+  color: #fffafa;
   border-radius: 40rpx;
   font-size: 26rpx;
 }
@@ -170,7 +170,7 @@ function goBuy() {
   margin-top: 24rpx;
   font-size: 34rpx;
   font-weight: 600;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .ls-lock-desc {
   margin-top: 12rpx;

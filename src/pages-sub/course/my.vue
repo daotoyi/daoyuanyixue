@@ -132,7 +132,7 @@ function goCourse() {
 <style lang="scss" scoped>
 .my-course-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   display: flex;
   flex-direction: column;
 }
@@ -143,13 +143,13 @@ function goCourse() {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 30rpx;
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .mc-head-title {
   font-size: 32rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .mc-head-right {
   display: flex;
@@ -157,18 +157,18 @@ function goCourse() {
 }
 .mc-head-link {
   font-size: 24rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .mc-head-arrow {
   font-size: 28rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   margin-left: 4rpx;
 }
 
 /* 分类 tab: 紧凑小按钮 + 固定彩色 + 右上角数字 */
 .filter-bar {
-  background: #fefbf6;
-  border-bottom: 1rpx solid #efe7d8;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
   flex-shrink: 0;
 }
 .filter-inner {
@@ -203,37 +203,37 @@ function goCourse() {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid #efe7d8;
+  border: 2rpx solid #e8e2da;
 }
 .ct-badge text {
   font-size: 18rpx;
-  color: #fefbf6;
+  color: #fffafa;
   font-weight: 500;
 }
 /* 每个按钮固定颜色 */
-.ct-purchased { border-color: #8c5a2b; background: #faf3e9; }
-.ct-purchased .ct-label { color: #8c5a2b; }
-.ct-purchased .ct-badge { background: #8c5a2b; }
-.ct-purchased.active { background: #8c5a2b; }
-.ct-purchased.active .ct-label { color: #fefbf6; }
+.ct-purchased { border-color: #c41e3a; background: #fbe9ec; }
+.ct-purchased .ct-label { color: #c41e3a; }
+.ct-purchased .ct-badge { background: #c41e3a; }
+.ct-purchased.active { background: #c41e3a; }
+.ct-purchased.active .ct-label { color: #fffafa; }
 
-.ct-learning { border-color: #b04a45; background: #faf3e9; }
-.ct-learning .ct-label { color: #b04a45; }
-.ct-learning .ct-badge { background: #b04a45; }
-.ct-learning.active { background: #b04a45; }
-.ct-learning.active .ct-label { color: #fefbf6; }
+.ct-learning { border-color: #9c1630; background: #fbe9ec; }
+.ct-learning .ct-label { color: #9c1630; }
+.ct-learning .ct-badge { background: #9c1630; }
+.ct-learning.active { background: #9c1630; }
+.ct-learning.active .ct-label { color: #fffafa; }
 
-.ct-done { border-color: #6e7f5a; background: #faf3e9; }
+.ct-done { border-color: #6e7f5a; background: #fbe9ec; }
 .ct-done .ct-label { color: #6e7f5a; }
 .ct-done .ct-badge { background: #6e7f5a; }
 .ct-done.active { background: #6e7f5a; }
-.ct-done.active .ct-label { color: #fefbf6; }
+.ct-done.active .ct-label { color: #fffafa; }
 
-.ct-fav { border-color: #ba7517; background: #faf3e9; }
-.ct-fav .ct-label { color: #ba7517; }
-.ct-fav .ct-badge { background: #ba7517; }
-.ct-fav.active { background: #ba7517; }
-.ct-fav.active .ct-label { color: #fefbf6; }
+.ct-fav { border-color: #c41e3a; background: #fbe9ec; }
+.ct-fav .ct-label { color: #c41e3a; }
+.ct-fav .ct-badge { background: #c41e3a; }
+.ct-fav.active { background: #c41e3a; }
+.ct-fav.active .ct-label { color: #fffafa; }
 
 /* 列表 */
 .mc-scroll {
@@ -245,9 +245,9 @@ function goCourse() {
 }
 .mc-card {
   display: flex;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 20rpx;
   margin-bottom: 20rpx;
 }
@@ -255,7 +255,7 @@ function goCourse() {
   width: 180rpx;
   height: 180rpx;
   border-radius: 12rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   flex-shrink: 0;
 }
 .mc-body {
@@ -272,22 +272,22 @@ function goCourse() {
 .mc-title {
   font-size: 28rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   line-height: 1.4;
   flex: 1;
 }
 .mc-fav {
   font-size: 34rpx;
-  color: #b3a595;
+  color: #8a857c;
   padding-left: 12rpx;
 }
 .mc-fav.on {
-  color: #c4a484;
+  color: #b8860b;
 }
 .mc-teacher {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .mc-progress-row {
   margin-top: auto;
@@ -297,26 +297,26 @@ function goCourse() {
 .mc-progress {
   flex: 1;
   height: 12rpx;
-  background: #efe7d8;
+  background: #e8e2da;
   border-radius: 6rpx;
   overflow: hidden;
 }
 .mc-progress-inner {
   height: 100%;
-  background: linear-gradient(90deg, #c4a484, #8c5a2b);
+  background: linear-gradient(90deg, #b8860b, #c41e3a);
   border-radius: 6rpx;
 }
 .mc-progress-text {
   margin-left: 14rpx;
   font-size: 22rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
 }
 .mc-status-tag {
   margin-top: 8rpx;
   align-self: flex-start;
   font-size: 20rpx;
   color: #6e7f5a;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding: 2rpx 14rpx;
   border-radius: 999rpx;
 }

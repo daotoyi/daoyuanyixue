@@ -492,7 +492,7 @@ onShow(async () => {
 <style lang="scss" scoped>
 .user-page {
   min-height: 100vh;
-  background: #f8f3ea;
+  background: #f8f5f0;
   padding-bottom: 60rpx;
 }
 
@@ -500,7 +500,7 @@ onShow(async () => {
 .user-header {
   position: relative;
   padding: 70rpx 40rpx 60rpx;
-  background: linear-gradient(160deg, #4e3420 0%, #6e4a26 60%, #8c5a2b 100%);
+  background: linear-gradient(160deg, #9c1630 0%, #6b1022 60%, #c41e3a 100%);
   overflow: hidden;
 }
 .header-bg {
@@ -524,7 +524,7 @@ onShow(async () => {
 }
 .setting-icon {
   font-size: 34rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .home-entry {
   position: absolute;
@@ -545,7 +545,7 @@ onShow(async () => {
 }
 .home-label {
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 
 .msg-entry {
@@ -572,8 +572,8 @@ onShow(async () => {
   width: 14rpx;
   height: 14rpx;
   border-radius: 50%;
-  background: #b04a45;
-  border: 2rpx solid #4e3420;
+  background: #9c1630;
+  border: 2rpx solid #9c1630;
 }
 .bg-char {
   font-size: 320rpx;
@@ -600,7 +600,7 @@ onShow(async () => {
   justify-content: center;
   background: rgba(201, 169, 106, 0.35);
   font-size: 52rpx;
-  color: #857563;
+  color: #55524c;
 }
 .avatar-edit {
   position: absolute;
@@ -609,14 +609,14 @@ onShow(async () => {
   width: 40rpx;
   height: 40rpx;
   border-radius: 50%;
-  background: #8c5a2b;
+  background: #c41e3a;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .avatar-edit text {
   font-size: 22rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 .user-meta {
   margin-left: 30rpx;
@@ -628,33 +628,33 @@ onShow(async () => {
 .user-name {
   font-size: 38rpx;
   font-weight: 500;
-  color: #857563;
+  color: #55524c;
 }
 .vip-badge {
   margin-left: 16rpx;
   padding: 2rpx 16rpx;
   border-radius: 999rpx;
   font-size: 20rpx;
-  color: #4e3420;
+  color: #9c1630;
 }
 .vip-wrap {
   position: relative;
   margin-left: 16rpx;
 }
-.vip-0 { background: #857563; }
-.vip-1 { background: linear-gradient(135deg, #a8884c, #8c6d3f); }
+.vip-0 { background: #55524c; }
+.vip-1 { background: linear-gradient(135deg, #d4a94b, #6b1022); }
 .vip-2 { background: linear-gradient(135deg, #d4a84c, #b07a2a); }
 .vip-3 { background: linear-gradient(135deg, #c9a9a9, #9c6b6b); }
 .vip-4 { background: linear-gradient(135deg, #d8b84c, #a8822a); }
-.vip-5 { background: linear-gradient(135deg, #b04a45, #8c3228); }
-.vip-6 { background: linear-gradient(135deg, #4e3420, #2a1a10); }
-.vip-7 { background: linear-gradient(135deg, #8c6d3f, #4e3420); box-shadow: 0 0 12rpx rgba(140, 109, 63, 0.5); }
+.vip-5 { background: linear-gradient(135deg, #9c1630, #6b1022); }
+.vip-6 { background: linear-gradient(135deg, #9c1630, #6b1022); }
+.vip-7 { background: linear-gradient(135deg, #6b1022, #9c1630); box-shadow: 0 0 12rpx rgba(140, 109, 63, 0.5); }
 /* 等级说明弹窗 */
 .vip-tip { display: block; text-align: center; font-size: 26rpx; color: #5f4c3a; margin-bottom: 20rpx; font-weight: 500; }
 .vip-row {
   display: flex;
   align-items: center;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
   margin-bottom: 12rpx;
@@ -666,8 +666,8 @@ onShow(async () => {
   text-align: center;
   flex-shrink: 0;
 }
-.vip-badge-lg text { font-size: 24rpx; font-weight: 600; color: #fefbf6; }
-.vip-range { flex: 1; margin-left: 20rpx; font-size: 24rpx; color: #42372c; }
+.vip-badge-lg text { font-size: 24rpx; font-weight: 600; color: #fffafa; }
+.vip-range { flex: 1; margin-left: 20rpx; font-size: 24rpx; color: #2a2a2a; }
 .vip-tip {
   margin-left: 14rpx;
   font-size: 20rpx;
@@ -686,9 +686,9 @@ onShow(async () => {
   display: flex;
   align-items: center;
   margin: -30rpx 30rpx 0;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   padding: 30rpx 0;
   position: relative;
   z-index: 1;
@@ -702,25 +702,25 @@ onShow(async () => {
 .asset-num {
   font-size: 32rpx;
   font-weight: 500;
-  color: #4e3420;
+  color: #9c1630;
 }
 .asset-label {
   margin-top: 8rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .asset-divider {
   width: 1rpx;
   height: 48rpx;
-  background: #efe7d8;
+  background: #e8e2da;
 }
 
 /* 面板 */
 .panel {
   margin: 24rpx 30rpx 0;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 16rpx;
-  border: 1rpx solid #efe7d8;
+  border: 1rpx solid #e8e2da;
   overflow: hidden;
 }
 .panel-head {
@@ -728,16 +728,16 @@ onShow(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 26rpx 30rpx;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .panel-title {
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .panel-more {
   font-size: 22rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 
 .order-entry {
@@ -758,7 +758,7 @@ onShow(async () => {
 .entry-label {
   margin-top: 10rpx;
   font-size: 22rpx;
-  color: #857563;
+  color: #55524c;
 }
 .entry-badge {
   position: absolute;
@@ -768,8 +768,8 @@ onShow(async () => {
   height: 30rpx;
   padding: 0 8rpx;
   border-radius: 999rpx;
-  background: #b04a45;
-  color: #fefbf6;
+  background: #9c1630;
+  color: #fffafa;
   font-size: 18rpx;
   display: flex;
   align-items: center;
@@ -804,7 +804,7 @@ onShow(async () => {
   display: flex;
   align-items: center;
   padding: 30rpx 0;
-  border-bottom: 1rpx solid #efe7d8;
+  border-bottom: 1rpx solid #e8e2da;
 }
 .menu-item:last-child {
   border-bottom: none;
@@ -816,11 +816,11 @@ onShow(async () => {
 .menu-label {
   flex: 1;
   font-size: 28rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .menu-arrow {
   font-size: 36rpx;
-  color: #857563;
+  color: #55524c;
 }
 
 .logout {
@@ -833,15 +833,15 @@ onShow(async () => {
   height: 88rpx;
   border-radius: 999rpx;
   border: 1rpx solid #d8ccb8;
-  background: #fefbf6;
+  background: #fffafa;
 }
 .logout-btn text {
   font-size: 28rpx;
-  color: #b04a45;
+  color: #9c1630;
 }
 .version {
   text-align: center;
-  color: #b3a595;
+  color: #8a857c;
   font-size: 22rpx;
   padding: 40rpx 0 0;
 }
@@ -861,7 +861,7 @@ onShow(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fefbf6;
+  background: #fffafa;
   border-radius: 24rpx 24rpx 0 0;
   z-index: 1000;
   padding-bottom: env(safe-area-inset-bottom);
@@ -877,7 +877,7 @@ onShow(async () => {
 .sheet-head .sheet-title { margin-bottom: 0; }
 .sheet-close {
   font-size: 30rpx;
-  color: #b3a595;
+  color: #8a857c;
   padding: 6rpx 0 6rpx 30rpx;
 }
 .sheet-btn {
@@ -888,7 +888,7 @@ onShow(async () => {
   padding: 0 40rpx;
   border-radius: 999rpx;
   border: 1rpx solid #d8ccb8;
-  color: #857563;
+  color: #55524c;
   font-size: 26rpx;
 }
 /* 弹窗 */
@@ -899,7 +899,7 @@ onShow(async () => {
   text-align: center;
   font-size: 30rpx;
   font-weight: 500;
-  color: #42372c;
+  color: #2a2a2a;
   margin-bottom: 24rpx;
 }
 .pf-avatar-row {
@@ -913,24 +913,24 @@ onShow(async () => {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
-  border: 3rpx solid #8c5a2b;
-  background: #f8f3ea;
+  border: 3rpx solid #c41e3a;
+  background: #f8f5f0;
 }
 .pf-avatar-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 60rpx;
-  color: #b3a595;
+  color: #8a857c;
 }
 .pf-pick {
   padding: 16rpx 30rpx;
   border-radius: 999rpx;
-  background: #8c5a2b;
+  background: #c41e3a;
 }
 .pf-pick text {
   font-size: 24rpx;
-  color: #fefbf6;
+  color: #fffafa;
 }
 /* 弹窗实心按钮 */
 .btn-fill {
@@ -943,11 +943,11 @@ onShow(async () => {
 }
 .btn-fill text {
   font-size: 26rpx;
-  color: #fefbf6;
+  color: #fffafa;
   letter-spacing: 2rpx;
 }
 .btn-save {
-  background: linear-gradient(135deg, #8c5a2b, #6e4a26);
+  background: linear-gradient(135deg, #c41e3a, #6b1022);
 }
 .btn-invite {
   margin-top: 24rpx;
@@ -955,7 +955,7 @@ onShow(async () => {
   height: 80rpx;
   box-sizing: border-box;
   padding: 0 20rpx;
-  background: linear-gradient(135deg, #b04a45, #8c3228);
+  background: linear-gradient(135deg, #9c1630, #6b1022);
 }
 .f-row {
   display: flex;
@@ -965,17 +965,17 @@ onShow(async () => {
 .f-label {
   width: 140rpx;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   flex-shrink: 0;
 }
 .f-input {
   flex: 1;
   height: 76rpx;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 0 22rpx;
   font-size: 26rpx;
-  color: #42372c;
+  color: #2a2a2a;
 }
 .sheet-actions {
   display: flex;
@@ -996,19 +996,19 @@ onShow(async () => {
   font-size: 56rpx;
   font-weight: 600;
   letter-spacing: 6rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   margin: 10rpx 0 16rpx;
 }
 .invite-tip {
   display: block;
   font-size: 24rpx;
-  color: #857563;
+  color: #55524c;
   margin-bottom: 20rpx;
 }
 .invite-link {
   display: flex;
   align-items: flex-start;
-  background: #f8f3ea;
+  background: #f8f5f0;
   border-radius: 12rpx;
   padding: 14rpx 16rpx;
   box-sizing: border-box;
@@ -1021,7 +1021,7 @@ onShow(async () => {
   flex: 1;
   min-width: 0;
   font-size: 20rpx;
-  color: #8c5a2b;
+  color: #c41e3a;
   line-height: 1.5;
   word-break: break-all;
   overflow-wrap: anywhere;
