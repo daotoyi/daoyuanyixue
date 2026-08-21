@@ -628,7 +628,7 @@ onShow(async () => {
 .user-name {
   font-size: 38rpx;
   font-weight: 500;
-  color: #55524c;
+  color: #fffafa;
 }
 .vip-badge {
   margin-left: 16rpx;

@@ -963,7 +963,7 @@ onShow(async () => {
 .banner-title {
   font-size: 52rpx;
   font-weight: 500;
-  color: #55524c;
+  color: #fffafa;
   letter-spacing: 8rpx;
 }
 .banner-sub {
