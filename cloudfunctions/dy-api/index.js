@@ -2580,6 +2580,24 @@ async function storageGetUploadUrl(data) {
   }
 }
 
+/* 云存储中转上传 (前端 base64 → 云函数服务端上传, 规避浏览器 CORS/安全域名限制) */
+async function storageUploadBase64(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  const b64 = String(data.base64 || '').replace(/^data:image\/\w+;base64,/, '')
+  if (!cloudPath) return fail('缺少 cloudPath')
+  if (!b64) return fail('缺少图片数据')
+  try {
+    const buf = Buffer.from(b64, 'base64')
+    if (!buf.length || buf.length > 8 * 1024 * 1024) return fail('图片数据无效或超过 8MB')
+    const up = await app.uploadFile({ cloudPath, fileContent: buf })
+    const fileID = up && (up.fileID || (up.file && up.file.fileID))
+    if (!fileID) return fail('上传失败: 无 fileID')
+    return ok({ fileID })
+  } catch (e) {
+    return fail('上传失败: ' + (e.message || e))
+  }
+}
+
 async function adminPandaoCreate(data) {
   await ensureCollection('pandao_sessions')
   const max = await db.collection('pandao_sessions').orderBy('id', 'desc').limit(1).get().catch(() => ({ data: [] }))
@@ -3557,6 +3575,7 @@ const ROUTES = {
   'order.payBalance': orderPayBalance,
   'order.alipayPrepay': alipayPrepay,
   'storage.getUploadUrl': storageGetUploadUrl,
+  'storage.uploadBase64': storageUploadBase64,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
   'admin.pandao.update': adminPandaoUpdate,

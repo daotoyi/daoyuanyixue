@@ -168,8 +168,54 @@ export async function getStorage() {
   }
   return {
     uploadFile: async (filePath, cloudPath) => {
-      // H5: 云函数生成 COS 临时上传凭证 → 前端直传 (不依赖前端登录态, 避免 unauthenticated)
-      // 1) 调云函数网关获取上传凭证
+      // H5: 优先云函数中转上传 (base64 → 服务端 app.uploadFile, 无浏览器 CORS/安全域名限制)
+      // 降级: 云函数生成 COS 凭证 → 前端直传 (安全域名白名单放行时可用)
+      // 1) 读取文件为 base64 (兼容 blob:/https: URL 与 uni 本地临时文件路径)
+      let base64 = ''
+      try {
+        let bytes = null
+        if (typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
+          const ab = await fetch(filePath).then((r) => r.arrayBuffer())
+          bytes = new Uint8Array(ab)
+        } else if (typeof filePath === 'string') {
+          // uni 临时文件 (H5 端 chooseImage 返回 blob: URL 或本地路径; App 端返回本地路径)
+          const fs = uni.getFileSystemManager ? uni.getFileSystemManager() : null
+          if (fs && fs.readFile) {
+            bytes = await new Promise((resolve, reject) => {
+              fs.readFile({ filePath, success: (r) => resolve(new Uint8Array(r.data)), fail: reject })
+            })
+          }
+        }
+        if (bytes && bytes.length) {
+          let bin = ''
+          const CHUNK = 0x8000
+          for (let i = 0; i < bytes.length; i += CHUNK) {
+            bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK))
+          }
+          base64 = btoa(bin)
+        }
+      } catch (e) {
+        console.warn('[CloudBase] base64 读取失败, 尝试直传', e)
+      }
+      // 2) 有 base64 → 云函数中转上传
+      if (base64) {
+        const res = await new Promise((resolve, reject) => {
+          uni.request({
+            url: API_BASE,
+            method: 'POST',
+            data: { action: 'storage.uploadBase64', data: { cloudPath, base64 } },
+            timeout: 60000,
+            success: (r) => {
+              if (r.data && r.data.status === 200) resolve(r.data.data || {})
+              else reject(new Error((r.data && r.data.msg) || '上传失败'))
+            },
+            fail: (err) => reject(new Error('上传请求失败: ' + (err.errMsg || ''))),
+          })
+        })
+        if (res && res.fileID) return { fileID: res.fileID }
+        throw new Error('云函数上传未返回 fileID')
+      }
+      // 3) 降级: 直传 COS
       const meta = await new Promise((resolve, reject) => {
         uni.request({
           url: API_BASE,
@@ -184,7 +230,6 @@ export async function getStorage() {
         })
       })
       if (!meta || !meta.url) throw new Error(meta && meta.msg ? meta.msg : '上传凭证无效')
-      // 2) blob URL → Blob/File (uni.chooseVideo/chooseImage 的 tempFilePath)
       let body = filePath
       try {
         if (typeof fetch === 'function' && typeof filePath === 'string' && filePath.indexOf('blob:') === 0) {
@@ -193,7 +238,6 @@ export async function getStorage() {
       } catch (e) {
         console.warn('[CloudBase] blob 读取失败, 按原值上传', e)
       }
-      // 3) POST multipart/form-data 直传 (与 @cloudbase/node-sdk uploadFile 一致: Signature/x-cos-security-token/x-cos-meta-fileid/key/file)
       const formData = new FormData()
       if (meta.authorization) formData.append('Signature', meta.authorization)
       if (meta.token) formData.append('x-cos-security-token', meta.token)
