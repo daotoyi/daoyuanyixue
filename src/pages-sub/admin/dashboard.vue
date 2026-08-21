@@ -1477,8 +1477,7 @@ async function loadProductCates() {
 const HIDDEN_COURSE_CATES = ['八字命理', '奇门遁甲', '六爻预测', '风水堪舆']
 async function loadCourseCates() {
   let cats = await adminCateList({ type: 'courses' })
-  // 默认隐藏预置分类: 分类栏不显示, 避免空分类干扰
-  cats = cats.filter((c) => !HIDDEN_COURSE_CATES.includes(c.name))
+  // 不再隐藏任何预置分类, 所有课程类别都可见
   courseCates.value = cats
   if (cats.length && !courseCates.value.some((c) => c.id === courseActiveCate.value)) {
     courseActiveCate.value = cats[0].id
