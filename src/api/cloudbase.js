@@ -10,16 +10,67 @@
 // CloudBase 环境配置
 const ENV_ID = 'cloud1-d8gs2k9m311f7272f'
 const REGION = 'ap-shanghai'
-const API_BASE = 'https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api'
+// H5端: 优先用同域名的 /dy-api 路由 (避免跨域), 降级到云函数网关直连
+const API_BASE = typeof window !== 'undefined' && window.location.hostname.includes('club')
+  ? '/dy-api'
+  : 'https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api'
 
 // #ifdef H5 || APP-PLUS
-// H5 / App: 静态引入 @cloudbase/js-sdk (避免 app 端 code-splitting 冲突)
+    // H5 / App: 静态引入 @cloudbase/js-sdk (避免 app 端 code-splitting 冲突)
 import * as cloudbaseSdkModule from '@cloudbase/js-sdk'
 const cloudbaseSdk = cloudbaseSdkModule.default || cloudbaseSdkModule
 // #endif
 
 let cloudApp = null
 let _initPromise = null
+
+/**
+ * Canvas 压缩图片到指定大小以下的 base64 (H5 端)
+ * @param {string} src 图片路径 (blob:/http: URL)
+ * @param {number} targetKB 目标大小 KB
+ * @returns {Promise<string>} base64 字符串 (不含 data: 前缀)
+ */
+async function compressImageToBase64(src, targetKB = 80) {
+  const targetBytes = targetKB * 1024
+  const img = new Image()
+  img.src = src
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej })
+  let { naturalWidth: w, naturalHeight: h } = img
+  // 限制最大尺寸 1280px
+  const MAX_DIM = 1280
+  if (w > MAX_DIM || h > MAX_DIM) {
+    const scale = MAX_DIM / Math.max(w, h)
+    w = Math.round(w * scale)
+    h = Math.round(h * scale)
+  }
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(img, 0, 0, w, h)
+  // 逐步降低 quality 直到 < targetKB
+  let quality = 0.85
+  let dataUrl = canvas.toDataURL('image/jpeg', quality)
+  while (dataUrl.length * 0.75 > targetBytes && quality > 0.15) {
+    quality -= 0.15
+    dataUrl = canvas.toDataURL('image/jpeg', quality)
+  }
+  // 去掉 data:image/jpeg;base64, 前缀
+  return dataUrl.replace(/^data:image\/\w+;base64,/, '')
+}
+
+/**
+ * 通用 API 请求 (H5 端用 fetch 绕过 uni.request CORS 问题)
+ */
+async function apiRequest(payload) {
+  const res = await fetch(API_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const data = await res.json()
+  return data
+}
 
 /**
  * 初始化 CloudBase SDK (H5 / App 端)
@@ -168,52 +219,57 @@ export async function getStorage() {
   }
   return {
     uploadFile: async (filePath, cloudPath) => {
-      // H5: 优先云函数中转上传 (base64 → 服务端 app.uploadFile, 无浏览器 CORS/安全域名限制)
-      // 降级: 云函数生成 COS 凭证 → 前端直传 (安全域名白名单放行时可用)
-      // 1) 读取文件为 base64 (兼容 blob:/https: URL 与 uni 本地临时文件路径)
+      // H5: 图片 → canvas 压缩到 <80KB → base64 云函数中转 (云函数网关 body 限制 ~100KB)
+      //      非图片 → 云函数 getUploadUrl → COS 直传
+      // 1) 图片: canvas 压缩 + base64
       let base64 = ''
-      try {
-        let bytes = null
-        if (typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
-          const ab = await fetch(filePath).then((r) => r.arrayBuffer())
-          bytes = new Uint8Array(ab)
-        } else if (typeof filePath === 'string') {
-          // uni 临时文件 (H5 端 chooseImage 返回 blob: URL 或本地路径; App 端返回本地路径)
-          const fs = uni.getFileSystemManager ? uni.getFileSystemManager() : null
-          if (fs && fs.readFile) {
-            bytes = await new Promise((resolve, reject) => {
-              fs.readFile({ filePath, success: (r) => resolve(new Uint8Array(r.data)), fail: reject })
-            })
-          }
+      const isImage = /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(cloudPath) || cloudPath.includes('covers/') || cloudPath.includes('images/') || cloudPath.includes('avatar')
+      if (isImage && typeof document !== 'undefined' && typeof document.createElement === 'function') {
+        try {
+          base64 = await compressImageToBase64(filePath, 80)
+        } catch (e) {
+          console.warn('[CloudBase] canvas 压缩失败, 尝试原始读取', e)
         }
-        if (bytes && bytes.length) {
-          let bin = ''
-          const CHUNK = 0x8000
-          for (let i = 0; i < bytes.length; i += CHUNK) {
-            bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK))
-          }
-          base64 = btoa(bin)
-        }
-      } catch (e) {
-        console.warn('[CloudBase] base64 读取失败, 尝试直传', e)
       }
-      // 2) 有 base64 → 云函数中转上传
-      if (base64) {
-        const res = await new Promise((resolve, reject) => {
-          uni.request({
-            url: API_BASE,
-            method: 'POST',
-            data: { action: 'storage.uploadBase64', data: { cloudPath, base64 } },
-            timeout: 60000,
-            success: (r) => {
-              if (r.data && r.data.status === 200) resolve(r.data.data || {})
-              else reject(new Error((r.data && r.data.msg) || '上传失败'))
-            },
-            fail: (err) => reject(new Error('上传请求失败: ' + (err.errMsg || ''))),
-          })
-        })
-        if (res && res.fileID) return { fileID: res.fileID }
-        throw new Error('云函数上传未返回 fileID')
+      // 非图片或 canvas 失败: 原始 base64 (小文件可用, 大文件走 COS 直传)
+      if (!base64) {
+        try {
+          let bytes = null
+          if (typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
+            const ab = await fetch(filePath).then((r) => r.arrayBuffer())
+            bytes = new Uint8Array(ab)
+          } else if (typeof filePath === 'string') {
+            const fs = uni.getFileSystemManager ? uni.getFileSystemManager() : null
+            if (fs && fs.readFile) {
+              bytes = await new Promise((resolve, reject) => {
+                fs.readFile({ filePath, success: (r) => resolve(new Uint8Array(r.data)), fail: reject })
+              })
+            }
+          }
+          if (bytes && bytes.length) {
+            let bin = ''
+            const CHUNK = 0x8000
+            for (let i = 0; i < bytes.length; i += CHUNK) {
+              bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK))
+            }
+            base64 = btoa(bin)
+          }
+        } catch (e) {
+          console.warn('[CloudBase] base64 读取失败', e)
+        }
+      }
+      // 2) 有 base64 且 <80KB → 云函数中转上传
+      if (base64 && base64.length < 110000) {
+        const res = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'storage.uploadBase64', data: { cloudPath, base64 } }),
+        }).then(r => r.json())
+        if (res.status === 200) {
+          if (res.data && res.data.fileID) return { fileID: res.data.fileID }
+          throw new Error('云函数上传未返回 fileID')
+        }
+        throw new Error(res.msg || '上传失败')
       }
       // 3) 降级: 直传 COS
       const meta = await new Promise((resolve, reject) => {

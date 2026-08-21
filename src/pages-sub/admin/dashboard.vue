@@ -5,7 +5,7 @@
       <view class="logo-area">
         <view class="logo-seal" @tap="sidebarCollapsed = !sidebarCollapsed"><text>{{ sidebarCollapsed ? '☰' : '道' }}</text></view>
         <text class="logo-name" v-if="!sidebarCollapsed">道元易学</text>
-        <text class="logo-sub" v-if="!sidebarCollapsed">管理后台</text>
+        <text class="logo-sub" v-if="!sidebarCollapsed">管理后台（{{ verNum }}）</text>
       </view>
 
       <scroll-view scroll-y class="menu-scroll">
@@ -1285,6 +1285,7 @@ const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unrece
 const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed, onMounted } from 'vue'
+import { APP_VERSION } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminOrderAnalysis,
@@ -1302,6 +1303,7 @@ import { getStorage } from '../../api/cloudbase'
 import { resolveCloudList, resolveCloudUrl } from '../../utils/avatar'
 
 const userStore = useUserStore()
+const verNum = computed(() => APP_VERSION.replace(/^v/, ''))
 
 const modules = [
   { key: 'overview', label: '数据概览', icon: '📊' },

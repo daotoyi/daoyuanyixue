@@ -114,11 +114,11 @@
 </head>
 <body>
   <div class="card">
-    <div class="icon"><img src="/images/app-logo.png" alt="道元易学" /></div>
+    <div class="icon"><img src="https://zhenhesheng.cn/images/app-logo.jpg" alt="道元易学" /></div>
     <div class="brand">真和盛</div>
     <div class="name">道元易学</div>
     <div class="sub">观天道 · 明人事 · 致中和</div>
-    <div class="version">Android v1.11.181</div>
+    <div class="version">Android v1.11.182</div>
 
     <div class="features">
       <div><span>◆</span>商城：开运饰品 · 香薰禅修 · 文房茶道</div>
@@ -126,29 +126,11 @@
       <div><span>◆</span>社区：易友动态 · 直播讲堂</div>
     </div>
 
-  <a class="btn" id="downloadBtn" disabled href="javascript:void(0)">正在准备下载…</a>
+  <a class="btn" id="downloadBtn" href="https://zhenhesheng.cn/apk/daoyuan-v1.11.182.apk">下载安卓 APP</a>
   <div class="tip">
-    若按钮未亮起，请直接点击下方备用链接<br />
-    <a href="https://zhenhesheng.cn/apk/daoyuan-v1.11.181.apk" style="color:#854d0e">直接下载 APK</a>
+    若按钮无法点击，请直接点击下方备用链接<br />
+    <a href="https://zhenhesheng.cn/apk/daoyuan-v1.11.182.apk" style="color:#854d0e">直接下载 APK</a>
   </div>
 </div>
-
-<script>
-  // APK 路径约定: 绝对路径 zhenhesheng.cn/apk/daoyuan-v1.11.181.apk (主域名映射静态托管根, 各域名访问均可下载)
-  var apkUrl = 'https://zhenhesheng.cn/apk/daoyuan-v1.11.181.apk'
-    var btn = document.getElementById('downloadBtn')
-    var xhr = new XMLHttpRequest()
-    xhr.open('HEAD', apkUrl, true)
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          btn.href = apkUrl
-          btn.removeAttribute('disabled')
-          btn.textContent = '下载安卓 APP'
-        }
-      }
-    }
-    xhr.send()
-  </script>
 </body>
 </html>
