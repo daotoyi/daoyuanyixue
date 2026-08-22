@@ -107,7 +107,15 @@ async function listProducts(data) {
     )
   }
   // 过滤后台下架商品 (is_show === false)
-  return ok(list.filter((p) => p.is_show !== false))
+  list = list.filter((p) => p.is_show !== false)
+  // 默认按 sort ASC, id ASC 排序；如果没有 sort 字段则按 id 降序
+  list.sort((a, b) => {
+    const sa = a.sort != null ? a.sort : Infinity
+    const sb = b.sort != null ? b.sort : Infinity
+    if (sa !== sb) return sa - sb
+    return (a.id || 0) - (b.id || 0)
+  })
+  return ok(list)
 }
 
 async function getProduct(data) {

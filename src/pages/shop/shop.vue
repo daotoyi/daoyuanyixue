@@ -20,6 +20,13 @@
       <!-- 左侧分类 -->
       <scroll-view scroll-y class="cate-side" :scroll-top="0">
         <view
+          :class="{ 'cate-item active': activeCate === 0 }"
+          @tap="switchCate(0)"
+        >
+          <view class="cate-indicator" v-if="activeCate === 0"></view>
+          <text class="cate-name">全部（{{ products.length }}）</text>
+        </view>
+        <view
           v-for="c in cateList"
           :key="c.id"
           class="cate-item"
@@ -31,38 +38,74 @@
         </view>
       </scroll-view>
 
-      <!-- 右侧商品分区 -->
+      <!-- 右侧内容 -->
       <scroll-view scroll-y class="goods-side" :scroll-into-view="intoView" :scroll-with-animation="true" @scroll="onSideScroll">
-        <view
-          v-for="c in cateList"
-          :key="c.id"
-          :id="'cate-' + c.id"
-          class="goods-section"
-        >
-          <view class="section-head">
-            <text class="section-title">{{ c.name }}</text>
-            <text class="section-sub">{{ cateCount(c.id) }} 件</text>
-          </view>
+        <!-- "全部"视图: 按分类顺序平铺展示 -->
+        <view v-if="activeCate === 0">
+          <view
+            v-for="c in cateList"
+            :key="c.id"
+            :id="'cate-' + c.id"
+            class="goods-section"
+          >
+            <view class="section-head">
+              <text class="section-title">{{ c.name }}</text>
+              <text class="section-sub">{{ cateCount(c.id) }} 件</text>
+            </view>
 
-          <view class="goods-grid" v-if="grouped[c.id] && grouped[c.id].length">
-            <view class="goods-card" v-for="p in grouped[c.id]" :key="p.id" @tap="goDetail(p.id)">
-              <image class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
-              <view class="goods-info">
-                <text class="goods-name ellipsis-2">{{ p.name }}</text>
-                <view class="goods-price-row">
-                  <text class="goods-price">¥{{ p.price }}</text>
-                  <text class="goods-otprice">¥{{ p.ot_price }}</text>
+            <view class="goods-grid" v-if="grouped[c.id] && grouped[c.id].length">
+              <view class="goods-card" v-for="p in grouped[c.id]" :key="p.id" @tap="goDetail(p.id)">
+                <image class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
+                <view class="goods-info">
+                  <text class="goods-name ellipsis-2">{{ p.name }}</text>
+                  <view class="goods-price-row">
+                    <text class="goods-price">¥{{ p.price }}</text>
+                    <text class="goods-otprice">¥{{ p.ot_price }}</text>
+                  </view>
+                  <text class="goods-sales">已售 {{ p.sales }}</text>
                 </view>
-                <text class="goods-sales">已售 {{ p.sales }}</text>
               </view>
             </view>
-          </view>
 
-          <view class="section-empty" v-else>
-            <text class="empty-icon">🛍</text>
-            <text class="empty-tip">该分类暂无商品</text>
+            <view class="section-empty" v-else>
+              <text class="empty-icon">🛍</text>
+              <text class="empty-tip">该分类暂无商品</text>
+            </view>
           </view>
         </view>
+        <!-- 分类视图: 按分类分组展示 -->
+        <template v-else>
+          <view
+            v-for="c in cateList"
+            :key="c.id"
+            :id="'cate-' + c.id"
+            class="goods-section"
+          >
+            <view class="section-head">
+              <text class="section-title">{{ c.name }}</text>
+              <text class="section-sub">{{ cateCount(c.id) }} 件</text>
+            </view>
+
+            <view class="goods-grid" v-if="grouped[c.id] && grouped[c.id].length">
+              <view class="goods-card" v-for="p in grouped[c.id]" :key="p.id" @tap="goDetail(p.id)">
+                <image class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
+                <view class="goods-info">
+                  <text class="goods-name ellipsis-2">{{ p.name }}</text>
+                  <view class="goods-price-row">
+                    <text class="goods-price">¥{{ p.price }}</text>
+                    <text class="goods-otprice">¥{{ p.ot_price }}</text>
+                  </view>
+                  <text class="goods-sales">已售 {{ p.sales }}</text>
+                </view>
+              </view>
+            </view>
+
+            <view class="section-empty" v-else>
+              <text class="empty-icon">🛍</text>
+              <text class="empty-tip">该分类暂无商品</text>
+            </view>
+          </view>
+        </template>
 
         <view class="goods-bottom">— 道法自然 · 物以载道 —</view>
       </scroll-view>
