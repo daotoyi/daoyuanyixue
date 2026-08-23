@@ -1630,31 +1630,31 @@ onShow(async () => {
   }
   /* 推荐页横滑卡片 (直播/盘道/商品/课程): PC 放大, 比例协调 */
   .rec-modules {
-    padding: 0 28px 12px;
+    padding: 0 32px 12px;
   }
   .rec-sec {
-    margin-bottom: 40px;
+    margin-bottom: 48px;
   }
   .rec-head {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
   .rec-title {
-    font-size: 26px;
+    font-size: 30px;
   }
   .rec-more {
-    font-size: 16px;
+    font-size: 17px;
   }
   .rec-scroll {
-    padding-bottom: 8px;
+    padding-bottom: 10px;
   }
   .rec-live-card,
   .rec-pd-card,
   .rec-prod-card,
   .rec-course-card {
-    width: 330px;
-    padding: 16px;
-    margin-right: 24px;
-    border-radius: 18px;
+    width: 380px;
+    padding: 18px;
+    margin-right: 28px;
+    border-radius: 20px;
   }
   .rec-live-img,
   .rec-pd-img,
@@ -1662,55 +1662,55 @@ onShow(async () => {
   .rec-course-img {
     height: auto;
     aspect-ratio: 16 / 9;
-    border-radius: 12px;
+    border-radius: 14px;
   }
   .rec-live-title,
   .rec-prod-name,
   .rec-course-title,
   .rec-pd-title {
-    font-size: 21px;
-    margin-top: 14px;
+    font-size: 23px;
+    margin-top: 16px;
   }
   .rec-live-time,
   .rec-pd-time,
   .rec-pd-meta,
   .rec-pd-badge {
-    font-size: 15px;
-    margin-top: 8px;
+    font-size: 16px;
+    margin-top: 10px;
   }
   .rec-pd-price,
   .rec-prod-price,
   .rec-course-price {
-    font-size: 24px;
-    margin-top: 12px;
+    font-size: 26px;
+    margin-top: 14px;
   }
   .rec-live-status {
-    font-size: 14px;
-    padding: 4px 16px;
-    margin-top: 10px;
+    font-size: 15px;
+    padding: 5px 18px;
+    margin-top: 12px;
   }
   /* 动态精选卡片: PC 放大 */
   .rec-moment-card {
-    width: 400px;
-    padding: 16px;
-    margin-right: 24px;
-    border-radius: 18px;
+    width: 440px;
+    padding: 18px;
+    margin-right: 28px;
+    border-radius: 20px;
   }
   .rec-moment-img {
-    height: 220px;
-    border-radius: 12px;
+    height: 240px;
+    border-radius: 14px;
   }
   .rec-moment-content {
-    font-size: 18px;
-    margin-top: 14px;
-    min-height: 52px;
+    font-size: 20px;
+    margin-top: 16px;
+    min-height: 58px;
     line-height: 1.6;
   }
   .rec-moment-user {
-    font-size: 15px;
+    font-size: 16px;
   }
   .rec-moment-likes {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   /* 动态流: PC 双列贴图网格, 避免全宽扁长条 */
