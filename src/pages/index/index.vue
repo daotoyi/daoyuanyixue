@@ -1542,6 +1542,40 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
+  /* 品牌横幅: PC 放大 */
+  .banner {
+    padding: 64px 64px 56px;
+  }
+  .banner-title {
+    font-size: 44px;
+    letter-spacing: 12px;
+  }
+  .banner-sub {
+    margin-top: 16px;
+    font-size: 18px;
+    letter-spacing: 6px;
+  }
+  .banner-seal {
+    right: 64px;
+    width: 120px;
+    height: 120px;
+  }
+  .seal-img {
+    width: 96px;
+    height: 96px;
+  }
+  /* 频道 Tab: PC 放大 */
+  .channel-tabs {
+    padding: 0 24px;
+  }
+  .channel-tab {
+    padding: 22px 0 18px;
+    font-size: 19px;
+  }
+  .tab-line {
+    width: 48px;
+    height: 6px;
+  }
   /* 盘道活动卡片: 两列网格, 避免全宽扁长条 (左右太宽/上下太矮/封面裁切) */
   .pandao-list {
     display: grid;
@@ -1595,13 +1629,32 @@ onShow(async () => {
     padding: 10px 30px;
   }
   /* 推荐页横滑卡片 (直播/盘道/商品/课程): PC 放大, 比例协调 */
+  .rec-modules {
+    padding: 0 28px 12px;
+  }
+  .rec-sec {
+    margin-bottom: 40px;
+  }
+  .rec-head {
+    margin-bottom: 20px;
+  }
+  .rec-title {
+    font-size: 26px;
+  }
+  .rec-more {
+    font-size: 16px;
+  }
+  .rec-scroll {
+    padding-bottom: 8px;
+  }
   .rec-live-card,
   .rec-pd-card,
   .rec-prod-card,
   .rec-course-card {
-    width: 280px;
-    padding: 14px;
-    margin-right: 20px;
+    width: 330px;
+    padding: 16px;
+    margin-right: 24px;
+    border-radius: 18px;
   }
   .rec-live-img,
   .rec-pd-img,
@@ -1609,29 +1662,96 @@ onShow(async () => {
   .rec-course-img {
     height: auto;
     aspect-ratio: 16 / 9;
+    border-radius: 12px;
   }
   .rec-live-title,
   .rec-prod-name,
   .rec-course-title,
   .rec-pd-title {
-    font-size: 18px;
-    margin-top: 12px;
+    font-size: 21px;
+    margin-top: 14px;
   }
   .rec-live-time,
   .rec-pd-time,
   .rec-pd-meta,
   .rec-pd-badge {
-    font-size: 14px;
+    font-size: 15px;
+    margin-top: 8px;
   }
   .rec-pd-price,
   .rec-prod-price,
   .rec-course-price {
-    font-size: 20px;
+    font-size: 24px;
+    margin-top: 12px;
+  }
+  .rec-live-status {
+    font-size: 14px;
+    padding: 4px 16px;
+    margin-top: 10px;
+  }
+  /* 动态精选卡片: PC 放大 */
+  .rec-moment-card {
+    width: 400px;
+    padding: 16px;
+    margin-right: 24px;
+    border-radius: 18px;
+  }
+  .rec-moment-img {
+    height: 220px;
+    border-radius: 12px;
+  }
+  .rec-moment-content {
+    font-size: 18px;
+    margin-top: 14px;
+    min-height: 52px;
+    line-height: 1.6;
+  }
+  .rec-moment-user {
+    font-size: 15px;
+  }
+  .rec-moment-likes {
+    font-size: 15px;
+  }
+
+  /* 动态流: PC 双列贴图网格, 避免全宽扁长条 */
+  .feed {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    padding: 28px;
+  }
+  .moment-card {
+    margin-bottom: 0;
+    padding: 20px;
+    border-radius: 18px;
+  }
+  .moment-name {
+    font-size: 18px;
+  }
+  .moment-time {
+    font-size: 13px;
+  }
+  .moment-content {
+    font-size: 17px;
+    line-height: 1.7;
+  }
+  .img-1 { height: 320px; }
+  .img-2 { height: 200px; }
+  .img-3 { height: 180px; }
+  .act-icon {
+    font-size: 22px;
+  }
+  .act-num {
+    font-size: 15px;
   }
 }
 @media screen and (min-width: 1440px) {
   .home-page {
     max-width: 1320px;
+  }
+  /* 超宽屏: 动态流三列 */
+  .feed {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
