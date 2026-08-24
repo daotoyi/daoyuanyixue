@@ -206,7 +206,8 @@ const orders = computed(() => {
     ? [...typeFiltered.value]
     : typeFiltered.value.filter((o) => o.status === activeStatus.value)
   // 按创建时间排序: desc 最新在前(默认), asc 最旧在前
-  list.sort((a, b) => (sortOrder.value === 'desc' ? 1 : -1) * (parseTime(a.created_at) - parseTime(b.created_at)))
+  // 注意: sort 回调返回负值表示 a 在前; desc 时新订单(时间戳大)需排前 → 乘 -1
+  list.sort((a, b) => (sortOrder.value === 'desc' ? -1 : 1) * (parseTime(a.created_at) - parseTime(b.created_at)))
   return list
 })
 
