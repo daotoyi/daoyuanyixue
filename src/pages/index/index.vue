@@ -957,7 +957,11 @@ onShow(async () => {
 /* 品牌横幅 */
 .banner {
   position: relative;
-  padding: 40rpx 40rpx 36rpx;
+  padding: 70rpx 40rpx 60rpx;
+  min-height: 240rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background: linear-gradient(135deg, #9c1630 0%, #6b1022 55%, #c41e3a 100%);
 }
 .banner-title {
@@ -1767,20 +1771,20 @@ onShow(async () => {
 .rec-course-card {
   display: inline-flex;
   flex-direction: column;
-  width: 220rpx;
-  margin-right: 16rpx;
+  width: 330rpx;
+  margin-right: 24rpx;
   background: #fffafa;
   border: 1rpx solid #e8e2da;
-  border-radius: 14rpx;
-  padding: 12rpx;
+  border-radius: 21rpx;
+  padding: 18rpx;
   vertical-align: top;
 }
 .rec-live-img,
 .rec-prod-img,
 .rec-course-img {
   width: 100%;
-  height: 130rpx;
-  border-radius: 10rpx;
+  height: 195rpx;
+  border-radius: 15rpx;
   background: #f8f5f0;
 }
 .rec-live-title,
@@ -1788,21 +1792,21 @@ onShow(async () => {
 .rec-course-title,
 .rec-pd-title {
   display: block;
-  margin-top: 10rpx;
-  font-size: 24rpx;
+  margin-top: 15rpx;
+  font-size: 36rpx;
   color: #2a2a2a;
 }
 .rec-live-time {
   display: block;
-  margin-top: 6rpx;
-  font-size: 20rpx;
+  margin-top: 9rpx;
+  font-size: 30rpx;
   color: #55524c;
 }
 .rec-live-status {
   display: inline-block;
-  margin-top: 6rpx;
-  font-size: 20rpx;
-  padding: 2rpx 12rpx;
+  margin-top: 9rpx;
+  font-size: 30rpx;
+  padding: 3rpx 18rpx;
   border-radius: 999rpx;
   align-self: flex-start;
 }
@@ -1811,30 +1815,30 @@ onShow(async () => {
 .rec-live-status.st-ended { background: #efeadf; color: #55524c; }
 .rec-pd-badge {
   align-self: flex-start;
-  font-size: 20rpx;
+  font-size: 30rpx;
   color: #c41e3a;
   background: #f5efe3;
-  padding: 2rpx 12rpx;
+  padding: 3rpx 18rpx;
   border-radius: 999rpx;
 }
 .rec-pd-time {
   display: block;
-  margin-top: 6rpx;
-  font-size: 20rpx;
+  margin-top: 9rpx;
+  font-size: 30rpx;
   color: #55524c;
 }
 .rec-pd-meta {
   display: block;
-  margin-top: 6rpx;
-  font-size: 20rpx;
+  margin-top: 9rpx;
+  font-size: 30rpx;
   color: #8a857c;
 }
 .rec-pd-price,
 .rec-prod-price,
 .rec-course-price {
   display: block;
-  margin-top: 8rpx;
-  font-size: 26rpx;
+  margin-top: 12rpx;
+  font-size: 39rpx;
   font-weight: 600;
   color: #9c1630;
 }
@@ -1861,9 +1865,9 @@ onShow(async () => {
 }
 .rec-pd-img {
   width: 100%;
-  height: 130rpx;
-  border-radius: 10rpx;
-  margin-bottom: 8rpx;
+  height: 195rpx;
+  border-radius: 15rpx;
+  margin-bottom: 12rpx;
   background: #f8f5f0;
 }
 
@@ -1871,18 +1875,18 @@ onShow(async () => {
 .rec-moment-card {
   display: inline-flex;
   flex-direction: column;
-  width: 280rpx;
-  margin-right: 16rpx;
+  width: 420rpx;
+  margin-right: 24rpx;
   background: #fffafa;
   border: 1rpx solid #e8e2da;
-  border-radius: 14rpx;
-  padding: 12rpx;
+  border-radius: 21rpx;
+  padding: 18rpx;
   vertical-align: top;
 }
 .rec-moment-img {
   width: 100%;
-  height: 150rpx;
-  border-radius: 10rpx;
+  height: 225rpx;
+  border-radius: 15rpx;
   background: #f8f5f0;
   overflow: hidden;
 }
@@ -1891,33 +1895,33 @@ onShow(async () => {
   align-items: center;
   justify-content: center;
   color: #8a857c;
-  font-size: 40rpx;
+  font-size: 60rpx;
   background: #f5efe3;
 }
 .rec-moment-content {
   display: block;
-  margin-top: 10rpx;
-  font-size: 24rpx;
+  margin-top: 15rpx;
+  font-size: 36rpx;
   color: #2a2a2a;
   line-height: 1.5;
-  min-height: 72rpx;
+  min-height: 108rpx;
 }
 .rec-moment-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8rpx;
+  margin-top: 12rpx;
 }
 .rec-moment-user {
-  font-size: 20rpx;
+  font-size: 30rpx;
   color: #c41e3a;
-  max-width: 160rpx;
+  max-width: 240rpx;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .rec-moment-likes {
-  font-size: 20rpx;
+  font-size: 30rpx;
   color: #8a857c;
 }
 

@@ -500,6 +500,7 @@ onShow(async () => {
 .user-header {
   position: relative;
   padding: 70rpx 40rpx 60rpx;
+  min-height: 240rpx;
   background: linear-gradient(160deg, #9c1630 0%, #6b1022 60%, #c41e3a 100%);
   overflow: hidden;
 }

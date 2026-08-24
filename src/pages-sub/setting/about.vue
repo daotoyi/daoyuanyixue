@@ -11,6 +11,8 @@
       <view class="info-row"><text class="info-label">关于我们</text><text class="info-value">真和盛文化</text></view>
       <view class="info-row"><text class="info-label">版本</text><text class="info-value">{{ APP_FULL_VERSION }}（{{ APP_BUILD_DATE }}）</text></view>
       <view class="info-row"><text class="info-label">理念</text><text class="info-value">融合传统智慧与现代科技</text></view>
+      <view class="info-row"><text class="info-label">开发者</text><text class="info-value">昊辰</text></view>
+      <view class="info-row" @tap="copyContact"><text class="info-label">联系我们</text><text class="info-value info-link">zhenhesheng@126.com</text></view>
     </view>
 
     <view class="about-foot">
@@ -33,6 +35,14 @@ const logoUrl = computed(() => {
   return '/static/logo.png'
   // #endif
 })
+
+/* 点击邮箱 → 复制到剪贴板 (H5/小程序通用) */
+function copyContact() {
+  uni.setClipboardData({
+    data: 'zhenhesheng@126.com',
+    success: () => uni.showToast({ title: '邮箱已复制', icon: 'success' }),
+  })
+}
 </script>
 
 <style lang="scss" scoped>
@@ -110,6 +120,10 @@ const logoUrl = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.info-link {
+  color: #c41e3a;
+  text-decoration: underline;
 }
 
 .about-foot {

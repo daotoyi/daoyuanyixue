@@ -3097,7 +3097,7 @@ onMounted(async () => {
 }
 .logo-name {
   font-size: 28rpx;
-  color: #55524c;
+  color: #fffafa;
   letter-spacing: 4rpx;
 }
 .logo-sub {

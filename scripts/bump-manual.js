@@ -1,0 +1,12 @@
+const fs = require('fs');
+const { execSync } = require('child_process');
+const v = 'v1.11.191';
+const commit = execSync('git rev-parse --short HEAD').toString().trim();
+const date = new Date().toISOString().slice(0, 10);
+let c = fs.readFileSync('src/version.js', 'utf8');
+c = c.replace(/APP_VERSION = 'v[\d.]+'/, "APP_VERSION = '" + v + "'");
+c = c.replace(/APP_COMMIT = '[a-f0-9]+'/, "APP_COMMIT = '" + commit + "'");
+c = c.replace(/APP_BUILD_DATE = '[\d-]+'/, "APP_BUILD_DATE = '" + date + "'");
+c = c.replace(/APP_FULL_VERSION = 'v[\d.]+ \([a-f0-9]+\)'/, "APP_FULL_VERSION = '" + v + " (" + commit + ")'");
+fs.writeFileSync('src/version.js', c);
+console.log('已更新 version.js → ' + v + ' (' + commit + ')');
