@@ -164,7 +164,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder } from '../../api/api'
+import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder, wxpayQuerySync } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudList } from '../../utils/avatar'
 
@@ -437,6 +437,7 @@ function startQrPolling(order_no) {
   stopQrPolling()
   qrPollTimer = setInterval(async () => {
     try {
+      // ① 先查本地订单状态 (回调正常时直接命中)
       const o = await getOrder(order_no)
       if (o && o.status && o.status !== '待付款' && o.status !== '待支付') {
         stopQrPolling()
@@ -446,7 +447,21 @@ function startQrPolling(order_no) {
         setTimeout(() => {
           uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order_no}` })
         }, 600)
+        return
       }
+      // ② 本地仍待付款 → 主动查微信侧订单状态 (兜底: 回调丢失也能同步)
+      try {
+        const sync = await wxpayQuerySync(order_no)
+        if (sync && sync.synced && sync.status && sync.status !== '待付款' && sync.status !== '待支付') {
+          stopQrPolling()
+          showQrPay.value = false
+          uni.showToast({ title: '支付成功', icon: 'success' })
+          clearSelected()
+          setTimeout(() => {
+            uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order_no}` })
+          }, 600)
+        }
+      } catch (e) { /* 查单失败忽略, 下轮再试 */ }
     } catch (e) { /* 忽略轮询错误 */ }
   }, 2500)
 }

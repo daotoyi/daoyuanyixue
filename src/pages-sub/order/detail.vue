@@ -119,7 +119,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
 
@@ -272,13 +272,25 @@ function startQrPolling(no) {
   stopQrPolling()
   qrPollTimer = setInterval(async () => {
     try {
+      // ① 先查本地订单状态 (回调正常时直接命中)
       const o = await getOrder(no)
       if (o && o.status && o.status !== '待付款' && o.status !== '待支付') {
         stopQrPolling()
         showQrPay.value = false
         uni.showToast({ title: '支付成功', icon: 'success' })
         await load()
+        return
       }
+      // ② 本地仍待付款 → 主动查微信侧订单状态 (兜底: 回调丢失也能同步)
+      try {
+        const sync = await wxpayQuerySync(no)
+        if (sync && sync.synced && sync.status && sync.status !== '待付款' && sync.status !== '待支付') {
+          stopQrPolling()
+          showQrPay.value = false
+          uni.showToast({ title: '支付成功', icon: 'success' })
+          await load()
+        }
+      } catch (e) { /* 查单失败忽略, 下轮再试 */ }
     } catch (e) { /* 忽略 */ }
   }, 2500)
 }

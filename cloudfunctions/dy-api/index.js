@@ -2199,6 +2199,120 @@ async function wxpayNative(data) {
   }
 }
 
+/* 主动查单同步 (兜底): 前端轮询时若订单仍待付款, 调微信查单 API 确认支付结果并同步本地订单
+   解决: 商户平台未配置支付回调域名 / 回调网络抖动 导致订单状态不同步的问题 */
+async function wxpayQuerySync(data) {  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  // 已支付订单无需查单
+  if (order.status !== '待付款' && order.status !== '待支付') {
+    return ok({ status: order.status, already: true })
+  }
+  const wxpay = require('./wxpay-v3')
+  let res
+  try {
+    res = await wxpay.queryOrder(order_no)
+  } catch (e) {
+    return fail('查单失败: ' + (e.message || '请稍后重试'))
+  }
+  // 微信侧支付成功 (trade_state=SUCCESS) → 同步本地订单 (与支付回调同一套逻辑)
+  if (res && res.trade_state === 'SUCCESS') {
+    await markOrderPaid({ order_no, trade_no: res.transaction_id || '', openid: (res.payer && res.payer.openid) || '' })
+    const updated = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+    return ok({ status: (updated && updated.status) || '已完成', synced: true })
+  }
+  // 已关闭/未支付
+  if (res && res.trade_state === 'CLOSED') {
+    await db.collection('orders').where({ order_no }).update({ status: '已取消' })
+    return ok({ status: '已取消', synced: true })
+  }
+  return ok({ status: order.status, wechat_state: (res && res.trade_state) || 'unknown' })
+}
+
+/* 支付成功统一处理 (微信回调 / 主动查单 共用):
+   1. 更新订单状态 (预约/课程/AI解盘/充值=已完成, 实体商品=待发货)
+   2. 站内消息 + 服务号推送
+   3. 课程自动发课 / 预约标记 / 充值到账 */
+async function markOrderPaid({ order_no, trade_no, openid }) {
+  const o = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!o) return
+  // 已处理过 (防重复回调/查单重复执行)
+  if (o.status !== '待付款' && o.status !== '待支付') return
+  // 预约/课程/AI解盘/充值 = 虚拟服务 → 已完成; 实体商品 → 待发货
+  const isVirtual = o.order_type === 'appointment' || o.order_type === 'course' || o.order_type === 'tool_unlock' || o.order_type === 'recharge'
+  const nextStatus = isVirtual ? '已完成' : '待发货'
+  await db.collection('orders').where({ order_no }).update({
+    status: nextStatus,
+    pay_method: '微信支付',
+    pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+    trade_no: trade_no || '',
+  })
+  try {
+    if (!o.uid) return
+    // 工具解锁订单: 消息文案不同, 不报虚拟发货
+    const isToolUnlock = o.order_type === 'tool_unlock'
+    await db.collection('messages').add({
+      id: Date.now() % 1000000,
+      uid: o.uid,
+      type: 'order',
+      title: '订单支付成功',
+      content: isToolUnlock
+        ? ((o.items && o.items[0] && o.items[0].name) || '玄学工具') + ' 已解锁，快去查看完整解盘吧'
+        : '订单 ' + order_no + ' 已支付成功，商家正在加紧备货',
+      read: false,
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    })
+    // 服务号推送: 支付成功 (未绑定/未订阅自动跳过, 不影响主流程)
+    try {
+      await sendGzhMsg(o.uid, '订单支付成功', isToolUnlock
+        ? ((o.items && o.items[0] && o.items[0].name) || '玄学工具') + ' 已解锁'
+        : `订单 ${order_no} 已支付成功`)
+    } catch (e2) {}
+    // 上报发货信息: 仅课程/虚拟订单支付成功即自动报虚拟发货(免人工);
+    // 实体商品订单不在此上报, 等后台发货时上报实体物流(一个支付单仅一次上报机会)
+    try {
+      const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
+      if (o.course_id) {
+        await reportShippingInfo(order_no, trade_no || '', (u && u.openid) || '', { logisticsType: 3, itemDesc: '课程' })
+      }
+    } catch (e2) {}
+    // 课程直购订单: 支付成功自动发放课程
+    if (o.course_id) {
+      try {
+        const existed = (await db.collection('user_courses').where({ uid: Number(o.uid), course_id: Number(o.course_id) }).limit(1).get()).data[0]
+        if (!existed) {
+          await db.collection('user_courses').add({
+            uid: Number(o.uid),
+            course_id: Number(o.course_id),
+            progress: 0,
+            status: '学习中',
+            favorited: false,
+            bought_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+          })
+        }
+      } catch (e3) {}
+    }
+    // 盘道预约订单: 支付成功标记预约完成
+    if (o.order_type === 'appointment' || o.session_id) {
+      try {
+        await db.collection('orders').where({ order_no }).update({ appointment_status: '已预约' })
+      } catch (e4) {}
+    }
+    // 元宝充值订单: 支付成功加元宝到账 (1元=1元宝)
+    if (o.order_type === 'recharge' && o.recharge_points) {
+      try {
+        const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
+        const bal = Number((u && u.balance) || 0) || 0
+        const newBal = Math.round((bal + Number(o.recharge_points)) * 100) / 100
+        await db.collection('users').where({ uid: Number(o.uid) }).update({ balance: String(newBal) })
+      } catch (e5) {}
+    }
+  } catch (e) {
+    console.error('[dy-api] markOrderPaid 后续处理失败:', e)
+  }
+}
+
 /* App 端微信支付: 生成小程序 URL Scheme, 唤起微信小程序完成支付 (App 无原生微信支付SDK, 借道小程序)
    wxa/generatescheme: 需小程序已发布且配置好 access_token (config.local WX_APPSECRET) */
 async function wxmpScheme(data) {
@@ -3583,6 +3697,7 @@ const ROUTES = {
   'order.wxpay': wxpayPrepay,
   'pay.wxpayH5': wxpayH5,
   'pay.wxpayNative': wxpayNative,
+  'pay.querySync': wxpayQuerySync,
   'pay.wxmpScheme': wxmpScheme,
   'address.list': listAddresses,
   'address.add': addAddress,
@@ -3715,80 +3830,8 @@ exports.main = async (event = {}) => {
         return { code: 'SUCCESS', message: '退款已处理' }
       }
       if (resource && resource.out_trade_no) {
-        // 先查订单: 预约/课程/AI解盘为虚拟服务 → 已完成; 实体商品 → 待发货
-        const o = (await db.collection('orders').where({ order_no: resource.out_trade_no }).limit(1).get()).data[0]
-        const isVirtual = o && (o.order_type === 'appointment' || o.order_type === 'course' || o.order_type === 'tool_unlock' || o.order_type === 'recharge')
-        const nextStatus = isVirtual ? '已完成' : '待发货'
-        await db.collection('orders').where({ order_no: resource.out_trade_no }).update({
-          status: nextStatus,
-          pay_method: '微信支付',
-          pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
-          trade_no: resource.transaction_id || '',
-        })
-        try {
-          if (!o || !o.uid) {
-            // 订单不存在或缺少 uid: 状态已更新, 跳过消息/发课等后续处理
-          } else {
-            // 工具解锁订单: 消息文案不同, 不报虚拟发货
-            const isToolUnlock = o.order_type === 'tool_unlock'
-            await db.collection('messages').add({
-              id: Date.now() % 1000000,
-              uid: o.uid,
-              type: 'order',
-              title: '订单支付成功',
-              content: isToolUnlock
-                ? ((o.items && o.items[0] && o.items[0].name) || '玄学工具') + ' 已解锁，快去查看完整解盘吧'
-                : '订单 ' + resource.out_trade_no + ' 已支付成功，商家正在加紧备货',
-              read: false,
-              created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
-            })
-            // 服务号推送: 支付成功 (未绑定/未订阅自动跳过, 不影响主流程)
-            try {
-              await sendGzhMsg(o.uid, '订单支付成功', isToolUnlock
-                ? ((o.items && o.items[0] && o.items[0].name) || '玄学工具') + ' 已解锁'
-                : `订单 ${resource.out_trade_no} 已支付成功`)
-            } catch (e2) {}
-            // 上报发货信息: 仅课程/虚拟订单支付成功即自动报虚拟发货(免人工);
-            // 实体商品订单不在此上报, 等后台发货时上报实体物流(一个支付单仅一次上报机会)
-            try {
-              const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
-              if (o.course_id) {
-                await reportShippingInfo(resource.out_trade_no, resource.transaction_id || '', (u && u.openid) || '', { logisticsType: 3, itemDesc: '课程' })
-              }
-            } catch (e2) {}
-            // 课程直购订单: 支付成功自动发放课程
-            if (o.course_id) {
-              try {
-                const existed = (await db.collection('user_courses').where({ uid: Number(o.uid), course_id: Number(o.course_id) }).limit(1).get()).data[0]
-                if (!existed) {
-                  await db.collection('user_courses').add({
-                    uid: Number(o.uid),
-                    course_id: Number(o.course_id),
-                    progress: 0,
-                    status: '学习中',
-                    favorited: false,
-                    bought_at: new Date().toLocaleString('zh-CN', { hour12: false }),
-                  })
-                }
-              } catch (e3) {}
-            }
-            // 盘道预约订单: 支付成功标记预约完成
-            if (o.order_type === 'appointment' || o.session_id) {
-              try {
-                await db.collection('orders').where({ order_no: resource.out_trade_no }).update({ appointment_status: '已预约' })
-              } catch (e4) {}
-            }
-            // 元宝充值订单: 支付成功加元宝到账 (1元=1元宝)
-            if (o.order_type === 'recharge' && o.recharge_points) {
-              try {
-                const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
-                const bal = Number((u && u.balance) || 0) || 0
-                const newBal = Math.round((bal + Number(o.recharge_points)) * 100) / 100
-                await db.collection('users').where({ uid: Number(o.uid) }).update({ balance: String(newBal) })
-              } catch (e5) {}
-            }
-          }
-        } catch (e) {}
+        // 支付成功统一处理 (回调/主动查单共用): 更新状态+消息+发课+预约+充值
+        await markOrderPaid({ order_no: resource.out_trade_no, trade_no: resource.transaction_id || '', openid: (resource.payer && resource.payer.openid) || '' })
       }
     } catch (e) {
       return { code: 'FAIL', message: e.message || '验签失败' }

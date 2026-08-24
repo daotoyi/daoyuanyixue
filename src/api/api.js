@@ -207,6 +207,10 @@ export const wxpayH5 = (orderNo) =>
 export const wxpayNative = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ code_url: '' }))() : _callFunction('pay.wxpayNative', { order_no: orderNo })
 
+/* 主动查单同步 (兜底): 查询微信侧订单支付状态并同步本地订单 (回调丢失时恢复) */
+export const wxpayQuerySync = (orderNo) =>
+  __USE_MOCK__ ? _fromMock(() => ({ status: '待付款' }))() : _callFunction('pay.querySync', { order_no: orderNo })
+
 /* App 端微信支付: 生成小程序 URL Scheme (唤起微信小程序完成支付) */
 export const wxmpScheme = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ openlink: '' }))() : _callFunction('pay.wxmpScheme', { order_no: orderNo })
