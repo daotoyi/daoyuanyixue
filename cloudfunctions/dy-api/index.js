@@ -2171,7 +2171,7 @@ async function wxpayH5(data) {
   const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
   const wxpay = require('./wxpay-v3')
   try {
-    const r = await wxpay.h5UnifiedOrder({ outTradeNo: order_no, totalFee: Math.round(price * 100), body })
+    const r = await wxpay.h5UnifiedOrder({ outTradeNo: order_no, totalFee: Math.round(price * 100), body, clientIp: data.clientIp })
     return ok({ h5_url: r.h5_url, order_no })
   } catch (e) {
     return fail('微信支付下单失败: ' + (e.message || '请检查商户配置'))
@@ -3671,6 +3671,13 @@ exports.main = async (event = {}) => {
         data = { rawBody: raw, query: event.queryStringParameters || {} }
       }
     }
+    // 提取客户端 IP (H5 支付 scene_info.payer_client_ip 需要真实 IP)
+    try {
+      const h = event.headers || {}
+      const fwd = h['x-forwarded-for'] || h['X-Forwarded-For'] || ''
+      const ip = String(fwd).split(',')[0].trim() || h['x-real-ip'] || h['X-Real-Ip'] || ''
+      if (ip && !data.clientIp) data.clientIp = ip
+    } catch (e) { /* 忽略 */ }
     if (event.queryStringParameters) {
       action = event.queryStringParameters.action || action
       if (event.queryStringParameters.data) {
