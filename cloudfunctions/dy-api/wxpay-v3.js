@@ -33,7 +33,7 @@ function sign(message) {
   return crypto.createSign('RSA-SHA256').update(message).sign(privKey(), 'base64')
 }
 
-/** 构造 Authorization 头 */
+/** 构造 Authorization 头 (path 需含 query string, 微信 v3 签名规范 URL 含 query) */
 function authHeader(method, path, body) {
   const c = cfg()
   const ts = Math.floor(Date.now() / 1000)
@@ -49,12 +49,14 @@ function request(method, path, body, query) {
   return new Promise((resolve, reject) => {
     const c = cfg()
     let url = API_BASE + path
+    // 签名串 URL 必须含 query string (微信 v3 规范), query 需按原样拼接参与签名
+    const signPath = query ? path + '?' + new URLSearchParams(query).toString() : path
     if (query) url += '?' + new URLSearchParams(query).toString()
     const bodyStr = body ? JSON.stringify(body) : ''
     const req = https.request(url, {
       method,
       headers: {
-        Authorization: authHeader(method, path.split('?')[0], body),
+        Authorization: authHeader(method, signPath, body),
         'Content-Type': 'application/json',
         Accept: 'application/json',
         'User-Agent': 'daoyuanyixue/1.0',
