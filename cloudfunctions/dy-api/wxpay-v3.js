@@ -134,12 +134,13 @@ async function unifiedOrder({ outTradeNo, totalFee, body, openid }) {
 
 /**
  * Native 扫码支付统一下单 → 返回 code_url (用于 PC 端渲染二维码)
- * 注意: Native 支付 appid 可为小程序或公众号 AppID; 但商户号需已开通 Native 支付产品权限
+ * 注意: Native 支付 appid 用「小程序 AppID」(商户号已绑定小程序, 无需服务号);
+ *       订阅号/未认证公众号无法用于微信支付 (仅 H5 支付才要求认证服务号)
  */
 async function nativeUnifiedOrder({ outTradeNo, totalFee, body }) {
   const c = cfg()
   const res = await request('POST', '/v3/pay/transactions/native', {
-    appid: c.GZH_APPID || c.WXPAY_APPID,
+    appid: c.WXPAY_APPID,
     mchid: c.WXPAY_MCHID,
     description: String(body || '道元易学-订单').slice(0, 127),
     out_trade_no: outTradeNo,
