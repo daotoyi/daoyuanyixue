@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { execSync } = require('child_process');
-const v = 'v1.11.191';
+const v = 'v1.11.192';
 const commit = execSync('git rev-parse --short HEAD').toString().trim();
 const date = new Date().toISOString().slice(0, 10);
 let c = fs.readFileSync('src/version.js', 'utf8');

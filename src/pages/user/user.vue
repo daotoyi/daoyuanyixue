@@ -499,8 +499,8 @@ onShow(async () => {
 /* 头部 */
 .user-header {
   position: relative;
-  padding: 70rpx 40rpx 60rpx;
-  min-height: 240rpx;
+  padding: 48rpx 40rpx 40rpx;
+  min-height: 160rpx;
   background: linear-gradient(160deg, #9c1630 0%, #6b1022 60%, #c41e3a 100%);
   overflow: hidden;
 }
