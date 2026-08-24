@@ -97,6 +97,18 @@
       @close="showAftersale = false"
       @submitted="loadAftersales"
     ></aftersale-popup>
+
+    <!-- PC 扫码支付弹窗 -->
+    <view class="pp-mask" v-if="showQrPay" @tap="stopQrPolling; showQrPay = false"><view class="qr-pay-box" @tap.stop>
+      <view class="qr-pay-title">微信扫码支付</view>
+      <view class="qr-pay-img-wrap">
+        <image v-if="qrDataUrl" class="qr-pay-img" :src="qrDataUrl" mode="aspectFit"></image>
+        <view v-else class="qr-pay-loading">二维码生成中...</view>
+      </view>
+      <text class="qr-pay-tip">请使用微信扫一扫完成支付</text>
+      <text class="qr-pay-tip-sub">支付完成后将自动刷新订单</text>
+      <view class="qr-pay-close" @tap="stopQrPolling; showQrPay = false">关闭</view>
+    </view></view>
   </view>
 </template>
 
@@ -106,7 +118,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const order = ref(null)
@@ -218,6 +230,61 @@ async function load() {
   if (isRechargeOrder.value && selectedPay.value === 'balance') selectedPay.value = 'wechat'
 }
 
+/* ===== PC 扫码支付 (Native) ===== */
+const showQrPay = ref(false)
+const qrDataUrl = ref('')
+let qrPollTimer = null
+
+// PC 端判断: 宽屏且非移动 UA → 扫码支付 (微信收银台 H5 支付仅限手机浏览器)
+function isPC() {
+  // #ifdef H5
+  try {
+    const w = (window.innerWidth || document.documentElement.clientWidth) || 0
+    if (w >= 1024) return true
+    const ua = navigator.userAgent || ''
+    const mobile = /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(ua)
+    return !mobile
+  } catch (e) { return false }
+  // #endif
+  return false
+}
+
+// 生成二维码 dataURL
+async function renderQr(text) {
+  // #ifdef H5
+  try {
+    const QRCode = (await import('qrcode')).default
+    return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'M' })
+  } catch (e) {
+    return ''
+  }
+  // #endif
+  return ''
+}
+
+// 轮询支付状态
+function startQrPolling(no) {
+  stopQrPolling()
+  qrPollTimer = setInterval(async () => {
+    try {
+      const o = await getOrder(no)
+      if (o && o.status && o.status !== '待付款' && o.status !== '待支付') {
+        stopQrPolling()
+        showQrPay.value = false
+        uni.showToast({ title: '支付成功', icon: 'success' })
+        await load()
+      }
+    } catch (e) { /* 忽略 */ }
+  }, 2500)
+}
+
+function stopQrPolling() {
+  if (qrPollTimer) {
+    clearInterval(qrPollTimer)
+    qrPollTimer = null
+  }
+}
+
 async function doPay() {
   // 支付宝支付 (预约订单可选): 调后端生成支付宝订单, 未配置商户时明确提示
   if (selectedPay.value === 'alipay') {
@@ -296,12 +363,32 @@ async function doPay() {
   return
   // #endif
   // #ifdef H5
-  // H5 端无 JSAPI 微信支付能力: 明确引导, 不再静默走其他支付
-  uni.showModal({
-    title: '微信支付',
-    content: '微信支付请在微信小程序中完成；当前端请选择「元宝支付」或「支付宝」。',
-    showCancel: false,
-  })
+  // H5 端微信支付: PC(宽屏) → Native 扫码; 手机 → 微信收银台跳转
+  if (isPC()) {
+    try {
+      const native = await wxpayNative(orderNo.value)
+      if (native && native.code_url) {
+        qrDataUrl.value = await renderQr(native.code_url)
+        showQrPay.value = true
+        startQrPolling(orderNo.value)
+        return
+      }
+      uni.showToast({ title: (native && native.msg) || '微信支付未配置', icon: 'none' })
+    } catch (e) {
+      uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    }
+    return
+  }
+  try {
+    const h5 = await wxpayH5(orderNo.value)
+    if (h5 && h5.h5_url) {
+      window.location.href = h5.h5_url
+      return
+    }
+    uni.showToast({ title: (h5 && h5.msg) || '微信支付未配置', icon: 'none' })
+  } catch (e) {
+    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+  }
   return
   // #endif
 }
@@ -607,6 +694,89 @@ function goShop() {
   .od-page {
     max-width: 1320px;
   }
+}
+
+/* ===== PC 扫码支付弹窗 ===== */
+.pp-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+.qr-pay-box {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 560rpx;
+  background: #fffafa;
+  border-radius: 24rpx;
+  padding: 40rpx 36rpx 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 20rpx 80rpx rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+}
+.qr-pay-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2a2a2a;
+  margin-bottom: 28rpx;
+}
+.qr-pay-img-wrap {
+  width: 320rpx;
+  height: 320rpx;
+  background: #ffffff;
+  border: 2rpx solid #e8e2da;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.qr-pay-img {
+  width: 100%;
+  height: 100%;
+}
+.qr-pay-loading {
+  font-size: 26rpx;
+  color: #8a857c;
+}
+.qr-pay-tip {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #9c1630;
+}
+.qr-pay-tip-sub {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a857c;
+}
+.qr-pay-close {
+  margin-top: 28rpx;
+  padding: 14rpx 60rpx;
+  border-radius: 999rpx;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
+  font-size: 26rpx;
+  color: #55524c;
+}
+/* PC 扫码弹窗在桌面端使用 px 更清晰 */
+@media screen and (min-width: 1025px) {
+  .qr-pay-box {
+    width: 360px;
+    padding: 30px 28px 24px;
+  }
+  .qr-pay-title { font-size: 20px; margin-bottom: 20px; }
+  .qr-pay-img-wrap { width: 240px; height: 240px; }
+  .qr-pay-tip { font-size: 16px; margin-top: 16px; }
+  .qr-pay-tip-sub { font-size: 13px; }
+  .qr-pay-close { font-size: 15px; margin-top: 18px; }
 }
 
 </style>

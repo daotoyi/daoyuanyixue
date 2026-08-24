@@ -144,6 +144,18 @@
         <view class="btn-p" style="margin-top: 20rpx" @tap="saveAddress" :class="{ disabled: savingAddr }">{{ savingAddr ? '保存中...' : '保存地址' }}</view>
       </view>
     </view></view>
+
+    <!-- PC 扫码支付弹窗 -->
+    <view class="pp-mask" v-if="showQrPay" @tap="stopQrPolling; showQrPay = false"><view class="qr-pay-box" @tap.stop>
+      <view class="qr-pay-title">微信扫码支付</view>
+      <view class="qr-pay-img-wrap">
+        <image v-if="qrDataUrl" class="qr-pay-img" :src="qrDataUrl" mode="aspectFit"></image>
+        <view v-else class="qr-pay-loading">二维码生成中...</view>
+      </view>
+      <text class="qr-pay-tip">请使用微信扫一扫完成支付</text>
+      <text class="qr-pay-tip-sub">支付完成后将自动跳转订单详情</text>
+      <view class="qr-pay-close" @tap="stopQrPolling; showQrPay = false">关闭</view>
+    </view></view>
   </view>
 </template>
 
@@ -151,7 +163,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress } from '../../api/api'
+import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder } from '../../api/api'
 import { useUserStore } from '../../store/index'
 
 const userStore = useUserStore()
@@ -170,6 +182,13 @@ const balanceUsed = ref(false)
 const payMethod = ref('wechat')
 const showCoupon = ref(false)
 const submitting = ref(false)
+
+// PC 扫码支付: 弹窗显示微信支付二维码 (Native 支付)
+const showQrPay = ref(false)
+const qrCodeUrl = ref('') // 二维码内容 (code_url)
+const qrDataUrl = ref('') // 二维码图片 dataURL
+const qrPayLoading = ref(false)
+let qrPollTimer = null // 轮询支付结果定时器
 
 const balance = computed(() => userStore.userInfo.balance || '0.00')
 
@@ -382,6 +401,59 @@ const balanceDiscount = computed(() => {
 // 抵扣所用元宝数量
 const usedPoints = computed(() => Math.round(parseFloat(balanceDiscount.value) * 10))
 
+// PC 端判断: 宽屏且非触屏设备 → 使用 Native 扫码支付 (微信收银台 H5 支付仅限手机浏览器)
+function isPC() {
+  // #ifdef H5
+  try {
+    const w = (window.innerWidth || document.documentElement.clientWidth) || 0
+    if (w >= 1024) return true
+    const ua = navigator.userAgent || ''
+    const mobile = /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(ua)
+    return !mobile
+  } catch (e) { return false }
+  // #endif
+  return false
+}
+
+// 生成二维码 dataURL (H5 端动态引入 qrcode, PC 扫码支付展示)
+async function renderQr(text) {
+  // #ifdef H5
+  try {
+    const QRCode = (await import('qrcode')).default
+    return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'M' })
+  } catch (e) {
+    return ''
+  }
+  // #endif
+  return ''
+}
+
+// 轮询订单支付状态 (PC 扫码支付后等待微信回调更新订单)
+function startQrPolling(order_no) {
+  stopQrPolling()
+  qrPollTimer = setInterval(async () => {
+    try {
+      const o = await getOrder(order_no)
+      if (o && o.status && o.status !== '待付款' && o.status !== '待支付') {
+        stopQrPolling()
+        showQrPay.value = false
+        uni.showToast({ title: '支付成功', icon: 'success' })
+        clearSelected()
+        setTimeout(() => {
+          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order_no}` })
+        }, 600)
+      }
+    } catch (e) { /* 忽略轮询错误 */ }
+  }, 2500)
+}
+
+function stopQrPolling() {
+  if (qrPollTimer) {
+    clearInterval(qrPollTimer)
+    qrPollTimer = null
+  }
+}
+
 async function submitOrder() {
   if (!items.value.length) return
   if (!address.value) {
@@ -458,6 +530,25 @@ async function submitOrder() {
     }
     // #endif
     // #ifdef H5
+    // PC 端(宽屏) → Native 扫码支付; 手机端 → H5 收银台跳转
+    if (isPC()) {
+      try {
+        const native = await wxpayNative(order.order_no)
+        if (native && native.code_url) {
+          qrCodeUrl.value = native.code_url
+          qrDataUrl.value = await renderQr(native.code_url)
+          showQrPay.value = true
+          submitting.value = false
+          startQrPolling(order.order_no)
+          return
+        }
+        throw new Error((native && native.msg) || '微信支付未配置')
+      } catch (payErr) {
+        submitting.value = false
+        uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+        return
+      }
+    }
     try {
       const h5 = await wxpayH5(order.order_no)
       if (h5 && h5.h5_url) {
@@ -892,6 +983,80 @@ async function submitOrder() {
 }
 .btn-p.disabled {
   opacity: 0.6;
+}
+
+/* ===== PC 扫码支付弹窗 ===== */
+.qr-pay-box {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 560rpx;
+  background: #fffafa;
+  border-radius: 24rpx;
+  padding: 40rpx 36rpx 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 20rpx 80rpx rgba(0, 0, 0, 0.25);
+  z-index: 1001;
+}
+.qr-pay-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #2a2a2a;
+  margin-bottom: 28rpx;
+}
+.qr-pay-img-wrap {
+  width: 320rpx;
+  height: 320rpx;
+  background: #ffffff;
+  border: 2rpx solid #e8e2da;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.qr-pay-img {
+  width: 100%;
+  height: 100%;
+}
+.qr-pay-loading {
+  font-size: 26rpx;
+  color: #8a857c;
+}
+.qr-pay-tip {
+  margin-top: 24rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #9c1630;
+}
+.qr-pay-tip-sub {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a857c;
+}
+.qr-pay-close {
+  margin-top: 28rpx;
+  padding: 14rpx 60rpx;
+  border-radius: 999rpx;
+  background: #f8f5f0;
+  border: 1rpx solid #e8e2da;
+  font-size: 26rpx;
+  color: #55524c;
+}
+/* PC 扫码弹窗在桌面端使用 px 更清晰 */
+@media screen and (min-width: 1025px) {
+  .qr-pay-box {
+    width: 360px;
+    padding: 30px 28px 24px;
+  }
+  .qr-pay-title { font-size: 20px; margin-bottom: 20px; }
+  .qr-pay-img-wrap { width: 240px; height: 240px; }
+  .qr-pay-tip { font-size: 16px; margin-top: 16px; }
+  .qr-pay-tip-sub { font-size: 13px; }
+  .qr-pay-close { font-size: 15px; margin-top: 18px; }
 }
 
 </style>

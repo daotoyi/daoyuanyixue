@@ -1,7 +1,7 @@
 /**
  * 微信支付 API v3 直连模块 (原生 crypto 实现, 零额外依赖)
- * 覆盖: 统一下单(JSAPI) / 支付回调验签解密 / 查询订单 / 申请退款
- * 依赖 config.local.js: WXPAY_MCHID / WXPAY_V3_KEY / WXPAY_APIV3_SERIAL / WXPAY_CERT_PEM / WXPAY_KEY_PEM / WXPAY_APPID
+ * 覆盖: 统一下单(JSAPI) / H5下单 / Native扫码下单 / 支付回调验签解密 / 查询订单 / 申请退款
+ * 依赖 config.local.js: WXPAY_MCHID / WXPAY_V3_KEY / WXPAY_APIV3_SERIAL / WXPAY_CERT_PEM / WXPAY_KEY_PEM / WXPAY_APPID / GZH_APPID
  */
 const crypto = require('crypto')
 const https = require('https')
@@ -132,6 +132,26 @@ async function unifiedOrder({ outTradeNo, totalFee, body, openid }) {
   }
 }
 
+/**
+ * Native 扫码支付统一下单 → 返回 code_url (用于 PC 端渲染二维码)
+ * 注意: Native 支付 appid 可为小程序或公众号 AppID; 但商户号需已开通 Native 支付产品权限
+ */
+async function nativeUnifiedOrder({ outTradeNo, totalFee, body }) {
+  const c = cfg()
+  const res = await request('POST', '/v3/pay/transactions/native', {
+    appid: c.GZH_APPID || c.WXPAY_APPID,
+    mchid: c.WXPAY_MCHID,
+    description: String(body || '道元易学-订单').slice(0, 127),
+    out_trade_no: outTradeNo,
+    notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api/pay/notify`,
+    amount: { total: Math.round(totalFee), currency: 'CNY' },
+  })
+  if (res.status !== 200 && res.status !== 202) {
+    throw new Error((res.json && res.json.message) || '微信支付Native下单失败(' + res.status + ')')
+  }
+  return { code_url: res.json.code_url }
+}
+
 /** 查询订单 */
 async function queryOrder(outTradeNo) {
   const c = cfg()
@@ -185,4 +205,4 @@ function handleNotify(headers, rawBody) {
   return { eventType: body.event_type, resource, body }
 }
 
-module.exports = { unifiedOrder, h5UnifiedOrder, queryOrder, refund, handleNotify, verifySignature, decryptResource }
+module.exports = { unifiedOrder, h5UnifiedOrder, nativeUnifiedOrder, queryOrder, refund, handleNotify, verifySignature, decryptResource }

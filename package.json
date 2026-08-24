@@ -17,17 +17,18 @@
     "gen:domains": "node scripts/inject-tcb-domains.js"
   },
   "dependencies": {
+    "@cloudbase/js-sdk": "^2.7.0",
     "@dcloudio/uni-app": "3.0.0-4060620250520001",
     "@dcloudio/uni-app-harmony": "3.0.0-4060620250520001",
     "@dcloudio/uni-app-plus": "3.0.0-4060620250520001",
     "@dcloudio/uni-components": "3.0.0-4060620250520001",
     "@dcloudio/uni-h5": "3.0.0-4060620250520001",
     "@dcloudio/uni-mp-weixin": "3.0.0-4060620250520001",
-    "@cloudbase/js-sdk": "^2.7.0",
+    "dayjs": "^1.11.10",
     "pinia": "^2.1.7",
+    "qrcode": "^1.5.4",
     "vue": "^3.4.21",
-    "vue-i18n": "^9.13.1",
-    "dayjs": "^1.11.10"
+    "vue-i18n": "^9.13.1"
   },
   "devDependencies": {
     "@dcloudio/types": "^3.4.8",
