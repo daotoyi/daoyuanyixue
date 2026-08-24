@@ -2171,7 +2171,9 @@ async function wxpayH5(data) {
   const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
   const wxpay = require('./wxpay-v3')
   try {
-    const r = await wxpay.h5UnifiedOrder({ outTradeNo: order_no, totalFee: Math.round(price * 100), body, clientIp: data.clientIp })
+    // 支付完成「返回商户」→ 前端订单详情页 (H5 hash 路由)
+    const appUrl = `https://club.zhenhesheng.cn/h5/#/pages-sub/order/detail?order_no=${encodeURIComponent(order_no)}`
+    const r = await wxpay.h5UnifiedOrder({ outTradeNo: order_no, totalFee: Math.round(price * 100), body, clientIp: data.clientIp, appUrl })
     return ok({ h5_url: r.h5_url, order_no })
   } catch (e) {
     return fail('微信支付下单失败: ' + (e.message || '请检查商户配置'))
@@ -2461,7 +2463,7 @@ async function pandaoBook(data) {
     total_price: String(session.price),
     coupon_discount: 0,
     balance_used: 0,
-    items: [{ id: 'pd' + session.id, name: session.title, price: String(session.price), qty: 1 }],
+    items: [{ id: 'pd' + session.id, name: session.title, price: String(session.price), qty: 1, image: session.cover || '' }],
     pay_method: 'wechat',
     address: {},
     uid: Number(uid),
@@ -3713,15 +3715,20 @@ exports.main = async (event = {}) => {
         return { code: 'SUCCESS', message: '退款已处理' }
       }
       if (resource && resource.out_trade_no) {
+        // 先查订单: 预约/课程/AI解盘为虚拟服务 → 已完成; 实体商品 → 待发货
+        const o = (await db.collection('orders').where({ order_no: resource.out_trade_no }).limit(1).get()).data[0]
+        const isVirtual = o && (o.order_type === 'appointment' || o.order_type === 'course' || o.order_type === 'tool_unlock' || o.order_type === 'recharge')
+        const nextStatus = isVirtual ? '已完成' : '待发货'
         await db.collection('orders').where({ order_no: resource.out_trade_no }).update({
-          status: '待发货',
+          status: nextStatus,
           pay_method: '微信支付',
           pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
           trade_no: resource.transaction_id || '',
         })
         try {
-          const o = (await db.collection('orders').where({ order_no: resource.out_trade_no }).limit(1).get()).data[0]
-          if (o && o.uid) {
+          if (!o || !o.uid) {
+            // 订单不存在或缺少 uid: 状态已更新, 跳过消息/发课等后续处理
+          } else {
             // 工具解锁订单: 消息文案不同, 不报虚拟发货
             const isToolUnlock = o.order_type === 'tool_unlock'
             await db.collection('messages').add({

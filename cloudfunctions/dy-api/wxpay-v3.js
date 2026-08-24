@@ -163,8 +163,9 @@ async function queryOrder(outTradeNo) {
 /**
  * H5 支付统一下单 → 返回 h5_url (微信收银台跳转地址, 公众号 appid + 商户号需开通 H5 支付)
  * v3 参数: h5_info.type 固定 "Wap"; wap_url/wap_name 是 v2 字段已废弃
+ * appUrl: 支付完成「返回商户」跳转地址 (前端订单详情页 URL)
  */
-async function h5UnifiedOrder({ outTradeNo, totalFee, body, clientIp }) {
+async function h5UnifiedOrder({ outTradeNo, totalFee, body, clientIp, appUrl }) {
   const c = cfg()
   if (!c.GZH_APPID) throw new Error('未配置公众号AppID')
   const res = await request('POST', '/v3/pay/transactions/h5', {
@@ -176,7 +177,7 @@ async function h5UnifiedOrder({ outTradeNo, totalFee, body, clientIp }) {
     amount: { total: Math.round(totalFee), currency: 'CNY' },
     scene_info: {
       payer_client_ip: clientIp || '101.35.0.0',
-      h5_info: { type: 'Wap', app_name: '道元易学', app_url: `https://${c.WXPAY_NOTIFY_HOST || ''}` },
+      h5_info: { type: 'Wap', app_name: '道元易学', app_url: appUrl || `https://${c.WXPAY_NOTIFY_HOST || ''}` },
     },
   })
   if (res.status !== 200 && res.status !== 202) {

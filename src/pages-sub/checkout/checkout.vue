@@ -23,7 +23,8 @@
         <text class="card-count">{{ items.length }} 件</text>
       </view>
       <view class="co-item" v-for="i in items" :key="i.id">
-        <image class="co-img" :src="i.image" mode="aspectFill"></image>
+        <image v-if="i.image" class="co-img" :src="i.image" mode="aspectFill"></image>
+        <view v-else class="co-img co-img-fallback"><text>☯</text></view>
         <view class="co-info">
           <text class="co-name ellipsis-2">{{ i.name }}</text>
           <view class="co-row">
@@ -165,6 +166,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
 import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { resolveCloudList } from '../../utils/avatar'
 
 const userStore = useUserStore()
 
@@ -283,6 +285,8 @@ onLoad(async (options) => {
     const { items: list } = getSelectedItems()
     items.value = list
   }
+  // 结算清单图片 cloud:// → 签名URL (私有桶铁律, 否则 H5 支付页显示不出)
+  items.value = await resolveCloudList(items.value, 'image')
   loadCoupons()
   loadPayConfig()
   loadAddresses()
@@ -657,6 +661,15 @@ async function submitOrder() {
   height: 120rpx;
   border-radius: 12rpx;
   background: #f8f5f0;
+  flex-shrink: 0;
+}
+.co-img-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5efe3;
+  font-size: 48rpx;
+  color: #c9a96a;
 }
 .co-info {
   flex: 1;

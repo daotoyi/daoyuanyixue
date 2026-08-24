@@ -35,6 +35,44 @@ export async function resolveCloudUrl(src) {
 }
 
 /**
+ * 批量转换订单 items 图片 (cloud:// → 签名URL)
+ * 订单结构: orders[].items[].image (每个 item 可能为 cloud:// 私有桶文件)
+ * @param {Array} orders 订单数组
+ * @returns {Promise<Array>} 转换后的订单数组 (image 为可访问URL 或 空字符串)
+ */
+export async function resolveOrderImages(orders) {
+  if (!Array.isArray(orders) || !orders.length) return orders
+  const fileList = []
+  const seen = new Set()
+  orders.forEach((o) => {
+    ;(o.items || []).forEach((it) => {
+      if (it && isCloudFile(it.image) && !seen.has(it.image)) {
+        seen.add(it.image)
+        fileList.push(it.image)
+      }
+    })
+  })
+  if (!fileList.length) return orders
+  try {
+    const res = await fileUrl({ fileList })
+    const urlMap = {}
+    ;((res && res.list) || []).forEach((f) => {
+      if (f.url && f.fileID) {
+        urlMap[f.fileID] = f.url
+        _cache[f.fileID] = f.url
+      }
+    })
+    return orders.map((o) => ({
+      ...o,
+      items: (o.items || []).map((it) => (urlMap[it.image] ? { ...it, image: urlMap[it.image] } : it)),
+    }))
+  } catch (e) {
+    console.error('[avatar] 订单图片转换失败', e)
+    return orders
+  }
+}
+
+/**
  * 批量转换 (用于列表数据, 走云函数一次性转换, 按 fileID 精确匹配防止错位)
  * 三端统一: CloudBase 独立环境 (cloud1-), 小程序/App/H5 均需转签名 URL
  * @param {Array} list 数据数组

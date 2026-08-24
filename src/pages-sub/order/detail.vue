@@ -17,7 +17,8 @@
     <view class="card">
       <view class="card-title">商品清单</view>
       <view class="oi" v-for="(i, idx) in order.items" :key="idx">
-        <image class="oi-img" :src="i.image" mode="aspectFill"></image>
+        <image v-if="i.image" class="oi-img" :src="i.image" mode="aspectFill"></image>
+        <view v-else class="oi-img oi-img-fallback"><text>☯</text></view>
         <view class="oi-info">
           <text class="oi-name ellipsis-2">{{ i.name }}</text>
           <view class="oi-row">
@@ -120,6 +121,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { resolveOrderImages } from '../../utils/avatar'
 
 const order = ref(null)
 const orderNo = ref(null)
@@ -225,7 +227,10 @@ const payName = computed(() => {
 })
 
 async function load() {
-  order.value = await getOrder(orderNo.value)
+  const o = await getOrder(orderNo.value)
+  // 订单 items 图片 cloud:// → 签名URL (私有桶铁律, 否则 H5 显示不出)
+  const converted = await resolveOrderImages([o])
+  order.value = (converted && converted[0]) || o
   // 充值订单: 强制微信支付 (元宝不能买元宝), H5 端默认也切到微信
   if (isRechargeOrder.value && selectedPay.value === 'balance') selectedPay.value = 'wechat'
 }
@@ -489,6 +494,15 @@ function goShop() {
   height: 120rpx;
   border-radius: 12rpx;
   background: #f8f5f0;
+  flex-shrink: 0;
+}
+.oi-img-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5efe3;
+  font-size: 48rpx;
+  color: #c9a96a;
 }
 .oi-info {
   flex: 1;

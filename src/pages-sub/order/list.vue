@@ -54,7 +54,8 @@
 
           <view class="order-items">
             <view class="oi" v-for="(i, idx) in o.items" :key="idx">
-              <image class="oi-img" :src="i.image" mode="aspectFill"></image>
+              <image v-if="i.image" class="oi-img" :src="i.image" mode="aspectFill"></image>
+              <view v-else class="oi-img oi-img-fallback"><text>☯</text></view>
               <view class="oi-info">
                 <text class="oi-name ellipsis-2">{{ i.name }}</text>
                 <text class="oi-price">¥{{ i.price }} ×{{ i.qty }}</text>
@@ -113,6 +114,7 @@ import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getOrders, confirmOrder, deleteOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { resolveOrderImages } from '../../utils/avatar'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
 const activeStatus = ref('全部')
@@ -129,7 +131,9 @@ onShow(async () => {
 // 一次拉全部订单, 统计各状态数量 (必须传 uid, 只拉自己的订单)
 async function loadOrders() {
   const uid = useUserStore().userInfo.uid
-  allOrders.value = await getOrders({ status: '全部', uid })
+  const list = await getOrders({ status: '全部', uid })
+  // 订单 items 图片 cloud:// → 签名URL (私有桶铁律, 否则 H5 显示不出)
+  allOrders.value = await resolveOrderImages(list || [])
 }
 
 /* ===== 售后反馈 ===== */
@@ -673,6 +677,15 @@ async function doDelete(o) {
   height: 100rpx;
   border-radius: 10rpx;
   background: #f8f5f0;
+  flex-shrink: 0;
+}
+.oi-img-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5efe3;
+  font-size: 40rpx;
+  color: #c9a96a;
 }
 .oi-info {
   flex: 1;
