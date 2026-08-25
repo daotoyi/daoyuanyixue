@@ -3272,6 +3272,61 @@ async function adminOrderRefund(data) {
   return ok({ updated: true })
 }
 
+/* 销量重算 (管理员): 统计所有已支付(非待付款/已取消/已退款)订单, 重置商品 sales/stock 与课程 students_count
+   用于: 接入自动同步前历史数据修正 / 后台误改后一键校准 */
+async function adminRecalcSales() {
+  const paid = ['待发货', '待收货', '已完成']
+  const orders = await db.collection('orders').limit(500).get()
+  const prodMap = {} // productId → qty
+  const courseMap = {} // courseId → count
+  ;(orders.data || []).forEach((o) => {
+    if (!paid.includes(o.status)) return
+    // 商品订单
+    if (o.order_type === 'product' || (!o.order_type && !o.course_id && !o.session_id)) {
+      ;(o.items || []).forEach((it) => {
+        const pid = Number(it && it.id)
+        const qty = Number(it && it.qty) || 1
+        if (pid && qty) prodMap[pid] = (prodMap[pid] || 0) + qty
+      })
+    }
+    // 课程订单
+    if (o.course_id && (o.order_type === 'course' || !o.order_type)) {
+      const cid = Number(o.course_id)
+      if (cid) courseMap[cid] = (courseMap[cid] || 0) + 1
+    }
+  })
+  // 商品销量: 只补不覆盖 — sales 取 max(当前值, 真实订单数)
+  // (避免覆盖后台人工维护的展示销量; 若人工值 < 订单数则补足)
+  const prods = await db.collection('products').limit(500).get()
+  let prodUpdated = 0
+  for (const p of prods.data || []) {
+    const pid = Number(p.id)
+    const orderQty = prodMap[pid] || 0
+    if (orderQty > 0) {
+      const cur = Number(p.sales) || 0
+      if (orderQty > cur) {
+        await db.collection('products').where({ id: pid }).update({ sales: orderQty })
+        prodUpdated++
+      }
+    }
+  }
+  // 课程学习人数: 只补不覆盖 (students_count 取 max(当前值, 真实订单数))
+  const courses = await db.collection('courses').limit(500).get()
+  let courseUpdated = 0
+  for (const c of courses.data || []) {
+    const cid = Number(c.id)
+    const cnt = courseMap[cid] || 0
+    if (cnt > 0) {
+      const cur = Number(c.students_count) || 0
+      if (cnt > cur) {
+        await db.collection('courses').where({ id: cid }).update({ students_count: cnt })
+        courseUpdated++
+      }
+    }
+  }
+  return ok({ prodUpdated, courseUpdated, prodMap, courseMap })
+}
+
 async function adminOrderDelete(data) {
   const { order_no } = data
   if (!order_no) return fail('缺少订单号')
@@ -3818,6 +3873,7 @@ const ROUTES = {
   'admin.courses.update': adminCourseUpdate,
   'admin.orders.ship': adminOrderShip,
   'admin.orders.refund': adminOrderRefund,
+  'admin.recalcSales': adminRecalcSales,
   'admin.orders.delete': adminOrderDelete,
   'admin.users.create': adminUserCreate,
   'admin.users.update': adminUserUpdate,
