@@ -330,8 +330,15 @@ function goCourse() {
   justify-content: center;
 }
 .empty-btn {
-  width: 320rpx;
-  margin: 40rpx auto 0;
+  margin-top: 40rpx;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.empty-btn .btn-p {
+  min-width: 320rpx;
+  box-sizing: border-box;
+  text-align: center;
 }
 /* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
 @media screen and (min-width: 1025px) {
