@@ -1962,6 +1962,8 @@ async function cancelOrder(data) {
       refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       refund_reason: '用户取消订单',
     })
+    // 退款回退销量 (商品/课程)
+    try { await revertSalesAfterRefund(order) } catch (e) {}
   } else {
     await db.collection('orders').where(cond).update({ status: '已取消' })
   }
@@ -2053,6 +2055,8 @@ async function courseRefund(data) {
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: '课程7日退款',
   })
+  // 退款回退销量 (课程学习人数 -1)
+  try { await revertSalesAfterRefund(order) } catch (e) {}
 
   // 推送消息
   try {
@@ -2230,6 +2234,75 @@ async function wxpayQuerySync(data) {  const { order_no } = data
   return ok({ status: order.status, wechat_state: (res && res.trade_state) || 'unknown' })
 }
 
+/* 支付成功后同步销量数据 (商品已售/库存, 课程学习人数)
+   防重复: 仅在订单从「待付款→已支付」时调用一次; 通过 markOrderPaid/orderPayBalance 入口调用 */
+async function syncSalesAfterPay(order) {
+  if (!order) return
+  // ① 商品订单: 累加已售数量 + 扣减库存 (items 中 id 为商品 id)
+  if (order.order_type === 'product' || (!order.order_type && !order.course_id && !order.session_id)) {
+    const items = Array.isArray(order.items) ? order.items : []
+    for (const it of items) {
+      const pid = Number(it && it.id)
+      const qty = Number(it && it.qty) || 1
+      if (!pid || !qty) continue
+      try {
+        const p = (await db.collection('products').where({ id: pid }).limit(1).get()).data[0]
+        if (p) {
+          await db.collection('products').where({ id: pid }).update({
+            sales: (Number(p.sales) || 0) + qty,
+            stock: Math.max(0, (Number(p.stock) || 0) - qty),
+          })
+        }
+      } catch (e) {}
+    }
+  }
+  // ② 课程订单: 学习人数 +1
+  if (order.course_id && (order.order_type === 'course' || !order.order_type)) {
+    try {
+      const c = (await db.collection('courses').where({ id: Number(order.course_id) }).limit(1).get()).data[0]
+      if (c) {
+        await db.collection('courses').where({ id: Number(order.course_id) }).update({
+          students_count: (Number(c.students_count) || 0) + 1,
+        })
+      }
+    } catch (e) {}
+  }
+}
+
+/* 退款后回退销量数据 (商品已售/库存, 课程学习人数) — 与 syncSalesAfterPay 相反 */
+async function revertSalesAfterRefund(order) {
+  if (!order) return
+  // ① 商品订单: 回退已售 + 恢复库存
+  if (order.order_type === 'product' || (!order.order_type && !order.course_id && !order.session_id)) {
+    const items = Array.isArray(order.items) ? order.items : []
+    for (const it of items) {
+      const pid = Number(it && it.id)
+      const qty = Number(it && it.qty) || 1
+      if (!pid || !qty) continue
+      try {
+        const p = (await db.collection('products').where({ id: pid }).limit(1).get()).data[0]
+        if (p) {
+          await db.collection('products').where({ id: pid }).update({
+            sales: Math.max(0, (Number(p.sales) || 0) - qty),
+            stock: (Number(p.stock) || 0) + qty,
+          })
+        }
+      } catch (e) {}
+    }
+  }
+  // ② 课程订单: 学习人数 -1
+  if (order.course_id && (order.order_type === 'course' || !order.order_type)) {
+    try {
+      const c = (await db.collection('courses').where({ id: Number(order.course_id) }).limit(1).get()).data[0]
+      if (c) {
+        await db.collection('courses').where({ id: Number(order.course_id) }).update({
+          students_count: Math.max(0, (Number(c.students_count) || 0) - 1),
+        })
+      }
+    } catch (e) {}
+  }
+}
+
 /* 支付成功统一处理 (微信回调 / 主动查单 共用):
    1. 更新订单状态 (预约/课程/AI解盘/充值=已完成, 实体商品=待发货)
    2. 站内消息 + 服务号推送
@@ -2239,6 +2312,8 @@ async function markOrderPaid({ order_no, trade_no, openid }) {
   if (!o) return
   // 已处理过 (防重复回调/查单重复执行)
   if (o.status !== '待付款' && o.status !== '待支付') return
+  // 同步销量 (商品已售/库存, 课程学习人数) — 订单状态为待付款, 此处仅执行一次
+  try { await syncSalesAfterPay(o) } catch (e) { console.error('[dy-api] syncSalesAfterPay:', e) }
   // 预约/课程/AI解盘/充值 = 虚拟服务 → 已完成; 实体商品 → 待发货
   const isVirtual = o.order_type === 'appointment' || o.order_type === 'course' || o.order_type === 'tool_unlock' || o.order_type === 'recharge'
   const nextStatus = isVirtual ? '已完成' : '待发货'
@@ -2655,6 +2730,8 @@ async function orderPayBalance(data) {
   if (bal < price) return fail(`元宝不足（需 ${price} 元宝），请先充值`)
   const newBal = Math.round((bal - price) * 100) / 100
   await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
+  // 同步销量 (商品已售/库存, 课程学习人数) — 仅待付款→已支付这一次
+  try { await syncSalesAfterPay(order) } catch (e) {}
   // 支付成功: 预约/虚拟商品标记已完成, 实体商品标记待发货
   const nextStatus = order.order_type === 'appointment' || order.order_type === 'course' || order.order_type === 'tool_unlock' ? '已完成' : '待发货'
   await db.collection('orders').where({ order_no }).update({
@@ -3184,6 +3261,13 @@ async function adminOrderShip(data) {
 }
 
 async function adminOrderRefund(data) {
+  // 先取订单快照用于回退销量 (退款只针对已支付订单)
+  try {
+    const o = (await db.collection('orders').where({ order_no: data.order_no }).limit(1).get()).data[0]
+    if (o && o.status !== '待付款' && o.status !== '待支付') {
+      await revertSalesAfterRefund(o)
+    }
+  } catch (e) {}
   await db.collection('orders').where({ order_no: data.order_no }).update({ status: '已退款' })
   return ok({ updated: true })
 }
