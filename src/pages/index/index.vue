@@ -1793,19 +1793,19 @@ onShow(async () => {
 .rec-pd-title {
   display: block;
   margin-top: 15rpx;
-  font-size: 36rpx;
+  font-size: 26rpx;
   color: #2a2a2a;
 }
 .rec-live-time {
   display: block;
   margin-top: 9rpx;
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #55524c;
 }
 .rec-live-status {
   display: inline-block;
   margin-top: 9rpx;
-  font-size: 30rpx;
+  font-size: 22rpx;
   padding: 3rpx 18rpx;
   border-radius: 999rpx;
   align-self: flex-start;
@@ -1815,7 +1815,7 @@ onShow(async () => {
 .rec-live-status.st-ended { background: #efeadf; color: #55524c; }
 .rec-pd-badge {
   align-self: flex-start;
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #c41e3a;
   background: #f5efe3;
   padding: 3rpx 18rpx;
@@ -1824,13 +1824,13 @@ onShow(async () => {
 .rec-pd-time {
   display: block;
   margin-top: 9rpx;
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #55524c;
 }
 .rec-pd-meta {
   display: block;
   margin-top: 9rpx;
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #8a857c;
 }
 .rec-pd-price,
@@ -1838,7 +1838,7 @@ onShow(async () => {
 .rec-course-price {
   display: block;
   margin-top: 12rpx;
-  font-size: 39rpx;
+  font-size: 30rpx;
   font-weight: 600;
   color: #9c1630;
 }
@@ -1901,7 +1901,7 @@ onShow(async () => {
 .rec-moment-content {
   display: block;
   margin-top: 15rpx;
-  font-size: 36rpx;
+  font-size: 26rpx;
   color: #2a2a2a;
   line-height: 1.5;
   min-height: 108rpx;
@@ -1913,7 +1913,7 @@ onShow(async () => {
   margin-top: 12rpx;
 }
 .rec-moment-user {
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #c41e3a;
   max-width: 240rpx;
   overflow: hidden;
@@ -1921,7 +1921,7 @@ onShow(async () => {
   text-overflow: ellipsis;
 }
 .rec-moment-likes {
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #8a857c;
 }
 
