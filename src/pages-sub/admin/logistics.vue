@@ -48,6 +48,7 @@
 import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { adminLogisticsList, adminOrderShip, adminList } from '../../api/api'
+import { staticUrl } from '../../utils/static-url'
 
 const order = ref(null)
 const orderNo = ref('')
@@ -79,7 +80,7 @@ onLoad(async (options) => {
     ])
     logistics.value = lg.map((l) => ({
       ...l,
-      icon: '/static/logis/' + l.code + '.png',
+      icon: staticUrl('/static/logis/' + l.code + '.png'),
     }))
     if (orderNo.value) {
       order.value = orders.find((o) => o.order_no === orderNo.value) || null

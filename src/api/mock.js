@@ -5,7 +5,7 @@
  * 前端只需替换 api/api.js 的数据来源, 页面零改动。
  */
 
-const PLACEHOLDER = '/static/placeholder/'
+const PLACEHOLDER = 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/static/placeholder/'
 
 /* ---- 商品分类 (categories) ---- */
 export const categories = [

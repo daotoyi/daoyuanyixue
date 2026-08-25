@@ -167,6 +167,7 @@ import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
 import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder, wxpayQuerySync } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudList } from '../../utils/avatar'
+import { staticUrl } from '../../utils/static-url'
 
 const userStore = useUserStore()
 
@@ -198,7 +199,7 @@ const balance = computed(() => userStore.userInfo.balance || '0.00')
 const wechatPayName = '微信支付'
 
 const payMethods = ref([
-  { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
+  { key: 'wechat', name: wechatPayName, icon: '', img: staticUrl('/static/pay-wechat.png') },
   { key: 'balance', name: '元宝支付', icon: '💰' },
 ])
 
@@ -207,7 +208,7 @@ async function loadPayConfig() {
   try {
     const cfg = await getPayConfig()
     const list = [
-      { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
+      { key: 'wechat', name: wechatPayName, icon: '', img: staticUrl('/static/pay-wechat.png') },
       { key: 'balance', name: '元宝支付', icon: '💰' },
     ]
     if (cfg.show_alipay) list.push({ key: 'alipay', name: '支付宝', icon: '🔵' })
@@ -219,7 +220,7 @@ async function loadPayConfig() {
     if (!payMethods.value.some((m) => m.key === payMethod.value)) payMethod.value = 'wechat'
   } catch (e) {
     payMethods.value = [
-      { key: 'wechat', name: wechatPayName, icon: '', img: '/static/pay-wechat.png' },
+      { key: 'wechat', name: wechatPayName, icon: '', img: staticUrl('/static/pay-wechat.png') },
       { key: 'balance', name: '元宝支付', icon: '💰' },
     ]
   }

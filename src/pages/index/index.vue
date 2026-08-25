@@ -338,6 +338,7 @@ import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, fileUrl, getProducts, getCourses, getRecommendedMoments } from '../../api/api'
 import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
+import { staticUrl } from '../../utils/static-url'
 import { useUserStore } from '../../store/index'
 
 // tab 顺序固定: 推荐 → 盘道 → 直播 → 动态 (显示与否由后台首页管理开关控制)
@@ -439,15 +440,8 @@ const canPublishMoment = computed(() => {
   return ['admin', 'manager', 'operator', 'viewer'].includes(role)
 })
 
-/* logo 绝对路径 (H5 需运行时 origin, 避免 Vite publicPath=./ 编译成相对路径导致 image 背景 none 不渲染) */
-const logoUrl = computed(() => {
-  // #ifdef H5
-  return (typeof window !== 'undefined' ? window.location.origin : '') + '/static/logo.png'
-  // #endif
-  // #ifndef H5
-  return '/static/logo.png'
-  // #endif
-})
+/* logo 统一走云托管静态 URL (小程序不打包 static 图片, 2026-08-25) */
+const logoUrl = computed(() => staticUrl('/static/logo.png'))
 
 // 推荐=被推荐动态; 动态=所有用户动态
 const shownMoments = computed(() => {

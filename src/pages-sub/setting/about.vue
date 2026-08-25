@@ -25,16 +25,10 @@
 <script setup>
 import { computed } from 'vue'
 import { APP_FULL_VERSION, APP_BUILD_DATE } from '../../version'
+import { staticUrl } from '../../utils/static-url'
 
-/* logo 绝对路径 (H5 需运行时 origin, 避免 Vite publicPath=./ 编译成相对路径导致 image 背景 none 不渲染) */
-const logoUrl = computed(() => {
-  // #ifdef H5
-  return (typeof window !== 'undefined' ? window.location.origin : '') + '/static/logo.png'
-  // #endif
-  // #ifndef H5
-  return '/static/logo.png'
-  // #endif
-})
+/* logo 统一走云托管静态 URL (小程序不打包 static 图片, 2026-08-25) */
+const logoUrl = computed(() => staticUrl('/static/logo.png'))
 
 /* 点击邮箱 → 复制到剪贴板 (H5/小程序通用) */
 function copyContact() {
