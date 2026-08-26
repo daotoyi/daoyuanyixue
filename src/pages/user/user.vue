@@ -585,7 +585,6 @@ onShow(async () => {
   position: relative;
   display: flex;
   align-items: center;
-  margin-top: 60rpx;
 }
 .avatar-wrap {
   position: relative;
