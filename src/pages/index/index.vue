@@ -1765,20 +1765,20 @@ onShow(async () => {
 .rec-course-card {
   display: inline-flex;
   flex-direction: column;
-  width: 330rpx;
-  margin-right: 24rpx;
+  width: 220rpx;
+  margin-right: 16rpx;
   background: #fffafa;
   border: 1rpx solid #e8e2da;
-  border-radius: 21rpx;
-  padding: 18rpx;
+  border-radius: 14rpx;
+  padding: 12rpx;
   vertical-align: top;
 }
 .rec-live-img,
 .rec-prod-img,
 .rec-course-img {
   width: 100%;
-  height: 195rpx;
-  border-radius: 15rpx;
+  height: 130rpx;
+  border-radius: 10rpx;
   background: #f8f5f0;
 }
 .rec-live-title,
@@ -1786,21 +1786,21 @@ onShow(async () => {
 .rec-course-title,
 .rec-pd-title {
   display: block;
-  margin-top: 15rpx;
-  font-size: 26rpx;
+  margin-top: 10rpx;
+  font-size: 24rpx;
   color: #2a2a2a;
 }
 .rec-live-time {
   display: block;
-  margin-top: 9rpx;
-  font-size: 22rpx;
+  margin-top: 6rpx;
+  font-size: 20rpx;
   color: #55524c;
 }
 .rec-live-status {
   display: inline-block;
   margin-top: 9rpx;
-  font-size: 22rpx;
-  padding: 3rpx 18rpx;
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
   border-radius: 999rpx;
   align-self: flex-start;
 }
@@ -1809,30 +1809,30 @@ onShow(async () => {
 .rec-live-status.st-ended { background: #efeadf; color: #55524c; }
 .rec-pd-badge {
   align-self: flex-start;
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #c41e3a;
   background: #f5efe3;
-  padding: 3rpx 18rpx;
+  padding: 2rpx 12rpx;
   border-radius: 999rpx;
 }
 .rec-pd-time {
   display: block;
-  margin-top: 9rpx;
-  font-size: 22rpx;
+  margin-top: 6rpx;
+  font-size: 20rpx;
   color: #55524c;
 }
 .rec-pd-meta {
   display: block;
-  margin-top: 9rpx;
-  font-size: 22rpx;
+  margin-top: 6rpx;
+  font-size: 20rpx;
   color: #8a857c;
 }
 .rec-pd-price,
 .rec-prod-price,
 .rec-course-price {
   display: block;
-  margin-top: 12rpx;
-  font-size: 30rpx;
+  margin-top: 8rpx;
+  font-size: 26rpx;
   font-weight: 600;
   color: #9c1630;
 }
@@ -1859,8 +1859,8 @@ onShow(async () => {
 }
 .rec-pd-img {
   width: 100%;
-  height: 195rpx;
-  border-radius: 15rpx;
+  height: 130rpx;
+  border-radius: 10rpx;
   margin-bottom: 12rpx;
   background: #f8f5f0;
 }
@@ -1869,18 +1869,18 @@ onShow(async () => {
 .rec-moment-card {
   display: inline-flex;
   flex-direction: column;
-  width: 420rpx;
-  margin-right: 24rpx;
+  width: 280rpx;
+  margin-right: 16rpx;
   background: #fffafa;
   border: 1rpx solid #e8e2da;
-  border-radius: 21rpx;
-  padding: 18rpx;
+  border-radius: 14rpx;
+  padding: 12rpx;
   vertical-align: top;
 }
 .rec-moment-img {
   width: 100%;
-  height: 225rpx;
-  border-radius: 15rpx;
+  height: 150rpx;
+  border-radius: 10rpx;
   background: #f8f5f0;
   overflow: hidden;
 }
@@ -1894,8 +1894,8 @@ onShow(async () => {
 }
 .rec-moment-content {
   display: block;
-  margin-top: 15rpx;
-  font-size: 26rpx;
+  margin-top: 10rpx;
+  font-size: 24rpx;
   color: #2a2a2a;
   line-height: 1.5;
   min-height: 108rpx;
@@ -1904,18 +1904,18 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 12rpx;
+  margin-top: 8rpx;
 }
 .rec-moment-user {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #c41e3a;
-  max-width: 240rpx;
+  max-width: 160rpx;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 .rec-moment-likes {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #8a857c;
 }
 
