@@ -499,8 +499,8 @@ onShow(async () => {
 /* 头部 */
 .user-header {
   position: relative;
-  padding: 48rpx 40rpx 40rpx;
-  min-height: 160rpx;
+  padding: 36rpx 40rpx 28rpx;
+  min-height: 140rpx;
   background: linear-gradient(160deg, #9c1630 0%, #6b1022 60%, #c41e3a 100%);
   overflow: hidden;
 }
@@ -693,7 +693,7 @@ onShow(async () => {
 .asset-card {
   display: flex;
   align-items: center;
-  margin: -30rpx 30rpx 0;
+  margin: -16rpx 30rpx 0;
   background: #fffafa;
   border-radius: 16rpx;
   border: 1rpx solid #e8e2da;

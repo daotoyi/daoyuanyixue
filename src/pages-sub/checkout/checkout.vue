@@ -139,7 +139,7 @@
         <view class="af-row"><text class="af-label">手机号</text><input class="f-input" v-model="addrForm.phone" type="number" maxlength="11" placeholder="收货人手机号" /></view>
         <view class="af-row" style="align-items: flex-start"><text class="af-label">详细地址</text><textarea class="f-textarea" v-model="addrForm.detail" placeholder="省市区 + 详细地址" /></view>
         <view class="af-row"><text class="af-label">设为默认</text><switch :checked="addrForm.is_default" color="#c41e3a" style="transform: scale(0.8)" @change="addrForm.is_default = $event.detail.value" /></view>
-        <view class="btn-p" style="margin-top: 20rpx" @tap="saveAddress" :class="{ disabled: savingAddr }">{{ savingAddr ? '保存中...' : '保存地址' }}</view>
+        <view class="af-btn-wrap"><view class="btn-p" @tap="saveAddress" :class="{ disabled: savingAddr }">{{ savingAddr ? '保存中...' : '保存地址' }}</view></view>
       </view>
     </view></view>
 
@@ -1014,6 +1014,12 @@ async function submitOrder() {
 .af-row .f-textarea {
   height: 140rpx;
   padding: 14rpx 20rpx;
+}
+/* 保存地址按钮居中 */
+.af-btn-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 24rpx;
 }
 .btn-p.disabled {
   opacity: 0.6;

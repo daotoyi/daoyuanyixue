@@ -951,8 +951,8 @@ onShow(async () => {
 /* 品牌横幅 */
 .banner {
   position: relative;
-  padding: 48rpx 40rpx 40rpx;
-  min-height: 160rpx;
+  padding: 36rpx 40rpx 28rpx;
+  min-height: 140rpx;
   display: flex;
   flex-direction: column;
   justify-content: center;
