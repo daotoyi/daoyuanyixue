@@ -63,6 +63,13 @@
             </view>
           </view>
 
+          <!-- 物流摘要 (后台发货后显示运单号与状态) -->
+          <view class="order-lg" v-if="o.tracking_no" @tap.stop="goDetail(o.order_no)">
+            <text class="ol-lg-status" :class="'ol-' + lgCls(o)">{{ lgText(o) }}</text>
+            <text class="ol-lg-company">{{ o.logistics_company || '快递' }}</text>
+            <text class="ol-lg-no">运单号 {{ o.tracking_no }}</text>
+          </view>
+
           <view class="order-foot">
             <text class="of-time">{{ o.created_at }}</text>
             <view class="of-right">
@@ -119,6 +126,20 @@ import { resolveOrderImages } from '../../utils/avatar'
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
 const activeStatus = ref('全部')
 const allOrders = ref([])
+
+/* 物流状态文字 (由订单状态映射: 待收货=运输中, 已完成=已签收) */
+function lgText(o) {
+  if (!o) return ''
+  if (o.status === '已完成') return '已签收'
+  if (o.status === '待收货') return '运输中'
+  if (o.status === '已退款') return '已退回'
+  return '已发货'
+}
+/* 物流状态样式类 */
+function lgCls(o) {
+  const t = lgText(o)
+  return { 运输中: 'transit', 已签收: 'done', 已退回: 'refund', 已发货: 'shipped' }[t] || 'shipped'
+}
 
 onLoad((options) => {
   if (options.status) activeStatus.value = options.status
@@ -725,6 +746,41 @@ async function doDelete(o) {
 .of-total {
   font-size: 26rpx;
   color: #2a2a2a;
+}
+
+/* ===== 物流摘要 ===== */
+.order-lg {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  padding: 12rpx 16rpx;
+  background: #faf7f1;
+  border-radius: 10rpx;
+}
+.ol-lg-status {
+  font-size: 22rpx;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  flex-shrink: 0;
+}
+.ol-lg-status.ol-transit { background: #fdece8; color: #c0392b; }
+.ol-lg-status.ol-shipped { background: #fdf3e2; color: #b07a2a; }
+.ol-lg-status.ol-done { background: #e8f2e0; color: #6e7f5a; }
+.ol-lg-status.ol-refund { background: #efeadf; color: #8a857c; }
+.ol-lg-company {
+  font-size: 22rpx;
+  color: #2a2a2a;
+  flex-shrink: 0;
+}
+.ol-lg-no {
+  font-size: 22rpx;
+  color: #9c1630;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 .empty {

@@ -46,14 +46,6 @@
       </view>
 
       <view class="co-row-line">
-        <text class="line-label">元宝抵扣</text>
-        <view class="balance-right">
-          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount + '（用 ' + usedPoints + ' 元宝）' : '可用 ' + balance + ' 元宝（10元宝=1元）' }}</text>
-          <switch :checked="balanceUsed" color="#c41e3a" style="transform: scale(0.8)" @change="toggleBalance" />
-        </view>
-      </view>
-
-      <view class="co-row-line">
         <text class="line-label">配送方式</text>
         <text class="line-value">快递包邮</text>
       </view>
@@ -68,6 +60,14 @@
         <text class="pay-name">{{ p.name }}</text>
         <view class="pay-check" :class="{ on: payMethod === p.key }">
           <text v-if="payMethod === p.key">✓</text>
+        </view>
+      </view>
+      <!-- 元宝抵扣 (跟随元宝支付方式展示) -->
+      <view class="co-row-line balance-deduct" v-if="hasBalancePay">
+        <text class="line-label">元宝抵扣</text>
+        <view class="balance-right">
+          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount + '（用 ' + usedPoints + ' 元宝）' : '可用 ' + balance + ' 元宝（10元宝=1元）' }}</text>
+          <switch :checked="balanceUsed" color="#c41e3a" style="transform: scale(0.8)" @change="toggleBalance" />
         </view>
       </view>
     </view>
@@ -229,6 +229,9 @@ async function loadPayConfig() {
 const subTotal = computed(() =>
   items.value.reduce((s, i) => s + parseFloat(i.price) * i.qty, 0)
 )
+
+// 元宝支付是否在支付方式列表中 (决定是否展示"元宝抵扣"行)
+const hasBalancePay = computed(() => payMethods.value.some((m) => m.key === 'balance'))
 
 const couponDiscount = computed(() => {
   if (!selectedCoupon.value) return 0
@@ -742,6 +745,10 @@ async function submitOrder() {
 .balance-right {
   display: flex;
   align-items: center;
+}
+.balance-deduct {
+  border-top: 1rpx dashed #e8e2da;
+  margin-top: 6rpx;
 }
 
 /* 支付方式 */

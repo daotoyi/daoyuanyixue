@@ -29,6 +29,30 @@
       </view>
     </view>
 
+    <!-- 物流信息 (后台发货后展示运单号与当前状态) -->
+    <view class="card lg-card" v-if="order.tracking_no">
+      <view class="lg-head">
+        <text class="lg-title">物流信息</text>
+        <text class="lg-status" :class="'lg-' + logisticsStatus.cls">{{ logisticsStatus.text }}</text>
+      </view>
+      <view class="lg-row">
+        <text class="lg-label">物流公司</text>
+        <text class="lg-value">{{ order.logistics_company || '快递' }}</text>
+      </view>
+      <view class="lg-row" @tap="copyTracking">
+        <text class="lg-label">运单号</text>
+        <text class="lg-value lg-no">{{ order.tracking_no }}</text>
+        <text class="lg-copy">复制</text>
+      </view>
+      <view class="lg-row" v-if="order.shipped_at">
+        <text class="lg-label">发货时间</text>
+        <text class="lg-value">{{ order.shipped_at }}</text>
+      </view>
+      <view class="lg-row lg-tip-row">
+        <text class="lg-tip">可前往对应快递官网/公众号凭运单号查询最新轨迹</text>
+      </view>
+    </view>
+
     <!-- 金额明细 -->
     <view class="card">
       <view class="row"><text class="rk">商品总额</text><text class="rv">¥{{ order.total_price }}</text></view>
@@ -211,6 +235,22 @@ const statusTip = computed(() => ({
   已完成: '交易已完成，感谢您的信任',
   已退款: '退款已原路退回',
 })[order.value?.status] || '')
+
+/* 物流状态: 由订单状态映射 (已发货=运输中, 已完成=已签收) */
+const logisticsStatus = computed(() => {
+  if (!order.value) return { text: '', cls: '' }
+  if (order.value.status === '已完成') return { text: '已签收', cls: 'done' }
+  if (order.value.status === '待收货') return { text: '运输中', cls: 'transit' }
+  if (order.value.status === '已退款') return { text: '已退回', cls: 'refund' }
+  return { text: '已发货', cls: 'shipped' }
+})
+
+/* 复制运单号 */
+function copyTracking() {
+  const no = (order.value && order.value.tracking_no) || ''
+  if (!no) return
+  uni.setClipboardData({ data: no, success: () => uni.showToast({ title: '运单号已复制', icon: 'success' }) })
+}
 
 // 充值订单: 不能用元宝支付买元宝, 只支持微信/支付宝
 const isRechargeOrder = computed(() => order.value?.order_type === 'recharge')
@@ -804,5 +844,45 @@ function goShop() {
   .qr-pay-tip-sub { font-size: 13px; }
   .qr-pay-close { font-size: 15px; margin-top: 18px; }
 }
+
+/* ===== 物流信息卡片 ===== */
+.lg-card { padding: 24rpx 24rpx 8rpx; }
+.lg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18rpx;
+  border-bottom: 1rpx solid #e8e2da;
+}
+.lg-title { font-size: 30rpx; font-weight: 600; color: #2a2a2a; }
+.lg-status {
+  font-size: 24rpx;
+  padding: 4rpx 18rpx;
+  border-radius: 999rpx;
+}
+.lg-status.lg-transit { background: #fdece8; color: #c0392b; }
+.lg-status.lg-shipped { background: #fdf3e2; color: #b07a2a; }
+.lg-status.lg-done { background: #e8f2e0; color: #6e7f5a; }
+.lg-status.lg-refund { background: #efeadf; color: #8a857c; }
+.lg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+.lg-label { font-size: 26rpx; color: #8a857c; flex-shrink: 0; }
+.lg-value { font-size: 26rpx; color: #2a2a2a; margin-left: 24rpx; word-break: break-all; }
+.lg-no { color: #9c1630; font-weight: 600; }
+.lg-copy {
+  font-size: 22rpx;
+  color: #c41e3a;
+  border: 1rpx solid #c41e3a;
+  border-radius: 999rpx;
+  padding: 2rpx 16rpx;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+.lg-tip-row { padding: 10rpx 0 18rpx; }
+.lg-tip { font-size: 22rpx; color: #b4a89a; }
 
 </style>
