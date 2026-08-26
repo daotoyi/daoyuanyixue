@@ -125,7 +125,8 @@
           </view>
         </view>
         <view class="addr-none" v-else>
-          <text>暂无收货地址，请点击右上角新增</text>
+          <text>暂无收货地址</text>
+          <view class="addr-none-btn" @tap="openAddrForm">＋ 新增收货地址</view>
         </view>
       </view>
     </view></view>
@@ -317,18 +318,16 @@ async function loadAddresses() {
   }
 }
 
-/* 点击收货地址: 有地址弹选择列表, 无地址直接弹录入 */
+/* 点击收货地址: 始终弹地址选择列表 (含已有地址/空态提示/新增按钮), 新增按钮再弹录入表单 */
 function chooseAddress() {
   if (!userStore.userInfo.uid) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
-  if (addrList.value.length) {
-    showAddr.value = true
-  } else {
-    openAddrForm()
-  }
+  // 打开前刷新一次地址列表 (避免列表为空/过期)
+  loadAddresses()
+  showAddr.value = true
 }
 
 /* 选择地址 */
@@ -979,6 +978,15 @@ async function submitOrder() {
   padding: 60rpx 0;
   text-align: center;
   color: #8a857c;
+  font-size: 26rpx;
+}
+.addr-none-btn {
+  display: inline-flex;
+  margin-top: 24rpx;
+  padding: 14rpx 44rpx;
+  border-radius: 999rpx;
+  background: #c41e3a;
+  color: #fffafa;
   font-size: 26rpx;
 }
 .af-row {
