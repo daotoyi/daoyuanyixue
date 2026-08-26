@@ -58,16 +58,12 @@
         <image v-if="p.key === 'wechat'" class="pay-icon-img" :src="p.img" mode="aspectFit"></image>
         <text v-else class="pay-icon">{{ p.icon }}</text>
         <text class="pay-name">{{ p.name }}</text>
+        <!-- 选择元宝支付时: 显示自动抵扣提示 -->
+        <text class="pay-deduct" v-if="p.key === 'balance' && payMethod === 'balance' && parseFloat(balance) > 0">
+          抵扣 ¥{{ balanceDiscount }}（消费 {{ usedPoints }} 元宝）
+        </text>
         <view class="pay-check" :class="{ on: payMethod === p.key }">
           <text v-if="payMethod === p.key">✓</text>
-        </view>
-      </view>
-      <!-- 元宝抵扣 (跟随元宝支付方式展示) -->
-      <view class="co-row-line balance-deduct" v-if="hasBalancePay">
-        <text class="line-label">元宝抵扣</text>
-        <view class="balance-right">
-          <text class="line-value">{{ balanceUsed ? '已抵扣 ¥' + balanceDiscount + '（用 ' + usedPoints + ' 元宝）' : '可用 ' + balance + ' 元宝（10元宝=1元）' }}</text>
-          <switch :checked="balanceUsed" color="#c41e3a" style="transform: scale(0.8)" @change="toggleBalance" />
         </view>
       </view>
     </view>
@@ -181,7 +177,6 @@ const addrForm = ref({ name: '', phone: '', detail: '', is_default: false })
 const savingAddr = ref(false)
 const coupons = ref([])
 const selectedCoupon = ref(null)
-const balanceUsed = ref(false)
 const payMethod = ref('wechat')
 const showCoupon = ref(false)
 const submitting = ref(false)
@@ -194,6 +189,9 @@ const qrPayLoading = ref(false)
 let qrPollTimer = null // 轮询支付结果定时器
 
 const balance = computed(() => userStore.userInfo.balance || '0.00')
+
+// 选择"元宝支付"时自动启用元宝抵扣
+const balanceUsed = computed(() => payMethod.value === 'balance')
 
 // 支付方式名: 小程序=微信支付(JSAPI); H5/APP=微信支付(H5收银台)
 const wechatPayName = '微信支付'
@@ -229,9 +227,6 @@ async function loadPayConfig() {
 const subTotal = computed(() =>
   items.value.reduce((s, i) => s + parseFloat(i.price) * i.qty, 0)
 )
-
-// 元宝支付是否在支付方式列表中 (决定是否展示"元宝抵扣"行)
-const hasBalancePay = computed(() => payMethods.value.some((m) => m.key === 'balance'))
 
 const couponDiscount = computed(() => {
   if (!selectedCoupon.value) return 0
@@ -393,14 +388,6 @@ function applyCoupon(c) {
   showCoupon.value = false
 }
 
-function toggleBalance() {
-  const bal = parseFloat(balance.value) || 0
-  if (!balanceUsed.value && bal <= 0) {
-    uni.showToast({ title: '元宝为 0，请先充值', icon: 'none' })
-    return
-  }
-  balanceUsed.value = !balanceUsed.value
-}
 // 元宝实际抵扣金额 (10元宝=1元)
 const balanceDiscount = computed(() => {
   if (!balanceUsed.value) return '0.00'
@@ -746,9 +733,12 @@ async function submitOrder() {
   display: flex;
   align-items: center;
 }
-.balance-deduct {
-  border-top: 1rpx dashed #e8e2da;
-  margin-top: 6rpx;
+/* 元宝支付抵扣提示 (选中元宝支付时显示) */
+.pay-deduct {
+  font-size: 22rpx;
+  color: #9c1630;
+  margin-right: 16rpx;
+  flex-shrink: 0;
 }
 
 /* 支付方式 */
