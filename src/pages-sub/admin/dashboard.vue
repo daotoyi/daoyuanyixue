@@ -117,7 +117,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
-              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
 
@@ -158,7 +158,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后「推荐」页签将不展示对应内容模块</text>
-              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
 
@@ -176,7 +176,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">关闭后「我的」页面将不展示玄学工具板块（默认关闭）</text>
-              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
 
@@ -194,7 +194,7 @@
             </view>
             <view class="settings-actions">
               <text class="settings-tip">默认关闭，开启后与手机号快捷登录上下排列</text>
-              <view class="btn-p sm" v-if="canWrite" @click="saveHomeConfig">保存配置</view>
+              <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
         </view>
@@ -218,7 +218,7 @@
                   </text>
                   <text class="home-pd-meta">{{ pd.day }} {{ pd.time }} · {{ pd.place }} · ¥{{ pd.price }}</text>
                 </view>
-                <view class="home-pd-ops" v-if="canWrite">
+                <view class="home-pd-ops" v-if="canManageHome">
                   <text class="op" @tap="editPandaoSession(pd)">编辑</text>
                   <text class="op danger" @tap="deletePandaoSession(pd)">删除</text>
                 </view>
@@ -250,7 +250,7 @@
             <view class="f-row">
               <text class="f-label">封面图</text>
               <view class="f-input-wrap">
-                <view class="f-row-inline" v-if="canWrite">
+                <view class="f-row-inline" v-if="canManageHome">
                   <view class="btn-p plain sm" @click="uploadPandaoCover">上传封面</view>
                   <image class="cover-preview" v-if="pdForm.cover" :src="pdForm._coverUrl || pdForm.cover" mode="aspectFill" @tap="previewPandaoCover"></image>
                   <text class="f-label-sm" v-if="pdForm.cover" @tap="pdForm.cover = ''">移除</text>
@@ -264,7 +264,7 @@
             </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
             <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea" v-model="pdForm.content" placeholder="详情页活动介绍（可换行）" /></view>
-            <view class="settings-actions" v-if="canWrite">
+            <view class="settings-actions" v-if="canManageHome">
               <view class="btn-p plain sm" v-if="pdForm.id" @click="pdForm = emptyPdForm()">取消编辑</view>
               <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
             </view>
@@ -280,7 +280,7 @@
                 <view class="home-pd-info">
                   <text class="home-pd-title">{{ fp.weekday !== undefined ? '星期' + ['日','一','二','三','四','五','六'][fp.weekday] + ' ' : '' }}{{ fp.name }}<text v-if="fp.enabled === false" class="home-pd-status st-end">（已取消）</text></text>
                 </view>
-                <view class="home-pd-ops" v-if="canWrite">
+                <view class="home-pd-ops" v-if="canManageHome">
                   <text class="op" @tap="editFixedPandao(i)">编辑</text>
                   <text class="op" @tap="toggleFixedPandao(i)">{{ fp.enabled === false ? '恢复固定' : '取消固定' }}</text>
                   <text class="op danger" @tap="removeFixedPandao(i)">删除</text>
@@ -306,7 +306,7 @@
                 <text class="pill" :class="{ on: fpForm.type === 'offline' }" @tap="fpForm.type = 'offline'">线下</text>
               </view>
             </view>
-            <view class="settings-actions" v-if="canWrite">
+            <view class="settings-actions" v-if="canManageHome">
               <view class="btn-p plain sm" v-if="fpForm._idx >= 0" @click="cancelEditFixedPandao">取消编辑</view>
               <view class="btn-p sm" @click="addFixedPandao">{{ fpForm._idx >= 0 ? '保存修改' : '添加固定活动' }}</view>
             </view>
@@ -1330,10 +1330,12 @@ const ROLE_LABEL = { admin: '超级管理员', operator: '操作管理员', mana
 const canWrite = computed(() => ['admin', 'operator'].includes(userRole.value))
 /* 课程管理权限: 超管(admin)/操作管理员(operator) 可管理, 管理员(manager)/员工(staff) 只能查看 */
 const canManageCourses = computed(() => ['admin', 'operator'].includes(userRole.value))
-/* 用户管理: 超管(admin)/操作管理员(operator) 可写, 管理员(manager) 只读 */
-const canManageUsers = computed(() => ['admin', 'operator'].includes(userRole.value))
-/* 系统设置: 超管(admin)/操作管理员(operator) 可写, 管理员(manager) 只读 */
-const canManageSettings = computed(() => ['admin', 'operator'].includes(userRole.value))
+/* 用户管理: 仅超管(admin)可写 (2026-08-26 用户更正: 三块功能仅超管可设置) */
+const canManageUsers = computed(() => userRole.value === 'admin')
+/* 系统设置: 仅超管可写 */
+const canManageSettings = computed(() => userRole.value === 'admin')
+/* 页面管理: 仅超管可写 */
+const canManageHome = computed(() => userRole.value === 'admin')
 const visibleModules = computed(() => {
   if (userRole.value === 'staff') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))

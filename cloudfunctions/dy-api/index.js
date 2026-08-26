@@ -2962,11 +2962,15 @@ const VIEWER_ROUTES = [
   'admin.aftersales.list',
 ]
 
-// 操作管理员(operator)禁止的操作: 仅数据库运维级 (用户管理/页面管理/系统设置已放行, 2026-08-26 用户确认)
+// 操作管理员(operator)禁止的操作: 用户管理 + 系统设置 + 数据库运维 (2026-08-26 用户确认: 用户管理/页面管理/系统设置仅超管可设置)
 const OPERATOR_BLOCKED = [
+  'admin.users.create',
+  'admin.users.update',
+  'admin.users.delete',
   'admin.renumberUids',
   'admin.assignDaoCodes',
   'admin.recalcVip',
+  'admin.settings.save',
   'admin.db.createCollection',
 ]
 
@@ -3986,6 +3990,11 @@ exports.main = async (event = {}) => {
     // 员工权限细分
     const allowed = await requireStaffAllowed(action, data)
     if (!allowed) return fail('该操作需要超级管理员权限', 403)
+  }
+  // 小程序发布运维接口 (系统设置-小程序管理): 仅超管可操作 (2026-08-26 用户确认: 系统设置仅超管)
+  if (['wxmp.getAuthUrl', 'wxmp.listBound', 'wxmp.getExperienceQr', 'wxmp.uploadCode', 'wxmp.submitAudit', 'wxmp.release'].includes(action)) {
+    const r = await dbUserRole(data)
+    if (r !== 'admin') return fail('该操作需要超级管理员权限', 403)
   }
   try {
     return await handler(data)
