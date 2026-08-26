@@ -512,7 +512,7 @@ onShow(async () => {
 .setting-entry {
   position: absolute;
   right: 36rpx;
-  top: 44rpx;
+  top: 16rpx;
   z-index: 5;
   width: 64rpx;
   height: 64rpx;
@@ -530,7 +530,7 @@ onShow(async () => {
 .home-entry {
   position: absolute;
   right: 200rpx;
-  top: 44rpx;
+  top: 16rpx;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -552,7 +552,7 @@ onShow(async () => {
 .msg-entry {
   position: absolute;
   right: 116rpx;
-  top: 44rpx;
+  top: 16rpx;
   z-index: 5;
   width: 64rpx;
   height: 64rpx;
@@ -585,6 +585,7 @@ onShow(async () => {
   position: relative;
   display: flex;
   align-items: center;
+  margin-top: 60rpx;
 }
 .avatar-wrap {
   position: relative;
@@ -621,6 +622,9 @@ onShow(async () => {
 }
 .user-meta {
   margin-left: 30rpx;
+  flex: 1;
+  min-width: 0;
+  padding-right: 60rpx;
 }
 .name-row {
   display: flex;
@@ -630,6 +634,10 @@ onShow(async () => {
   font-size: 38rpx;
   font-weight: 500;
   color: #fffafa;
+  max-width: 320rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .vip-badge {
   margin-left: 16rpx;

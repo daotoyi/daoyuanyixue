@@ -57,6 +57,7 @@
 - **项目内文件删除免确认 (2026-08-06)**: 项目目录(/Users/wenhua/WorkBuddy/zhs-deploy)内需要删除的文件直接删, 不要问确认
 - **版本号策略 (2026-08-25 用户最新确认)**: **每一次改动都必须升版本号 (patch+1)**, 没有"日常小改动不升版本"的约定。每次改动完成提交前先 `node scripts/bump-version.js && node scripts/gen-version.js` (patch+1), 再构建提交推送; bump 读 git tag 为准
 - **四端同步升版铁律 (2026-08-25)**: 升版本必须 **version.js + build.gradle + 下载页 + git tag 一次同步完成**, 然后 **H5 + 小程序 + APK 全部重建为同一版本号** 再部署, 禁止只为单一端(如只出APK)单独升版造成不同步
+- **APK 构建策略 (2026-08-26 用户确认)**: **Android APK 不随每次迭代自动构建** (H5+小程序照常每次构建部署); 但**版本号始终四端同步递增** (bump 时 build.gradle 一起升, 下载页同步); **当用户需要生成 APK 时, 用当前已同步的版本号直接构建**, 不需要再单独升版本 — 即 APK 永远与 H5线上/小程序/下载页版本一致
 - **APK 构建时序铁律 (2026-08-25)**: ①升版本(bump+gen) ②**先重建 H5** ③`cap sync android`(复制最新 dist/build/h5) ④`gradlew assembleRelease` ⑤复制上传。⚠️ **cap sync 复制的是 dist/build/h5, 若 H5 未重建, APK 内部是旧版本**; ⚠️ **H5 构建会清空 dist/build/h5(含 apk/ 子目录), APK 需在 H5 构建后重新复制**; 验证: `unzip -p app-release.apk "assets/public/assets/version*.js"` 看内部版本号
 - **版本迭代 (2026-08-07 13:30 用户要求)**: 每次提交都升小版本 — 每次改动完成提交前先 `node scripts/bump-version.js && node scripts/gen-version.js` (patch+1), 再构建提交推送
 - **构建策略 (2026-08-07 18:25 用户约定)**: 每次迭代**同步构建 H5 + 小程序并部署**; **APP(APK) 单独提需求才构建**, 不随每次迭代自动构建
