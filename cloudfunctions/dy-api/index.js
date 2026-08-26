@@ -2962,15 +2962,11 @@ const VIEWER_ROUTES = [
   'admin.aftersales.list',
 ]
 
-// 操作管理员(operator)禁止的操作: 用户管理 + 系统设置 + 数据库运维 (其余全放行)
+// 操作管理员(operator)禁止的操作: 仅数据库运维级 (用户管理/页面管理/系统设置已放行, 2026-08-26 用户确认)
 const OPERATOR_BLOCKED = [
-  'admin.users.create',
-  'admin.users.update',
-  'admin.users.delete',
   'admin.renumberUids',
   'admin.assignDaoCodes',
   'admin.recalcVip',
-  'admin.settings.save',
   'admin.db.createCollection',
 ]
 

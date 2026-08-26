@@ -683,7 +683,7 @@
         <view v-else-if="activeModule === 'users'" class="module">
           <view class="module-head">
             <text class="module-title">用户管理（{{ usersFiltered.length }}）</text>
-            <view class="btn-p sm" v-if="userRole === 'admin'" @click="showCreateUser = true">＋ 新建员工/管理员</view>
+            <view class="btn-p sm" v-if="canManageUsers" @click="showCreateUser = true">＋ 新建员工/管理员</view>
           </view>
           <view class="user-stats">
             <view class="us-item us-online">
@@ -1307,7 +1307,6 @@ const verNum = computed(() => APP_VERSION.replace(/^v/, ''))
 
 const modules = [
   { key: 'overview', label: '数据概览', icon: '📊' },
-  { key: 'home', label: '页面管理', icon: '🏠' },
   { key: 'products', label: '商品管理', icon: '🛍' },
   { key: 'courses', label: '课程管理', icon: '📚' },
   { key: 'orders', label: '订单管理', icon: '📦' },
@@ -1316,9 +1315,10 @@ const modules = [
   { key: 'coupons', label: '优惠券', icon: '🎟' },
   { key: 'pandao', label: '盘道管理', icon: '☯️' },
   { key: 'lives', label: '直播管理', icon: '📡' },
-  { key: 'users', label: '用户管理', icon: '👥' },
   { key: 'moments', label: '动态管理', icon: '📝' },
   { key: 'feedbacks', label: '反馈管理', icon: '💬' },
+  { key: 'users', label: '用户管理', icon: '👥' },
+  { key: 'home', label: '页面管理', icon: '🏠' },
   { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
 // 员工权限: 仅概览/商品/课程/订单/直播 (注意: 员工不能登录后台, 此配置保留以防历史会话)
@@ -1330,10 +1330,10 @@ const ROLE_LABEL = { admin: '超级管理员', operator: '操作管理员', mana
 const canWrite = computed(() => ['admin', 'operator'].includes(userRole.value))
 /* 课程管理权限: 超管(admin)/操作管理员(operator) 可管理, 管理员(manager)/员工(staff) 只能查看 */
 const canManageCourses = computed(() => ['admin', 'operator'].includes(userRole.value))
-/* 用户管理: 仅超管可写 (操作管理员/管理员 只读) */
-const canManageUsers = computed(() => userRole.value === 'admin')
-/* 系统设置: 仅超管可写 */
-const canManageSettings = computed(() => userRole.value === 'admin')
+/* 用户管理: 超管(admin)/操作管理员(operator) 可写, 管理员(manager) 只读 */
+const canManageUsers = computed(() => ['admin', 'operator'].includes(userRole.value))
+/* 系统设置: 超管(admin)/操作管理员(operator) 可写, 管理员(manager) 只读 */
+const canManageSettings = computed(() => ['admin', 'operator'].includes(userRole.value))
 const visibleModules = computed(() => {
   if (userRole.value === 'staff') {
     return modules.filter((m) => STAFF_MODULES.includes(m.key))
