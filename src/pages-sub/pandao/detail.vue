@@ -11,7 +11,7 @@
       <view class="pd-meta">
         <view class="pd-meta-item"><text class="pd-meta-icon">🕐</text><text>{{ session.start_date || '' }} {{ session.day }} {{ session.time }}</text></view>
         <view class="pd-meta-item"><text class="pd-meta-icon">📍</text><text>{{ session.place }}</text></view>
-        <view class="pd-meta-item"><text class="pd-meta-icon">💰</text><text class="pd-price" :class="{ 'pd-free': Number(session.price) <= 0 }">{{ Number(session.price) <= 0 ? '免费' : '¥' + session.price }}</text></view>
+        <view class="pd-meta-item"><text class="pd-meta-icon">💰</text><text class="pd-price" :class="{ 'pd-free': isFreePrice(session.price) }">{{ fmtPrice(session.price) }}</text></view>
       </view>
     </view>
 
@@ -28,7 +28,7 @@
       <view class="pd-share-btn" @tap="shareH5"><text>分享</text></view>
       <!-- #endif -->
       <view class="pd-book-btn" :class="{ ok: session._booked }" @tap="bookNow">
-        <text>{{ session._booked ? '已预约' : (Number(session.price) <= 0 ? '免费报名' : '报名预约 ¥' + session.price) }}</text>
+        <text>{{ session._booked ? '已预约' : (isFreePrice(session.price) ? '免费报名' : '报名预约 ¥' + session.price) }}</text>
       </view>
     </view>
   </view>
@@ -40,6 +40,7 @@ import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getPandaoDetail, pandaoBook, pandaoCancel, getPandaoMine } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudUrl } from '../../utils/avatar'
+import { isFreePrice, fmtPrice } from '../../utils/price'
 
 /* 盘道临近提醒: 按 start_date 计算 */
 function nearLabel(p) {

@@ -55,9 +55,9 @@
 
     <!-- 金额明细 -->
     <view class="card">
-      <view class="row"><text class="rk">商品总额</text><text class="rv">{{ Number(order.total_price) <= 0 ? '免费' : '¥' + order.total_price }}</text></view>
+      <view class="row"><text class="rk">商品总额</text><text class="rv">{{ fmtPrice(order.total_price) }}</text></view>
       <view class="row"><text class="rk">运费</text><text class="rv">包邮</text></view>
-      <view class="row total"><text class="rk">实付款</text><text class="rv red">{{ Number(order.total_price) <= 0 ? '免费' : '¥' + order.total_price }}</text></view>
+      <view class="row total"><text class="rk">实付款</text><text class="rv red">{{ fmtPrice(order.total_price) }}</text></view>
     </view>
 
     <!-- 订单信息 -->
@@ -146,6 +146,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
+import { isFreePrice, fmtPrice } from '../../utils/price'
 
 const order = ref(null)
 const orderNo = ref(null)
@@ -393,7 +394,10 @@ async function doPay() {
   // #ifdef MP-WEIXIN
   try {
     const prepay = await wxpayPrepay(orderNo.value)
-    if (prepay && prepay.payment) {
+    if (prepay && prepay.free) {
+      // 免费订单: 已直接完成, 刷新订单状态
+      uni.showToast({ title: '免费订单已完成', icon: 'success' })
+    } else if (prepay && prepay.payment) {
       await wxRequestPayment(prepay.payment)
       uni.showToast({ title: '支付成功', icon: 'success' })
     } else {
@@ -425,6 +429,11 @@ async function doPay() {
   if (isPC()) {
     try {
       const native = await wxpayNative(orderNo.value)
+      if (native && native.free) {
+        uni.showToast({ title: '免费订单已完成', icon: 'success' })
+        await load()
+        return
+      }
       if (native && native.code_url) {
         qrDataUrl.value = await renderQr(native.code_url)
         showQrPay.value = true
@@ -439,6 +448,11 @@ async function doPay() {
   }
   try {
     const h5 = await wxpayH5(orderNo.value)
+    if (h5 && h5.free) {
+      uni.showToast({ title: '免费订单已完成', icon: 'success' })
+      await load()
+      return
+    }
     if (h5 && h5.h5_url) {
       window.location.href = h5.h5_url
       return

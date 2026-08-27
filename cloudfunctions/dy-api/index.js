@@ -2095,6 +2095,12 @@ async function wxpayPrepay(data) {
   if (!order) return fail('订单不存在')
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
   const price = Number(order.total_price)
+  // 免费订单 (价格=0 或后台填"免费"): 无需支付, 直接完成订单
+  const rawP = String(order.total_price == null ? '' : order.total_price).trim()
+  if (rawP === '免费' || (Number(rawP.replace(/[^\d.]/g, '')) || 0) <= 0) {
+    await orderFreeConfirm({ order_no, uid: Number(order.uid) })
+    return ok({ order_no, free: true, message: '免费订单已完成' })
+  }
   if (!price || price <= 0) return fail('订单金额异常')
   const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
   // 取用户 openid (v3 JSAPI 必须)
@@ -2171,6 +2177,12 @@ async function wxpayH5(data) {
   if (!order) return fail('订单不存在')
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
   const price = Number(order.total_price)
+  // 免费订单 (价格=0 或后台填"免费"): 无需支付, 直接完成订单
+  const rawP = String(order.total_price == null ? '' : order.total_price).trim()
+  if (rawP === '免费' || (Number(rawP.replace(/[^\d.]/g, '')) || 0) <= 0) {
+    await orderFreeConfirm({ order_no, uid: Number(order.uid) })
+    return ok({ order_no, free: true, message: '免费订单已完成' })
+  }
   if (!price || price <= 0) return fail('订单金额异常')
   const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
   const wxpay = require('./wxpay-v3')
@@ -2192,6 +2204,12 @@ async function wxpayNative(data) {
   if (!order) return fail('订单不存在')
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
   const price = Number(order.total_price)
+  // 免费订单 (价格=0 或后台填"免费"): 无需支付, 直接完成订单
+  const rawP = String(order.total_price == null ? '' : order.total_price).trim()
+  if (rawP === '免费' || (Number(rawP.replace(/[^\d.]/g, '')) || 0) <= 0) {
+    await orderFreeConfirm({ order_no, uid: Number(order.uid) })
+    return ok({ order_no, free: true, message: '免费订单已完成' })
+  }
   if (!price || price <= 0) return fail('订单金额异常')
   const body = (order.items && order.items.length ? order.items.map((i) => i.name).join('、') : '道元易学-订单').slice(0, 127)
   const wxpay = require('./wxpay-v3')
@@ -2396,6 +2414,12 @@ async function wxmpScheme(data) {
   const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
   if (!order) return fail('订单不存在')
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
+  // 免费订单 (价格=0 或后台填"免费"): 无需支付, 直接完成订单
+  const rawP = String(order.total_price == null ? '' : order.total_price).trim()
+  if (rawP === '免费' || (Number(rawP.replace(/[^\d.]/g, '')) || 0) <= 0) {
+    await orderFreeConfirm({ order_no, uid: Number(order.uid) })
+    return ok({ order_no, free: true, message: '免费订单已完成' })
+  }
   const token = await getWxAccessToken()
   if (!token) return fail('小程序未配置（缺少 AppSecret），请在服务端 config.local.js 配置后重试')
   // 小程序页面路径: 订单详情页 (分包 pages-sub/order/detail), 打开后自动进入支付
@@ -2644,16 +2668,18 @@ async function pandaoBook(data) {
   const list = Array.isArray(sessions) ? sessions : (sessions.data || [])
   const session = list.find((s) => s.id === Number(session_id))
   if (!session) return fail('活动场次不存在')
-  // 创建预约订单 (order_type=appointment); 价格=0 免费场次直接完成, 无需支付
-  const isFree = Number(session.price) <= 0
+  // 创建预约订单 (order_type=appointment); 价格=0 或后台填"免费" → 免费场次直接完成, 无需支付
+  const rawPrice = String(session.price == null ? '' : session.price).trim()
+  const priceNum = Number(rawPrice.replace(/[^\d.]/g, '')) || 0
+  const isFree = rawPrice === '免费' || priceNum <= 0
   const order_no = `DY${Date.now()}${Math.floor(Math.random() * 1000)}`
   await db.collection('orders').add({
     order_no,
     status: isFree ? '已完成' : '待付款',
-    total_price: String(session.price),
+    total_price: isFree ? '0' : rawPrice,
     coupon_discount: 0,
     balance_used: 0,
-    items: [{ id: 'pd' + session.id, name: session.title, price: String(session.price), qty: 1, image: session.cover || '' }],
+    items: [{ id: 'pd' + session.id, name: session.title, price: isFree ? '0' : rawPrice, qty: 1, image: session.cover || '' }],
     pay_method: isFree ? '免费' : 'wechat',
     pay_time: isFree ? new Date().toLocaleString('zh-CN', { hour12: false }) : '',
     address: {},

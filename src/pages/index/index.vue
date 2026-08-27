@@ -56,7 +56,7 @@
               <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
               <text class="rec-pd-time ellipsis-1">🕐 {{ pd.start_date || '' }} {{ pd.time }}</text>
               <text class="rec-pd-meta ellipsis-1">📍 {{ pd.place }}</text>
-              <text class="rec-pd-price">{{ Number(pd.price) <= 0 ? '免费' : '¥' + pd.price }}</text>
+              <text class="rec-pd-price">{{ fmtPrice(pd.price) }}</text>
             </view>
           </scroll-view>
         </view>
@@ -71,7 +71,7 @@
             <view class="rec-prod-card" v-for="p in recProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
               <image class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
               <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
-              <text class="rec-prod-price">{{ Number(p.price) <= 0 ? '免费' : '¥' + p.price }}</text>
+              <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
             </view>
           </scroll-view>
         </view>
@@ -86,7 +86,7 @@
             <view class="rec-course-card" v-for="c in recCourses.slice(0, 6)" :key="c.id" @tap="goCourseDetail(c)">
               <image class="rec-course-img" :src="c.cover" mode="aspectFill"></image>
               <text class="rec-course-title ellipsis-1">{{ c.title }}</text>
-              <text class="rec-course-price">{{ Number(c.price) <= 0 ? '免费' : '¥' + c.price }}</text>
+              <text class="rec-course-price">{{ fmtPrice(c.price) }}</text>
             </view>
           </scroll-view>
         </view>
@@ -251,7 +251,7 @@
             </view>
           </view>
           <view class="pandao-foot">
-            <text class="pandao-price">{{ Number(pd.price) <= 0 ? '免费' : '¥' + pd.price }}</text>
+            <text class="pandao-price">{{ fmtPrice(pd.price) }}</text>
             <view class="pandao-btn" :class="{ ok: pd._booked }" @tap.stop="bookPandao(pd)">
               <text>{{ pd._booked ? '已预约' : '报名预约' }}</text>
             </view>
@@ -340,6 +340,7 @@ import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, get
 import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
 import { useUserStore } from '../../store/index'
+import { isFreePrice, fmtPrice } from '../../utils/price'
 
 // tab 顺序固定: 推荐 → 盘道 → 直播 → 动态 (显示与否由后台首页管理开关控制)
 const tabs = ref([
@@ -523,11 +524,17 @@ async function bookPandao(pd) {
   try {
     const res = await pandaoBook({ uid: userStore.userInfo.uid, session_id: pd.id })
     if (res && res.order_no) {
-      // 不立即标记"已预约": 未支付不算预约成功, 支付完成后返回首页由已支付订单标记
-      uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
-      setTimeout(() => {
-        uni.navigateTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
-      }, 800)
+      if (res.free) {
+        // 免费场次: 直接预约成功, 无需支付
+        pd._booked = true
+        uni.showToast({ title: '预约成功', icon: 'success' })
+      } else {
+        // 付费场次: 未支付不算预约成功, 支付完成后返回首页由已支付订单标记
+        uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
+        setTimeout(() => {
+          uni.navigateTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
+        }, 800)
+      }
     }
   } catch (e) {
     uni.showToast({ title: e.message || '报名失败', icon: 'none' })

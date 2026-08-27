@@ -28,7 +28,7 @@
         <view class="co-info">
           <text class="co-name ellipsis-2">{{ i.name }}</text>
           <view class="co-row">
-            <text class="co-price">¥{{ i.price }}</text>
+            <text class="co-price">{{ fmtPrice(i.price) }}</text>
             <text class="co-qty">×{{ i.qty }}</text>
           </view>
         </view>
@@ -72,8 +72,7 @@
     <view class="submit-bar">
       <view class="submit-total">
         <text class="st-label">合计</text>
-        <text class="st-price" :class="{ 'st-free': subTotal <= 0 }">{{ subTotal <= 0 ? '免费' : '¥' + finalPrice }}</text>
-        <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
+        <text class="st-price" :class="{ 'st-free': subTotal <= 0 }">{{ subTotal <= 0 ? '免费' : '¥' + finalPrice }}</text>        <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
       </view>
       <view class="btn-fill btn-submit" @tap="submitOrder">
         <text>{{ submitting ? '提交中...' : '提交订单' }}</text>
@@ -165,6 +164,7 @@ import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpSchem
 import { useUserStore } from '../../store/index'
 import { resolveCloudList } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
+import { priceNum, fmtPrice } from '../../utils/price'
 
 const userStore = useUserStore()
 
@@ -226,7 +226,7 @@ async function loadPayConfig() {
 }
 
 const subTotal = computed(() =>
-  items.value.reduce((s, i) => s + parseFloat(i.price) * i.qty, 0)
+  items.value.reduce((s, i) => s + priceNum(i.price) * i.qty, 0)
 )
 
 const couponDiscount = computed(() => {

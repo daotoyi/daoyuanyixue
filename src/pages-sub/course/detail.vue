@@ -67,11 +67,11 @@
       </template>
       <template v-else>
         <view class="buy-left">
-          <text class="buy-price">{{ Number(course.price) <= 0 ? '免费' : '¥' + course.price }}</text>
-          <text class="buy-origin" v-if="Number(course.price) > 0 && Number(course.ot_price) > 0">¥{{ course.ot_price }}</text>
+          <text class="buy-price">{{ fmtPrice(course.price) }}</text>
+          <text class="buy-origin" v-if="!isFreePrice(course.price) && Number(course.ot_price) > 0">¥{{ course.ot_price }}</text>
         </view>
         <view class="btn-fill btn-buy" @tap="buyCourse">
-          <text>{{ buying ? '购买中...' : (Number(course.price) <= 0 ? '立即学习' : '立即购买') }}</text>
+          <text>{{ buying ? '购买中...' : (isFreePrice(course.price) ? '立即学习' : '立即购买') }}</text>
         </view>
       </template>
     </view>
@@ -86,6 +86,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCourse, teacherInfo, getMyCourses, updateCourseProgress } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { isFreePrice, fmtPrice } from '../../utils/price'
 
 const userStore = useUserStore()
 const course = ref(null)
