@@ -482,9 +482,15 @@ onShow(async () => {
     /* 忽略 */
   }
   // 加载页面配置 (玄学工具开关等, 默认关闭)
+  // 玄学工具板块: 仅微信小程序端受后台开关控制; H5/网站/App 端始终正常显示
   try {
     const cfg = await getPayConfig()
+    // #ifdef MP-WEIXIN
     showTools.value = cfg.show_tools === true
+    // #endif
+    // #ifndef MP-WEIXIN
+    showTools.value = true
+    // #endif
   } catch (e) { /* 默认关闭 */ }
 })
 </script>

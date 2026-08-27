@@ -175,7 +175,7 @@
               </view>
             </view>
             <view class="settings-actions">
-              <text class="settings-tip">关闭后「我的」页面将不展示玄学工具板块（默认关闭）</text>
+              <text class="settings-tip">关闭后仅微信小程序不展示玄学工具，H5/App 正常显示（默认关闭）</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -184,7 +184,6 @@
           <view class="settings-card">
             <view class="settings-desc">
               <text class="sd-title">登录设置</text>
-              <text class="sd-text">开启后登录注册页显示「微信一键登录」，与「手机号快捷登录」上下排列（默认关闭）</text>
             </view>
             <view class="f-row">
               <text class="f-label">显示微信一键登录</text>
