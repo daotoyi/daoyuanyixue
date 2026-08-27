@@ -1533,206 +1533,6 @@ onShow(async () => {
 .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #8a857c; }
 
 /* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
-@media screen and (min-width: 1025px) {
-  .home-page {
-    max-width: 1200px;
-    margin: 0 auto;
-    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
-    min-height: 100vh;
-  }
-  /* 品牌横幅: 不做 PC 特殊放大, 保持与"我的"页头部一致的 rpx 缩放比例 */
-  /* 频道 Tab: PC 放大 */
-  .channel-tabs {
-    padding: 0 24px;
-  }
-  .channel-tab {
-    padding: 22px 0 18px;
-    font-size: 19px;
-  }
-  .tab-line {
-    width: 48px;
-    height: 6px;
-  }
-  /* 盘道活动卡片: 两列网格, 避免全宽扁长条 (左右太宽/上下太矮/封面裁切) */
-  .pandao-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px;
-    padding: 24px;
-  }
-  .pandao-card {
-    margin-bottom: 0;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-  }
-  .pandao-cover {
-    height: auto;
-    aspect-ratio: 16 / 9;
-    margin-bottom: 16px;
-  }
-  .pandao-badge {
-    width: 84px;
-    height: 84px;
-    font-size: 24px;
-    border-radius: 14px;
-  }
-  .pandao-title {
-    font-size: 22px;
-  }
-  .pandao-time,
-  .pandao-place {
-    font-size: 15px;
-    margin-top: 8px;
-  }
-  .pandao-desc {
-    font-size: 14px;
-    margin-top: 10px;
-    line-height: 1.6;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-  }
-  .pandao-foot {
-    margin-top: auto;
-    padding-top: 18px;
-  }
-  .pandao-price {
-    font-size: 26px;
-  }
-  .pandao-btn {
-    font-size: 16px;
-    padding: 10px 30px;
-  }
-  /* 推荐页横滑卡片 (直播/盘道/商品/课程): PC 放大 1.5 倍, 比例协调 */
-  .rec-modules {
-    padding: 0 36px 14px;
-  }
-  .rec-sec {
-    margin-bottom: 64px;
-  }
-  .rec-head {
-    margin-bottom: 30px;
-  }
-  .rec-title {
-    font-size: 36px;
-  }
-  .rec-more {
-    font-size: 20px;
-  }
-  .rec-scroll {
-    padding-bottom: 12px;
-  }
-  .rec-live-card,
-  .rec-pd-card,
-  .rec-prod-card,
-  .rec-course-card {
-    width: 570px;
-    padding: 26px;
-    margin-right: 40px;
-    border-radius: 28px;
-  }
-  .rec-live-img,
-  .rec-pd-img,
-  .rec-prod-img,
-  .rec-course-img {
-    height: auto;
-    aspect-ratio: 16 / 9;
-    border-radius: 18px;
-  }
-  .rec-live-title,
-  .rec-prod-name,
-  .rec-course-title,
-  .rec-pd-title {
-    font-size: 30px;
-    margin-top: 22px;
-  }
-  .rec-live-time,
-  .rec-pd-time,
-  .rec-pd-meta,
-  .rec-pd-badge {
-    font-size: 21px;
-    margin-top: 14px;
-  }
-  .rec-pd-price,
-  .rec-prod-price,
-  .rec-course-price {
-    font-size: 34px;
-    margin-top: 18px;
-  }
-  .rec-live-status {
-    font-size: 18px;
-    padding: 6px 22px;
-    margin-top: 16px;
-  }
-  /* 动态精选卡片: PC 放大 1.5 倍 */
-  .rec-moment-card {
-    width: 660px;
-    padding: 26px;
-    margin-right: 40px;
-    border-radius: 28px;
-  }
-  .rec-moment-img {
-    height: 320px;
-    border-radius: 18px;
-  }
-  .rec-moment-content {
-    font-size: 26px;
-    margin-top: 20px;
-    min-height: 72px;
-    line-height: 1.6;
-  }
-  .rec-moment-user {
-    font-size: 21px;
-  }
-  .rec-moment-likes {
-    font-size: 21px;
-  }
-
-  /* 动态流: PC 双列贴图网格, 避免全宽扁长条 */
-  .feed {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px;
-    padding: 28px;
-  }
-  .moment-card {
-    margin-bottom: 0;
-    padding: 20px;
-    border-radius: 18px;
-  }
-  .moment-name {
-    font-size: 18px;
-  }
-  .moment-time {
-    font-size: 13px;
-  }
-  .moment-content {
-    font-size: 17px;
-    line-height: 1.7;
-  }
-  .img-1 { height: 320px; }
-  .img-2 { height: 200px; }
-  .img-3 { height: 180px; }
-  .act-icon {
-    font-size: 22px;
-  }
-  .act-num {
-    font-size: 15px;
-  }
-}
-@media screen and (min-width: 1440px) {
-  .home-page {
-    max-width: 1320px;
-  }
-  /* 超宽屏: 动态流三列 */
-  .feed {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-
 /* ===== 推荐页内容模块 (直播/盘道/商品/课程) ===== */
 .rec-modules {
   padding: 0 24rpx 8rpx;
@@ -1917,6 +1717,227 @@ onShow(async () => {
 .rec-moment-likes {
   font-size: 20rpx;
   color: #8a857c;
+}
+
+@media screen and (min-width: 1025px) {
+  .home-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
+    min-height: 100vh;
+  }
+  /* 品牌横幅: 不做 PC 特殊放大, 保持与"我的"页头部一致的 rpx 缩放比例 */
+  /* 频道 Tab: PC 放大 */
+  .channel-tabs {
+    padding: 0 24px;
+  }
+  .channel-tab {
+    padding: 22px 0 18px;
+    font-size: 19px;
+  }
+  .tab-line {
+    width: 48px;
+    height: 6px;
+  }
+  /* 盘道活动卡片: 两列网格, 避免全宽扁长条 (左右太宽/上下太矮/封面裁切) */
+  .pandao-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    padding: 24px;
+  }
+  .pandao-card {
+    margin-bottom: 0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+  }
+  .pandao-cover {
+    height: auto;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 16px;
+  }
+  .pandao-badge {
+    width: 84px;
+    height: 84px;
+    font-size: 24px;
+    border-radius: 14px;
+  }
+  .pandao-title {
+    font-size: 22px;
+  }
+  .pandao-time,
+  .pandao-place {
+    font-size: 15px;
+    margin-top: 8px;
+  }
+  .pandao-desc {
+    font-size: 14px;
+    margin-top: 10px;
+    line-height: 1.6;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+  }
+  .pandao-foot {
+    margin-top: auto;
+    padding-top: 18px;
+  }
+  .pandao-price {
+    font-size: 26px;
+  }
+  .pandao-btn {
+    font-size: 16px;
+    padding: 10px 30px;
+  }
+  /* 推荐页横滑卡片 (直播/盘道/商品/课程): PC 保持 v1.11.208 的 rpx 换算尺寸 (与移动端 v1.11.173 尺寸互相独立) */
+  .rec-modules {
+    padding: 0 24rpx 8rpx;
+  }
+  .rec-sec {
+    margin-bottom: 28rpx;
+  }
+  .rec-head {
+    margin-bottom: 16rpx;
+  }
+  .rec-title {
+    font-size: 30rpx;
+  }
+  .rec-more {
+    font-size: 24rpx;
+  }
+  .rec-scroll {
+    padding-bottom: 0;
+  }
+  .rec-live-card,
+  .rec-pd-card,
+  .rec-prod-card,
+  .rec-course-card {
+    width: 330rpx;
+    margin-right: 24rpx;
+    border-radius: 21rpx;
+    padding: 18rpx;
+  }
+  .rec-live-img,
+  .rec-pd-img,
+  .rec-prod-img,
+  .rec-course-img {
+    height: 195rpx;
+    border-radius: 15rpx;
+  }
+  .rec-live-title,
+  .rec-prod-name,
+  .rec-course-title,
+  .rec-pd-title {
+    margin-top: 15rpx;
+    font-size: 26rpx;
+  }
+  .rec-live-time {
+    margin-top: 9rpx;
+    font-size: 22rpx;
+  }
+  .rec-live-status {
+    margin-top: 9rpx;
+    font-size: 22rpx;
+    padding: 3rpx 18rpx;
+  }
+  .rec-pd-badge {
+    font-size: 22rpx;
+    padding: 3rpx 18rpx;
+  }
+  .rec-pd-time {
+    margin-top: 9rpx;
+    font-size: 22rpx;
+  }
+  .rec-pd-meta {
+    margin-top: 9rpx;
+    font-size: 22rpx;
+  }
+  .rec-pd-price,
+  .rec-prod-price,
+  .rec-course-price {
+    margin-top: 12rpx;
+    font-size: 30rpx;
+  }
+  .rec-pd-img {
+    height: 195rpx;
+    border-radius: 15rpx;
+    margin-bottom: 12rpx;
+  }
+  /* 动态精选卡片: PC 保持 v1.11.208 尺寸 */
+  .rec-moment-card {
+    width: 420rpx;
+    margin-right: 24rpx;
+    border-radius: 21rpx;
+    padding: 18rpx;
+  }
+  .rec-moment-img {
+    height: 225rpx;
+    border-radius: 15rpx;
+  }
+  .rec-moment-fallback {
+    font-size: 60rpx;
+  }
+  .rec-moment-content {
+    margin-top: 15rpx;
+    font-size: 26rpx;
+    line-height: 1.5;
+    min-height: 108rpx;
+  }
+  .rec-moment-foot {
+    margin-top: 12rpx;
+  }
+  .rec-moment-user {
+    font-size: 22rpx;
+    max-width: 240rpx;
+  }
+  .rec-moment-likes {
+    font-size: 22rpx;
+  }
+
+
+
+  /* 动态流: PC 双列贴图网格, 避免全宽扁长条 */
+  .feed {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    padding: 28px;
+  }
+  .moment-card {
+    margin-bottom: 0;
+    padding: 20px;
+    border-radius: 18px;
+  }
+  .moment-name {
+    font-size: 18px;
+  }
+  .moment-time {
+    font-size: 13px;
+  }
+  .moment-content {
+    font-size: 17px;
+    line-height: 1.7;
+  }
+  .img-1 { height: 320px; }
+  .img-2 { height: 200px; }
+  .img-3 { height: 180px; }
+  .act-icon {
+    font-size: 22px;
+  }
+  .act-num {
+    font-size: 15px;
+  }
+}
+@media screen and (min-width: 1440px) {
+  .home-page {
+    max-width: 1320px;
+  }
+  /* 超宽屏: 动态流三列 */
+  .feed {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 
