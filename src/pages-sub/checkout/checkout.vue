@@ -72,7 +72,7 @@
     <view class="submit-bar">
       <view class="submit-total">
         <text class="st-label">合计</text>
-        <text class="st-price">¥{{ finalPrice }}</text>
+        <text class="st-price" :class="{ 'st-free': subTotal <= 0 }">{{ subTotal <= 0 ? '免费' : '¥' + finalPrice }}</text>
         <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
       </view>
       <view class="btn-fill btn-submit" @tap="submitOrder">
@@ -161,7 +161,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder, wxpayQuerySync } from '../../api/api'
+import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, orderFreeConfirm, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder, wxpayQuerySync } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudList } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
@@ -482,6 +482,19 @@ async function submitOrder() {
       uid: userStore.userInfo.uid || 0,
       course_id: courseId.value || 0,
     })
+    // 免费订单 (后台价格=0): 直接完成, 不拉起支付; 仅按原始商品价判断, 避免元宝抵扣到0被误判
+    if (subTotal.value <= 0) {
+      try {
+        await orderFreeConfirm({ order_no: order.order_no, uid: userStore.userInfo.uid })
+      } catch (e) { /* 免费确认失败也跳详情页查看状态 */ }
+      clearSelected()
+      uni.showToast({ title: '下单成功', icon: 'success' })
+      setTimeout(() => {
+        uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
+      }, 600)
+      submitting.value = false
+      return
+    }
     // 微信小程序: JSAPI 微信支付; 其他端: 微信H5收银台/元宝支付
     // #ifdef MP-WEIXIN
     try {
@@ -806,6 +819,10 @@ async function submitOrder() {
   font-weight: 500;
   color: #9c1630;
   margin-left: 8rpx;
+}
+.st-price.st-free {
+  color: #2a9d3f;
+  font-size: 36rpx;
 }
 .st-origin {
   font-size: 20rpx;

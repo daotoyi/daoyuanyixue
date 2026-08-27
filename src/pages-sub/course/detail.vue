@@ -67,11 +67,11 @@
       </template>
       <template v-else>
         <view class="buy-left">
-          <text class="buy-price">¥{{ course.price }}</text>
-          <text class="buy-origin">¥{{ course.ot_price }}</text>
+          <text class="buy-price">{{ Number(course.price) <= 0 ? '免费' : '¥' + course.price }}</text>
+          <text class="buy-origin" v-if="Number(course.price) > 0 && Number(course.ot_price) > 0">¥{{ course.ot_price }}</text>
         </view>
         <view class="btn-fill btn-buy" @tap="buyCourse">
-          <text>{{ buying ? '购买中...' : '立即购买' }}</text>
+          <text>{{ buying ? '购买中...' : (Number(course.price) <= 0 ? '立即学习' : '立即购买') }}</text>
         </view>
       </template>
     </view>

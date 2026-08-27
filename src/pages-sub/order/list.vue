@@ -73,7 +73,7 @@
           <view class="order-foot">
             <text class="of-time">{{ o.created_at }}</text>
             <view class="of-right">
-              <text class="of-total">合计 ¥{{ o.total_price }}</text>
+              <text class="of-total">合计 {{ Number(o.total_price) <= 0 ? '免费' : '¥' + o.total_price }}</text>
               <view v-if="o.status === '待付款'" class="btn-fill btn-pay" @tap.stop="doPay(o)">
                 <text>去支付</text>
               </view>

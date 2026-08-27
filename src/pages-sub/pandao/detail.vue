@@ -11,7 +11,7 @@
       <view class="pd-meta">
         <view class="pd-meta-item"><text class="pd-meta-icon">🕐</text><text>{{ session.start_date || '' }} {{ session.day }} {{ session.time }}</text></view>
         <view class="pd-meta-item"><text class="pd-meta-icon">📍</text><text>{{ session.place }}</text></view>
-        <view class="pd-meta-item"><text class="pd-meta-icon">💰</text><text class="pd-price">¥{{ session.price }}</text></view>
+        <view class="pd-meta-item"><text class="pd-meta-icon">💰</text><text class="pd-price" :class="{ 'pd-free': Number(session.price) <= 0 }">{{ Number(session.price) <= 0 ? '免费' : '¥' + session.price }}</text></view>
       </view>
     </view>
 
@@ -28,7 +28,7 @@
       <view class="pd-share-btn" @tap="shareH5"><text>分享</text></view>
       <!-- #endif -->
       <view class="pd-book-btn" :class="{ ok: session._booked }" @tap="bookNow">
-        <text>{{ session._booked ? '已预约' : '报名预约 ¥' + session.price }}</text>
+        <text>{{ session._booked ? '已预约' : (Number(session.price) <= 0 ? '免费报名' : '报名预约 ¥' + session.price) }}</text>
       </view>
     </view>
   </view>
@@ -140,10 +140,16 @@ async function bookNow() {
   try {
     const res = await pandaoBook({ uid: userStore.userInfo.uid, session_id: sessionId.value })
     if (res && res.order_no) {
-      uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
-      setTimeout(() => {
-        uni.redirectTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
-      }, 800)
+      if (res.free) {
+        // 免费场次: 直接预约成功, 无需支付
+        session.value._booked = true
+        uni.showToast({ title: '预约成功', icon: 'success' })
+      } else {
+        uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
+        setTimeout(() => {
+          uni.redirectTo({ url: '/pages-sub/order/detail?order_no=' + res.order_no })
+        }, 800)
+      }
     }
   } catch (e) {
     uni.showToast({ title: e.message || '报名失败', icon: 'none' })

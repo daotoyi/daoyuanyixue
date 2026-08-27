@@ -2644,16 +2644,18 @@ async function pandaoBook(data) {
   const list = Array.isArray(sessions) ? sessions : (sessions.data || [])
   const session = list.find((s) => s.id === Number(session_id))
   if (!session) return fail('活动场次不存在')
-  // 创建预约订单 (order_type=appointment)
+  // 创建预约订单 (order_type=appointment); 价格=0 免费场次直接完成, 无需支付
+  const isFree = Number(session.price) <= 0
   const order_no = `DY${Date.now()}${Math.floor(Math.random() * 1000)}`
   await db.collection('orders').add({
     order_no,
-    status: '待付款',
+    status: isFree ? '已完成' : '待付款',
     total_price: String(session.price),
     coupon_discount: 0,
     balance_used: 0,
     items: [{ id: 'pd' + session.id, name: session.title, price: String(session.price), qty: 1, image: session.cover || '' }],
-    pay_method: 'wechat',
+    pay_method: isFree ? '免费' : 'wechat',
+    pay_time: isFree ? new Date().toLocaleString('zh-CN', { hour12: false }) : '',
     address: {},
     uid: Number(uid),
     course_id: 0,
@@ -2664,7 +2666,7 @@ async function pandaoBook(data) {
     session_place: session.place,
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
-  return ok({ order_no, order_type: 'appointment' })
+  return ok({ order_no, order_type: 'appointment', free: isFree })
 }
 
 /* 取消盘道预约: 未支付直接删除; 已支付自动退款(微信退款/余额退回) */
@@ -2749,6 +2751,32 @@ async function orderPayBalance(data) {
   // 服务号推送: 支付成功 (未绑定/未订阅自动跳过)
   try { await sendGzhMsg(Number(uid), '订单支付成功', `订单 ${order_no} 已支付成功`) } catch (e2) {}
   return ok({ order_no, balance: String(newBal), message: '支付成功' })
+}
+/* 免费订单直接完成 (后台价格=0): 不拉起支付, 点击后直接完成订单 */
+async function orderFreeConfirm(data) {
+  const { order_no, uid } = data
+  if (!order_no || !uid) return fail('参数错误')
+  const order = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可操作')
+  const price = Number(order.total_price) || 0
+  if (price > 0) return fail('非免费订单，请完成支付')
+  // 同步销量 (商品已售/库存, 课程学习人数)
+  try { await syncSalesAfterPay(order) } catch (e) {}
+  const nextStatus = order.order_type === 'appointment' || order.order_type === 'course' || order.order_type === 'tool_unlock' ? '已完成' : '待发货'
+  await db.collection('orders').where({ order_no }).update({
+    status: nextStatus,
+    pay_method: '免费',
+    balance_used: 0,
+    pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+  })
+  // 免费课程自动发课
+  if (order.order_type === 'course' && order.course_id) {
+    try { await buyCourse({ uid: Number(uid), course_id: order.course_id }) } catch (e) {}
+  }
+  // 服务号推送: 下单成功
+  try { await sendGzhMsg(Number(uid), '订单完成', `免费订单 ${order_no} 已完成`) } catch (e2) {}
+  return ok({ order_no, message: '免费订单已完成' })
 }
 /* 支付宝支付下单 (预约订单等): 需在后台配置支付宝商户 (appid/私钥), 未配置返回明确提示 */
 async function alipayPrepay(data) {
@@ -3857,6 +3885,7 @@ const ROUTES = {
   'pandao.cancel': pandaoCancel,
   'pandao.mine': pandaoMine,
   'order.payBalance': orderPayBalance,
+  'order.freeConfirm': orderFreeConfirm,
   'order.alipayPrepay': alipayPrepay,
   'storage.getUploadUrl': storageGetUploadUrl,
   'storage.uploadBase64': storageUploadBase64,

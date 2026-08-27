@@ -12,8 +12,8 @@
 
     <view class="info-card" v-if="product">
       <view class="price-row">
-        <text class="price">¥{{ product.price }}</text>
-        <text class="otprice">¥{{ product.ot_price }}</text>
+        <text class="price">{{ Number(product.price) <= 0 ? '免费' : '¥' + product.price }}</text>
+        <text class="otprice" v-if="Number(product.price) > 0 && Number(product.ot_price) > 0">¥{{ product.ot_price }}</text>
         <text class="sales">已售 {{ product.sales }}</text>
       </view>
       <text class="p-name">{{ product.name }}</text>

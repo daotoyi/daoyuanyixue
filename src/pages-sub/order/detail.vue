@@ -55,9 +55,9 @@
 
     <!-- 金额明细 -->
     <view class="card">
-      <view class="row"><text class="rk">商品总额</text><text class="rv">¥{{ order.total_price }}</text></view>
+      <view class="row"><text class="rk">商品总额</text><text class="rv">{{ Number(order.total_price) <= 0 ? '免费' : '¥' + order.total_price }}</text></view>
       <view class="row"><text class="rk">运费</text><text class="rv">包邮</text></view>
-      <view class="row total"><text class="rk">实付款</text><text class="rv red">¥{{ order.total_price }}</text></view>
+      <view class="row total"><text class="rk">实付款</text><text class="rv red">{{ Number(order.total_price) <= 0 ? '免费' : '¥' + order.total_price }}</text></view>
     </view>
 
     <!-- 订单信息 -->
@@ -262,6 +262,7 @@ const payName = computed(() => {
     alipay: '支付宝',
     balance: '元宝支付',
     余额: '元宝支付',
+    免费: '免费',
   }
   return m[order.value?.pay_method] || '微信支付'
 })

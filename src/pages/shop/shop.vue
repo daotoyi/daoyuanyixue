@@ -59,8 +59,8 @@
                 <view class="goods-info">
                   <text class="goods-name ellipsis-2">{{ p.name }}</text>
                   <view class="goods-price-row">
-                    <text class="goods-price">¥{{ p.price }}</text>
-                    <text class="goods-otprice">¥{{ p.ot_price }}</text>
+                    <text class="goods-price">{{ Number(p.price) <= 0 ? '免费' : '¥' + p.price }}</text>
+                    <text class="goods-otprice" v-if="Number(p.price) > 0 && Number(p.ot_price) > 0">¥{{ p.ot_price }}</text>
                   </view>
                   <text class="goods-sales">已售 {{ p.sales }}</text>
                 </view>
@@ -92,8 +92,8 @@
                 <view class="goods-info">
                   <text class="goods-name ellipsis-2">{{ p.name }}</text>
                   <view class="goods-price-row">
-                    <text class="goods-price">¥{{ p.price }}</text>
-                    <text class="goods-otprice">¥{{ p.ot_price }}</text>
+                    <text class="goods-price">{{ Number(p.price) <= 0 ? '免费' : '¥' + p.price }}</text>
+                    <text class="goods-otprice" v-if="Number(p.price) > 0 && Number(p.ot_price) > 0">¥{{ p.ot_price }}</text>
                   </view>
                   <text class="goods-sales">已售 {{ p.sales }}</text>
                 </view>
