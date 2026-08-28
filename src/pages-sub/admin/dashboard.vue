@@ -1309,6 +1309,16 @@ const modules = [
   { key: 'pandao', label: '盘道管理', icon: '☯️' },
   { key: 'lives', label: '直播管理', icon: '📡' },
   { key: 'products', label: '商品管理', icon: '🛍' },
+  { key: 'courses', label: '课程管理', icon: '📚' },
+  { key: 'orders', label: '订单管理', icon: '📦' },
+  { key: 'orderAnalysis', label: '订单分析', icon: '📈' },
+  { key: 'aftersales', label: '售后管理', icon: '🛠' },
+  { key: 'coupons', label: '优惠券', icon: '🎟' },
+  { key: 'moments', label: '动态管理', icon: '📝' },
+  { key: 'feedbacks', label: '反馈管理', icon: '💬' },
+  { key: 'users', label: '用户管理', icon: '👥' },
+  { key: 'home', label: '页面管理', icon: '🏠' },
+  { key: 'settings', label: '系统设置', icon: '⚙️' },
 ]
 // 员工权限: 仅概览/盘道/直播/商品 (注意: 员工不能登录后台, 此配置保留以防历史会话)
 const STAFF_MODULES = ['overview', 'pandao', 'lives', 'products']
