@@ -51,8 +51,8 @@
           <view class="lesson-main">
             <view class="lesson-name-row">
               <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
-              <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
               <text class="lesson-pending" v-if="!ep.video">课程待更新</text>
+              <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
             </view>
             <text class="lesson-text" v-if="ep.text">{{ ep.text }}</text>
           </view>
@@ -341,8 +341,13 @@ function startLearn() {
   align-items: center;
 }
 .lesson-name {
+  flex: 1;
+  min-width: 0;
   font-size: 26rpx;
   color: #2a2a2a;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 /* 课时文本说明: 显示在课时名下方 */
 .lesson-text {
@@ -356,16 +361,18 @@ function startLearn() {
 }
 .lesson-lock {
   font-size: 26rpx;
+  flex-shrink: 0;
+  margin-left: 12rpx;
 }
-/* 课时未上传视频标记 */
+/* 课时未上传视频标记: 贴着右侧的锁 */
 .lesson-pending {
-  margin-left: auto;
   font-size: 20rpx;
   color: #b0804a;
   background: #f7eddd;
   border-radius: 999rpx;
   padding: 2rpx 16rpx;
   flex-shrink: 0;
+  margin-left: auto;
 }
 .lesson-more {
   text-align: center;
