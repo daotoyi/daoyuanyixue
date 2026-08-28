@@ -218,6 +218,8 @@
                   <text class="home-pd-meta">{{ pd.day }} {{ pd.time }} · {{ pd.place }} · ¥{{ pd.price }}</text>
                 </view>
                 <view class="home-pd-ops" v-if="canManageHome">
+                  <text class="op" @tap="movePandao(pd, -1)">↑</text>
+                  <text class="op" @tap="movePandao(pd, 1)">↓</text>
                   <text class="op" @tap="editPandaoSession(pd)">编辑</text>
                   <text class="op danger" @tap="deletePandaoSession(pd)">删除</text>
                 </view>
@@ -262,7 +264,7 @@
               </view>
             </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
-            <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea" v-model="pdForm.content" placeholder="详情页活动介绍（可换行）" /></view>
+            <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea pd-content-ta" v-model="pdForm.content" placeholder="详情页活动介绍（可换行，不限字数）" /></view>
             <view class="settings-actions" v-if="canManageHome">
               <view class="btn-p plain sm" v-if="pdForm.id" @click="pdForm = emptyPdForm()">取消编辑</view>
               <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
@@ -772,6 +774,8 @@
               <text class="td w-time">{{ l.start_time || '-' }}</text>
               <text class="td w-status" :class="'ls-' + l.status">{{ { live: '直播中', upcoming: '未开始', ended: '已结束' }[l.status] || l.status }}</text>
               <view class="td w-ops ops" v-if="canWrite">
+                <text class="op" @tap="moveLive(l, -1)">↑</text>
+                <text class="op" @tap="moveLive(l, 1)">↓</text>
                 <text class="op" @tap="openLiveForm(l)">编辑</text>
               </view>
             </view>
@@ -1766,6 +1770,44 @@ function editPandaoSession(pd) {
     cover: pd.cover || '',
   }
   pdForm.value._coverUrl = pd._coverUrl || ''
+}
+
+/* 盘道场次排序: 交换 sort (后台顺序与首页推荐页同步) */
+async function movePandao(pd, dir) {
+  const list = homePandaoList.value
+  const idx = list.findIndex((x) => x.id === pd.id)
+  if (idx < 0) return
+  const target = idx + dir
+  if (target < 0 || target >= list.length) return uni.showToast({ title: dir < 0 ? '已在最前' : '已在最后', icon: 'none' })
+  const a = list[idx]
+  const b = list[target]
+  try {
+    await adminPandaoUpdate({ id: a.id, sort: b.sort || b.id })
+    await adminPandaoUpdate({ id: b.id, sort: a.sort || a.id })
+    uni.showToast({ title: '已调整顺序', icon: 'none' })
+    await loadPandaoConfig()
+  } catch (e) {
+    uni.showToast({ title: '调整失败: ' + (e.message || ''), icon: 'none' })
+  }
+}
+
+/* 直播排序: 交换 sort (推荐页直播顺序同步) */
+async function moveLive(l, dir) {
+  const list = lives.value
+  const idx = list.findIndex((x) => x.id === l.id)
+  if (idx < 0) return
+  const target = idx + dir
+  if (target < 0 || target >= list.length) return uni.showToast({ title: dir < 0 ? '已在最前' : '已在最后', icon: 'none' })
+  const a = list[idx]
+  const b = list[target]
+  try {
+    await adminLiveUpdate({ id: a.id, sort: b.sort || b.id })
+    await adminLiveUpdate({ id: b.id, sort: a.sort || a.id })
+    uni.showToast({ title: '已调整顺序', icon: 'none' })
+    await loadModule('lives')
+  } catch (e) {
+    uni.showToast({ title: '调整失败: ' + (e.message || ''), icon: 'none' })
+  }
 }
 
 async function deletePandaoSession(pd) {
@@ -4448,6 +4490,12 @@ onMounted(async () => {
   padding: 14rpx 20rpx;
   font-size: 26rpx;
   color: #2a2a2a;
+}
+/* 盘道详情内容: 长文编辑 (不限字数, 较高文本域) */
+.pd-content-ta {
+  height: 320rpx;
+  min-height: 320rpx;
+  line-height: 1.6;
 }
 /* 课程表单: 标题/描述输入框加大 */
 .f-title {

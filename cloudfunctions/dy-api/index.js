@@ -702,8 +702,14 @@ async function publishMoment(data) {
 /* ============ 直播 ============ */
 
 async function listLiveStreams() {
-  const res = await db.collection('live_streams').orderBy('start_time', 'desc').limit(50).get()
-  return ok(res.data)
+  const res = await db.collection('live_streams').limit(100).get()
+  // 排序: 优先 sort 字段 (后台可调整顺序), 无 sort 按开始时间倒序
+  return ok(res.data.sort((a, b) => {
+    const sa = a.sort !== undefined && a.sort !== null ? Number(a.sort) : null
+    const sb = b.sort !== undefined && b.sort !== null ? Number(b.sort) : null
+    if (sa !== null || sb !== null) return (sa ?? 1e9) - (sb ?? 1e9)
+    return String(b.start_time || '').localeCompare(String(a.start_time || ''))
+  }))
 }
 
 /* ============ 优惠券 ============ */
@@ -2665,8 +2671,11 @@ const PANDAO_DEFAULTS = [
 async function pandaoList(data) {
   await ensureCollection('pandao_sessions')
   try {
-    const res = await db.collection('pandao_sessions').orderBy('id', 'asc').limit(50).get()
-    if (res.data && res.data.length) return ok(res.data)
+    const res = await db.collection('pandao_sessions').limit(100).get()
+    if (res.data && res.data.length) {
+      // 排序: 优先 sort 字段, 无 sort 用 id (后台可调整场次顺序)
+      return ok(res.data.sort((a, b) => (Number(a.sort) || a.id) - (Number(b.sort) || b.id)))
+    }
   } catch (e) { /* 集合不存在用默认 */ }
   return ok(PANDAO_DEFAULTS)
 }
@@ -2905,14 +2914,15 @@ async function adminPandaoCreate(data) {
   const nextId = max.data && max.data.length ? (max.data[0].id || 0) + 1 : 1
   const doc = {
     id: nextId,
+    sort: data.sort || nextId,
     title: String(data.title || '').slice(0, 50),
     day: String(data.day || (String(data.time || '').includes('周') ? String(data.time).split(' ')[0] : '周六')).slice(0, 10),
     start_date: String(data.start_date || '').slice(0, 20),
     time: String(data.time || '').slice(0, 30),
     place: String(data.place || '').slice(0, 80),
     price: String(data.price || '0'),
-    desc: String(data.desc || '').slice(0, 200),
-    content: String(data.content || '').slice(0, 2000),
+    desc: String(data.desc || '').slice(0, 2000),
+    content: String(data.content || ''), // 详情页富内容: 不限字数
     cover: String(data.cover || '').slice(0, 500),
     status: String(data.status || '即将开始'),
   }
@@ -2933,14 +2943,15 @@ async function adminPandaoDelete(data) {
 async function adminPandaoUpdate(data) {
   await ensureCollection('pandao_sessions')
   const doc = {}
+  if (data.sort !== undefined) doc.sort = Number(data.sort)
   if (data.title !== undefined) doc.title = String(data.title).slice(0, 50)
   if (data.day !== undefined) doc.day = String(data.day).slice(0, 10)
   if (data.start_date !== undefined) doc.start_date = String(data.start_date).slice(0, 20)
   if (data.time !== undefined) doc.time = String(data.time).slice(0, 30)
   if (data.place !== undefined) doc.place = String(data.place).slice(0, 80)
   if (data.price !== undefined) doc.price = String(data.price)
-  if (data.desc !== undefined) doc.desc = String(data.desc).slice(0, 500)
-  if (data.content !== undefined) doc.content = String(data.content).slice(0, 2000) // 详情页富内容
+  if (data.desc !== undefined) doc.desc = String(data.desc).slice(0, 2000)
+  if (data.content !== undefined) doc.content = String(data.content) // 详情页富内容: 不限字数
   if (data.cover !== undefined) doc.cover = String(data.cover).slice(0, 500) // 封面图
   if (data.status !== undefined) doc.status = String(data.status) // 即将开始/已结束/已发布
   const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).update(doc)
@@ -3161,6 +3172,16 @@ async function adminList(data) {
     res = await query.orderBy('created_at', 'desc').limit(200).get()
   } else {
     res = await query.limit(200).get()
+    // 盘道场次/直播: 按 sort 排序 (后台可调整顺序, 与前台推荐页一致)
+    if (collection === 'pandao_sessions') res.data.sort((a, b) => (Number(a.sort) || a.id) - (Number(b.sort) || b.id))
+    if (collection === 'live_streams') {
+      res.data.sort((a, b) => {
+        const sa = a.sort !== undefined && a.sort !== null ? Number(a.sort) : null
+        const sb = b.sort !== undefined && b.sort !== null ? Number(b.sort) : null
+        if (sa !== null || sb !== null) return (sa ?? 1e9) - (sb ?? 1e9)
+        return String(b.start_time || '').localeCompare(String(a.start_time || ''))
+      })
+    }
   }
   // 用户列表: 管理员 > 受限管理员 > 员工 > 用户, 同级按 uid 升序
   if (collection === 'users') {
@@ -3483,6 +3504,7 @@ async function adminLiveUpdate(data) {
   ;['title', 'anchor', 'cover', 'status', 'start_time', 'end_time', 'description', 'third_party_url', 'viewers'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
+  if (data.sort !== undefined) doc.sort = Number(data.sort)
   await db.collection('live_streams').where({ id: Number(data.id) }).update(doc)
   return ok({ updated: true })
 }
@@ -3492,6 +3514,7 @@ async function adminLiveCreate(data) {
   const nextId = max.data.length ? (max.data[0].id || 0) + 1 : 1
   const doc = {
     id: nextId,
+    sort: data.sort || nextId,
     title: data.title,
     anchor: data.anchor || '主播',
     avatar: data.avatar || '',
