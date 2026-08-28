@@ -467,15 +467,18 @@ async function doPay() {
 
 async function doCancel() {
   const isPaid = order.value.status === '待发货'
+  const isFree = isFreePrice(order.value.total_price)
+  // 免费订单取消不提退款，直接确认
   uni.showModal({
     title: '取消订单',
-    content: isPaid ? '确定取消该订单吗？取消后款项将原路退回。' : '确定取消该订单吗？',
+    content: isPaid && !isFree ? '确定取消该订单吗？取消后款项将原路退回。' : '确定取消该订单吗？',
+    confirmText: isFree ? '确认取消' : undefined,
     success: async (r) => {
       if (!r.confirm) return
       try {
         const res = await cancelOrder({ order_no: orderNo.value })
-        uni.showToast({ title: '订单已取消' + (res && res.refunded ? '，已退款' : ''), icon: 'success' })
-        order.value.status = (res && res.refunded) ? '已退款' : '已取消'
+        uni.showToast({ title: '订单已取消' + (res && res.refunded && !isFree ? '，已退款' : ''), icon: 'success' })
+        order.value.status = (res && res.refunded && !isFree) ? '已退款' : '已取消'
       } catch (e) {
         uni.showToast({ title: e.message || '取消失败', icon: 'none' })
       }
