@@ -1073,6 +1073,9 @@
                   @tap="ep.free = ep.free === false ? true : false"
                 >{{ ep.free === false ? '付费' : '免费' }}</text>
               </view>
+              <view class="ep-row">
+                <textarea class="f-textarea ep-text" v-model="ep.text" placeholder="课时文本说明（选填，显示在课程详情页该课时下方）"></textarea>
+              </view>
             </view>
             <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加课时</view>
           </view>
@@ -4219,6 +4222,14 @@ onMounted(async () => {
 }
 .ep-row:last-child {
   margin-bottom: 0;
+}
+/* 课时文本说明输入框 */
+.ep-text {
+  flex: 1;
+  height: 100rpx;
+  min-height: 100rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 .ep-index {
   width: 44rpx;

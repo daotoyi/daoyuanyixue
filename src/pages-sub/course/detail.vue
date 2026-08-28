@@ -1,8 +1,17 @@
 <template>
   <view class="cd-page" v-if="course">
-    <!-- 封面 -->
-    <view class="cover">
-      <image class="cover-img" :src="course.cover" mode="aspectFill"></image>
+    <!-- 封面 / 视频 (PC 端有视频时默认铺满整个屏幕) -->
+    <view class="cover" :class="{ 'has-video': !!mainVideo }">
+      <video
+        v-if="mainVideo"
+        class="cover-video"
+        :src="mainVideo"
+        controls
+        object-fit="contain"
+        :show-center-play-btn="true"
+        :enable-progress-gesture="true"
+      ></video>
+      <image v-else class="cover-img" :src="course.cover" mode="aspectFill"></image>
       <view class="cover-level" :class="'lv-' + lvCls(course.level)">{{ course.level }}</view>
       <view class="cover-title">{{ course.title }}</view>
     </view>
@@ -48,8 +57,13 @@
       <view class="outline">
         <view class="lesson" v-for="(ep, i) in outlineList" :key="i" @tap="openLesson(i)">
           <view class="lesson-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
-          <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
-          <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
+          <view class="lesson-main">
+            <view class="lesson-name-row">
+              <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
+              <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
+            </view>
+            <text class="lesson-text" v-if="ep.text">{{ ep.text }}</text>
+          </view>
         </view>
         <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
           … 共 {{ course.lessons_count }} 课时
@@ -95,6 +109,15 @@ const teacherInfoData = ref({})
 
 /* 课程大纲: 后台上传的课时(episodes), 无则用课时数生成占位; 点击进入小节页播放 */
 const episodesList = computed(() => (Array.isArray(course.value && course.value.episodes) && course.value.episodes.length ? course.value.episodes : []))
+/* 主视频: 优先取课程单视频, 否则取第一集课时视频 (PC 端详情页顶部默认播放并铺满屏幕) */
+const mainVideo = computed(() => {
+  const c = course.value
+  if (!c) return ''
+  if (c.video) return c.video
+  const eps = Array.isArray(c.episodes) ? c.episodes : []
+  const first = eps.find((e) => e && e.video)
+  return first ? first.video : ''
+})
 const outlineList = computed(() => {
   const eps = episodesList.value
   if (eps.length) return eps
@@ -187,6 +210,13 @@ function startLearn() {
 .cover-img {
   width: 100%;
   height: 100%;
+}
+/* 详情页顶部视频: PC 端默认铺满整个屏幕 (100vw x 自适应高度), 移动端同封面高度 */
+.cover-video {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: block;
 }
 .cover-level {
   position: absolute;
@@ -308,7 +338,7 @@ function startLearn() {
 }
 .lesson {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 18rpx 0;
   border-bottom: 1rpx solid #e8e2da;
 }
@@ -322,12 +352,31 @@ function startLearn() {
   justify-content: center;
   font-size: 22rpx;
   color: #c41e3a;
+  flex-shrink: 0;
+  margin-top: 2rpx;
 }
-.lesson-name {
+.lesson-main {
   flex: 1;
   margin-left: 16rpx;
+  min-width: 0;
+}
+.lesson-name-row {
+  display: flex;
+  align-items: center;
+}
+.lesson-name {
   font-size: 26rpx;
   color: #2a2a2a;
+}
+/* 课时文本说明: 显示在课时名下方 */
+.lesson-text {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a857c;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .lesson-lock {
   font-size: 26rpx;
@@ -399,6 +448,18 @@ function startLearn() {
     margin: 0 auto;
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+  /* PC 端详情页视频默认铺满整个屏幕: 全宽全高, 视频容器脱离页面流 (仅当存在视频时) */
+  .cover.has-video {
+    height: 100vh;
+    width: 100vw;
+    max-width: none;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+  .cover-video {
+    width: 100%;
+    height: 100%;
   }
 }
 @media screen and (min-width: 1440px) {

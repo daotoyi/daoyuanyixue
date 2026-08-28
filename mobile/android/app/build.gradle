@@ -7,7 +7,7 @@ android {
         applicationId "cn.codebuddy.zhs.workbuddy"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 312
+        versionCode 314
         versionName "1.11.217"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

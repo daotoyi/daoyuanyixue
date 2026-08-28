@@ -127,6 +127,54 @@ function goBuy() {
   width: 100%;
   height: 420rpx;
 }
+/* PC 宽屏: 视频默认铺满整个屏幕, 标题/导航半透明浮层叠加 */
+@media screen and (min-width: 1025px) {
+  .ls-page {
+    position: relative;
+    min-height: 100vh;
+    background: #000;
+    padding-bottom: 0;
+  }
+  .ls-head {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 28rpx 32rpx;
+    background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0));
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .ls-title {
+    color: #fff;
+    text-shadow: 0 2rpx 8rpx rgba(0,0,0,0.4);
+  }
+  .ls-sub {
+    color: rgba(255,255,255,0.75);
+    margin-top: 0;
+    margin-left: 24rpx;
+  }
+  .ls-video {
+    margin: 0;
+    border-radius: 0;
+    height: 100vh;
+    width: 100vw;
+  }
+  .ls-player {
+    height: 100vh;
+    width: 100vw;
+  }
+  .ls-nav {
+    position: fixed;
+    bottom: 40rpx;
+    left: 32rpx;
+    right: 32rpx;
+    z-index: 10;
+    margin: 0;
+  }
+}
 .ls-empty {
   margin: 60rpx 24rpx 0;
   padding: 80rpx 0;
