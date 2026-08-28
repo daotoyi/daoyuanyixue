@@ -501,11 +501,12 @@ async function bookPandao(pd) {
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
     return
   }
-  // 已预约 → 取消预约 (已支付自动退款)
+  // 已预约 → 取消预约 (已支付自动退款; 免费场次直接取消)
   if (pd._booked) {
+    const isFreePd = String(pd.price == null ? '' : pd.price).trim() === '免费' || Number(String(pd.price || '').replace(/[^\d.]/g, '')) <= 0
     uni.showModal({
       title: '取消预约',
-      content: '确定取消该场次的预约吗？已支付的费用将自动原路退回。',
+      content: isFreePd ? '确定取消该场次的预约吗？' : '确定取消该场次的预约吗？已支付的费用将自动原路退回。',
       confirmText: '取消预约',
       confirmColor: '#9c1630',
       success: async (res) => {

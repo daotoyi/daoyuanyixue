@@ -1922,48 +1922,59 @@ async function cancelOrder(data) {
   if (order.status === '待发货') {
     const refundAmt = Number(order.total_price) || 0
     const isBalance = String(order.pay_method || '').includes('余额')
-    if (isBalance) {
-      // 元宝支付: 直接退回元宝余额
-      const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
-      const bal = Number((u && u.balance) || 0) || 0
-      await db.collection('users').where({ uid: Number(order.uid) })
-        .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
-    } else if (order.pay_method === '微信支付' || order.pay_method === 'wechat' || order.trade_no) {
-      // 微信支付: 调微信退款 API v3
-      try {
-        const wxpay = require('./wxpay-v3')
-        await wxpay.refund({
-          outTradeNo: order.order_no,
-          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
-          totalFee: Math.round(refundAmt * 100),
-          refundFee: Math.round(refundAmt * 100),
-          reason: '用户取消订单',
-        })
-      } catch (e) {
-        return fail('微信退款发起失败: ' + (e.message || '请稍后重试'))
-      }
+    // 免费订单/金额为0: 直接取消, 不发起退款 (微信退款金额最小为 1 分)
+    const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
+    if (isFreeOrder) {
+      await db.collection('orders').where(cond).update({
+        status: '已取消',
+        refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        refund_reason: '用户取消订单（免费）',
+      })
+      try { await revertSalesAfterRefund(order) } catch (e) {}
     } else {
-      // 其他支付方式兜底: 走微信退款接口 (微信支付订单必填 trade_no)
-      try {
-        const wxpay = require('./wxpay-v3')
-        await wxpay.refund({
-          outTradeNo: order.order_no,
-          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
-          totalFee: Math.round(refundAmt * 100),
-          refundFee: Math.round(refundAmt * 100),
-          reason: '用户取消订单',
-        })
-      } catch (e) {
-        return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+      if (isBalance) {
+        // 元宝支付: 直接退回元宝余额
+        const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
+        const bal = Number((u && u.balance) || 0) || 0
+        await db.collection('users').where({ uid: Number(order.uid) })
+          .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+      } else if (order.pay_method === '微信支付' || order.pay_method === 'wechat' || order.trade_no) {
+        // 微信支付: 调微信退款 API v3
+        try {
+          const wxpay = require('./wxpay-v3')
+          await wxpay.refund({
+            outTradeNo: order.order_no,
+            outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+            totalFee: Math.round(refundAmt * 100),
+            refundFee: Math.round(refundAmt * 100),
+            reason: '用户取消订单',
+          })
+        } catch (e) {
+          return fail('微信退款发起失败: ' + (e.message || '请稍后重试'))
+        }
+      } else {
+        // 其他支付方式兜底: 走微信退款接口 (微信支付订单必填 trade_no)
+        try {
+          const wxpay = require('./wxpay-v3')
+          await wxpay.refund({
+            outTradeNo: order.order_no,
+            outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+            totalFee: Math.round(refundAmt * 100),
+            refundFee: Math.round(refundAmt * 100),
+            reason: '用户取消订单',
+          })
+        } catch (e) {
+          return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+        }
       }
+      await db.collection('orders').where(cond).update({
+        status: '已退款',
+        refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        refund_reason: '用户取消订单',
+      })
+      // 退款回退销量 (商品/课程)
+      try { await revertSalesAfterRefund(order) } catch (e) {}
     }
-    await db.collection('orders').where(cond).update({
-      status: '已退款',
-      refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
-      refund_reason: '用户取消订单',
-    })
-    // 退款回退销量 (商品/课程)
-    try { await revertSalesAfterRefund(order) } catch (e) {}
   } else {
     await db.collection('orders').where(cond).update({ status: '已取消' })
   }
@@ -2713,6 +2724,16 @@ async function pandaoCancel(data) {
   // 已支付 → 自动退款 (防重复退款)
   if (order.status !== '已退款' && order.status !== '已取消') {
     const refundAmt = Number(order.total_price) || 0
+    // 免费场次/金额为0: 直接取消, 不发起退款 (微信退款金额最小为 1 分)
+    const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
+    if (isFreeOrder) {
+      await db.collection('orders').where({ order_no: order.order_no }).update({
+        status: '已取消',
+        refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        refund_reason: '用户取消预约（免费场次）',
+      })
+      return ok({ refunded: false, message: '预约已取消' })
+    }
     const isBalance = String(order.pay_method || '').includes('余额')
     if (isBalance) {
       // 余额/元宝支付: 直接退回余额

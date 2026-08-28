@@ -191,12 +191,18 @@ async function h5UnifiedOrder({ outTradeNo, totalFee, body, clientIp, appUrl }) 
 /** 申请退款 */
 async function refund({ outTradeNo, outRefundNo, totalFee, refundFee, reason }) {
   const c = cfg()
+  const rf = Math.round(refundFee)
+  const tt = Math.round(totalFee)
+  // 微信退款金额最小为 1 分; 0 元订单不发起退款 (免费订单直接取消, 不产生退款)
+  if (rf < 1 || tt < 1) {
+    throw new Error('退款金额无效（免费订单无需退款）')
+  }
   const res = await request('POST', '/v3/refund/domestic/refunds', {
     out_trade_no: outTradeNo,
     out_refund_no: outRefundNo,
     reason: String(reason || '').slice(0, 80),
     notify_url: `https://${c.WXPAY_NOTIFY_HOST || ''}/dy-api/refund/notify`,
-    amount: { refund: Math.round(refundFee), total: Math.round(totalFee), currency: 'CNY' },
+    amount: { refund: rf, total: tt, currency: 'CNY' },
   })
   if (res.status >= 300) throw new Error((res.json && res.json.message) || '退款失败(' + res.status + ')')
   return res.json
