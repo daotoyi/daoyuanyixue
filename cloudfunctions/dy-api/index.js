@@ -3016,6 +3016,7 @@ const VIEWER_ROUTES = [
   'admin.recentOrders',
   'admin.orderAnalysis',
   'admin.settings.get',
+  'admin.oss.videos.list',
   'admin.categories.list',
   'admin.logistics.list',
   'admin.feedbacks.list',
@@ -3819,6 +3820,189 @@ async function adminSettingsSave(data) {
   return ok({ saved: true, group })
 }
 
+/* ============ C/OSS 视频存储管理 ============ */
+/* https GET 下载 (兼容无原生 fetch 的 Node 环境) */
+function httpsGetBuffer(url) {
+  return new Promise((resolve, reject) => {
+    const https = require('https')
+    const u = new URL(url)
+    const req = https.request(
+      { hostname: u.hostname, path: u.pathname + u.search, method: 'GET' },
+      (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error('HTTP ' + res.statusCode))
+          return
+        }
+        const chunks = []
+        res.on('data', (c) => chunks.push(c))
+        res.on('end', () => resolve(Buffer.concat(chunks)))
+      }
+    )
+    req.on('error', reject)
+    req.end()
+  })
+}
+
+/* https PUT 上传二进制 (兼容无原生 fetch 的 Node 环境) */
+function httpsPutBuffer(url, buf) {
+  return new Promise((resolve, reject) => {
+    const https = require('https')
+    const u = new URL(url)
+    const req = https.request(
+      { hostname: u.hostname, path: u.pathname + u.search, method: 'PUT', headers: { 'Content-Type': 'video/mp4', 'Content-Length': buf.length } },
+      (res) => {
+        let d = ''
+        res.on('data', (c) => (d += c))
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve()
+          else reject(new Error('HTTP ' + res.statusCode + ' ' + d.slice(0, 160)))
+        })
+      }
+    )
+    req.on('error', reject)
+    req.write(buf)
+    req.end()
+  })
+}
+
+/* 判断视频是否已存储到 C/OSS (对象存储): 本地 = tcb.qcloud.la / cloud://; C/OSS = cos.myqcloud.com 或 settings.oss.domain */
+function isVideoOnOss(url, ossCfg) {
+  if (!url || typeof url !== 'string') return false
+  if (url.indexOf('cos.ap-') !== -1 || url.indexOf('myqcloud.com') !== -1) return true
+  if (ossCfg && ossCfg.domain && url.indexOf(ossCfg.domain) !== -1) return true
+  return false
+}
+
+/* 列出所有课程视频及存储位置 (本地 / C/OSS) */
+async function adminOssVideosList() {
+  const [ossRes, coursesRes] = await Promise.all([
+    db.collection('settings').where({ group: 'oss' }).limit(1).get(),
+    db.collection('courses').limit(200).get(),
+  ])
+  const ossCfg = ossRes.data[0] || {}
+  const videos = []
+  for (const c of coursesRes.data) {
+    if (!Array.isArray(c.episodes) || !c.episodes.length) continue
+    c.episodes.forEach((ep, i) => {
+      if (!ep || !ep.video) return
+      videos.push({
+        course_id: c.id,
+        course_title: c.title || `课程 ${c.id}`,
+        episode_index: i,
+        episode_title: ep.title || `第 ${i + 1} 课`,
+        video: ep.video,
+        inOss: isVideoOnOss(ep.video, ossCfg),
+      })
+    })
+  }
+  return ok({ videos, oss_enabled: ossCfg.enabled === '1' || ossCfg.enabled === true })
+}
+
+/* 将指定课程课时视频从本地(CloudBase 云存储)搬运到 C/OSS (复制到目标 COS 桶) */
+async function adminOssVideoMigrate(data) {
+  const course_id = Number(data.course_id)
+  const episode_index = Number(data.episode_index)
+  if (!course_id && course_id !== 0) return fail('缺少 course_id')
+  if (episode_index === undefined || episode_index === null) return fail('缺少课时序号')
+
+  const [ossRes, courseRes] = await Promise.all([
+    db.collection('settings').where({ group: 'oss' }).limit(1).get(),
+    db.collection('courses').where({ id: course_id }).limit(1).get(),
+  ])
+  const ossCfg = ossRes.data[0] || {}
+  if (ossCfg.enabled !== '1' && ossCfg.enabled !== true) return fail('C/OSS 存储未启用，请先在系统设置中开启')
+  const provider = (ossCfg.provider || '').toLowerCase()
+  if (!ossCfg.access_key || !ossCfg.secret_key || !ossCfg.bucket || !ossCfg.region) return fail('C/OSS 配置不完整（AccessKey/Bucket/Region 必填）')
+
+  const course = courseRes.data[0]
+  if (!course) return fail('课程不存在')
+  const eps = Array.isArray(course.episodes) ? course.episodes : []
+  const ep = eps[episode_index]
+  if (!ep || !ep.video) return fail('课时不存在或无视频')
+  if (isVideoOnOss(ep.video, ossCfg)) return ok({ migrated: true, already: true, video: ep.video })
+
+  const srcUrl = ep.video
+  // 1) 下载源视频 (CloudBase 云存储 CDN URL → 用 getTempFileURL 换签名 URL → fetch 下载)
+  let dlUrl = srcUrl
+  if (srcUrl.indexOf('tcb.qcloud.la') !== -1) {
+    const m = srcUrl.match(/https:\/\/[^/]+\.tcb\.qcloud\.la\/(.+)$/)
+    if (m) {
+      const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${decodeURIComponent(m[1])}`
+      const tres = await app.getTempFileURL({ fileList: [{ fileID, maxAge: 7200 }] })
+      const fl = tres && tres.fileList && tres.fileList[0]
+      dlUrl = (fl && (fl.tempFileURL || fl.download_url)) || srcUrl
+    }
+  }
+  let buf = null
+  try {
+    buf = await httpsGetBuffer(dlUrl)
+  } catch (e) {
+    return fail('下载源视频失败: ' + (e.message || e))
+  }
+  if (!buf || !buf.length) return fail('下载源视频内容为空')
+
+  // 2) 上传到目标对象存储 (腾讯云 COS: PUT 直传带签名; 阿里云 OSS: 同理 PUT)
+  const extMatch = srcUrl.match(/\.([a-zA-Z0-9]+)(\?|$)/)
+  const ext = extMatch ? extMatch[1] : 'mp4'
+  const key = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`
+
+  if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
+    const upUrl = await cosPutUrl(ossCfg, key)
+    await httpsPutBuffer(upUrl, buf)
+  } else if (provider.indexOf('ali') !== -1 || provider.indexOf('阿里') !== -1 || provider.indexOf('oss') !== -1) {
+    const upUrl = await ossPutUrl(ossCfg, key)
+    await httpsPutBuffer(upUrl, buf)
+  } else {
+    return fail('不支持的服务商: ' + (provider || '未知') + '（仅支持腾讯云COS/阿里云OSS）')
+  }
+
+  // 3) 更新课程课时视频地址为 C/OSS 访问地址
+  const newUrl = (ossCfg.domain ? ossCfg.domain.replace(/\/+$/, '') : `https://${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`) + '/' + key
+  const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: newUrl } : e))
+  await db.collection('courses').doc(course._id).update({ episodes: newEps })
+
+  return ok({ migrated: true, video: newUrl })
+}
+
+/* 腾讯云 COS: 生成预签名 PUT URL */
+function cosPutUrl(cfg, key) {
+  return new Promise((resolve, reject) => {
+    try {
+      const crypto = require('crypto')
+      const now = Math.floor(Date.now() / 1000)
+      const keyTime = `${now - 60};${now + 3600}`
+      const signKey = crypto.createHmac('sha1', cfg.secret_key).update(keyTime).digest('hex')
+      const host = `${cfg.bucket}.cos.${cfg.region}.myqcloud.com`
+      const httpString = `put\n/${key}\n\nhost=${host}\n`
+      const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
+      const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
+      const signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
+      const auth = `q-sign-algorithm=sha1&q-ak=${cfg.access_key}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
+      resolve(`https://${host}/${key}?${auth}`)
+    } catch (e) {
+      reject(new Error('COS 签名失败: ' + (e.message || e)))
+    }
+  })
+}
+
+/* 阿里云 OSS: 生成预签名 PUT URL */
+function ossPutUrl(cfg, key) {
+  return new Promise((resolve, reject) => {
+    try {
+      const crypto = require('crypto')
+      const now = Math.floor(Date.now() / 1000)
+      const expires = now + 3600
+      const object = '/' + key
+      const strToSign = `PUT\n\nvideo/mp4\n${expires}\n/${cfg.bucket}${object}`
+      const signature = crypto.createHmac('sha1', cfg.secret_key).update(strToSign).digest('base64')
+      const auth = encodeURIComponent(signature)
+      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com${object}?OSSAccessKeyId=${cfg.access_key}&Expires=${expires}&Signature=${auth}`)
+    } catch (e) {
+      reject(new Error('OSS 签名失败: ' + (e.message || e)))
+    }
+  })
+}
+
 /* ============ 路由 ============ */
 
 const ROUTES = {
@@ -3952,6 +4136,8 @@ const ROUTES = {
   'admin.orderAnalysis': adminOrderAnalysis,
   'admin.settings.get': adminSettingsGet,
   'admin.settings.save': adminSettingsSave,
+  'admin.oss.videos.list': adminOssVideosList,
+  'admin.oss.videos.migrate': adminOssVideoMigrate,
   'admin.categories.list': adminCateList,
   'admin.categories.create': adminCateCreate,
   'admin.categories.update': adminCateUpdate,

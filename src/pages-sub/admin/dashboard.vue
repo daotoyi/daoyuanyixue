@@ -920,6 +920,40 @@
             </view>
           </view>
 
+          <!-- ===== C/OSS 存储管理 (启用后显示视频存储列表) ===== -->
+          <view class="settings-card" v-if="activeSettingsTab === 'oss' && ossEnabled">
+            <view class="settings-desc">
+              <text class="sd-title">视频存储管理（{{ ossVideoList.length }}）</text>
+              <text class="sd-text">本地存储 = CloudBase 云存储；C/OSS = 对象存储。点击「搬运到 C/OSS」将视频迁移到对象存储。</text>
+            </view>
+            <view class="oss-toolbar">
+              <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
+              <text class="oss-summary" v-if="ossVideoList.length">
+                <text class="oss-stat">本地 {{ ossVideosLocal.length }}</text>
+                <text class="oss-stat">C/OSS {{ ossVideosRemote.length }}</text>
+              </text>
+            </view>
+            <view class="table oss-video-table" v-if="ossVideoList.length">
+              <view class="tr th">
+                <text class="td oss-col-title">课程 / 课时</text>
+                <text class="td oss-col-type">存储</text>
+                <text class="td oss-col-ops">操作</text>
+              </view>
+              <view class="tr" v-for="(v, vi) in ossVideoList" :key="vi">
+                <view class="td oss-col-title">
+                  <text class="oss-course">{{ v.course_title }}</text>
+                  <text class="oss-episode">{{ v.episode_title }}</text>
+                </view>
+                <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? 'C/OSS' : '本地' }}</text>
+                <view class="td oss-col-ops ops">
+                  <text class="op" v-if="!v.inOss && canManageSettings" @tap="migrateOssVideo(v)">搬运到 C/OSS</text>
+                  <text class="op done" v-else>已就绪</text>
+                </view>
+              </view>
+            </view>
+            <view class="empty-tip" v-else-if="!ossLoading">暂无可管理的视频</view>
+          </view>
+
           <!-- ===== 小程序接管 (独立板块, 在"小程序"tab 后) ===== -->
           <view class="settings-card" v-else>
             <view class="settings-desc">
@@ -1034,7 +1068,7 @@
     </view></view>
 
     <!-- ===== 课程编辑弹窗 ===== -->
-    <view class="pp-mask" v-if="showCourse" @tap="showCourse = false"><view class="pp-sheet" @tap.stop>
+    <view class="pp-mask course-mask" v-if="showCourse" @tap="showCourse = false"><view class="pp-sheet course-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ courseForm.id ? '编辑课程' : '新增课程' }}</view>
         <view class="f-row"><text class="f-label">标题</text><input class="f-input f-title" v-model="courseForm.title" placeholder="课程名称" /></view>
@@ -1051,34 +1085,6 @@
         <view class="f-row" v-if="courseForm.cover">
           <text class="f-label">预览</text>
           <image class="cover-preview" :src="courseForm.cover" mode="aspectFill"></image>
-        </view>
-        <!-- 视频集 (多集: 每集标题+视频) -->
-        <view class="f-row" style="align-items: flex-start">
-          <text class="f-label">课程大纲</text>
-          <view class="ep-list" style="flex: 1">
-            <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ei">
-              <view class="ep-row">
-                <text class="ep-index">{{ ei + 1 }}</text>
-                <input class="f-input ep-title" v-model="ep.title" placeholder="课时名（如：第1课 阴阳五行）" />
-                <text class="ep-op" @tap="moveEpisode(ei, -1)">↑</text>
-                <text class="ep-op" @tap="moveEpisode(ei, 1)">↓</text>
-                <text class="ep-op danger" @tap="removeEpisode(ei)">✕</text>
-              </view>
-              <view class="ep-row">
-                <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
-                <text class="btn-p sm" style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
-                <text
-                  class="ep-free"
-                  :class="{ on: ep.free !== false }"
-                  @tap="ep.free = ep.free === false ? true : false"
-                >{{ ep.free === false ? '付费' : '免费' }}</text>
-              </view>
-              <view class="ep-row">
-                <textarea class="f-textarea ep-text" v-model="ep.text" placeholder="课时文本说明（选填，显示在课程详情页该课时下方）"></textarea>
-              </view>
-            </view>
-            <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加课时</view>
-          </view>
         </view>
         <!-- 兼容单视频字段 -->
         <view class="f-row" v-if="courseForm.video && !(courseForm.episodes && courseForm.episodes.length)">
@@ -1106,6 +1112,34 @@
           </view>
         </view>
         <view class="f-row" style="align-items: flex-start"><text class="f-label">描述</text><textarea class="f-textarea f-desc" v-model="courseForm.description" placeholder="课程介绍（可多行）" /></view>
+        <!-- 视频集 (多集: 每集标题+视频+文本) -->
+        <view class="f-row" style="align-items: flex-start">
+          <text class="f-label">课程大纲</text>
+          <view class="ep-list" style="flex: 1">
+            <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ei">
+              <view class="ep-row">
+                <text class="ep-index">{{ ei + 1 }}</text>
+                <input class="f-input ep-title" v-model="ep.title" placeholder="课时名（如：第1课 阴阳五行）" />
+                <text class="ep-op" @tap="moveEpisode(ei, -1)">↑</text>
+                <text class="ep-op" @tap="moveEpisode(ei, 1)">↓</text>
+                <text class="ep-op danger" @tap="removeEpisode(ei)">✕</text>
+              </view>
+              <view class="ep-row">
+                <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
+                <text class="btn-p sm" style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
+                <text
+                  class="ep-free"
+                  :class="{ on: ep.free !== false }"
+                  @tap="ep.free = ep.free === false ? true : false"
+                >{{ ep.free === false ? '付费' : '免费' }}</text>
+              </view>
+              <view class="ep-row">
+                <textarea class="f-textarea ep-text" v-model="ep.text" placeholder="课时文本说明（选填，显示在课程详情页该课时下方）"></textarea>
+              </view>
+            </view>
+            <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加课时</view>
+          </view>
+        </view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showCourse = false">取消</view>
           <view class="btn-p sm" @click="saveCourse">保存</view>
@@ -1295,6 +1329,7 @@ import {
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
+  adminVideosList, adminVideoMigrate,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
@@ -2447,11 +2482,13 @@ function uploadCourseVideo() {
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         courseForm.value.video = url
-        uni.showToast({ title: '视频已上传', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
-      } finally {
         uni.hideLoading()
+        uni.showToast({ title: '视频已上传', icon: 'success' })
+        // C/OSS 启用时提示是否搬运到 C/OSS (单视频 → 第一课时)
+        await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: 0 })
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       }
     },
   })
@@ -2493,11 +2530,42 @@ function uploadEpisodeVideo(i) {
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         courseForm.value.episodes[i].video = url
         if (!courseForm.value.episodes[i].title) courseForm.value.episodes[i].title = `第${i + 1}集`
-        uni.showToast({ title: '已上传', icon: 'success' })
-      } catch (e) {
-        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
-      } finally {
         uni.hideLoading()
+        uni.showToast({ title: '已上传', icon: 'success' })
+        // C/OSS 启用时提示是否搬运到 C/OSS
+        await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+      }
+    },
+  })
+}
+
+/* C/OSS 启用时: 询问是否将刚上传的本地视频搬运到 C/OSS */
+async function maybeMigrateToOss(v) {
+  let ossEnabledFlag = false
+  try {
+    const res = await adminSettingsGet({ group: 'oss' })
+    const cfg = res.configs || {}
+    ossEnabledFlag = cfg.enabled === '1' || cfg.enabled === true
+  } catch (e) { /* 忽略, 默认不提示 */ }
+  if (!ossEnabledFlag) return
+  uni.showModal({
+    title: 'C/OSS 存储',
+    content: '是否将该视频同时存储到 C/OSS（对象存储）？',
+    confirmText: '存储到 C/OSS',
+    cancelText: '暂存本地',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        uni.showLoading({ title: '搬运中...' })
+        await adminVideoMigrate(v)
+        uni.hideLoading()
+        uni.showToast({ title: '已存储到 C/OSS', icon: 'success' })
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: e.message || '搬运失败', icon: 'none' })
       }
     },
   })
@@ -2907,8 +2975,9 @@ const settingsTabs = [
     ],
   },
   {
-    group: 'oss', label: 'OSS 存储', desc: '对象存储，用于图片/文件上传',
+    group: 'oss', label: 'C/OSS 存储', desc: '对象存储，用于图片/文件上传；开启后可管理课程视频本地/C/OSS 存储',
     fields: [
+      { key: 'enabled', label: '启用 C/OSS 存储', type: 'switch', desc: '开启后上传视频时可选择存储到 C/OSS，并可搬运本地视频' },
       { key: 'provider', label: '服务商', placeholder: '腾讯云COS / 阿里云OSS' },
       { key: 'access_key', label: 'AccessKeyId', secret: true },
       { key: 'secret_key', label: 'AccessKeySecret', secret: true },
@@ -2977,6 +3046,12 @@ function hasSecret(key) {
 function switchSettingsTab(group) {
   activeSettingsTab.value = group
   loadSettings(group)
+  if (group === 'oss') {
+    // 稍后等设置加载完成判断是否启用
+    setTimeout(() => {
+      if (ossEnabled.value) loadOssVideos()
+    }, 400)
+  }
 }
 
 async function loadSettings(group) {
@@ -3010,6 +3085,8 @@ async function saveSettings() {
     await adminSettingsSave({ group: cur.group, configs })
     uni.showToast({ title: '配置已保存', icon: 'success' })
     await loadSettings(cur.group)
+    // 保存 C/OSS 配置后若启用则刷新视频列表
+    if (cur.group === 'oss' && ossEnabled.value) loadOssVideos()
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
   } finally {
@@ -3019,6 +3096,40 @@ async function saveSettings() {
 
 function clearSettingsSecret(f) {
   settingsForm.value[f.key] = ''
+}
+
+/* ===== C/OSS 视频存储管理 ===== */
+const ossEnabled = computed(() => settingsForm.value.enabled === '1' || settingsForm.value.enabled === true)
+const ossVideoList = ref([])
+const ossLoading = ref(false)
+const ossVideosLocal = computed(() => ossVideoList.value.filter((v) => !v.inOss))
+const ossVideosRemote = computed(() => ossVideoList.value.filter((v) => v.inOss))
+
+/* 切换到 oss tab 或保存后自动加载视频列表 */
+async function loadOssVideos() {
+  ossLoading.value = true
+  try {
+    const res = await adminVideosList({})
+    ossVideoList.value = Array.isArray(res.videos) ? res.videos : []
+  } catch (e) {
+    uni.showToast({ title: e.message || '加载视频列表失败', icon: 'none' })
+  } finally {
+    ossLoading.value = false
+  }
+}
+
+/* 搬运单个视频到 C/OSS */
+async function migrateOssVideo(v) {
+  try {
+    uni.showLoading({ title: '搬运中...' })
+    await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index })
+    uni.hideLoading()
+    uni.showToast({ title: '已搬运到 C/OSS', icon: 'success' })
+    await loadOssVideos()
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: e.message || '搬运失败', icon: 'none' })
+  }
 }
 
 onMounted(async () => {
@@ -4183,6 +4294,51 @@ onMounted(async () => {
   color: #55524c;
 }
 
+/* C/OSS 视频存储管理 */
+.oss-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16rpx 0;
+}
+.oss-summary {
+  display: flex;
+  gap: 16rpx;
+  font-size: 22rpx;
+  color: #55524c;
+}
+.oss-stat {
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: #f8f5f0;
+}
+.oss-video-table .oss-col-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.oss-course {
+  font-size: 24rpx;
+  color: #2a2a2a;
+  font-weight: 500;
+}
+.oss-episode {
+  font-size: 20rpx;
+  color: #8a857c;
+}
+.oss-col-type {
+  width: 100rpx;
+  flex-shrink: 0;
+}
+.oss-col-ops {
+  width: 180rpx;
+  flex-shrink: 0;
+}
+.op.done {
+  color: #3d7a4e;
+}
+
 /* 弹窗表单 */
 .form-sheet {
   padding: 30rpx;
@@ -4513,6 +4669,20 @@ onMounted(async () => {
     margin: 0 auto;
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+  /* PC 端课程编辑弹窗更宽: 突破底部弹出宽度限制, 垂直居中大面板 */
+  .pp-mask.course-mask {
+    align-items: center;
+  }
+  .course-mask .course-sheet {
+    width: 900px;
+    max-width: 94vw;
+    max-height: 86vh;
+    border-radius: 20rpx;
+    margin: 0 auto;
+  }
+  .course-sheet .form-sheet {
+    max-height: 78vh;
   }
 }
 

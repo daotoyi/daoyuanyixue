@@ -25,7 +25,7 @@
       ></video>
     </view>
     <view class="ls-empty" v-else>
-      <text>本课时暂未上传视频，请稍后再来</text>
+      <text>课程待更新</text>
     </view>
 
     <!-- 上一课 / 下一课 -->

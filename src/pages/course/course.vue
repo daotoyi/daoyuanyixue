@@ -33,6 +33,7 @@
               <view class="course-cover">
                 <image class="course-img" :src="cc.cover" mode="aspectFill"></image>
                 <view class="course-level" :class="'lv-' + lvCls(cc.level)">{{ cc.level }}</view>
+                <view class="course-pending" v-if="!hasCourseVideo(cc)">课程待更新</view>
               </view>
               <view class="course-body-inner">
                 <text class="course-title">{{ cc.title }}</text>
@@ -85,6 +86,14 @@ const currentCate = computed(() =>
 
 function cateCount(id) {
   return (grouped[id] || []).length
+}
+
+/* 课程是否已有视频: 单视频字段或任一课时视频 */
+function hasCourseVideo(c) {
+  if (!c) return false
+  if (c.video) return true
+  if (Array.isArray(c.episodes)) return c.episodes.some((e) => e && e.video)
+  return false
 }
 
 async function switchCate(id) {
@@ -229,6 +238,17 @@ onShow(async () => {
   border-radius: 999rpx;
   font-size: 20rpx;
   color: #fffafa;
+}
+/* 课程待更新标记 (未上传视频) */
+.course-pending {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 8rpx 20rpx;
+  background: rgba(60, 42, 24, 0.72);
+  color: #ffd8a8;
+  font-size: 20rpx;
+  border-top-left-radius: 14rpx;
 }
 .lv-basic { background: #6e7f5a; }
 .lv-inter { background: #c41e3a; }
