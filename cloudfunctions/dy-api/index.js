@@ -2840,16 +2840,22 @@ async function storageGetUploadUrl(data) {
   if (!cloudPath) return fail('缺少 cloudPath')
   try {
     const meta = await app.getUploadMetadata({ cloudPath })
+    console.log('[storageGetUploadUrl] raw for', cloudPath, JSON.stringify(meta))
     const m = meta && meta.data ? meta.data : meta
-    return ok({
+    // 提取所有可能的字段名变体
+    const result = {
       url: m && m.url,
+      host: m && m.host,
       token: m && m.token,
       authorization: m && (m.authorization || m.auth),
+      sig: m && (m.sig || m.signature),
       fileId: m && (m.fileId || m.cosFileId || m.fileID || m.file_id),
       cosFileId: m && (m.cosFileId || m.fileId || m.fileID),
       _dbg: JSON.stringify(meta || null),
-    })
+    }
+    return ok(result)
   } catch (e) {
+    console.error('[storageGetUploadUrl] error:', e.stack || e)
     return fail('获取上传凭证失败: ' + (e.message || e))
   }
 }

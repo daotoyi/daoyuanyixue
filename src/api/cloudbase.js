@@ -271,7 +271,8 @@ export async function getStorage() {
         }
         throw new Error(res.msg || '上传失败')
       }
-      // 3) 降级: 直传 COS
+      // 3) 降级: 直传 COS (增强版 - 增加详细错误诊断)
+      console.log('[CloudBase] 准备获取上传凭证 cloudPath:', cloudPath)
       const meta = await new Promise((resolve, reject) => {
         uni.request({
           url: API_BASE,
@@ -279,13 +280,18 @@ export async function getStorage() {
           data: { action: 'storage.getUploadUrl', data: { cloudPath } },
           timeout: 20000,
           success: (res) => {
+            console.log('[CloudBase] getUploadUrl 响应:', JSON.stringify(res.data))
             if (res.data && res.data.status === 200) resolve(res.data.data || {})
             else reject(new Error((res.data && res.data.msg) || '获取上传凭证失败'))
           },
-          fail: (err) => reject(new Error('网络请求失败: ' + (err.errMsg || ''))),
+          fail: (err) => reject(new Error('获取上传凭证网络失败: ' + (err.errMsg || ''))),
         })
       })
-      if (!meta || !meta.url) throw new Error(meta && meta.msg ? meta.msg : '上传凭证无效')
+      console.log('[CloudBase] 上传凭证原始数据:', JSON.stringify(meta))
+      
+      if (!meta || !meta.url) throw new Error(meta && meta.msg ? meta.msg : '上传凭证无效，缺少 URL')
+      
+      // 读取文件内容
       let body = filePath
       try {
         if (typeof fetch === 'function' && typeof filePath === 'string' && filePath.indexOf('blob:') === 0) {
@@ -294,16 +300,36 @@ export async function getStorage() {
       } catch (e) {
         console.warn('[CloudBase] blob 读取失败, 按原值上传', e)
       }
+      
+      // 打印将要发送到 COS 的关键字段（脱敏）
+      console.log('[CloudBase] COS 直传参数预览:')
+      console.log('  url:', meta.url ? meta.url.slice(0, 60) + '...' : '(无)')
+      console.log('  token:', meta.token ? '(有)' : '(无)')
+      console.log('  authorization(sig):', meta.authorization ? meta.authorization.slice(0, 30) + '...' : '(无)')
+      console.log('  fileId:', meta.fileId || meta.cosFileId ? '(有)' : '(无)')
+      console.log('  cloudPath:', cloudPath)
+      
       const formData = new FormData()
       if (meta.authorization) formData.append('Signature', meta.authorization)
       if (meta.token) formData.append('x-cos-security-token', meta.token)
       if (meta.cosFileId) formData.append('x-cos-meta-fileid', meta.cosFileId)
       formData.append('key', cloudPath)
       formData.append('file', body, cloudPath.split('/').pop() || 'upload.bin')
-      const resp = await fetch(meta.url, { method: 'POST', body: formData })
+      
+      console.log('[CloudBase] 开始 POST 到 COS...')
+      let resp
+      try {
+        resp = await fetch(meta.url, { method: 'POST', body: formData })
+      } catch (fetchErr) {
+        console.error('[CloudBase] fetch 调用异常:', fetchErr)
+        throw new Error('COS 直传网络错误: ' + fetchErr.message + ' (请检查 COS bucket CORS 配置或网络连接)')
+      }
+      
+      console.log('[CloudBase] COS 响应 status:', resp.status, resp.statusText)
       if (!resp.ok) {
         let msg = '上传失败 HTTP ' + resp.status
-        try { msg = msg + ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
+        try { msg = msg + ' ' + (await resp.text()).slice(0, 200) } catch (e2) {}
+        console.error('[CloudBase] COS 上传失败详情:', msg)
         throw new Error(msg)
       }
       return { fileID: meta.fileId || meta.cosFileId }
