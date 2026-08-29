@@ -12,11 +12,33 @@ const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV })
 const db = app.database()
 const _ = db.command
 
-/* CloudBase 短信扩展 (可选): 未安装扩展包时不影响其他功能 */
+/* CloudBase 短信扩展 (可选): 未安装扩展包时不影响其他功能
+   扩展包 name='SMS', 内部通过 https://{env}.service.tcloudbase.com/tcb-ext-sms 调扩展函数
+   前置: 环境需在 CloudBase 控制台安装「短信验证码登录」扩展 (创建 tcb-sms-auth 云函数) */
+let SMS_EXT_NAME = 'SMS'
 try {
   const extSms = require('@cloudbase/extension-sms')
+  if (extSms && extSms.name) SMS_EXT_NAME = extSms.name
   if (extSms && app.registerExtension) app.registerExtension(extSms)
 } catch (e) { /* 扩展包未安装: 仅影响 cloudbase 方案的短信 */ }
+
+/* 调用 CloudBase 短信扩展 (Send/Verify) */
+async function smsExtCall(action, phone, smsCode) {
+  if (!app.invokeExtension) throw new Error('当前环境不支持短信扩展')
+  const opts = { action, app, phone }
+  if (smsCode) opts.smsCode = smsCode
+  try {
+    await app.invokeExtension(SMS_EXT_NAME, opts)
+    return true
+  } catch (e) {
+    const msg = (e && e.message) || String(e || '')
+    // 扩展未安装时 HTTP 调用会失败, 给出可操作的提示
+    if (/404|tcb-ext-sms|getaddrinfo|ENOTFOUND|not found/i.test(msg)) {
+      throw new Error('CloudBase 短信扩展未安装，请先在控制台「扩展能力-短信验证码登录」安装')
+    }
+    throw new Error(msg.replace(/^\[@cloudbase\/extension-sms\]\s*/, ''))
+  }
+}
 
 const ok = (data) => ({ status: 200, data, msg: 'success' })
 const fail = (msg, status = 400) => ({ status, msg })
@@ -966,11 +988,8 @@ async function sendVerifyCode(data) {
 
   // 方案A: CloudBase 短信扩展
   if (provider === 'cloudbase') {
-    if (!app.invokeExtension) {
-      return fail('短信扩展未启用，请先在 CloudBase 控制台安装「短信验证码登录」扩展')
-    }
     try {
-      await app.invokeExtension('sms', { action: 'Send', app, phone: account })
+      await smsExtCall('Send', account)
       return ok({ sent: true, msg: '验证码已发送' })
     } catch (e) {
       return fail('验证码发送失败: ' + (e.message || '请检查短信扩展配置'))
@@ -1022,9 +1041,8 @@ async function verifyCode(account, code, scene) {
 
   // CloudBase 扩展: 用扩展 Verify 校验
   if (provider === 'cloudbase') {
-    if (!app.invokeExtension) return false
     try {
-      await app.invokeExtension('sms', { action: 'Verify', app, phone: accountKey, smsCode: String(code).trim() })
+      await smsExtCall('Verify', accountKey, String(code).trim())
       return true
     } catch (e) {
       return false
