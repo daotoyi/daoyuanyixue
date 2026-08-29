@@ -25,7 +25,7 @@
         <text class="field-label">验证码</text>
         <view class="code-row">
           <input class="field-input code-input" v-model="verifyCode" type="number" maxlength="6" placeholder="请输入验证码" />
-          <view class="btn-p plain code-btn" :class="{ 'code-btn-disabled': codeCountdown > 0 }" @click="sendCode('register')">
+          <view class="btn-p code-btn" :class="{ 'code-btn-disabled': codeCountdown > 0 }" @click="sendCode('register')">
             <text>{{ codeCountdown > 0 ? codeCountdown + 's 后重发' : '获取验证码' }}</text>
           </view>
         </view>
@@ -98,7 +98,7 @@
         </view>
         <view class="wx-auth-row">
           <input class="wx-nick-input" type="number" v-model="forgotCode" maxlength="6" placeholder="请输入验证码" />
-          <view class="btn-p plain forgot-code-btn" :class="{ 'code-btn-disabled': forgotCountdown > 0 }" @click="sendCode('forgot')">
+          <view class="btn-p forgot-code-btn" :class="{ 'code-btn-disabled': forgotCountdown > 0 }" @click="sendCode('forgot')">
             <text>{{ forgotCountdown > 0 ? forgotCountdown + 's 后重发' : '获取验证码' }}</text>
           </view>
         </view>
@@ -514,7 +514,7 @@ async function submit() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60rpx 0 70rpx;
+  padding: 44rpx 0 48rpx;
 }
 .brand-seal {
   width: 120rpx;
@@ -554,18 +554,18 @@ async function submit() {
 .form-card {
   background: #fffafa;
   border-radius: 24rpx;
-  padding: 40rpx 36rpx;
+  padding: 32rpx 36rpx 36rpx;
   box-shadow: 0 8rpx 40rpx rgba(69, 26, 3, 0.15);
 }
 .form-tabs {
   display: flex;
-  margin-bottom: 40rpx;
+  margin-bottom: 28rpx;
   border-bottom: 1rpx solid #e8e2da;
 }
 .ft {
   flex: 1;
   text-align: center;
-  padding-bottom: 20rpx;
+  padding-bottom: 16rpx;
   font-size: 30rpx;
   color: #55524c;
   position: relative;
@@ -587,16 +587,16 @@ async function submit() {
 }
 
 .field {
-  margin-bottom: 30rpx;
+  margin-bottom: 22rpx;
 }
 .field-label {
   display: block;
   font-size: 24rpx;
   color: #55524c;
-  margin-bottom: 12rpx;
+  margin-bottom: 10rpx;
 }
 .field-input {
-  height: 88rpx;
+  height: 84rpx;
   background: #f8f5f0;
   border-radius: 14rpx;
   padding: 0 26rpx;
@@ -612,17 +612,22 @@ async function submit() {
 }
 .code-input {
   flex: 1;
+  min-width: 0;
 }
 .code-btn {
   flex-shrink: 0;
-  min-width: 200rpx;
-  height: 88rpx;
+  width: auto !important;
+  min-width: 208rpx;
+  height: 84rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 14rpx;
   font-size: 26rpx;
-  padding: 0 16rpx;
+  padding: 0 20rpx;
+  background: #c41e3a;
+  color: #fffafa;
+  border: none;
 }
 .code-btn-disabled {
   opacity: 0.55;
@@ -641,6 +646,7 @@ async function submit() {
 /* 忘记密码弹窗内验证码按钮 */
 .forgot-code-btn {
   flex-shrink: 0;
+  width: auto !important;
   min-width: 200rpx;
   height: 72rpx;
   display: flex;
@@ -649,6 +655,9 @@ async function submit() {
   border-radius: 12rpx;
   font-size: 24rpx;
   padding: 0 16rpx;
+  background: #c41e3a;
+  color: #fffafa;
+  border: none;
 }
 
 .err-text {
