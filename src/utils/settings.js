@@ -51,12 +51,13 @@ export function applyTheme() {
   // #endif
   // tabBar 深色适配 (首页/商城/课程/我的 四栏)
   try {
-    uni.setTabBarStyle({
+    const p = uni.setTabBarStyle({
       backgroundColor: dark ? '#1c1712' : '#FFFCF5',
       color: dark ? '#857563' : '#A89A85',
       selectedColor: dark ? '#c4a484' : '#854D0E',
       borderStyle: dark ? 'black' : 'white',
     })
+    if (p && p.catch) p.catch(() => {}) // 非 tabBar 页面 reject → 静默 (try/catch 抓不住异步)
   } catch (e) {
     /* 非 tabBar 环境忽略 */
   }
@@ -105,7 +106,8 @@ export function updateTabBar() {
   const labels = TAB_LABELS[settingsState.lang] || TAB_LABELS.zh
   labels.forEach((text, i) => {
     try {
-      uni.setTabBarItem({ index: i, text })
+      const p = uni.setTabBarItem({ index: i, text })
+      if (p && p.catch) p.catch(() => {}) // 非 tabBar 页面 reject → 静默
     } catch (e) {
       // 非 tabbar 页面忽略
     }

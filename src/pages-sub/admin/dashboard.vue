@@ -1140,15 +1140,15 @@
               </view>
               <view class="ep-row">
                 <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
-                <!-- 上传中: 行内独立显示该课时进度 + 暂停/取消 (支持多课时并行上传) -->
+                <!-- 上传中: 行内独立显示该课时进度 + 暂停/取消 (按钮绑定 ep 对象, 避免并行上传中索引错位) -->
                 <view class="ep-up" v-if="ep._uploading">
                   <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
                   <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
-                  <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ei)">{{ ep._paused ? '继续' : '暂停' }}</text>
-                  <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ei)">取消</text>
+                  <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ep)">{{ ep._paused ? '继续' : '暂停' }}</text>
+                  <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
                   <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
                 </view>
-                <text class="btn-p sm" v-else style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
+                <text class="btn-p sm" v-else style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ep)">上传</text>
                 <text
                   class="ep-free"
                   :class="{ on: ep.free !== false }"
@@ -2613,10 +2613,11 @@ function moveEpisode(i, dir) {
   arr[i] = arr[j]
   arr[j] = t
 }
-/* 上传某一集视频 (行内独立进度 + 暂停/继续/取消, 支持多课时并行上传) */
-function uploadEpisodeVideo(i) {
-  const ep = courseForm.value.episodes[i]
+/* 上传某一集视频 (行内独立进度 + 暂停/继续/取消, 支持多课时并行上传; 绑定 ep 对象防索引错位) */
+function uploadEpisodeVideo(ep) {
   if (!ep) return
+  const i = courseForm.value.episodes.indexOf(ep)
+  if (i < 0) return
   if (ep._uploading) return uni.showToast({ title: '该课时正在上传中', icon: 'none' })
   uni.chooseVideo({
     count: 1,
@@ -2667,9 +2668,9 @@ function uploadEpisodeVideo(i) {
   })
 }
 /* 暂停/继续 上传 (中断所有进行中的分片, 立即暂停; 恢复后自动续传) */
-function togglePauseEpisodeUpload(i) {
-  const ep = courseForm.value.episodes[i]
+function togglePauseEpisodeUpload(ep) {
   if (!ep || !ep._control || !ep._uploading) return
+  console.log('[上传控制] 点击暂停/继续, 当前 paused=', ep._paused, 'abortFns=', ep._control.abortFns ? ep._control.abortFns.size : 0)
   if (ep._paused) {
     ep._control.paused = false
     ep._paused = false
@@ -2684,14 +2685,16 @@ function togglePauseEpisodeUpload(i) {
   }
 }
 /* 取消上传 (立即中断所有分片并清理) */
-function cancelEpisodeUpload(i) {
-  const ep = courseForm.value.episodes[i]
+function cancelEpisodeUpload(ep) {
   if (!ep || !ep._control || !ep._uploading) return
+  console.log('[上传控制] 点击取消, abortFns=', ep._control.abortFns ? ep._control.abortFns.size : 0)
   ep._control.cancelled = true
   ep._cancelled = true
   ep._status = '正在取消…'
   abortAllParts(ep._control) // 立即中断所有并发分片, 不等它们自然结束
   uni.showToast({ title: '正在取消...', icon: 'none' })
+  // 兜底: 1.5s 后仍未结束则再中断一次
+  setTimeout(() => { if (ep && ep._uploading) abortAllParts(ep._control) }, 1500)
 }
 /* 遍历中断 control 中所有在传分片的请求 */
 function abortAllParts(control) {
