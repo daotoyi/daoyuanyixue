@@ -3042,11 +3042,12 @@ async function deleteCoupon(c) {
 
 const settingsTabs = [
   {
-    group: 'sms', label: '短信配置', desc: '验证码与通知短信发送服务',
+    group: 'sms', label: '短信配置', desc: '验证码与通知短信发送服务（腾讯云短信）',
     fields: [
-      { key: 'provider', label: '服务商', placeholder: '腾讯云短信 / 阿里云短信' },
+      { key: 'provider', label: '服务商', placeholder: '腾讯云 / tencent' },
       { key: 'secret_id', label: 'SecretId', secret: true },
       { key: 'secret_key', label: 'SecretKey', secret: true },
+      { key: 'sms_sdk_app_id', label: '短信应用ID(SdkAppId)', placeholder: '140 开头' },
       { key: 'sign', label: '短信签名', placeholder: '如: 真和盛' },
       { key: 'template_id', label: '验证码模板ID' },
       { key: 'region', label: '区域', placeholder: 'ap-guangzhou' },

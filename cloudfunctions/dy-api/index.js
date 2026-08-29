@@ -865,7 +865,7 @@ async function getSmsConfig() {
 
 /* 腾讯云短信 API v3 (TC3-HMAC-SHA256 签名, 零依赖) — 发送验证码短信
    文档: https://cloud.tencent.com/document/api/382/55981 */
-function tencentSmsSend({ secretId, secretKey, region, sign, templateId, phones, templateParams }) {
+function tencentSmsSend({ secretId, secretKey, region, sign, templateId, phones, templateParams, smsSdkAppId }) {
   const crypto = require('crypto')
   const https = require('https')
   const host = 'sms.tencentcloudapi.com'
@@ -873,11 +873,11 @@ function tencentSmsSend({ secretId, secretKey, region, sign, templateId, phones,
   const action = 'SendSms'
   const version = '2021-01-11'
   const timestamp = Math.floor(Date.now() / 1000)
-  const date = new Date(timestamp * 1000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z').slice(0, 8)
+  const date = new Date(timestamp * 1000).toISOString().slice(0, 10) // YYYY-MM-DD (TC3 签名 Credential/HMAC 均要求带横线)
 
   const payload = JSON.stringify({
     PhoneNumberSet: phones,
-    SmsSdkAppId: '', // 预留: 如需要可填 SmsSdkAppId
+    SmsSdkAppId: smsSdkAppId || '', // 短信应用 ID (短信控制台创建应用后生成, 140 开头)
     SignName: sign,
     TemplateId: templateId,
     TemplateParamSet: templateParams,
@@ -978,6 +978,8 @@ async function sendVerifyCode(data) {
   if (!provider || (provider !== '腾讯云' && provider !== 'tencent' && !String(cfg.secret_id))) {
     return fail('短信服务未配置，请联系管理员在后台【系统设置-短信配置】填写')
   }
+  if (!String(cfg.sign)) return fail('短信签名未配置，请在后台【系统设置-短信配置】填写已审核的签名')
+  if (!String(cfg.template_id)) return fail('验证码模板未配置，请在后台【系统设置-短信配置】填写模板ID')
   try {
     const res = await tencentSmsSend({
       secretId: cfg.secret_id,
@@ -985,6 +987,7 @@ async function sendVerifyCode(data) {
       region: cfg.region || 'ap-guangzhou',
       sign: cfg.sign,
       templateId: cfg.template_id,
+      smsSdkAppId: cfg.sms_sdk_app_id,
       phones: ['+86' + account],
       templateParams: [code, '5'],
     })
