@@ -3139,7 +3139,7 @@ async function storagePartUploadAuth(data) {
         Key: cloudPath,
         Method: 'PUT',
         Query: { partNumber, uploadId },
-        Expires: 600,
+        Expires: 1800, // 30 分钟: 防暂停/慢网/重试期间签名过期
       }, (err, data) => (err ? reject(err) : resolve(data.Url)))
     })
     return ok({ url })

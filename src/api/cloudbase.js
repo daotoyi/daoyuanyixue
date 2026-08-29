@@ -111,21 +111,33 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
       }
     }
     if (!auth || !auth.url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
-    // PUT 分片 (失败重试 3 次; 成功即记录分片号, ETag 由云函数服务端查询)
+    // PUT 分片: HTTP 错误与网络异常(断网/超时/连接重置)均自动重试 4 次退避递增;
+    // 重试前重新获取签名, 避免签名过期(10分钟)导致重试必败
     let okFlag = false
-    for (let retry = 0; retry < 3 && !okFlag; retry++) {
+    let lastErr = null
+    for (let retry = 0; retry < 4 && !okFlag; retry++) {
       await waitIfPaused(control)
-      const resp = await fetch(auth.url, { method: 'PUT', body: piece })
-      if (resp.ok) {
-        okFlag = true
-      } else {
-        let msg = '分片 ' + partNumber + ' 上传失败 HTTP ' + resp.status
-        try { msg += ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
-        console.error('[CloudBase]', msg)
-        if (retry < 2) await sleep(1200 * (retry + 1))
-        else throw new Error(msg)
+      if (retry > 0) {
+        try { auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }) } catch (e2) {}
       }
+      try {
+        const resp = await fetch(auth.url, { method: 'PUT', body: piece })
+        if (resp.ok) {
+          okFlag = true
+        } else {
+          let msg = '分片 ' + partNumber + ' 上传失败 HTTP ' + resp.status
+          try { msg += ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
+          lastErr = new Error(msg)
+          console.error('[CloudBase]', msg)
+        }
+      } catch (netErr) {
+        // 网络层异常 → 记录后进入退避重试
+        lastErr = netErr
+        console.error('[CloudBase] 分片 ' + partNumber + ' 网络错误(自动重试):', netErr.message || netErr)
+      }
+      if (!okFlag && retry < 3) await sleep(1000 * Math.pow(2, retry)) // 1s/2s/4s 退避
     }
+    if (!okFlag) throw lastErr || new Error('分片 ' + partNumber + ' 上传失败')
     donePartNumbers.push(partNumber)
     uploaded += piece.size
     if (onProgress) onProgress(uploaded / size, uploaded, size)
