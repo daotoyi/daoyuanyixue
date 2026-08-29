@@ -28,6 +28,11 @@
       <text>课程待更新</text>
     </view>
 
+    <!-- 课时文本说明 (显示在视频下方) -->
+    <view class="ls-note" v-if="lesson.text">
+      <text class="ls-note-text">{{ lesson.text }}</text>
+    </view>
+
     <!-- 上一课 / 下一课 -->
     <view class="ls-nav">
       <view class="ls-btn" v-if="index > 0" @tap="go(index - 1)">‹ 上一课</view>
@@ -184,6 +189,21 @@ function goBuy() {
   text-align: center;
   color: #a08c72;
   font-size: 26rpx;
+}
+/* 课时文本说明: 视频下方 */
+.ls-note {
+  margin: 30rpx 24rpx 0;
+  padding: 24rpx 28rpx;
+  background: #fffcf5;
+  border: 1rpx solid #f0e4d2;
+  border-radius: 16rpx;
+}
+.ls-note-text {
+  font-size: 26rpx;
+  color: #3a2a18;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .ls-nav {
   display: flex;

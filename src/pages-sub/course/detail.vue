@@ -54,7 +54,6 @@
               <text class="lesson-pending" v-if="!ep.video">课程待更新</text>
               <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
             </view>
-            <text class="lesson-text" v-if="ep.text">{{ ep.text }}</text>
           </view>
         </view>
         <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
@@ -348,16 +347,6 @@ function startLearn() {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-/* 课时文本说明: 显示在课时名下方 */
-.lesson-text {
-  display: block;
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  color: #8a857c;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 .lesson-lock {
   font-size: 26rpx;
