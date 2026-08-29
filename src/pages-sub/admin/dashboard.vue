@@ -941,8 +941,8 @@
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
               <text class="oss-summary" v-if="ossVideoList.length">
-                <text class="oss-stat">本地 {{ ossVideosLocal.length }}</text>
-                <text class="oss-stat">C/OSS {{ ossVideosRemote.length }}</text>
+                <text class="oss-stat">本地 {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
+                <text class="oss-stat">C/OSS {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
               </text>
             </view>
             <view class="table oss-video-table" v-if="ossVideoList.length">
@@ -3192,6 +3192,9 @@ const ossVideoList = ref([])
 const ossLoading = ref(false)
 const ossVideosLocal = computed(() => ossVideoList.value.filter((v) => !v.inOss))
 const ossVideosRemote = computed(() => ossVideoList.value.filter((v) => v.inOss))
+/* 本地 / C/OSS 存储体积合计 (size_bytes 为 null 的跳过) */
+const ossLocalBytes = computed(() => ossVideosLocal.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
+const ossRemoteBytes = computed(() => ossVideosRemote.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
 
 /* 文件大小格式化: null/0 → "-"; B/KB/MB/GB 智能显示 */
 function fmtFileSize(bytes) {
