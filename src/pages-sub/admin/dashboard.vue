@@ -4617,26 +4617,24 @@ onMounted(async () => {
 }
 .ep-up-btn {
   font-size: 22rpx;
-  color: #6f5f4a;
-  border: 1rpx solid #d5cbbd;
+  color: #fff;
+  background: #8a7a63;
   border-radius: 8rpx;
-  padding: 4rpx 14rpx;
+  padding: 5rpx 14rpx;
   flex-shrink: 0;
-  background: #f7f2ea;
   line-height: 1.4;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 .ep-up-btn:hover {
-  background: #ece3d3;
+  background: #6f614d;
 }
 .ep-up-btn.danger {
-  color: #c41e3a;
-  border-color: #e0b3b9;
-  background: #fdf0f1;
+  color: #fff;
+  background: #c41e3a;
 }
 .ep-up-btn.danger:hover {
-  background: #f5d9dc;
+  background: #9c1630;
 }
 .f-label {
   width: 150rpx;
