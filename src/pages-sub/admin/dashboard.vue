@@ -2620,7 +2620,7 @@ function moveEpisode(i, dir) {
 }
 /* ===== 断点续传记录 (localStorage): 失败/取消后保留已传分片, 下次选同一文件自动续传 ===== */
 const RESUME_KEY = 'zhs_upload_resume'
-const PART_SIZE_BYTES = 32 * 1024 * 1024
+const PART_SIZE_BYTES = 16 * 1024 * 1024
 function saveResume(rec) {
   try {
     let list = JSON.parse(uni.getStorageSync(RESUME_KEY) || '[]')
@@ -2690,6 +2690,31 @@ function uploadEpisodeVideo(ep) {
       ep._status = resumeInfo ? '续传中…' : ''
       let cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
       let lastSaveTs = 0
+      // 断网自动暂停 / 恢复自动继续 (参考百度网盘: 网络恢复后自动续传, 不用手动干预)
+      const onNetOffline = () => {
+        if (ep._uploading && !ep._control.cancelled) {
+          ep._control.paused = true
+          ep._paused = true
+          ep._status = '网络已断开，等待恢复后自动继续…'
+        }
+      }
+      const onNetOnline = () => {
+        if (ep._uploading && ep._paused && !ep._control.cancelled) {
+          ep._control.paused = false
+          ep._paused = false
+          ep._status = ''
+        }
+      }
+      if (typeof window !== 'undefined') {
+        window.addEventListener('offline', onNetOffline)
+        window.addEventListener('online', onNetOnline)
+      }
+      const removeNetListeners = () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('offline', onNetOffline)
+          window.removeEventListener('online', onNetOnline)
+        }
+      }
       try {
         ep._status = '初始化中…'
         // getStorage 加 15s 超时兜底: 防止 SDK 初始化(匿名登录)网络卡住时上传永远 0% 无反应
@@ -2724,9 +2749,11 @@ function uploadEpisodeVideo(ep) {
         ep._status = ''
         removeResume(fileSize) // 成功清除续传点
         uni.showToast({ title: '已上传', icon: 'success' })
+        removeNetListeners()
         // C/OSS 启用时提示是否搬运到 C/OSS
         await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
       } catch (e) {
+        removeNetListeners()
         // 失败/取消: 保存续传点 (分片保留在 COS, 下次选同文件可继续)
         if (control.uploadId) {
           saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: Date.now() })

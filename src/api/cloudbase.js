@@ -28,7 +28,7 @@ let _initPromise = null
    COS 单次 PUT 上限 5GB, 4GB+ 上传不稳定 → 非图片(视频)上传统一走分片,
    可获得真实进度, 并支持暂停/继续/取消。
    协议: createMultipart → (partUploadAuth + fetch PUT) × N → completeMultipart */
-const MULTIPART_PART_SIZE = 32 * 1024 * 1024        // 32MB / 片 (慢速上行带宽也能在超时内传完, 避免反复超时)
+const MULTIPART_PART_SIZE = 16 * 1024 * 1024        // 16MB / 片 (参考百度网盘细粒度分片: 单片失败影响小, 重试易成功)
 const MULTIPART_CONCURRENCY = 6                     // 并发片数 (吃满浏览器同域名连接上限, 提速)
 const PUT_TIMEOUT_MS = 90000                        // 单片 PUT 超时: 防请求挂起卡死进度
 
@@ -196,12 +196,38 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     }
   }
   try {
-    // 并发上传分片
-    for (let i = 0; i < totalParts; i += MULTIPART_CONCURRENCY) {
-      await waitIfPaused(control)
-      const n = Math.min(MULTIPART_CONCURRENCY, totalParts - i)
-      await Promise.all(Array.from({ length: n }, (_, j) => uploadOne(i + j)))
+    // 分片上传: 参考百度网盘"永不放弃"模式 — 单片失败不中断整体,
+    // 失败片进补齐队列, 退避后反复重试(最多 8 轮), 直到全部传完或用户取消
+    let pendingParts = []
+    for (let p = 1; p <= totalParts; p++) {
+      if (!skipSet.has(p)) pendingParts.push(p)
     }
+    let failedParts = []
+    let round = 0
+    while (pendingParts.length > 0) {
+      failedParts = []
+      for (let i = 0; i < pendingParts.length; i += MULTIPART_CONCURRENCY) {
+        await waitIfPaused(control) // 暂停等待 / 取消立即抛 UPLOAD_CANCELLED
+        const batch = pendingParts.slice(i, i + MULTIPART_CONCURRENCY)
+        const results = await Promise.allSettled(batch.map((pn) => uploadOne(pn - 1)))
+        results.forEach((r, j) => {
+          if (r.status === 'rejected') {
+            failedParts.push(batch[j])
+            console.error('[CloudBase] 分片 ' + batch[j] + ' 失败(留待补齐轮):', (r.reason && r.reason.message) || r.reason)
+          }
+        })
+        if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
+      }
+      if (failedParts.length === 0) break // 全部成功
+      round++
+      if (round > 8) {
+        throw new Error('分片 ' + failedParts.slice(0, 8).join(',') + ' 多次失败，已保留进度，可重新选择该文件续传')
+      }
+      pendingParts = failedParts
+      status('retrying')
+      await sleep(2000 * Math.min(round, 5)) // 轮间退避 2s/4s/6s/8s/10s, 等网络恢复
+    }
+    if (round > 0) status('resumed')
     donePartNumbers.sort((a, b) => a - b)
     // 2) 合并分片
     await waitIfPaused(control)
