@@ -904,6 +904,13 @@
                   style="transform: scale(0.85)"
                   @change="settingsForm[f.key] = $event.detail.value ? '1' : '0'"
                 />
+                <picker
+                  v-else-if="f.type === 'select'"
+                  :range="f.options || []"
+                  @change="settingsForm[f.key] = (f.options || [])[$event.detail.value]"
+                >
+                  <view class="f-input" :class="{ ph: !settingsForm[f.key] }">{{ settingsForm[f.key] || (f.options && f.options[0]) || '请选择' }}</view>
+                </picker>
                 <input
                   v-else
                   class="f-input"
@@ -3042,15 +3049,15 @@ async function deleteCoupon(c) {
 
 const settingsTabs = [
   {
-    group: 'sms', label: '短信配置', desc: '验证码与通知短信发送服务（腾讯云短信）',
+    group: 'sms', label: '短信配置', desc: '验证码短信发送方案（二选一）：CloudBase 短信扩展 或 腾讯云短信直连',
     fields: [
-      { key: 'provider', label: '服务商', placeholder: '腾讯云 / tencent' },
-      { key: 'secret_id', label: 'SecretId', secret: true },
-      { key: 'secret_key', label: 'SecretKey', secret: true },
-      { key: 'sms_sdk_app_id', label: '短信应用ID(SdkAppId)', placeholder: '140 开头' },
-      { key: 'sign', label: '短信签名', placeholder: '如: 真和盛' },
-      { key: 'template_id', label: '验证码模板ID' },
-      { key: 'region', label: '区域', placeholder: 'ap-guangzhou' },
+      { key: 'provider', label: '方案', type: 'select', options: ['cloudbase', 'tencent'], placeholder: 'cloudbase=扩展 / tencent=直连' },
+      { key: 'secret_id', label: 'SecretId (tencent直连)', secret: true },
+      { key: 'secret_key', label: 'SecretKey (tencent直连)', secret: true },
+      { key: 'sms_sdk_app_id', label: '短信应用ID (tencent直连)', placeholder: '140 开头' },
+      { key: 'sign', label: '短信签名 (tencent直连)', placeholder: '如: 真和盛' },
+      { key: 'template_id', label: '验证码模板ID (tencent直连)' },
+      { key: 'region', label: '区域 (tencent直连)', placeholder: 'ap-guangzhou' },
     ],
   },
   {

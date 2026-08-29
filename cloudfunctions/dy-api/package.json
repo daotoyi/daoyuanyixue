@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "@cloudbase/node-sdk": "^2.9.0",
+    "@cloudbase/extension-sms": "^0.0.2",
     "wx-server-sdk": "^2.6.3"
   }
 }

@@ -12,6 +12,12 @@ const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV })
 const db = app.database()
 const _ = db.command
 
+/* CloudBase 短信扩展 (可选): 未安装扩展包时不影响其他功能 */
+try {
+  const extSms = require('@cloudbase/extension-sms')
+  if (extSms && app.registerExtension) app.registerExtension(extSms)
+} catch (e) { /* 扩展包未安装: 仅影响 cloudbase 方案的短信 */ }
+
 const ok = (data) => ({ status: 200, data, msg: 'success' })
 const fail = (msg, status = 400) => ({ status, msg })
 
@@ -939,7 +945,9 @@ function tencentSmsSend({ secretId, secretKey, region, sign, templateId, phones,
 }
 
 /* 发送验证码 (注册 register / 找回密码 forgot 共用)
-   手机号 → 腾讯云短信; 邮箱 → 预留 SMTP (未配置返回提示) */
+   方案A: provider=cloudbase → CloudBase 短信扩展 (@cloudbase/extension-sms, 扩展自动管理验证码)
+   方案B: provider=腾讯云/tencent → 腾讯云短信直连 (TC3 签名)
+   手机号 → 短信; 邮箱 → 预留 SMTP (未配置返回提示) */
 async function sendVerifyCode(data) {
   const account = String(data.account || data.phone || '').trim()
   const scene = data.scene === 'forgot' ? 'forgot' : 'register'
@@ -948,39 +956,35 @@ async function sendVerifyCode(data) {
   if (!isEmail && !/^1\d{10}$/.test(account)) return fail('请输入正确的手机号')
   if (isEmail && !/^[\w.+-]+@[\w-]+\.[\w.]+$/.test(account)) return fail('请输入正确的邮箱')
 
-  await ensureCollection('verify_codes')
-  const accountKey = isEmail ? account.toLowerCase() : account
-  const nowMs = Date.now()
-
-  // 防刷: 同一账号 60 秒内只能发一次
-  const recent = await db.collection('verify_codes')
-    .where({ account: accountKey, scene, used: false })
-    .orderBy('created_ms', 'desc').limit(1).get()
-  if (recent.data.length) {
-    const last = Number(recent.data[0].created_ms) || 0
-    if (nowMs - last < 60 * 1000) {
-      const remain = Math.ceil((60 * 1000 - (nowMs - last)) / 1000)
-      return fail(`发送太频繁，请 ${remain} 秒后再试`)
-    }
-  }
-
-  // 生成 6 位验证码
-  const code = String(Math.floor(100000 + Math.random() * 900000))
   const cfg = await getSmsConfig()
+  const provider = String(cfg.provider || '').toLowerCase()
 
   if (isEmail) {
     // 邮箱: 预留 SMTP (未配置则提示)
     return fail('邮箱验证暂未开通，请使用手机号接收验证码')
   }
 
-  // 手机号 → 腾讯云短信
-  const provider = String(cfg.provider || '').toLowerCase()
+  // 方案A: CloudBase 短信扩展
+  if (provider === 'cloudbase') {
+    if (!app.invokeExtension) {
+      return fail('短信扩展未启用，请先在 CloudBase 控制台安装「短信验证码登录」扩展')
+    }
+    try {
+      await app.invokeExtension('sms', { action: 'Send', app, phone: account })
+      return ok({ sent: true, msg: '验证码已发送' })
+    } catch (e) {
+      return fail('验证码发送失败: ' + (e.message || '请检查短信扩展配置'))
+    }
+  }
+
+  // 方案B: 腾讯云短信直连
   if (!provider || (provider !== '腾讯云' && provider !== 'tencent' && !String(cfg.secret_id))) {
-    return fail('短信服务未配置，请联系管理员在后台【系统设置-短信配置】填写')
+    return fail('短信服务未配置，请先在后台【系统设置-短信配置】选择方案并填写')
   }
   if (!String(cfg.sign)) return fail('短信签名未配置，请在后台【系统设置-短信配置】填写已审核的签名')
   if (!String(cfg.template_id)) return fail('验证码模板未配置，请在后台【系统设置-短信配置】填写模板ID')
   try {
+    const code = String(Math.floor(100000 + Math.random() * 900000))
     const res = await tencentSmsSend({
       secretId: cfg.secret_id,
       secretKey: cfg.secret_key,
@@ -993,24 +997,41 @@ async function sendVerifyCode(data) {
     })
     // 发送成功才入库
     await db.collection('verify_codes').add({
-      account: accountKey,
+      account: isEmail ? account.toLowerCase() : account,
       scene,
       code,
       used: false,
-      created_ms: nowMs,
-      expire_ms: nowMs + 5 * 60 * 1000, // 5 分钟有效
+      created_ms: Date.now(),
+      expire_ms: Date.now() + 5 * 60 * 1000, // 5 分钟有效
       created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     })
-    return ok({ sent: true, msg: (res && res.SendStatusSet && res.SendStatusSet[0] && res.SendStatusSet[0].Code === 'Ok') ? '验证码已发送' : '验证码已发送' })
+    return ok({ sent: true, msg: '验证码已发送' })
   } catch (e) {
     return fail('验证码发送失败: ' + (e.message || ''))
   }
 }
 
-/* 校验验证码 (注册/重置密码共用) */
+/* 校验验证码 (注册/重置密码共用)
+   provider=cloudbase → 扩展 Verify; 否则 → 本地 verify_codes 集合 */
 async function verifyCode(account, code, scene) {
   if (!account || !code) return false
-  const accountKey = String(account).includes('@') ? String(account).toLowerCase() : String(account)
+  const isEmail = String(account).includes('@')
+  const accountKey = isEmail ? String(account).toLowerCase() : String(account)
+  const cfg = await getSmsConfig()
+  const provider = String(cfg.provider || '').toLowerCase()
+
+  // CloudBase 扩展: 用扩展 Verify 校验
+  if (provider === 'cloudbase') {
+    if (!app.invokeExtension) return false
+    try {
+      await app.invokeExtension('sms', { action: 'Verify', app, phone: accountKey, smsCode: String(code).trim() })
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+
+  // 本地 verify_codes 集合
   const nowMs = Date.now()
   const res = await db.collection('verify_codes')
     .where({ account: accountKey, scene, code: String(code).trim(), used: false })
