@@ -52,7 +52,7 @@
             <view class="lesson-name-row">
               <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
               <text class="lesson-pending" v-if="!ep.video">课程待更新</text>
-              <text class="lesson-lock" v-if="ep.free === false && !isOwned">🔒</text>
+              <text class="lesson-lock" v-if="!isFreeCourse && ep.free === false && !isOwned">🔒</text>
             </view>
           </view>
         </view>
@@ -112,8 +112,8 @@ function openLesson(i) {
     uni.showToast({ title: '课程待更新', icon: 'none' })
     return
   }
-  // 付费课时: 未购买则引导购买 (购买后全部课时开放)
-  if (ep.free === false && !isOwned.value) {
+  // 付费课时: 未购买则引导购买 (购买后全部课时开放; 课程免费则全部开放)
+  if (!isFreeCourse.value && ep.free === false && !isOwned.value) {
     uni.showModal({
       title: '付费课时',
       content: '该课时为付费内容，购买课程后即可观看全部课时',
@@ -145,6 +145,8 @@ const owned = ref(false)
 const buying = ref(false)
 
 const isOwned = computed(() => owned.value)
+/* 课程免费 (价格 0 或 "免费") → 所有课时不上锁 */
+const isFreeCourse = computed(() => isFreePrice(course.value && course.value.price))
 
 onLoad(async (options) => {
   course.value = await getCourse(options.id)
@@ -167,6 +169,13 @@ async function buyCourse() {
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录再购买', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  // 免费课程: 直接开始学习 (跳转第一个有视频的课时)
+  if (isFreeCourse.value) {
+    const eps = episodesList.value.length ? episodesList.value : outlineList.value
+    const firstVideoIdx = eps.findIndex((e) => e.video)
+    uni.navigateTo({ url: `/pages-sub/course/lesson?course_id=${course.value.id}&index=${firstVideoIdx >= 0 ? firstVideoIdx : 0}` })
     return
   }
   // 课程购买: 跳转结算页走订单+微信支付 (支付成功后自动发放课程)

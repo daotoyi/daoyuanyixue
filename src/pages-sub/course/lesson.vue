@@ -64,8 +64,15 @@ const lesson = computed(() => {
 })
 const episodes = computed(() => (Array.isArray(course.value && course.value.episodes) ? course.value.episodes : []))
 const courseTitle = computed(() => (course.value && course.value.title) || '')
-/* 付费课时且未购买 → 锁定 (购买后全部开放) */
-const locked = computed(() => loaded.value && !!lesson.value && lesson.value.free === false && !owned.value)
+/* 付费课时且未购买 → 锁定 (购买后全部开放; 课程免费则全部开放) */
+const isFreeCourse = computed(() => {
+  const p = course.value && course.value.price
+  const s = String(p ?? '').trim()
+  if (s === '免费') return true
+  const n = Number(s.replace(/[^\d.\-]/g, ''))
+  return !isNaN(n) && n <= 0
+})
+const locked = computed(() => loaded.value && !!lesson.value && !isFreeCourse.value && lesson.value.free === false && !owned.value)
 
 onLoad(async (options) => {
   index.value = Number(options.index) || 0
