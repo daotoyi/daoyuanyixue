@@ -54,6 +54,7 @@
               <image class="rec-pd-img" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
               <text class="rec-pd-badge">{{ pd.day }}</text>
               <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
+              <text class="rec-pd-desc ellipsis-1" v-if="pd.desc">{{ pd.desc }}</text>
               <text class="rec-pd-time ellipsis-1">🕐 {{ pd.start_date || '' }} {{ pd.time }}</text>
               <text class="rec-pd-meta ellipsis-1">📍 {{ pd.place }}</text>
               <text class="rec-pd-price">{{ fmtPrice(pd.price) }}</text>
@@ -1597,6 +1598,13 @@ onShow(async () => {
   margin-top: 10rpx;
   font-size: 24rpx;
   color: #2a2a2a;
+}
+/* 盘道说明 → 卡片副标题 */
+.rec-pd-desc {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: #8a857c;
 }
 .rec-live-time {
   display: block;

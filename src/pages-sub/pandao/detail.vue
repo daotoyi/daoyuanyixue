@@ -8,6 +8,7 @@
         <text class="pd-status" :class="'st-' + statusKey(session.status)">{{ session.status || '即将开始' }}</text>
       </view>
       <text class="pd-title">{{ session.title }}</text>
+      <text class="pd-subtitle" v-if="session.desc">{{ session.desc }}</text>
       <view class="pd-meta">
         <view class="pd-meta-item"><text class="pd-meta-icon">🕐</text><text>{{ session.start_date || '' }} {{ session.day }} {{ session.time }}</text></view>
         <view class="pd-meta-item"><text class="pd-meta-icon">📍</text><text>{{ session.place }}</text></view>
@@ -242,6 +243,14 @@ async function bookNow() {
   font-weight: bold;
   color: #3a2a18;
   margin-top: 20rpx;
+}
+/* 说明 → 副标题 */
+.pd-subtitle {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #8a857c;
+  line-height: 1.5;
 }
 .pd-meta {
   margin-top: 24rpx;
