@@ -3108,12 +3108,12 @@ const settingsTabs = [
     group: 'sms', label: '短信配置', desc: '验证码短信发送方案：腾讯云短信直连（验证码入库自管，5 分钟有效）',
     fields: [
       { key: 'provider', label: '方案', type: 'select', options: ['tencent'], placeholder: 'tencent=腾讯云短信直连' },
-      { key: 'secret_id', label: 'SecretId (tencent直连)', secret: true },
-      { key: 'secret_key', label: 'SecretKey (tencent直连)', secret: true },
-      { key: 'sms_sdk_app_id', label: '短信应用ID (tencent直连)', placeholder: '140 开头' },
-      { key: 'sign', label: '短信签名 (tencent直连)', placeholder: '如: 真和盛' },
-      { key: 'template_id', label: '验证码模板ID (tencent直连)' },
-      { key: 'region', label: '区域 (tencent直连)', placeholder: 'ap-guangzhou' },
+      { key: 'secret_id', label: 'SecretId', secret: true },
+      { key: 'secret_key', label: 'SecretKey', secret: true },
+      { key: 'sms_sdk_app_id', label: '短信应用ID', placeholder: '140 开头' },
+      { key: 'sign', label: '短信签名', placeholder: '如: 真和盛' },
+      { key: 'template_id', label: '验证码模板ID' },
+      { key: 'region', label: '区域', placeholder: 'ap-guangzhou' },
     ],
   },
   {
