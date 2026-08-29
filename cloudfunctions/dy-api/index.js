@@ -3193,6 +3193,41 @@ async function storageAbortMultipart(data) {
   }
 }
 
+/* 清理所有未完成的分片上传 (列出 bucket 全部 multipart uploads 并逐个 abort, 释放残留分片存储)。
+   用于上传中断/卡壳后回收占用; prefix 可限定目录 (默认全部) */
+async function storageAbortAllMultipart(data) {
+  const prefix = String(data.prefix || '')
+  try {
+    const cos = getCos()
+    const aborted = []
+    let keyMarker = ''
+    let uploadIdMarker = ''
+    for (let round = 0; round < 20; round++) {
+      const res = await cos.multipartList({
+        Bucket: COS_BUCKET, Region: COS_REGION, Prefix: prefix,
+        KeyMarker: keyMarker, UploadIdMarker: uploadIdMarker, MaxUploads: 1000,
+      })
+      const uploads = res.Upload || []
+      for (const u of uploads) {
+        if (!u || !u.Key || !u.UploadId) continue
+        try {
+          await cos.multipartAbort({ Bucket: COS_BUCKET, Region: COS_REGION, Key: u.Key, UploadId: u.UploadId })
+          aborted.push({ key: u.Key, uploadId: String(u.UploadId).slice(0, 16) + '...' })
+        } catch (e) {
+          console.warn('[storageAbortAllMultipart] abort 失败', u.Key, e.message || e)
+        }
+      }
+      keyMarker = res.NextKeyMarker || ''
+      uploadIdMarker = res.NextUploadIdMarker || ''
+      if (!uploads.length || !keyMarker || res.IsTruncated !== 'true') break
+    }
+    return ok({ aborted_count: aborted.length, aborted })
+  } catch (e) {
+    console.error('[storageAbortAllMultipart] error:', e.stack || e)
+    return fail('清理分片失败: ' + (e.message || e))
+  }
+}
+
 /* 云存储上传凭证 (管理端生成 COS 临时上传信息, 前端直传, 不依赖前端登录态) */
 async function storageGetUploadUrl(data) {
   const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
@@ -4530,6 +4565,7 @@ const ROUTES = {
   'storage.partUploadAuth': storagePartUploadAuth,
   'storage.completeMultipart': storageCompleteMultipart,
   'storage.abortMultipart': storageAbortMultipart,
+  'storage.abortAllMultipart': storageAbortAllMultipart,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
   'admin.pandao.update': adminPandaoUpdate,
