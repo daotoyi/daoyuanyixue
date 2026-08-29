@@ -2691,10 +2691,16 @@ function uploadEpisodeVideo(ep) {
       let cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
       let lastSaveTs = 0
       try {
-        const storage = await getStorage()
+        ep._status = '初始化中…'
+        // getStorage 加 15s 超时兜底: 防止 SDK 初始化(匿名登录)网络卡住时上传永远 0% 无反应
+        const storage = await Promise.race([
+          getStorage(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('云存储初始化超时，请检查网络后重试')), 15000)),
+        ])
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
         if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
         if (resumeInfo) cloudPath = resume.cloudPath // 续传必须用同一 cloudPath
+        ep._status = ''
         const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
           const pct = Math.min(99, Math.round(ratio * 100))
           if (pct !== ep._progress) ep._progress = pct

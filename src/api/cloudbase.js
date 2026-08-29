@@ -50,7 +50,8 @@ async function waitIfPaused(control) {
 async function probeFileSize(filePath) {
   try {
     if (typeof fetch === 'function' && typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
-      return (await fetch(filePath).then((r) => r.blob())).size || 0
+      const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('读取超时')), 10000))])
+      return (await withTimeout(fetch(filePath), 10000).then((r) => r.blob())).size || 0
     }
     if (uni.getFileInfo) {
       return await new Promise((resolve) => {
@@ -295,16 +296,20 @@ export async function initCloudBase() {
       region: REGION,
     })
     console.log('[CloudBase] H5/App SDK 初始化完成', ENV_ID)
-    // H5 端调用云函数需要身份, 尝试匿名登录 (失败不阻塞)
+    // H5 端调用云函数需要身份, 尝试匿名登录 (失败/超时都不阻塞: 云函数网关调用不依赖前端登录态)
     try {
       const auth = cloudApp.auth()
-      const state = await auth.getLoginState()
+      const withTimeout = (p, ms) => Promise.race([
+        p,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('匿名登录超时')), ms)),
+      ])
+      const state = await withTimeout(auth.getLoginState(), 10000)
       if (!state) {
-        await auth.signInAnonymously()
+        await withTimeout(auth.signInAnonymously(), 10000)
         console.log('[CloudBase] 匿名登录完成')
       }
     } catch (e) {
-      console.warn('[CloudBase] 匿名登录跳过', e)
+      console.warn('[CloudBase] 匿名登录跳过(超时或失败, 不影响网关调用)', e && e.message || e)
     }
     return cloudApp
   } catch (e) {
