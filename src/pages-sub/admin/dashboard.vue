@@ -966,8 +966,8 @@
             <view class="empty-tip" v-else-if="!ossLoading">暂无可管理的视频</view>
           </view>
 
-          <!-- ===== 小程序接管 (独立板块, 在"小程序"tab 后) ===== -->
-          <view class="settings-card" v-else>
+          <!-- ===== 小程序接管 (仅"小程序接管"tab 显示) ===== -->
+          <view class="settings-card" v-else-if="activeSettingsTab === 'wxmp'">
             <view class="settings-desc">
               <text class="sd-title">小程序接管（{{ wxmpList.length }}）</text>
               <text class="sd-text">已接管小程序（{{ wxmpList.length }}）：填 AppID → 生成授权链接 → 管理员扫码 → 自动接管（上传开发版 / 体验码 / 提审 / 发布）</text>
