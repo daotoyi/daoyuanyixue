@@ -789,8 +789,14 @@ async function register(data) {
   const isEmail = String(account).includes('@')
   const accountKey = isEmail ? 'email' : 'phone'
   const accountVal = isEmail ? String(account).toLowerCase() : String(account)
+  // 先查重: 已注册账号不消耗验证码
   const exists = await db.collection('users').where({ [accountKey]: accountVal }).limit(1).get()
   if (exists.data.length) return fail(isEmail ? '该邮箱已注册' : '该手机号已注册')
+  // 注册必须通过验证码校验 (防止机器注册)
+  const code = String(data.code || '').trim()
+  if (!code) return fail('请输入验证码')
+  const codeOk = await verifyCode(account, code, 'register')
+  if (!codeOk) return fail('验证码错误或已过期')
   // 道号分配 (按角色: 管理员/员工 ZHSM 系列, 用户 ZHS 系列)
   // 安全: 公开注册只能创建普通用户, 忽略客户端传入的 role (防注册即管理员)
   const role = 'user'
@@ -843,6 +849,202 @@ async function register(data) {
   }
   const { password, ...safe } = user
   return ok(safe)
+}
+
+/* ============ 验证码 (注册/找回密码) ============ */
+
+/* 读取短信配置 (settings 集合 sms 组) */
+async function getSmsConfig() {
+  try {
+    const res = await db.collection('settings').where({ group: 'sms' }).limit(1).get()
+    return res.data[0] || {}
+  } catch (e) {
+    return {}
+  }
+}
+
+/* 腾讯云短信 API v3 (TC3-HMAC-SHA256 签名, 零依赖) — 发送验证码短信
+   文档: https://cloud.tencent.com/document/api/382/55981 */
+function tencentSmsSend({ secretId, secretKey, region, sign, templateId, phones, templateParams }) {
+  const crypto = require('crypto')
+  const https = require('https')
+  const host = 'sms.tencentcloudapi.com'
+  const service = 'sms'
+  const action = 'SendSms'
+  const version = '2021-01-11'
+  const timestamp = Math.floor(Date.now() / 1000)
+  const date = new Date(timestamp * 1000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z').slice(0, 8)
+
+  const payload = JSON.stringify({
+    PhoneNumberSet: phones,
+    SmsSdkAppId: '', // 预留: 如需要可填 SmsSdkAppId
+    SignName: sign,
+    TemplateId: templateId,
+    TemplateParamSet: templateParams,
+  })
+
+  // ① CanonicalRequest
+  const canonicalHeaders = 'content-type:application/json; charset=utf-8\nhost:' + host + '\nx-tc-action:' + action.toLowerCase() + '\n'
+  const signedHeaders = 'content-type;host;x-tc-action'
+  const hashedPayload = crypto.createHash('sha256').update(payload).digest('hex')
+  const canonicalRequest = 'POST\n/\n\n' + canonicalHeaders + '\n' + signedHeaders + '\n' + hashedPayload
+
+  // ② StringToSign
+  const hashedCanonical = crypto.createHash('sha256').update(canonicalRequest).digest('hex')
+  const stringToSign = 'TC3-HMAC-SHA256\n' + timestamp + '\n' + date + '/' + service + '/tc3_request\n' + hashedCanonical
+
+  // ③ 签名
+  const kDate = crypto.createHmac('sha256', 'TC3' + secretKey).update(date).digest()
+  const kService = crypto.createHmac('sha256', kDate).update(service).digest()
+  const kSigning = crypto.createHmac('sha256', kService).update('tc3_request').digest()
+  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex')
+
+  const authorization =
+    'TC3-HMAC-SHA256 Credential=' + secretId + '/' + date + '/' + service + '/tc3_request, SignedHeaders=' + signedHeaders + ', Signature=' + signature
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        host,
+        path: '/',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          Host: host,
+          'X-TC-Action': action,
+          'X-TC-Timestamp': String(timestamp),
+          'X-TC-Version': version,
+          'X-TC-Region': region || 'ap-guangzhou',
+          Authorization: authorization,
+        },
+      },
+      (r) => {
+        let d = ''
+        r.on('data', (c) => (d += c))
+        r.on('end', () => {
+          try {
+            const j = JSON.parse(d)
+            if (j.Response && j.Response.Error) reject(new Error(j.Response.Error.Message || '短信发送失败'))
+            else resolve(j.Response || j)
+          } catch (e) {
+            reject(new Error('短信响应解析失败: ' + d.slice(0, 200)))
+          }
+        })
+      }
+    )
+    req.on('error', (e) => reject(new Error('短信网络错误: ' + e.message)))
+    req.write(payload)
+    req.end()
+  })
+}
+
+/* 发送验证码 (注册 register / 找回密码 forgot 共用)
+   手机号 → 腾讯云短信; 邮箱 → 预留 SMTP (未配置返回提示) */
+async function sendVerifyCode(data) {
+  const account = String(data.account || data.phone || '').trim()
+  const scene = data.scene === 'forgot' ? 'forgot' : 'register'
+  if (!account) return fail('请输入手机号或邮箱')
+  const isEmail = account.includes('@')
+  if (!isEmail && !/^1\d{10}$/.test(account)) return fail('请输入正确的手机号')
+  if (isEmail && !/^[\w.+-]+@[\w-]+\.[\w.]+$/.test(account)) return fail('请输入正确的邮箱')
+
+  await ensureCollection('verify_codes')
+  const accountKey = isEmail ? account.toLowerCase() : account
+  const nowMs = Date.now()
+
+  // 防刷: 同一账号 60 秒内只能发一次
+  const recent = await db.collection('verify_codes')
+    .where({ account: accountKey, scene, used: false })
+    .orderBy('created_ms', 'desc').limit(1).get()
+  if (recent.data.length) {
+    const last = Number(recent.data[0].created_ms) || 0
+    if (nowMs - last < 60 * 1000) {
+      const remain = Math.ceil((60 * 1000 - (nowMs - last)) / 1000)
+      return fail(`发送太频繁，请 ${remain} 秒后再试`)
+    }
+  }
+
+  // 生成 6 位验证码
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  const cfg = await getSmsConfig()
+
+  if (isEmail) {
+    // 邮箱: 预留 SMTP (未配置则提示)
+    return fail('邮箱验证暂未开通，请使用手机号接收验证码')
+  }
+
+  // 手机号 → 腾讯云短信
+  const provider = String(cfg.provider || '').toLowerCase()
+  if (!provider || (provider !== '腾讯云' && provider !== 'tencent' && !String(cfg.secret_id))) {
+    return fail('短信服务未配置，请联系管理员在后台【系统设置-短信配置】填写')
+  }
+  try {
+    const res = await tencentSmsSend({
+      secretId: cfg.secret_id,
+      secretKey: cfg.secret_key,
+      region: cfg.region || 'ap-guangzhou',
+      sign: cfg.sign,
+      templateId: cfg.template_id,
+      phones: ['+86' + account],
+      templateParams: [code, '5'],
+    })
+    // 发送成功才入库
+    await db.collection('verify_codes').add({
+      account: accountKey,
+      scene,
+      code,
+      used: false,
+      created_ms: nowMs,
+      expire_ms: nowMs + 5 * 60 * 1000, // 5 分钟有效
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    })
+    return ok({ sent: true, msg: (res && res.SendStatusSet && res.SendStatusSet[0] && res.SendStatusSet[0].Code === 'Ok') ? '验证码已发送' : '验证码已发送' })
+  } catch (e) {
+    return fail('验证码发送失败: ' + (e.message || ''))
+  }
+}
+
+/* 校验验证码 (注册/重置密码共用) */
+async function verifyCode(account, code, scene) {
+  if (!account || !code) return false
+  const accountKey = String(account).includes('@') ? String(account).toLowerCase() : String(account)
+  const nowMs = Date.now()
+  const res = await db.collection('verify_codes')
+    .where({ account: accountKey, scene, code: String(code).trim(), used: false })
+    .orderBy('created_ms', 'desc').limit(1).get()
+  const rec = res.data[0]
+  if (!rec) return false
+  if (nowMs > Number(rec.expire_ms)) return false // 过期
+  // 标记已使用 (防重复使用)
+  await db.collection('verify_codes').where({ _id: rec._id }).update({ used: true }).catch(() => {})
+  return true
+}
+
+/* 忘记密码: 验证码校验通过后重置密码 */
+async function resetPassword(data) {
+  const account = String(data.account || data.phone || '').trim()
+  const code = String(data.code || '').trim()
+  const newPwd = String(data.password || '')
+  if (!account) return fail('请输入手机号或邮箱')
+  if (!code) return fail('请输入验证码')
+  if (newPwd.length < 6) return fail('新密码至少 6 位')
+
+  // 校验验证码
+  const okCode = await verifyCode(account, code, 'forgot')
+  if (!okCode) return fail('验证码错误或已过期')
+
+  // 找到用户
+  const isEmail = account.includes('@')
+  let user
+  if (isEmail) {
+    user = (await db.collection('users').where({ email: account.toLowerCase() }).limit(1).get()).data[0]
+  } else {
+    user = (await db.collection('users').where({ phone: account }).limit(1).get()).data[0]
+  }
+  if (!user) return fail('该账号未注册')
+
+  await db.collection('users').where({ uid: user.uid }).update({ password: newPwd })
+  return ok({ updated: true, msg: '密码已重置，请使用新密码登录' })
 }
 
 /* ---- 用户资料 / 资产 / 微信登录 ---- */
@@ -4106,6 +4308,8 @@ const ROUTES = {
   'coupons.list': listCoupons,
   'user.login': login,
   'user.register': register,
+  'auth.sendCode': sendVerifyCode,
+  'auth.resetPassword': resetPassword,
   'user.phoneLogin': phoneLogin,
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,

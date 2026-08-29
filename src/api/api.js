@@ -156,6 +156,14 @@ export const register = (params) =>
       })()
     : _callFunction('user.register', params)
 
+/* 发送验证码 (注册/找回密码) */
+export const sendVerifyCode = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ sent: true }))() : _callFunction('auth.sendCode', params)
+
+/* 忘记密码: 验证码校验后重置密码 */
+export const resetPassword = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('auth.resetPassword', params)
+
 export const updatePhone = (params) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('user.updatePhone', params)
 export const bindWechat = (params) =>

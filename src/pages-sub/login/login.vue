@@ -20,6 +20,17 @@
         <input class="field-input" v-model="phone" type="text" maxlength="50" :placeholder="mode === 'login' ? '手机号、邮箱或道号' : '手机号或邮箱'" />
       </view>
 
+      <!-- 注册: 验证码 -->
+      <view class="field" v-if="mode === 'register'">
+        <text class="field-label">验证码</text>
+        <view class="code-row">
+          <input class="field-input code-input" v-model="verifyCode" type="number" maxlength="6" placeholder="请输入验证码" />
+          <view class="btn-p plain code-btn" :class="{ 'code-btn-disabled': codeCountdown > 0 }" @click="sendCode('register')">
+            <text>{{ codeCountdown > 0 ? codeCountdown + 's 后重发' : '获取验证码' }}</text>
+          </view>
+        </view>
+      </view>
+
       <view class="field">
         <text class="field-label">密码</text>
         <input class="field-input" v-model="password" :password="true" placeholder="请输入密码" />
@@ -28,6 +39,11 @@
       <view class="field" v-if="mode === 'register'">
         <text class="field-label">邀请码</text>
         <input class="field-input" v-model="inviteCode" placeholder="选填，输入好友邀请码" />
+      </view>
+
+      <!-- 登录: 忘记密码 -->
+      <view class="forgot-row" v-if="mode === 'login'">
+        <text class="forgot-link" @tap="openForgot">忘记密码？</text>
       </view>
 
       <view class="err-text" v-if="errorMsg">{{ errorMsg }}</view>
@@ -74,6 +90,27 @@
         </view>
       </view></view>
 
+      <!-- 忘记密码弹窗: 手机号/邮箱 + 验证码 + 新密码 -->
+      <view class="pp-mask" v-if="showForgot" @tap="showForgot = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
+        <view class="sheet-title">重置密码</view>
+        <view class="wx-auth-row">
+          <input class="wx-nick-input" type="text" v-model="forgotAccount" placeholder="请输入注册手机号或邮箱" maxlength="50" />
+        </view>
+        <view class="wx-auth-row">
+          <input class="wx-nick-input" type="number" v-model="forgotCode" maxlength="6" placeholder="请输入验证码" />
+          <view class="btn-p plain forgot-code-btn" :class="{ 'code-btn-disabled': forgotCountdown > 0 }" @click="sendCode('forgot')">
+            <text>{{ forgotCountdown > 0 ? forgotCountdown + 's 后重发' : '获取验证码' }}</text>
+          </view>
+        </view>
+        <view class="wx-auth-row">
+          <input class="wx-nick-input" type="password" v-model="forgotPwd" placeholder="请输入新密码（至少6位）" />
+        </view>
+        <view class="wx-auth-actions">
+          <view class="btn-p plain wx-auth-btn" @click="showForgot = false">取消</view>
+          <view class="btn-p wx-auth-btn" @click="doResetPassword">重置密码</view>
+        </view>
+      </view></view>
+
       <!-- 小程序: 微信授权面板 (chooseAvatar 微信头像 + nickname 微信昵称, 点登录后弹出) -->
       <!-- #ifdef MP-WEIXIN -->
       <view class="pp-mask" v-if="showWxAuth" @tap="showWxAuth = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
@@ -107,8 +144,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { login, register, wechatLogin, wechatCheck, bindWechatPhone, phoneLogin, getPayConfig } from '../../api/api'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { login, register, sendVerifyCode, resetPassword, wechatLogin, wechatCheck, bindWechatPhone, phoneLogin, getPayConfig } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { useUserStore } from '../../store/index'
 
@@ -119,6 +156,88 @@ const password = ref('')
 const inviteCode = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
+// 验证码 (注册)
+const verifyCode = ref('')
+const codeCountdown = ref(0)
+let codeTimer = null
+// 忘记密码
+const showForgot = ref(false)
+const forgotAccount = ref('')
+const forgotCode = ref('')
+const forgotPwd = ref('')
+const forgotCountdown = ref(0)
+let forgotTimer = null
+
+function startCountdown(target) {
+  if (target === 'forgot') {
+    forgotCountdown.value = 60
+    if (forgotTimer) clearInterval(forgotTimer)
+    forgotTimer = setInterval(() => {
+      forgotCountdown.value--
+      if (forgotCountdown.value <= 0) clearInterval(forgotTimer)
+    }, 1000)
+  } else {
+    codeCountdown.value = 60
+    if (codeTimer) clearInterval(codeTimer)
+    codeTimer = setInterval(() => {
+      codeCountdown.value--
+      if (codeCountdown.value <= 0) clearInterval(codeTimer)
+    }, 1000)
+  }
+}
+
+/* 发送验证码: scene=register 注册 / forgot 忘记密码 */
+async function sendCode(scene) {
+  const acct = (scene === 'forgot' ? forgotAccount.value : phone.value).trim()
+  if (!acct) {
+    uni.showToast({ title: '请先输入手机号或邮箱', icon: 'none' })
+    return
+  }
+  const isEmail = acct.includes('@')
+  if (!isEmail && !/^1\d{10}$/.test(acct)) {
+    uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+    return
+  }
+  if (isEmail) {
+    uni.showToast({ title: '邮箱验证暂未开通，请使用手机号', icon: 'none' })
+    return
+  }
+  try {
+    uni.showLoading({ title: '发送中...' })
+    await sendVerifyCode({ account: acct, scene })
+    uni.hideLoading()
+    uni.showToast({ title: '验证码已发送，请查收短信', icon: 'success' })
+    startCountdown(scene)
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: (e && e.message) || '发送失败', icon: 'none' })
+  }
+}
+
+function openForgot() {
+  showForgot.value = true
+  forgotAccount.value = ''
+  forgotCode.value = ''
+  forgotPwd.value = ''
+}
+
+/* 重置密码 */
+async function doResetPassword() {
+  const acct = forgotAccount.value.trim()
+  if (!acct) return uni.showToast({ title: '请输入手机号或邮箱', icon: 'none' })
+  if (!forgotCode.value) return uni.showToast({ title: '请输入验证码', icon: 'none' })
+  if (forgotPwd.value.length < 6) return uni.showToast({ title: '新密码至少 6 位', icon: 'none' })
+  try {
+    uni.showLoading({ title: '重置中...' })
+    await resetPassword({ account: acct, code: forgotCode.value, password: forgotPwd.value })
+    uni.hideLoading()
+    uni.showToast({ title: '密码已重置，请登录', icon: 'success' })
+    showForgot.value = false
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: (e && e.message) || '重置失败', icon: 'none' })
+  }
+}
 // 小程序微信授权头像昵称 (chooseAvatar 官方方案)
 const wxAvatar = ref('')
 const wxNickname = ref('')
@@ -160,6 +279,12 @@ onLoad((options) => {
   getPayConfig().then((cfg) => {
     if (cfg) showWechatLogin.value = !!cfg.show_wechat_login
   }).catch(() => {})
+})
+
+/* 离开页面清理验证码倒计时 */
+onUnload(() => {
+  if (codeTimer) clearInterval(codeTimer)
+  if (forgotTimer) clearInterval(forgotTimer)
 })
 
 /* 手机号快捷登录 (H5/APP 弹窗输入) */
@@ -344,6 +469,11 @@ async function submit() {
     errorMsg.value = '密码至少 6 位'
     return
   }
+  // 注册必须输入验证码
+  if (mode.value === 'register' && !verifyCode.value.trim()) {
+    errorMsg.value = '请输入验证码'
+    return
+  }
   loading.value = true
   try {
     let user
@@ -353,6 +483,7 @@ async function submit() {
       user = await register({
         account: phone.value.trim(),
         password: password.value,
+        code: verifyCode.value.trim(),
         invite_code: inviteCode.value,
       })
     }
@@ -476,6 +607,53 @@ async function submit() {
   padding: 0 26rpx;
   font-size: 28rpx;
   color: #2a2a2a;
+}
+
+/* 验证码行 */
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.code-input {
+  flex: 1;
+}
+.code-btn {
+  flex-shrink: 0;
+  min-width: 200rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  padding: 0 16rpx;
+}
+.code-btn-disabled {
+  opacity: 0.55;
+}
+/* 忘记密码 */
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: -12rpx 0 24rpx;
+}
+.forgot-link {
+  font-size: 24rpx;
+  color: #8a857c;
+  padding: 8rpx 0 8rpx 20rpx;
+}
+/* 忘记密码弹窗内验证码按钮 */
+.forgot-code-btn {
+  flex-shrink: 0;
+  min-width: 200rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  padding: 0 16rpx;
 }
 
 .err-text {
