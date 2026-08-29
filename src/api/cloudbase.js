@@ -30,6 +30,7 @@ let _initPromise = null
    协议: createMultipart → (partUploadAuth + fetch PUT) × N → completeMultipart */
 const MULTIPART_PART_SIZE = 64 * 1024 * 1024        // 64MB / 片
 const MULTIPART_CONCURRENCY = 3                     // 并发片数
+const PUT_TIMEOUT_MS = 120000                       // 单片 PUT 超时: 防请求挂起卡死进度
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -99,48 +100,67 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
     const start = partIndex * MULTIPART_PART_SIZE
     const end = Math.min(size, start + MULTIPART_PART_SIZE)
     const piece = await readBlobSlice(filePath, start, end)
-    // 获取本分片 PUT 预签名 URL (有效期 10 分钟, 失败重试 2 次)
-    let auth = null
-    for (let k = 0; k < 3 && !auth; k++) {
-      await waitIfPaused(control)
-      try {
-        auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber })
-      } catch (e) {
-        if (k === 2) throw e
-        await sleep(600 * (k + 1))
-      }
-    }
-    if (!auth || !auth.url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
-    // PUT 分片: HTTP 错误与网络异常(断网/超时/连接重置)均自动重试 4 次退避递增;
-    // 重试前重新获取签名, 避免签名过期(10分钟)导致重试必败
-    let okFlag = false
-    let lastErr = null
-    for (let retry = 0; retry < 4 && !okFlag; retry++) {
-      await waitIfPaused(control)
-      if (retry > 0) {
-        try { auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }) } catch (e2) {}
-      }
-      try {
-        const resp = await fetch(auth.url, { method: 'PUT', body: piece })
-        if (resp.ok) {
-          okFlag = true
-        } else {
-          let msg = '分片 ' + partNumber + ' 上传失败 HTTP ' + resp.status
-          try { msg += ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
-          lastErr = new Error(msg)
-          console.error('[CloudBase]', msg)
+    // 每片一个 AbortController: 支持 PUT 超时 + 暂停/取消立即中断当前请求
+    const controller = new AbortController()
+    const abortFn = () => controller.abort()
+    if (control) control.abortFn = abortFn
+    try {
+      // 获取本分片 PUT 预签名 URL (有效期 30 分钟, 失败重试 2 次)
+      let auth = null
+      for (let k = 0; k < 3 && !auth; k++) {
+        await waitIfPaused(control)
+        try {
+          auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber })
+        } catch (e) {
+          if (k === 2) throw e
+          await sleep(600 * (k + 1))
         }
-      } catch (netErr) {
-        // 网络层异常 → 记录后进入退避重试
-        lastErr = netErr
-        console.error('[CloudBase] 分片 ' + partNumber + ' 网络错误(自动重试):', netErr.message || netErr)
       }
-      if (!okFlag && retry < 3) await sleep(1000 * Math.pow(2, retry)) // 1s/2s/4s 退避
+      if (!auth || !auth.url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
+      // PUT 分片: HTTP 错误/网络异常/超时均自动重试 4 次退避递增, 重试前刷新签名
+      let okFlag = false
+      let lastErr = null
+      for (let retry = 0; retry < 4 && !okFlag; retry++) {
+        await waitIfPaused(control)
+        if (retry > 0) {
+          try { auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }) } catch (e2) {}
+        }
+        try {
+          const timer = setTimeout(() => controller.abort(), PUT_TIMEOUT_MS)
+          let resp
+          try {
+            resp = await fetch(auth.url, { method: 'PUT', body: piece, signal: controller.signal })
+          } finally {
+            clearTimeout(timer)
+          }
+          if (resp.ok) {
+            okFlag = true
+          } else {
+            let msg = '分片 ' + partNumber + ' 上传失败 HTTP ' + resp.status
+            try { msg += ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
+            lastErr = new Error(msg)
+            console.error('[CloudBase]', msg)
+          }
+        } catch (netErr) {
+          if (netErr && netErr.name === 'AbortError') {
+            // 中止来源: 超时 / 用户暂停 / 用户取消 → 统一先判断控制状态
+            await waitIfPaused(control) // 取消→抛 UPLOAD_CANCELLED; 暂停→等恢复; 纯超时→继续重试
+            lastErr = new Error('分片 ' + partNumber + ' 上传超时')
+            console.warn('[CloudBase] 分片 ' + partNumber + ' 上传超时, 自动重试')
+          } else {
+            lastErr = netErr
+            console.error('[CloudBase] 分片 ' + partNumber + ' 网络错误(自动重试):', netErr.message || netErr)
+          }
+        }
+        if (!okFlag && retry < 3) await sleep(1000 * Math.pow(2, retry)) // 1s/2s/4s 退避
+      }
+      if (!okFlag) throw lastErr || new Error('分片 ' + partNumber + ' 上传失败')
+      donePartNumbers.push(partNumber)
+      uploaded += piece.size
+      if (onProgress) onProgress(uploaded / size, uploaded, size)
+    } finally {
+      if (control && control.abortFn === abortFn) control.abortFn = null
     }
-    if (!okFlag) throw lastErr || new Error('分片 ' + partNumber + ' 上传失败')
-    donePartNumbers.push(partNumber)
-    uploaded += piece.size
-    if (onProgress) onProgress(uploaded / size, uploaded, size)
   }
   try {
     // 并发上传分片
@@ -198,16 +218,23 @@ async function compressImageToBase64(src, targetKB = 80) {
 }
 
 /**
- * 通用 API 请求 (H5 端用 fetch 绕过 uni.request CORS 问题)
+ * 通用 API 请求 (H5 端用 fetch 绕过 uni.request CORS 问题; 带 30s 超时防挂起)
  */
-async function apiRequest(payload) {
-  const res = await fetch(API_BASE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  const data = await res.json()
-  return data
+async function apiRequest(payload, timeoutMs = 30000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    const data = await res.json()
+    return data
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**

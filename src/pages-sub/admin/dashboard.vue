@@ -2660,7 +2660,7 @@ function uploadEpisodeVideo(i) {
     },
   })
 }
-/* 暂停/继续 上传 */
+/* 暂停/继续 上传 (立即中断当前分片请求, 恢复后自动续传该分片) */
 function togglePauseEpisodeUpload(i) {
   const ep = courseForm.value.episodes[i]
   if (!ep || !ep._control || !ep._uploading) return
@@ -2671,15 +2671,17 @@ function togglePauseEpisodeUpload(i) {
   } else {
     ep._control.paused = true
     ep._paused = true
+    if (ep._control.abortFn) ep._control.abortFn() // 中断进行中的分片请求, 立即暂停
     uni.showToast({ title: '已暂停', icon: 'none' })
   }
 }
-/* 取消上传 (分片循环检测到后中止并清理) */
+/* 取消上传 (立即中断当前请求, 分片循环退出并清理) */
 function cancelEpisodeUpload(i) {
   const ep = courseForm.value.episodes[i]
   if (!ep || !ep._control || !ep._uploading) return
   ep._control.cancelled = true
   ep._cancelled = true
+  if (ep._control.abortFn) ep._control.abortFn() // 立即中断, 不再等当前分片
   uni.showToast({ title: '正在取消...', icon: 'none' })
 }
 
@@ -4618,14 +4620,23 @@ onMounted(async () => {
   color: #6f5f4a;
   border: 1rpx solid #d5cbbd;
   border-radius: 8rpx;
-  padding: 4rpx 12rpx;
+  padding: 4rpx 14rpx;
   flex-shrink: 0;
-  background: #fff;
+  background: #f7f2ea;
   line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ep-up-btn:hover {
+  background: #ece3d3;
 }
 .ep-up-btn.danger {
   color: #c41e3a;
   border-color: #e0b3b9;
+  background: #fdf0f1;
+}
+.ep-up-btn.danger:hover {
+  background: #f5d9dc;
 }
 .f-label {
   width: 150rpx;
