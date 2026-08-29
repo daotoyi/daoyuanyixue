@@ -451,6 +451,7 @@
         <view v-else-if="activeModule === 'orders'" class="module">
           <view class="module-head">
             <text class="module-title">订单管理（{{ orders.length }}）</text>
+            <view class="btn-p plain sm" v-if="canWrite" style="margin-right: 16rpx;" @click="reconcileOrders">对账修复</view>
             <view class="filter-pills">
               <text
                 v-for="s in orderTypeFilterOptions"
@@ -1330,6 +1331,7 @@ import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminOrderAnalysis,
   adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
+  adminOrderReconcile,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
@@ -1827,6 +1829,40 @@ async function deletePandaoSession(pd) {
 
 async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
+}
+
+/* 对账修复: 微信已支付但回调丢失的订单自动同步状态 (后台一键修复) */
+async function reconcileOrders() {
+  uni.showModal({
+    title: '对账修复',
+    content: '将逐个核对待付款订单的微信支付状态，已支付但未同步的订单会自动更新为已支付。确定执行？',
+    success: async (res) => {
+      if (!res.confirm) return
+      try {
+        uni.showLoading({ title: '对账中...' })
+        const r = await adminOrderReconcile({})
+        uni.hideLoading()
+        const fixed = (r && r.fixed) || []
+        const closed = (r && r.closed) || []
+        uni.showToast({
+          title: fixed.length ? `已修复 ${fixed.length} 笔` : '无异常订单',
+          icon: 'none',
+        })
+        if (fixed.length || closed.length) {
+          const names = fixed.slice(0, 8).join(', ') + (fixed.length > 8 ? '...' : '')
+          uni.showModal({
+            title: '对账完成',
+            content: `已同步支付 ${fixed.length} 笔${closed.length ? '；关闭 ' + closed.length + ' 笔' : ''}\n${names}`,
+            showCancel: false,
+          })
+        }
+        await loadOrders()
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: '对账失败: ' + (e.message || ''), icon: 'none' })
+      }
+    },
+  })
 }
 
 /* 订单分类: 兼容历史无 order_type 订单 (course_id 判定) + 订单号前缀 (TL/RC/AP) */

@@ -400,6 +400,10 @@ async function doPay() {
     } else if (prepay && prepay.payment) {
       await wxRequestPayment(prepay.payment)
       uni.showToast({ title: '支付成功', icon: 'success' })
+      // 主动查单同步: 防止微信回调丢失导致本地订单状态不更新 (回调兜底)
+      try {
+        await wxpayQuerySync(orderNo.value)
+      } catch (e) { /* 查单失败不影响提示 */ }
     } else {
       uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
     }

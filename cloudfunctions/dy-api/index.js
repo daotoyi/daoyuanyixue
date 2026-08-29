@@ -2269,6 +2269,39 @@ async function wxpayQuerySync(data) {  const { order_no } = data
   return ok({ status: order.status, wechat_state: (res && res.trade_state) || 'unknown' })
 }
 
+/* 后台: 批量对账待付款订单 (微信已支付但回调丢失 → 自动同步状态)
+   遍历最近待付款订单逐个微信查单, 微信侧 SUCCESS 则 markOrderPaid 更新本地 */
+async function adminOrderReconcile(data) {
+  const limitNum = Math.min(Number(data.limit) || 50, 100)
+  const days = Math.min(Number(data.days) || 3, 14)
+  const startTs = new Date(Date.now() - days * 24 * 3600 * 1000).toLocaleString('zh-CN', { hour12: false })
+  const res = await db.collection('orders')
+    .where({ status: '待付款' })
+    .orderBy('created_at', 'desc')
+    .limit(limitNum)
+    .get()
+  const fixed = []
+  const failed = []
+  const wxpay = require('./wxpay-v3')
+  for (const o of res.data || []) {
+    // 只对账近期订单, 避免历史脏数据误处理
+    if (o.created_at && String(o.created_at) < String(startTs)) continue
+    try {
+      const q = await wxpay.queryOrder(o.order_no)
+      if (q && q.trade_state === 'SUCCESS') {
+        await markOrderPaid({ order_no: o.order_no, trade_no: q.transaction_id || '', openid: (q.payer && q.payer.openid) || '' })
+        fixed.push(o.order_no)
+      } else if (q && q.trade_state === 'CLOSED') {
+        await db.collection('orders').where({ order_no: o.order_no }).update({ status: '已取消' })
+        failed.push({ order_no: o.order_no, wechat: 'CLOSED' })
+      }
+    } catch (e) {
+      failed.push({ order_no: o.order_no, error: (e.message || e) })
+    }
+  }
+  return ok({ total: (res.data || []).length, fixed, closed: failed.filter((f) => f.wechat === 'CLOSED'), failed: failed.filter((f) => !f.wechat) })
+}
+
 /* 支付成功后同步销量数据 (商品已售/库存, 课程学习人数)
    防重复: 仅在订单从「待付款→已支付」时调用一次; 通过 markOrderPaid/orderPayBalance 入口调用 */
 async function syncSalesAfterPay(order) {
@@ -4162,6 +4195,7 @@ const ROUTES = {
   'admin.courses.update': adminCourseUpdate,
   'admin.orders.ship': adminOrderShip,
   'admin.orders.refund': adminOrderRefund,
+  'admin.orders.reconcile': adminOrderReconcile,
   'admin.recalcSales': adminRecalcSales,
   'admin.orders.delete': adminOrderDelete,
   'admin.users.create': adminUserCreate,
