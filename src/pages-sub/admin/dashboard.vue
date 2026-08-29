@@ -264,7 +264,7 @@
               </view>
             </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
-            <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea pd-content-ta" v-model="pdForm.content" placeholder="详情页活动介绍（可换行，不限字数）" /></view>
+            <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea pd-content-ta" v-model="pdForm.content" :maxlength="-1" placeholder="详情页活动介绍（可换行，不限字数）" /></view>
             <view class="settings-actions" v-if="canManageHome">
               <view class="btn-p plain sm" v-if="pdForm.id" @click="pdForm = emptyPdForm()">取消编辑</view>
               <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
@@ -1039,7 +1039,7 @@
         <view class="f-row">
           <text class="f-label">图片</text>
           <view class="f-img-box">
-            <textarea class="f-textarea" v-model="productForm.imagesText" placeholder="多个图片用逗号分隔，或点下方上传"></textarea>
+            <textarea class="f-textarea" v-model="productForm.imagesText" :maxlength="-1" placeholder="多个图片用逗号分隔，或点下方上传"></textarea>
             <view class="f-img-row">
               <view class="f-img-item" v-for="(u, ui) in productImages" :key="ui">
                 <image class="f-img-thumb" :src="u" mode="aspectFill"></image>
@@ -1049,7 +1049,7 @@
             </view>
           </view>
         </view>
-        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="productForm.description" /></view>
+        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="productForm.description" :maxlength="-1" /></view>
         <view class="attr-editor">
           <view class="attr-head">
             <text class="attr-title">商品属性</text>
@@ -1115,7 +1115,7 @@
             <text v-for="lv in ['入门', '进阶', '高级']" :key="lv" class="pill" :class="{ on: courseForm.level === lv }" @tap="courseForm.level = lv">{{ lv }}</text>
           </view>
         </view>
-        <view class="f-row" style="align-items: flex-start"><text class="f-label">描述</text><textarea class="f-textarea f-desc" v-model="courseForm.description" placeholder="课程介绍（可多行）" /></view>
+        <view class="f-row" style="align-items: flex-start"><text class="f-label">描述</text><textarea class="f-textarea f-desc" v-model="courseForm.description" :maxlength="-1" placeholder="课程介绍（可多行）" /></view>
         <!-- 视频集 (多集: 每集标题+视频+文本) -->
         <view class="f-row" style="align-items: flex-start">
           <text class="f-label">课程大纲</text>
@@ -1138,7 +1138,7 @@
                 >{{ ep.free === false ? '付费' : '免费' }}</text>
               </view>
               <view class="ep-row">
-                <textarea class="f-textarea ep-text" v-model="ep.text" placeholder="课时文本说明（选填，显示在课程详情页该课时下方）"></textarea>
+                <textarea class="f-textarea ep-text" v-model="ep.text" :maxlength="-1" placeholder="课时文本说明（选填，显示在课程详情页该课时下方）"></textarea>
               </view>
             </view>
             <view class="btn-p plain sm" style="margin-top: 10rpx" @click="addEpisode">＋ 添加课时</view>
@@ -1174,7 +1174,7 @@
             <text v-for="st in ['upcoming', 'live', 'ended']" :key="st" class="pill" :class="{ on: liveForm.status === st }" @tap="liveForm.status = st">{{ { upcoming: '未开始', live: '直播中', ended: '已结束' }[st] }}</text>
           </view>
         </view>
-        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="liveForm.description" /></view>
+        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="liveForm.description" :maxlength="-1" /></view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showLive = false">取消</view>
           <view class="btn-p sm" @click="saveLive">保存</view>
@@ -1259,7 +1259,7 @@
     <view class="pp-mask" v-if="showFeedbackReply" @tap="showFeedbackReply = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">回复反馈</view>
-        <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="replyForm.reply" placeholder="填写回复内容，反馈将标记为已处理" /></view>
+        <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="replyForm.reply" :maxlength="-1" placeholder="填写回复内容，反馈将标记为已处理" /></view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showFeedbackReply = false">取消</view>
           <view class="btn-p sm" @click="saveFeedbackReply">确认回复</view>
@@ -1290,7 +1290,7 @@
             <text class="pill" :class="{ on: asHandleForm.status === '已处理' }" @tap="asHandleForm.status = '已处理'">已处理</text>
           </view>
         </view>
-        <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="asHandleForm.reply" placeholder="填写处理结果，将推送给用户" /></view>
+        <view class="f-row"><text class="f-label">回复内容</text><textarea class="f-textarea" v-model="asHandleForm.reply" :maxlength="-1" placeholder="填写处理结果，将推送给用户" /></view>
         <view class="sheet-actions">
           <view class="btn-p plain sm" @click="showAftersaleHandle = false">取消</view>
           <view class="btn-p sm" @click="saveAftersaleReply">确认处理</view>
@@ -1303,7 +1303,7 @@
       <view class="form-sheet">
         <view class="sheet-title">{{ cateForm.id ? '编辑分类' : '新建分类' }}</view>
         <view class="f-row"><text class="f-label">分类名称</text><input class="f-input" v-model="cateForm.name" /></view>
-        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="cateForm.description" /></view>
+        <view class="f-row"><text class="f-label">描述</text><textarea class="f-textarea" v-model="cateForm.description" :maxlength="-1" /></view>
         <view class="f-row">
           <text class="f-label">前端显示</text>
           <view class="f-pills">
