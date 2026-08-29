@@ -1130,7 +1130,7 @@
         <view class="f-row" style="align-items: flex-start">
           <text class="f-label">课程大纲</text>
           <view class="ep-list" style="flex: 1">
-            <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ei">
+            <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ep._key || ('ep' + ei)">
               <view class="ep-row">
                 <text class="ep-index">{{ ei + 1 }}</text>
                 <input class="f-input ep-title" v-model="ep.title" placeholder="课时名（如：第1课 阴阳五行）" />
@@ -2597,10 +2597,15 @@ function uploadCourseVideo() {
 }
 
 /* ---- 视频集管理 (多集) ---- */
+/* 生成课时唯一 key: v-for 必须用稳定 key, 用索引作 key 会在增删/移动课时时
+   DOM 复用错位 → 按钮绑定到错误课时对象 → 暂停/取消"没反应" */
+function epKey() {
+  return 'ep' + Date.now() + '_' + Math.floor(Math.random() * 100000)
+}
 function addEpisode() {
   if (!courseForm.value.episodes) courseForm.value.episodes = []
   // 新增课时默认付费 (可在行内切换为免费)
-  courseForm.value.episodes.push({ title: '', video: '', free: false })
+  courseForm.value.episodes.push({ _key: epKey(), title: '', video: '', free: false })
 }
 function removeEpisode(i) {
   courseForm.value.episodes.splice(i, 1)
@@ -2836,7 +2841,7 @@ const courseForm = ref({})
 
 function openCourseForm(c) {
   courseForm.value = c
-    ? { ...c, episodes: Array.isArray(c.episodes) ? c.episodes.map((e) => ({ ...e })) : (c.video ? [{ title: '第1集', video: c.video }] : []) }
+    ? { ...c, episodes: Array.isArray(c.episodes) ? c.episodes.map((e) => ({ ...e, _key: e._key || epKey() })) : (c.video ? [{ _key: epKey(), title: '第1集', video: c.video }] : []) }
     : { id: null, title: '', teacher: '', price: '0.00', ot_price: '', cover: '', category_id: courseActiveCate.value || 1, lessons_count: 0, level: '入门', description: '', episodes: [] }
   showCourse.value = true
 }
