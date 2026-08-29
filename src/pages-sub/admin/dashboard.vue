@@ -1146,6 +1146,7 @@
                   <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
                   <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ei)">{{ ep._paused ? '继续' : '暂停' }}</text>
                   <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ei)">取消</text>
+                  <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
                 </view>
                 <text class="btn-p sm" v-else style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
                 <text
@@ -2623,11 +2624,12 @@ function uploadEpisodeVideo(i) {
     compressed: false,
     success: async (res) => {
       const filePath = res.tempFilePath
-      const control = { paused: false, cancelled: false }
+      const control = { paused: false, cancelled: false, abortFns: new Set() }
       ep._control = control
       ep._uploading = true
       ep._paused = false
       ep._progress = 0
+      ep._status = ''
       try {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
@@ -2635,7 +2637,9 @@ function uploadEpisodeVideo(i) {
         const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
           const pct = Math.min(99, Math.round(ratio * 100))
           if (pct !== ep._progress) ep._progress = pct
-        }, control)
+        }, control, (s) => {
+          ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
+        })
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
@@ -2644,6 +2648,7 @@ function uploadEpisodeVideo(i) {
         ep._uploading = false
         ep._paused = false
         ep._progress = 100
+        ep._status = ''
         uni.showToast({ title: '已上传', icon: 'success' })
         // C/OSS 启用时提示是否搬运到 C/OSS
         await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
@@ -2651,6 +2656,7 @@ function uploadEpisodeVideo(i) {
         ep._uploading = false
         ep._paused = false
         ep._progress = 0
+        ep._status = ''
         if (e && e.code === 'UPLOAD_CANCELLED') {
           uni.showToast({ title: '已取消上传', icon: 'none' })
         } else {
@@ -2660,29 +2666,37 @@ function uploadEpisodeVideo(i) {
     },
   })
 }
-/* 暂停/继续 上传 (立即中断当前分片请求, 恢复后自动续传该分片) */
+/* 暂停/继续 上传 (中断所有进行中的分片, 立即暂停; 恢复后自动续传) */
 function togglePauseEpisodeUpload(i) {
   const ep = courseForm.value.episodes[i]
   if (!ep || !ep._control || !ep._uploading) return
   if (ep._paused) {
     ep._control.paused = false
     ep._paused = false
+    ep._status = ''
     uni.showToast({ title: '继续上传', icon: 'none' })
   } else {
     ep._control.paused = true
     ep._paused = true
-    if (ep._control.abortFn) ep._control.abortFn() // 中断进行中的分片请求, 立即暂停
+    ep._status = '已暂停'
+    abortAllParts(ep._control) // 中断所有并发分片请求
     uni.showToast({ title: '已暂停', icon: 'none' })
   }
 }
-/* 取消上传 (立即中断当前请求, 分片循环退出并清理) */
+/* 取消上传 (立即中断所有分片并清理) */
 function cancelEpisodeUpload(i) {
   const ep = courseForm.value.episodes[i]
   if (!ep || !ep._control || !ep._uploading) return
   ep._control.cancelled = true
   ep._cancelled = true
-  if (ep._control.abortFn) ep._control.abortFn() // 立即中断, 不再等当前分片
+  ep._status = '正在取消…'
+  abortAllParts(ep._control) // 立即中断所有并发分片, 不等它们自然结束
   uni.showToast({ title: '正在取消...', icon: 'none' })
+}
+/* 遍历中断 control 中所有在传分片的请求 */
+function abortAllParts(control) {
+  if (!control || !control.abortFns || !control.abortFns.size) return
+  control.abortFns.forEach((fn) => { try { fn() } catch (e) {} })
 }
 
 /* C/OSS 启用时: 询问是否将刚上传的本地视频搬运到 C/OSS */
@@ -4592,9 +4606,15 @@ onMounted(async () => {
 .ep-up {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10rpx;
   margin-left: 10rpx;
   flex-shrink: 0;
+}
+.ep-up-status {
+  width: 100%;
+  font-size: 20rpx;
+  color: #b07a1e;
 }
 .ep-up-bar {
   width: 150rpx;

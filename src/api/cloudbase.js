@@ -28,14 +28,15 @@ let _initPromise = null
    COS 单次 PUT 上限 5GB, 4GB+ 上传不稳定 → 非图片(视频)上传统一走分片,
    可获得真实进度, 并支持暂停/继续/取消。
    协议: createMultipart → (partUploadAuth + fetch PUT) × N → completeMultipart */
-const MULTIPART_PART_SIZE = 64 * 1024 * 1024        // 64MB / 片
+const MULTIPART_PART_SIZE = 32 * 1024 * 1024        // 32MB / 片 (慢速上行带宽也能在超时内传完, 避免反复超时)
 const MULTIPART_CONCURRENCY = 3                     // 并发片数
-const PUT_TIMEOUT_MS = 120000                       // 单片 PUT 超时: 防请求挂起卡死进度
+const PUT_TIMEOUT_MS = 90000                        // 单片 PUT 超时: 防请求挂起卡死进度
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-/* 暂停/取消控制: control = { paused, cancelled }。
-   暂停: 进行中的分片完成后停止调度新的; 取消: 中止并抛 UPLOAD_CANCELLED */
+/* 暂停/取消控制: control = { paused, cancelled, abortFns:Set }。
+   暂停: 立即中断所有进行中的分片请求并停止调度新的; 恢复后续传;
+   取消: 立即中断所有分片并抛 UPLOAD_CANCELLED */
 async function waitIfPaused(control) {
   while (control && control.paused && !control.cancelled) {
     await sleep(300)
@@ -76,8 +77,13 @@ async function readBlobSlice(filePath, start, end) {
   return new Blob([ab])
 }
 
-/* COS 分片上传主流程: 返回 { fileID }。control = { paused, cancelled } 支持暂停/取消 */
-async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
+/* COS 分片上传主流程: 返回 { fileID }。
+   control = { paused, cancelled, abortFns:Set } 支持暂停/取消 (abortFns 遍历中断所有并发分片);
+   onStatus('retrying'|'paused'|'resumed'|'cancelling') 状态回调用于界面提示 */
+async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus) {
+  if (!control) control = {}
+  if (!control.abortFns) control.abortFns = new Set()
+  const status = (s) => { if (onStatus) onStatus(s) }
   await waitIfPaused(control)
   const size = await probeFileSize(filePath)
   if (!size) throw new Error('无法读取文件大小')
@@ -94,16 +100,17 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
   const uploadId = init.uploadId
   const donePartNumbers = []
   let uploaded = 0
+  let retrying = false
   const uploadOne = async (partIndex) => {
     const partNumber = partIndex + 1
     await waitIfPaused(control)
     const start = partIndex * MULTIPART_PART_SIZE
     const end = Math.min(size, start + MULTIPART_PART_SIZE)
     const piece = await readBlobSlice(filePath, start, end)
-    // 每片一个 AbortController: 支持 PUT 超时 + 暂停/取消立即中断当前请求
+    // 每片一个 AbortController 注册到 control.abortFns: 暂停/取消可中断所有并发分片
     const controller = new AbortController()
     const abortFn = () => controller.abort()
-    if (control) control.abortFn = abortFn
+    if (control && control.abortFns) control.abortFns.add(abortFn)
     try {
       // 获取本分片 PUT 预签名 URL (有效期 30 分钟, 失败重试 2 次)
       let auth = null
@@ -117,10 +124,10 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
         }
       }
       if (!auth || !auth.url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
-      // PUT 分片: HTTP 错误/网络异常/超时均自动重试 4 次退避递增, 重试前刷新签名
+      // PUT 分片: HTTP 错误/网络异常/超时均自动重试 3 次退避递增, 重试前刷新签名
       let okFlag = false
       let lastErr = null
-      for (let retry = 0; retry < 4 && !okFlag; retry++) {
+      for (let retry = 0; retry < 3 && !okFlag; retry++) {
         await waitIfPaused(control)
         if (retry > 0) {
           try { auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }) } catch (e2) {}
@@ -152,14 +159,18 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
             console.error('[CloudBase] 分片 ' + partNumber + ' 网络错误(自动重试):', netErr.message || netErr)
           }
         }
-        if (!okFlag && retry < 3) await sleep(1000 * Math.pow(2, retry)) // 1s/2s/4s 退避
+        if (!okFlag && retry < 2) {
+          if (!retrying) { retrying = true; status('retrying') }
+          await sleep(1000 * Math.pow(2, retry)) // 1s/2s 退避
+        }
       }
       if (!okFlag) throw lastErr || new Error('分片 ' + partNumber + ' 上传失败')
+      if (retrying) { retrying = false; status('resumed') }
       donePartNumbers.push(partNumber)
       uploaded += piece.size
       if (onProgress) onProgress(uploaded / size, uploaded, size)
     } finally {
-      if (control && control.abortFn === abortFn) control.abortFn = null
+      if (control && control.abortFns) control.abortFns.delete(abortFn)
     }
   }
   try {
@@ -177,6 +188,7 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control) {
     return { fileID: done.fileID }
   } catch (e) {
     // 3) 失败/取消 → 清理已传分片 (取消时 uploadId 已存在, abort 释放未完成分片)
+    if (e && e.code === 'UPLOAD_CANCELLED') status('cancelling')
     try { await call('storage.abortMultipart', { cloudPath, uploadId }) } catch (e2) {}
     throw e
   }
@@ -383,7 +395,7 @@ export async function getStorage() {
     })
   }
   return {
-    uploadFile: async (filePath, cloudPath, onProgress, control = {}) => {
+    uploadFile: async (filePath, cloudPath, onProgress, control = {}, onStatus) => {
       // H5: 图片 → canvas 压缩到 <80KB → base64 云函数中转 (云函数网关 body 限制 ~100KB)
       //      非图片 → 云函数 getUploadUrl → COS 直传; >3GB 大文件 → COS 分片上传
       // 1) 图片: canvas 压缩 + base64
@@ -399,7 +411,7 @@ export async function getStorage() {
       // 非图片或 canvas 失败: 原始 base64 (仅图片兜底, 视频等非图片直接 COS 分片, 不读内存)
       // 1.5) 非图片(视频) → 一律走 COS 分片上传: 真实进度 + 支持暂停/继续/取消
       if (!isImage) {
-        return uploadMultipartToCos(filePath, cloudPath, onProgress, control)
+        return uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus)
       }
       if (isImage && !base64) {
         try {
