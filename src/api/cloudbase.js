@@ -29,7 +29,7 @@ let _initPromise = null
    可获得真实进度, 并支持暂停/继续/取消。
    协议: createMultipart → (partUploadAuth + fetch PUT) × N → completeMultipart */
 const MULTIPART_PART_SIZE = 32 * 1024 * 1024        // 32MB / 片 (慢速上行带宽也能在超时内传完, 避免反复超时)
-const MULTIPART_CONCURRENCY = 3                     // 并发片数
+const MULTIPART_CONCURRENCY = 6                     // 并发片数 (吃满浏览器同域名连接上限, 提速)
 const PUT_TIMEOUT_MS = 90000                        // 单片 PUT 超时: 防请求挂起卡死进度
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
