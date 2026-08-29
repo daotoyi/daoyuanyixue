@@ -2618,7 +2618,38 @@ function moveEpisode(i, dir) {
   arr[i] = arr[j]
   arr[j] = t
 }
-/* 上传某一集视频 (行内独立进度 + 暂停/继续/取消, 支持多课时并行上传; 绑定 ep 对象防索引错位) */
+/* ===== 断点续传记录 (localStorage): 失败/取消后保留已传分片, 下次选同一文件自动续传 ===== */
+const RESUME_KEY = 'zhs_upload_resume'
+const PART_SIZE_BYTES = 32 * 1024 * 1024
+function saveResume(rec) {
+  try {
+    let list = JSON.parse(uni.getStorageSync(RESUME_KEY) || '[]')
+    list = list.filter((r) => r.size !== rec.size)
+    list.push(rec)
+    if (list.length > 10) list = list.slice(-10)
+    uni.setStorageSync(RESUME_KEY, JSON.stringify(list))
+  } catch (e) {}
+}
+function findResume(size) {
+  try {
+    const list = JSON.parse(uni.getStorageSync(RESUME_KEY) || '[]')
+    const rec = list.filter((r) => r.size === size && r.uploadId).sort((a, b) => (b.ts || 0) - (a.ts || 0))[0]
+    return rec || null
+  } catch (e) { return null }
+}
+function removeResume(size) {
+  try {
+    let list = JSON.parse(uni.getStorageSync(RESUME_KEY) || '[]')
+    list = list.filter((r) => r.size !== size)
+    uni.setStorageSync(RESUME_KEY, JSON.stringify(list))
+  } catch (e) {}
+}
+function resumePercent(rec, size) {
+  const total = Math.max(1, Math.ceil(size / PART_SIZE_BYTES))
+  return Math.min(99, Math.round(((rec.partNumbers || []).length / total) * 100))
+}
+
+/* 上传某一集视频 (行内独立进度 + 暂停/继续/取消 + 断点续传; 绑定 ep 对象防索引错位) */
 function uploadEpisodeVideo(ep) {
   if (!ep) return
   const i = courseForm.value.episodes.indexOf(ep)
@@ -2630,22 +2661,52 @@ function uploadEpisodeVideo(ep) {
     compressed: false,
     success: async (res) => {
       const filePath = res.tempFilePath
+      const fileSize = Number(res.size) || 0
+      // 断点续传检测: 同尺寸文件有未完成上传 → 询问续传
+      let resumeInfo = null
+      const resume = fileSize ? findResume(fileSize) : null
+      if (resume && resume.uploadId) {
+        const confirmRes = await new Promise((r) => {
+          uni.showModal({
+            title: '发现未完成的上传',
+            content: `上次该文件已上传约 ${resumePercent(resume, fileSize)}%，是否从断点继续上传？（若选重新上传将丢弃旧进度）`,
+            confirmText: '继续上传',
+            cancelText: '重新上传',
+            success: (rr) => r(rr.confirm === true),
+            fail: () => r(false),
+          })
+        })
+        if (confirmRes) {
+          resumeInfo = { uploadId: resume.uploadId, skipPartNumbers: resume.partNumbers || [] }
+        } else {
+          removeResume(fileSize)
+        }
+      }
       const control = { paused: false, cancelled: false, abortFns: new Set() }
       ep._control = control
       ep._uploading = true
       ep._paused = false
-      ep._progress = 0
-      ep._status = ''
+      ep._progress = resumeInfo ? resumePercent(resume, fileSize) : 0
+      ep._status = resumeInfo ? '续传中…' : ''
+      let cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
+      let lastSaveTs = 0
       try {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
-        const cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
+        if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
+        if (resumeInfo) cloudPath = resume.cloudPath // 续传必须用同一 cloudPath
         const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
           const pct = Math.min(99, Math.round(ratio * 100))
           if (pct !== ep._progress) ep._progress = pct
+          // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
+          const now = Date.now()
+          if (control.uploadId && now - lastSaveTs > 10000) {
+            lastSaveTs = now
+            saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: now })
+          }
         }, control, (s) => {
           ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
-        })
+        }, resumeInfo || null)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
@@ -2655,18 +2716,24 @@ function uploadEpisodeVideo(ep) {
         ep._paused = false
         ep._progress = 100
         ep._status = ''
+        removeResume(fileSize) // 成功清除续传点
         uni.showToast({ title: '已上传', icon: 'success' })
         // C/OSS 启用时提示是否搬运到 C/OSS
         await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
       } catch (e) {
+        // 失败/取消: 保存续传点 (分片保留在 COS, 下次选同文件可继续)
+        if (control.uploadId) {
+          saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: Date.now() })
+        }
         ep._uploading = false
         ep._paused = false
         ep._progress = 0
         ep._status = ''
         if (e && e.code === 'UPLOAD_CANCELLED') {
-          uni.showToast({ title: '已取消上传', icon: 'none' })
+          uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
         } else {
-          uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+          uni.showToast({ title: '上传中断，已保留进度，可重新选择该文件续传', icon: 'none' })
+          console.error('[上传失败]', e)
         }
       }
     },

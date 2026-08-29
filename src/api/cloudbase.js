@@ -79,8 +79,10 @@ async function readBlobSlice(filePath, start, end) {
 
 /* COS 分片上传主流程: 返回 { fileID }。
    control = { paused, cancelled, abortFns:Set } 支持暂停/取消 (abortFns 遍历中断所有并发分片);
-   onStatus('retrying'|'paused'|'resumed'|'cancelling') 状态回调用于界面提示 */
-async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus) {
+   onStatus('retrying'|'paused'|'resumed'|'cancelling') 状态回调用于界面提示;
+   resume = { uploadId, skipPartNumbers } 断点续传: 复用 uploadId 跳过已传分片, 只传缺失的;
+   失败/取消【不 abort 分片】→ 已传分片保留在 COS, 供下次续传 (control 上暴露 uploadId/partNumbers/size) */
+async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume) {
   if (!control) control = {}
   if (!control.abortFns) control.abortFns = new Set()
   const status = (s) => { if (onStatus) onStatus(s) }
@@ -93,17 +95,36 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     if (res.status !== 200) throw new Error(res.msg || action + ' 失败')
     return res.data || {}
   }
-  // 1) 初始化分片上传
-  await waitIfPaused(control)
-  const init = await call('storage.createMultipart', { cloudPath })
-  if (!init.uploadId) throw new Error('初始化分片上传失败')
-  const uploadId = init.uploadId
+  let uploadId = ''
   const donePartNumbers = []
   let uploaded = 0
+  // 1) 初始化: 续传复用 uploadId + 服务端查询已传分片; 否则新建
+  await waitIfPaused(control)
+  if (resume && resume.uploadId) {
+    uploadId = resume.uploadId
+    const lp = await call('storage.listParts', { cloudPath, uploadId }).catch(() => ({ parts: resume.skipPartNumbers || [] }))
+    donePartNumbers.push(...((lp && lp.parts) || resume.skipPartNumbers || []))
+    uploaded = donePartNumbers.length * MULTIPART_PART_SIZE // 近似 (最后一片略小, 进度显示无碍)
+    if (uploaded > size) uploaded = size
+    console.log('[CloudBase] 断点续传: uploadId=' + uploadId.slice(0, 12) + '... 已传分片=' + donePartNumbers.length + '/' + totalParts)
+  } else {
+    const init = await call('storage.createMultipart', { cloudPath })
+    if (!init.uploadId) throw new Error('初始化分片上传失败')
+    uploadId = init.uploadId
+  }
+  control.uploadId = uploadId
+  control.partNumbers = donePartNumbers
+  control.size = size
+  const skipSet = new Set(donePartNumbers)
   let retrying = false
   const uploadOne = async (partIndex) => {
     const partNumber = partIndex + 1
     await waitIfPaused(control)
+    if (skipSet.has(partNumber)) {
+      // 已传分片: 跳过 (续传场景)
+      if (onProgress) onProgress(uploaded / size, uploaded, size)
+      return
+    }
     const start = partIndex * MULTIPART_PART_SIZE
     const end = Math.min(size, start + MULTIPART_PART_SIZE)
     const piece = await readBlobSlice(filePath, start, end)
@@ -187,9 +208,8 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     if (!done.fileID) throw new Error('合并完成但未返回 fileID')
     return { fileID: done.fileID }
   } catch (e) {
-    // 3) 失败/取消 → 清理已传分片 (取消时 uploadId 已存在, abort 释放未完成分片)
+    // 3) 失败/取消: 已传分片【保留在 COS】供下次断点续传 (COS 7 天后自动清理未完成分片)
     if (e && e.code === 'UPLOAD_CANCELLED') status('cancelling')
-    try { await call('storage.abortMultipart', { cloudPath, uploadId }) } catch (e2) {}
     throw e
   }
 }
@@ -395,7 +415,7 @@ export async function getStorage() {
     })
   }
   return {
-    uploadFile: async (filePath, cloudPath, onProgress, control = {}, onStatus) => {
+    uploadFile: async (filePath, cloudPath, onProgress, control = {}, onStatus, resume) => {
       // H5: 图片 → canvas 压缩到 <80KB → base64 云函数中转 (云函数网关 body 限制 ~100KB)
       //      非图片 → 云函数 getUploadUrl → COS 直传; >3GB 大文件 → COS 分片上传
       // 1) 图片: canvas 压缩 + base64
@@ -409,9 +429,9 @@ export async function getStorage() {
         }
       }
       // 非图片或 canvas 失败: 原始 base64 (仅图片兜底, 视频等非图片直接 COS 分片, 不读内存)
-      // 1.5) 非图片(视频) → 一律走 COS 分片上传: 真实进度 + 支持暂停/继续/取消
+      // 1.5) 非图片(视频) → 一律走 COS 分片上传: 真实进度 + 暂停/取消 + 断点续传
       if (!isImage) {
-        return uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus)
+        return uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume)
       }
       if (isImage && !base64) {
         try {

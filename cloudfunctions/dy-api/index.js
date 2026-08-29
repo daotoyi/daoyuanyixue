@@ -3193,6 +3193,25 @@ async function storageAbortMultipart(data) {
   }
 }
 
+/* 查询分片上传已传分片号列表 (断点续传: 前端跳过已传分片, 只传缺失的) */
+async function storageListParts(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  const uploadId = String(data.uploadId || '')
+  if (!cloudPath || !uploadId) return fail('缺少 cloudPath/uploadId')
+  try {
+    const cos = getCos()
+    const res = await cos.multipartListPart({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
+    const parts = (res.Part || [])
+      .filter((p) => p && p.PartNumber)
+      .map((p) => Number(p.PartNumber))
+      .sort((a, b) => a - b)
+    return ok({ parts })
+  } catch (e) {
+    console.warn('[storageListParts] error:', e.message || e)
+    return ok({ parts: [] })
+  }
+}
+
 /* 清理所有未完成的分片上传 (列出 bucket 全部 multipart uploads 并逐个 abort, 释放残留分片存储)。
    用于上传中断/卡壳后回收占用; prefix 可限定目录 (默认全部) */
 async function storageAbortAllMultipart(data) {
@@ -4564,6 +4583,7 @@ const ROUTES = {
   'storage.createMultipart': storageCreateMultipart,
   'storage.partUploadAuth': storagePartUploadAuth,
   'storage.completeMultipart': storageCompleteMultipart,
+  'storage.listParts': storageListParts,
   'storage.abortMultipart': storageAbortMultipart,
   'storage.abortAllMultipart': storageAbortAllMultipart,
   'admin.pandao.create': adminPandaoCreate,
