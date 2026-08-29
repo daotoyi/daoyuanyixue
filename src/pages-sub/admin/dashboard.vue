@@ -4665,6 +4665,11 @@ onMounted(async () => {
   color: #c41e3a;
   padding: 4rpx 10rpx;
   flex-shrink: 0;
+  cursor: pointer;
+}
+.ep-op:hover {
+  background: #fdf1f1;
+  border-radius: 8rpx;
 }
 .ep-op.danger {
   color: #9c1630;
@@ -4678,10 +4683,18 @@ onMounted(async () => {
   padding: 4rpx 14rpx;
   margin-left: 10rpx;
   flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ep-free:hover {
+  background: #fdf1f1;
 }
 .ep-free.on {
   color: #3d7a4e;
   border-color: #9cc3a7;
+}
+.ep-free.on:hover {
+  background: #f0f7f1;
 }
 /* 课时行内上传进度 (多课时并行, 各自独立) */
 .ep-up {
