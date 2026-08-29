@@ -1140,7 +1140,12 @@
               </view>
               <view class="ep-row">
                 <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
-                <text class="btn-p sm" style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
+                <!-- 上传中: 行内独立显示该课时进度 (支持多课时并行上传) -->
+                <view class="ep-up" v-if="ep._uploading">
+                  <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
+                  <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
+                </view>
+                <text class="btn-p sm" v-else style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
                 <text
                   class="ep-free"
                   :class="{ on: ep.free !== false }"
@@ -2605,38 +2610,40 @@ function moveEpisode(i, dir) {
   arr[i] = arr[j]
   arr[j] = t
 }
-/* 上传某一集视频 */
+/* 上传某一集视频 (行内独立进度, 支持多课时并行上传) */
 function uploadEpisodeVideo(i) {
+  const ep = courseForm.value.episodes[i]
+  if (!ep) return
+  if (ep._uploading) return uni.showToast({ title: '该课时正在上传中', icon: 'none' })
   uni.chooseVideo({
     count: 1,
     maxDuration: 3600,
     compressed: false,
     success: async (res) => {
       const filePath = res.tempFilePath
-      let lastPct = -1
-      uni.showLoading({ title: '视频上传中...', mask: true })
+      ep._uploading = true
+      ep._progress = 0
       try {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
         const cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
         const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
-          const pct = Math.min(99, Math.floor(ratio * 100))
-          if (pct !== lastPct && pct % 2 === 0) {
-            lastPct = pct
-            uni.showLoading({ title: '上传中 ' + pct + '%', mask: true })
-          }
+          const pct = Math.min(99, Math.round(ratio * 100))
+          if (pct !== ep._progress) ep._progress = pct
         })
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
-        courseForm.value.episodes[i].video = url
-        if (!courseForm.value.episodes[i].title) courseForm.value.episodes[i].title = `第${i + 1}集`
-        uni.hideLoading()
+        ep.video = url
+        if (!ep.title) ep.title = `第${i + 1}集`
+        ep._uploading = false
+        ep._progress = 100
         uni.showToast({ title: '已上传', icon: 'success' })
         // C/OSS 启用时提示是否搬运到 C/OSS
         await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
       } catch (e) {
-        uni.hideLoading()
+        ep._uploading = false
+        ep._progress = 0
         uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
       }
     },
@@ -4545,6 +4552,33 @@ onMounted(async () => {
 .ep-free.on {
   color: #3d7a4e;
   border-color: #9cc3a7;
+}
+/* 课时行内上传进度 (多课时并行, 各自独立) */
+.ep-up {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-left: 10rpx;
+  flex-shrink: 0;
+}
+.ep-up-bar {
+  width: 150rpx;
+  height: 14rpx;
+  background: #f0ebe4;
+  border-radius: 7rpx;
+  overflow: hidden;
+}
+.ep-up-fill {
+  height: 100%;
+  background: #c41e3a;
+  border-radius: 7rpx;
+  transition: width 0.2s ease;
+}
+.ep-up-pct {
+  font-size: 22rpx;
+  color: #c41e3a;
+  min-width: 52rpx;
+  text-align: right;
 }
 .f-label {
   width: 150rpx;
