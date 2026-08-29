@@ -1140,10 +1140,12 @@
               </view>
               <view class="ep-row">
                 <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
-                <!-- 上传中: 行内独立显示该课时进度 (支持多课时并行上传) -->
+                <!-- 上传中: 行内独立显示该课时进度 + 暂停/取消 (支持多课时并行上传) -->
                 <view class="ep-up" v-if="ep._uploading">
                   <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
                   <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
+                  <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ei)">{{ ep._paused ? '继续' : '暂停' }}</text>
+                  <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ei)">取消</text>
                 </view>
                 <text class="btn-p sm" v-else style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ei)">上传</text>
                 <text
@@ -2610,7 +2612,7 @@ function moveEpisode(i, dir) {
   arr[i] = arr[j]
   arr[j] = t
 }
-/* 上传某一集视频 (行内独立进度, 支持多课时并行上传) */
+/* 上传某一集视频 (行内独立进度 + 暂停/继续/取消, 支持多课时并行上传) */
 function uploadEpisodeVideo(i) {
   const ep = courseForm.value.episodes[i]
   if (!ep) return
@@ -2621,7 +2623,10 @@ function uploadEpisodeVideo(i) {
     compressed: false,
     success: async (res) => {
       const filePath = res.tempFilePath
+      const control = { paused: false, cancelled: false }
+      ep._control = control
       ep._uploading = true
+      ep._paused = false
       ep._progress = 0
       try {
         const storage = await getStorage()
@@ -2630,24 +2635,52 @@ function uploadEpisodeVideo(i) {
         const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
           const pct = Math.min(99, Math.round(ratio * 100))
           if (pct !== ep._progress) ep._progress = pct
-        })
+        }, control)
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
         ep.video = url
         if (!ep.title) ep.title = `第${i + 1}集`
         ep._uploading = false
+        ep._paused = false
         ep._progress = 100
         uni.showToast({ title: '已上传', icon: 'success' })
         // C/OSS 启用时提示是否搬运到 C/OSS
         await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
       } catch (e) {
         ep._uploading = false
+        ep._paused = false
         ep._progress = 0
-        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+        if (e && e.code === 'UPLOAD_CANCELLED') {
+          uni.showToast({ title: '已取消上传', icon: 'none' })
+        } else {
+          uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+        }
       }
     },
   })
+}
+/* 暂停/继续 上传 */
+function togglePauseEpisodeUpload(i) {
+  const ep = courseForm.value.episodes[i]
+  if (!ep || !ep._control || !ep._uploading) return
+  if (ep._paused) {
+    ep._control.paused = false
+    ep._paused = false
+    uni.showToast({ title: '继续上传', icon: 'none' })
+  } else {
+    ep._control.paused = true
+    ep._paused = true
+    uni.showToast({ title: '已暂停', icon: 'none' })
+  }
+}
+/* 取消上传 (分片循环检测到后中止并清理) */
+function cancelEpisodeUpload(i) {
+  const ep = courseForm.value.episodes[i]
+  if (!ep || !ep._control || !ep._uploading) return
+  ep._control.cancelled = true
+  ep._cancelled = true
+  uni.showToast({ title: '正在取消...', icon: 'none' })
 }
 
 /* C/OSS 启用时: 询问是否将刚上传的本地视频搬运到 C/OSS */
@@ -3072,9 +3105,9 @@ async function deleteCoupon(c) {
 
 const settingsTabs = [
   {
-    group: 'sms', label: '短信配置', desc: '验证码短信发送方案（二选一）：CloudBase 短信扩展 或 腾讯云短信直连',
+    group: 'sms', label: '短信配置', desc: '验证码短信发送方案：腾讯云短信直连（验证码入库自管，5 分钟有效）',
     fields: [
-      { key: 'provider', label: '方案', type: 'select', options: ['cloudbase', 'tencent'], placeholder: 'cloudbase=扩展 / tencent=直连' },
+      { key: 'provider', label: '方案', type: 'select', options: ['tencent'], placeholder: 'tencent=腾讯云短信直连' },
       { key: 'secret_id', label: 'SecretId (tencent直连)', secret: true },
       { key: 'secret_key', label: 'SecretKey (tencent直连)', secret: true },
       { key: 'sms_sdk_app_id', label: '短信应用ID (tencent直连)', placeholder: '140 开头' },
@@ -4579,6 +4612,20 @@ onMounted(async () => {
   color: #c41e3a;
   min-width: 52rpx;
   text-align: right;
+}
+.ep-up-btn {
+  font-size: 22rpx;
+  color: #6f5f4a;
+  border: 1rpx solid #d5cbbd;
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+  flex-shrink: 0;
+  background: #fff;
+  line-height: 1.4;
+}
+.ep-up-btn.danger {
+  color: #c41e3a;
+  border-color: #e0b3b9;
 }
 .f-label {
   width: 150rpx;

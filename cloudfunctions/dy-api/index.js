@@ -12,34 +12,6 @@ const app = cloudbase.init({ env: cloudbase.SYMBOL_CURRENT_ENV })
 const db = app.database()
 const _ = db.command
 
-/* CloudBase 短信扩展 (可选): 未安装扩展包时不影响其他功能
-   扩展包 name='SMS', 内部通过 https://{env}.service.tcloudbase.com/tcb-ext-sms 调扩展函数
-   前置: 环境需在 CloudBase 控制台安装「短信验证码登录」扩展 (创建 tcb-sms-auth 云函数) */
-let SMS_EXT_NAME = 'SMS'
-try {
-  const extSms = require('@cloudbase/extension-sms')
-  if (extSms && extSms.name) SMS_EXT_NAME = extSms.name
-  if (extSms && app.registerExtension) app.registerExtension(extSms)
-} catch (e) { /* 扩展包未安装: 仅影响 cloudbase 方案的短信 */ }
-
-/* 调用 CloudBase 短信扩展 (Send/Verify) */
-async function smsExtCall(action, phone, smsCode) {
-  if (!app.invokeExtension) throw new Error('当前环境不支持短信扩展')
-  const opts = { action, app, phone }
-  if (smsCode) opts.smsCode = smsCode
-  try {
-    await app.invokeExtension(SMS_EXT_NAME, opts)
-    return true
-  } catch (e) {
-    const msg = (e && e.message) || String(e || '')
-    // 扩展未安装时 HTTP 调用会失败, 给出可操作的提示
-    if (/404|tcb-ext-sms|getaddrinfo|ENOTFOUND|not found/i.test(msg)) {
-      throw new Error('CloudBase 短信扩展未安装，请先在控制台「扩展能力-短信验证码登录」安装')
-    }
-    throw new Error(msg.replace(/^\[@cloudbase\/extension-sms\]\s*/, ''))
-  }
-}
-
 const ok = (data) => ({ status: 200, data, msg: 'success' })
 const fail = (msg, status = 400) => ({ status, msg })
 
@@ -967,8 +939,7 @@ function tencentSmsSend({ secretId, secretKey, region, sign, templateId, phones,
 }
 
 /* 发送验证码 (注册 register / 找回密码 forgot 共用)
-   方案A: provider=cloudbase → CloudBase 短信扩展 (@cloudbase/extension-sms, 扩展自动管理验证码)
-   方案B: provider=腾讯云/tencent → 腾讯云短信直连 (TC3 签名)
+   腾讯云短信直连 (TC3 签名), 验证码入库 verify_codes 集合 (5 分钟有效)
    手机号 → 短信; 邮箱 → 预留 SMTP (未配置返回提示) */
 async function sendVerifyCode(data) {
   const account = String(data.account || data.phone || '').trim()
@@ -986,17 +957,7 @@ async function sendVerifyCode(data) {
     return fail('邮箱验证暂未开通，请使用手机号接收验证码')
   }
 
-  // 方案A: CloudBase 短信扩展
-  if (provider === 'cloudbase') {
-    try {
-      await smsExtCall('Send', account)
-      return ok({ sent: true, msg: '验证码已发送' })
-    } catch (e) {
-      return fail('验证码发送失败: ' + (e.message || '请检查短信扩展配置'))
-    }
-  }
-
-  // 方案B: 腾讯云短信直连
+  // 腾讯云短信直连
   if (!provider || (provider !== '腾讯云' && provider !== 'tencent' && !String(cfg.secret_id))) {
     return fail('短信服务未配置，请先在后台【系统设置-短信配置】选择方案并填写')
   }
@@ -1030,24 +991,11 @@ async function sendVerifyCode(data) {
   }
 }
 
-/* 校验验证码 (注册/重置密码共用)
-   provider=cloudbase → 扩展 Verify; 否则 → 本地 verify_codes 集合 */
+/* 校验验证码 (注册/重置密码共用): 本地 verify_codes 集合 */
 async function verifyCode(account, code, scene) {
   if (!account || !code) return false
   const isEmail = String(account).includes('@')
   const accountKey = isEmail ? String(account).toLowerCase() : String(account)
-  const cfg = await getSmsConfig()
-  const provider = String(cfg.provider || '').toLowerCase()
-
-  // CloudBase 扩展: 用扩展 Verify 校验
-  if (provider === 'cloudbase') {
-    try {
-      await smsExtCall('Verify', accountKey, String(code).trim())
-      return true
-    } catch (e) {
-      return false
-    }
-  }
 
   // 本地 verify_codes 集合
   const nowMs = Date.now()
