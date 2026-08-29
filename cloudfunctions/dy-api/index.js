@@ -3212,10 +3212,10 @@ async function storageCompleteMultipart(data) {
   try {
     const cos = getCos()
     if (!parts.length) {
-      // 服务端查询已上传分片 (multipartListPart), 按 partNumbers 过滤
+      // 服务端查询已上传分片 (multipartListPart 返回字段为 Part), 按 partNumbers 过滤
       const listRes = await cos.multipartListPart({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
-      const uploaded = (listRes.Parts || []).filter(
-        (p) => p && p.PartNumber && (!partNumbers.length || partNumbers.indexOf(p.PartNumber) !== -1)
+      const uploaded = (listRes.Part || []).filter(
+        (p) => p && p.PartNumber && (!partNumbers.length || partNumbers.indexOf(Number(p.PartNumber)) !== -1)
       )
       if (!uploaded.length) return fail('未找到已上传的分片, 请重试')
       parts = uploaded.map((p) => ({ PartNumber: p.PartNumber, ETag: String(p.ETag).startsWith('"') ? p.ETag : '"' + p.ETag + '"' }))
