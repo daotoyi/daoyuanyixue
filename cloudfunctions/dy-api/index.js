@@ -4164,6 +4164,28 @@ function httpsGetBuffer(url) {
   })
 }
 
+/* https HEAD 请求获取文件大小 (返回字节数, 失败返回 null) */
+function httpsHeadSize(url) {
+  return new Promise((resolve) => {
+    try {
+      const https = require('https')
+      const u = new URL(url)
+      const req = https.request(
+        { hostname: u.hostname, path: u.pathname + u.search, method: 'HEAD' },
+        (res) => {
+          const len = Number(res.headers['content-length'])
+          resolve(!isNaN(len) && len > 0 ? len : null)
+        }
+      )
+      req.on('error', () => resolve(null))
+      req.setTimeout(15000, () => { try { req.destroy() } catch (e) {} resolve(null) })
+      req.end()
+    } catch (e) {
+      resolve(null)
+    }
+  })
+}
+
 /* https PUT 上传二进制 (兼容无原生 fetch 的 Node 环境) */
 function httpsPutBuffer(url, buf) {
   return new Promise((resolve, reject) => {
@@ -4194,7 +4216,7 @@ function isVideoOnOss(url, ossCfg) {
   return false
 }
 
-/* 列出所有课程视频及存储位置 (本地 / C/OSS) */
+/* 列出所有课程视频及存储位置 (本地 / C/OSS) + 文件大小 */
 async function adminOssVideosList() {
   const [ossRes, coursesRes] = await Promise.all([
     db.collection('settings').where({ group: 'oss' }).limit(1).get(),
@@ -4215,6 +4237,30 @@ async function adminOssVideosList() {
         inOss: isVideoOnOss(ep.video, ossCfg),
       })
     })
+  }
+  // 获取每个视频文件大小 (HEAD Content-Length; 本地存储先换签名 URL, 失败置 null)
+  for (const v of videos) {
+    try {
+      let url = v.video
+      // 本地云存储 (tcb.qcloud.la) → 签名 URL 再 HEAD
+      if (url.indexOf('tcb.qcloud.la') !== -1) {
+        const m = url.match(/https:\/\/[^/]+\.tcb\.qcloud\.la\/(.+)$/)
+        if (m) {
+          const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${decodeURIComponent(m[1])}`
+          const tres = await app.getTempFileURL({ fileList: [{ fileID, maxAge: 7200 }] })
+          const fl = tres && tres.fileList && tres.fileList[0]
+          if (fl && (fl.tempFileURL || fl.download_url)) url = fl.tempFileURL || fl.download_url
+        }
+      } else if (url.indexOf('cloud://') === 0) {
+        // 直接 cloud:// fileID
+        const tres = await app.getTempFileURL({ fileList: [{ fileID: url, maxAge: 7200 }] })
+        const fl = tres && tres.fileList && tres.fileList[0]
+        if (fl && (fl.tempFileURL || fl.download_url)) url = fl.tempFileURL || fl.download_url
+      }
+      v.size_bytes = await httpsHeadSize(url)
+    } catch (e) {
+      v.size_bytes = null
+    }
   }
   return ok({ videos, oss_enabled: ossCfg.enabled === '1' || ossCfg.enabled === true })
 }

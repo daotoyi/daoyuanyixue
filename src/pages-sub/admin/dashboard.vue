@@ -948,6 +948,7 @@
             <view class="table oss-video-table" v-if="ossVideoList.length">
               <view class="tr th">
                 <text class="td oss-col-title">课程 / 课时</text>
+                <text class="td oss-col-size">大小</text>
                 <text class="td oss-col-type">存储</text>
                 <text class="td oss-col-ops">操作</text>
               </view>
@@ -956,6 +957,7 @@
                   <text class="oss-course">{{ v.course_title }}</text>
                   <text class="oss-episode">{{ v.episode_title }}</text>
                 </view>
+                <text class="td oss-col-size">{{ fmtFileSize(v.size_bytes) }}</text>
                 <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? 'C/OSS' : '本地' }}</text>
                 <view class="td oss-col-ops ops">
                   <text class="op" v-if="!v.inOss && canManageSettings" @tap="migrateOssVideo(v)">搬运到 C/OSS</text>
@@ -3191,6 +3193,16 @@ const ossLoading = ref(false)
 const ossVideosLocal = computed(() => ossVideoList.value.filter((v) => !v.inOss))
 const ossVideosRemote = computed(() => ossVideoList.value.filter((v) => v.inOss))
 
+/* 文件大小格式化: null/0 → "-"; B/KB/MB/GB 智能显示 */
+function fmtFileSize(bytes) {
+  const b = Number(bytes)
+  if (!b || isNaN(b) || b <= 0) return '-'
+  if (b < 1024) return b + ' B'
+  if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB'
+  if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + ' MB'
+  return (b / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+}
+
 /* 切换到 oss tab 或保存后自动加载视频列表 */
 async function loadOssVideos() {
   ossLoading.value = true
@@ -4416,6 +4428,12 @@ onMounted(async () => {
 .oss-col-type {
   width: 100rpx;
   flex-shrink: 0;
+}
+.oss-col-size {
+  width: 120rpx;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #55524c;
 }
 .oss-col-ops {
   width: 180rpx;
