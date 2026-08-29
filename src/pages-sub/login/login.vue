@@ -16,8 +16,8 @@
       </view>
 
       <view class="field">
-        <text class="field-label">{{ mode === 'login' ? '手机号 / 邮箱 / 道号' : '手机号 / 邮箱' }}</text>
-        <input class="field-input" v-model="phone" type="text" maxlength="50" :placeholder="mode === 'login' ? '手机号、邮箱或道号' : '手机号或邮箱'" />
+        <text class="field-label">{{ mode === 'login' ? '手机号 / 道号' : '手机号' }}</text>
+        <input class="field-input" v-model="phone" type="text" maxlength="20" :placeholder="mode === 'login' ? '请输入手机号或道号' : '请输入手机号'" />
       </view>
 
       <!-- 注册: 验证码 -->
@@ -90,11 +90,11 @@
         </view>
       </view></view>
 
-      <!-- 忘记密码弹窗: 手机号/邮箱 + 验证码 + 新密码 -->
+      <!-- 忘记密码弹窗: 手机号 + 验证码 + 新密码 -->
       <view class="pp-mask" v-if="showForgot" @tap="showForgot = false"><view class="pp-sheet wx-auth-sheet" @tap.stop>
         <view class="sheet-title">重置密码</view>
         <view class="wx-auth-row">
-          <input class="wx-nick-input" type="text" v-model="forgotAccount" placeholder="请输入注册手机号或邮箱" maxlength="50" />
+          <input class="wx-nick-input" type="text" v-model="forgotAccount" placeholder="请输入注册手机号" maxlength="20" />
         </view>
         <view class="wx-auth-row">
           <input class="wx-nick-input" type="number" v-model="forgotCode" maxlength="6" placeholder="请输入验证码" />
@@ -186,20 +186,15 @@ function startCountdown(target) {
   }
 }
 
-/* 发送验证码: scene=register 注册 / forgot 忘记密码 */
+/* 发送验证码: scene=register 注册 / forgot 忘记密码 (仅手机号) */
 async function sendCode(scene) {
   const acct = (scene === 'forgot' ? forgotAccount.value : phone.value).trim()
   if (!acct) {
-    uni.showToast({ title: '请先输入手机号或邮箱', icon: 'none' })
+    uni.showToast({ title: '请先输入手机号', icon: 'none' })
     return
   }
-  const isEmail = acct.includes('@')
-  if (!isEmail && !/^1\d{10}$/.test(acct)) {
+  if (!/^1\d{10}$/.test(acct)) {
     uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
-    return
-  }
-  if (isEmail) {
-    uni.showToast({ title: '邮箱验证暂未开通，请使用手机号', icon: 'none' })
     return
   }
   try {
@@ -224,7 +219,8 @@ function openForgot() {
 /* 重置密码 */
 async function doResetPassword() {
   const acct = forgotAccount.value.trim()
-  if (!acct) return uni.showToast({ title: '请输入手机号或邮箱', icon: 'none' })
+  if (!acct) return uni.showToast({ title: '请输入手机号', icon: 'none' })
+  if (!/^1\d{10}$/.test(acct)) return uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
   if (!forgotCode.value) return uni.showToast({ title: '请输入验证码', icon: 'none' })
   if (forgotPwd.value.length < 6) return uni.showToast({ title: '新密码至少 6 位', icon: 'none' })
   try {
@@ -454,15 +450,14 @@ async function doWxLogin() {
 async function submit() {
   errorMsg.value = ''
   const acct = phone.value.trim()
-  const isEmail = acct.includes('@')
-  // 登录: 手机号 / 邮箱 / 道号; 注册: 手机号 / 邮箱 (注册时还没有道号)
-  if (!isEmail && mode.value === 'login') {
+  // 登录: 手机号 / 道号; 注册: 手机号
+  if (mode.value === 'login') {
     if (!/^1\d{10}$/.test(acct) && !/^[A-Za-z0-9]{3,20}$/.test(acct)) {
-      errorMsg.value = '请输入正确的手机号、邮箱或道号'
+      errorMsg.value = '请输入正确的手机号或道号'
       return
     }
-  } else if (!isEmail && !/^1\d{10}$/.test(acct)) {
-    errorMsg.value = '请输入正确的手机号或邮箱'
+  } else if (!/^1\d{10}$/.test(acct)) {
+    errorMsg.value = '请输入正确的手机号'
     return
   }
   if (password.value.length < 6) {
