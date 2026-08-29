@@ -3141,6 +3141,110 @@ async function alipayPrepay(data) {
     },
   })
 }
+/* ==================== COS 分片上传 (Multipart Upload, 支持 >4GB 大视频) ====================
+   COS 单次 PUT 上限 5GB, 4GB+ 视频必须走分片上传。协议:
+     1. createMultipart    → InitiateMultipartUpload → uploadId
+     2. partUploadAuth     → 为指定分片生成 PUT 签名 (Authorization + token), 前端 fetch 直传
+     3. completeMultipart  → 收集各分片 ETag → CompleteMultipartUpload → 合并
+     4. abortMultipart     → 失败时取消, 清理已传分片
+   密钥: 云函数运行时注入的 TENCENTCLOUD_* 临时密钥 (权限=本环境, 可操作本环境 COS 桶) */
+let cosSdk = null
+try { cosSdk = require('cos-nodejs-sdk-v5') } catch (e) { console.warn('[cos] cos-nodejs-sdk-v5 未安装:', e.message) }
+const COS_BUCKET = '636c-cloud1-d8gs2k9m311f7272f-1464523137'   // COS 桶名 (bucket-appid)
+const COS_REGION = 'ap-shanghai'
+let _cosInst = null
+function getCos() {
+  if (!cosSdk) throw new Error('cos-nodejs-sdk-v5 未安装')
+  if (_cosInst) return _cosInst
+  const SecretId = process.env.TENCENTCLOUD_SECRETID
+  const SecretKey = process.env.TENCENTCLOUD_SECRETKEY
+  if (!SecretId || !SecretKey) throw new Error('云函数运行时无 COS 临时密钥')
+  _cosInst = new cosSdk({ SecretId, SecretKey, SecurityToken: process.env.TENCENTCLOUD_SESSIONTOKEN || '', UserAgent: 'dy-api' })
+  return _cosInst
+}
+/* 1. 初始化分片上传 */
+async function storageCreateMultipart(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  if (!cloudPath) return fail('缺少 cloudPath')
+  try {
+    const cos = getCos()
+    const res = await cos.multipartInit({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, ContentType: 'video/mp4' })
+    if (!res || !res.UploadId) return fail('初始化分片上传失败: ' + JSON.stringify(res && res.error ? res.error : res).slice(0, 200))
+    return ok({ uploadId: res.UploadId, bucket: COS_BUCKET, region: COS_REGION, key: cloudPath })
+  } catch (e) {
+    console.error('[storageCreateMultipart] error:', e.stack || e)
+    return fail('初始化分片上传失败: ' + (e.message || e))
+  }
+}
+/* 2. 生成单个分片的 PUT 预签名 URL (含 token 与分片参数, 有效期 10 分钟, 前端直接 fetch PUT) */
+async function storagePartUploadAuth(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  const uploadId = String(data.uploadId || '')
+  const partNumber = Number(data.partNumber) || 0
+  if (!cloudPath || !uploadId || !partNumber) return fail('缺少 cloudPath/uploadId/partNumber')
+  try {
+    const cos = getCos()
+    const url = await new Promise((resolve, reject) => {
+      cos.getObjectUrl({
+        Bucket: COS_BUCKET,
+        Region: COS_REGION,
+        Key: cloudPath,
+        Method: 'PUT',
+        Query: { partNumber, uploadId },
+        Expires: 600,
+      }, (err, data) => (err ? reject(err) : resolve(data.Url)))
+    })
+    return ok({ url })
+  } catch (e) {
+    console.error('[storagePartUploadAuth] error:', e.stack || e)
+    return fail('生成分片签名失败: ' + (e.message || e))
+  }
+}
+/* 3. 完成分片上传 (合并)。parts 缺省时服务端查询已传分片 ETag (规避浏览器 CORS 读不到 ETag 头) */
+async function storageCompleteMultipart(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  const uploadId = String(data.uploadId || '')
+  const partNumbers = Array.isArray(data.partNumbers) ? data.partNumbers.map(Number).filter(Boolean) : []
+  let parts = Array.isArray(data.parts)
+    ? data.parts.filter((p) => p && p.PartNumber && p.ETag)
+    : []
+  if (!cloudPath || !uploadId) return fail('缺少 cloudPath/uploadId')
+  try {
+    const cos = getCos()
+    if (!parts.length) {
+      // 服务端查询已上传分片 (multipartListPart), 按 partNumbers 过滤
+      const listRes = await cos.multipartListPart({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
+      const uploaded = (listRes.Parts || []).filter(
+        (p) => p && p.PartNumber && (!partNumbers.length || partNumbers.indexOf(p.PartNumber) !== -1)
+      )
+      if (!uploaded.length) return fail('未找到已上传的分片, 请重试')
+      parts = uploaded.map((p) => ({ PartNumber: p.PartNumber, ETag: String(p.ETag).startsWith('"') ? p.ETag : '"' + p.ETag + '"' }))
+    }
+    await cos.multipartComplete({
+      Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId, Parts: parts,
+    })
+    const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${cloudPath}`
+    return ok({ fileID, url: `https://${COS_BUCKET}.cos.${COS_REGION}.myqcloud.com/${encodeURIComponent(cloudPath)}` })
+  } catch (e) {
+    console.error('[storageCompleteMultipart] error:', e.stack || e)
+    return fail('合并分片失败: ' + (e.message || e))
+  }
+}
+/* 4. 取消分片上传 (清理已传分片) */
+async function storageAbortMultipart(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  const uploadId = String(data.uploadId || '')
+  if (!cloudPath || !uploadId) return ok({ aborted: false })
+  try {
+    const cos = getCos()
+    await cos.multipartAbort({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
+    return ok({ aborted: true })
+  } catch (e) {
+    console.warn('[storageAbortMultipart] error:', e.message || e)
+    return ok({ aborted: false })
+  }
+}
+
 /* 云存储上传凭证 (管理端生成 COS 临时上传信息, 前端直传, 不依赖前端登录态) */
 async function storageGetUploadUrl(data) {
   const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
@@ -4474,6 +4578,10 @@ const ROUTES = {
   'order.alipayPrepay': alipayPrepay,
   'storage.getUploadUrl': storageGetUploadUrl,
   'storage.uploadBase64': storageUploadBase64,
+  'storage.createMultipart': storageCreateMultipart,
+  'storage.partUploadAuth': storagePartUploadAuth,
+  'storage.completeMultipart': storageCompleteMultipart,
+  'storage.abortMultipart': storageAbortMultipart,
   'admin.pandao.create': adminPandaoCreate,
   'admin.pandao.delete': adminPandaoDelete,
   'admin.pandao.update': adminPandaoUpdate,

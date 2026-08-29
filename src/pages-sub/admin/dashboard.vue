@@ -2559,12 +2559,19 @@ function uploadCourseVideo() {
     compressed: false,
     success: async (res) => {
       const filePath = res.tempFilePath
-      uni.showLoading({ title: '视频上传中...' })
+      let lastPct = -1
+      uni.showLoading({ title: '视频上传中...', mask: true })
       try {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
         const cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
-        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
+          const pct = Math.min(99, Math.floor(ratio * 100))
+          if (pct !== lastPct && pct % 2 === 0) {
+            lastPct = pct
+            uni.showLoading({ title: '上传中 ' + pct + '%', mask: true })
+          }
+        })
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
@@ -2606,12 +2613,19 @@ function uploadEpisodeVideo(i) {
     compressed: false,
     success: async (res) => {
       const filePath = res.tempFilePath
-      uni.showLoading({ title: '视频上传中...' })
+      let lastPct = -1
+      uni.showLoading({ title: '视频上传中...', mask: true })
       try {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
         const cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
-        const upRes = await storage.uploadFile(filePath, cloudPath)
+        const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
+          const pct = Math.min(99, Math.floor(ratio * 100))
+          if (pct !== lastPct && pct % 2 === 0) {
+            lastPct = pct
+            uni.showLoading({ title: '上传中 ' + pct + '%', mask: true })
+          }
+        })
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
         if (!fileID) throw new Error('上传失败')
         const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')

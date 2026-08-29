@@ -24,6 +24,114 @@ const cloudbaseSdk = cloudbaseSdkModule.default || cloudbaseSdkModule
 let cloudApp = null
 let _initPromise = null
 
+/* ===== 大文件分片上传 (COS Multipart Upload) =====
+   COS 单次 PUT 上限 5GB, 4GB+ 上传不稳定 → 超过阈值自动走分片。
+   协议: createMultipart → (partUploadAuth + fetch PUT) × N → completeMultipart */
+const MULTIPART_THRESHOLD = 3 * 1024 * 1024 * 1024  // 3GB 以上走分片
+const MULTIPART_PART_SIZE = 64 * 1024 * 1024        // 64MB / 片
+const MULTIPART_CONCURRENCY = 3                     // 并发片数
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/* 探测文件大小 (H5: blob/URL; App/其他: getFileInfo) */
+async function probeFileSize(filePath) {
+  try {
+    if (typeof fetch === 'function' && typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
+      return (await fetch(filePath).then((r) => r.blob())).size || 0
+    }
+    if (uni.getFileInfo) {
+      return await new Promise((resolve) => {
+        uni.getFileInfo({ filePath, success: (r) => resolve(r.size || 0), fail: () => resolve(0) })
+      })
+    }
+  } catch (e) {
+    console.warn('[CloudBase] 探测文件大小失败', e)
+  }
+  return 0
+}
+
+/* 读取指定区间的文件内容 (H5: Blob.slice; App: FileSystemManager position/length) */
+async function readBlobSlice(filePath, start, end) {
+  if (typeof fetch === 'function' && typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
+    const blob = await fetch(filePath).then((r) => r.blob())
+    return blob.slice(start, end)
+  }
+  const fs = uni.getFileSystemManager ? uni.getFileSystemManager() : null
+  if (!fs || !fs.readFile) throw new Error('当前环境不支持大文件分片上传')
+  const ab = await new Promise((resolve, reject) => {
+    fs.readFile({ filePath, position: start, length: end - start, encoding: '', success: (r) => resolve(r.data), fail: reject })
+  })
+  return new Blob([ab])
+}
+
+/* COS 分片上传主流程: 返回 { fileID } */
+async function uploadMultipartToCos(filePath, cloudPath, onProgress) {
+  const size = await probeFileSize(filePath)
+  if (!size) throw new Error('无法读取文件大小')
+  const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
+  const call = async (action, data) => {
+    const res = await apiRequest({ action, data })
+    if (res.status !== 200) throw new Error(res.msg || action + ' 失败')
+    return res.data || {}
+  }
+  // 1) 初始化分片上传
+  const init = await call('storage.createMultipart', { cloudPath })
+  if (!init.uploadId) throw new Error('初始化分片上传失败')
+  const uploadId = init.uploadId
+  const donePartNumbers = []
+  let uploaded = 0
+  const uploadOne = async (partIndex) => {
+    const partNumber = partIndex + 1
+    const start = partIndex * MULTIPART_PART_SIZE
+    const end = Math.min(size, start + MULTIPART_PART_SIZE)
+    const piece = await readBlobSlice(filePath, start, end)
+    // 获取本分片 PUT 预签名 URL (有效期 10 分钟, 失败重试 2 次)
+    let auth = null
+    for (let k = 0; k < 3 && !auth; k++) {
+      try {
+        auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber })
+      } catch (e) {
+        if (k === 2) throw e
+        await sleep(600 * (k + 1))
+      }
+    }
+    if (!auth || !auth.url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
+    // PUT 分片 (失败重试 3 次; 成功即记录分片号, ETag 由云函数服务端查询)
+    let okFlag = false
+    for (let retry = 0; retry < 3 && !okFlag; retry++) {
+      const resp = await fetch(auth.url, { method: 'PUT', body: piece })
+      if (resp.ok) {
+        okFlag = true
+      } else {
+        let msg = '分片 ' + partNumber + ' 上传失败 HTTP ' + resp.status
+        try { msg += ' ' + (await resp.text()).slice(0, 160) } catch (e2) {}
+        console.error('[CloudBase]', msg)
+        if (retry < 2) await sleep(1200 * (retry + 1))
+        else throw new Error(msg)
+      }
+    }
+    donePartNumbers.push(partNumber)
+    uploaded += piece.size
+    if (onProgress) onProgress(uploaded / size, uploaded, size)
+  }
+  try {
+    // 并发上传分片
+    for (let i = 0; i < totalParts; i += MULTIPART_CONCURRENCY) {
+      const n = Math.min(MULTIPART_CONCURRENCY, totalParts - i)
+      await Promise.all(Array.from({ length: n }, (_, j) => uploadOne(i + j)))
+    }
+    donePartNumbers.sort((a, b) => a - b)
+    // 2) 合并分片
+    const done = await call('storage.completeMultipart', { cloudPath, uploadId, partNumbers: donePartNumbers })
+    if (!done.fileID) throw new Error('合并完成但未返回 fileID')
+    return { fileID: done.fileID }
+  } catch (e) {
+    // 3) 失败 → 取消分片, 清理已传数据
+    try { await call('storage.abortMultipart', { cloudPath, uploadId }) } catch (e2) {}
+    throw e
+  }
+}
+
 /**
  * Canvas 压缩图片到指定大小以下的 base64 (H5 端)
  * @param {string} src 图片路径 (blob:/http: URL)
@@ -218,9 +326,9 @@ export async function getStorage() {
     })
   }
   return {
-    uploadFile: async (filePath, cloudPath) => {
+    uploadFile: async (filePath, cloudPath, onProgress) => {
       // H5: 图片 → canvas 压缩到 <80KB → base64 云函数中转 (云函数网关 body 限制 ~100KB)
-      //      非图片 → 云函数 getUploadUrl → COS 直传
+      //      非图片 → 云函数 getUploadUrl → COS 直传; >3GB 大文件 → COS 分片上传
       // 1) 图片: canvas 压缩 + base64
       let base64 = ''
       const isImage = /\.(jpe?g|png|webp|gif|bmp)(\?|$)/i.test(cloudPath) || cloudPath.includes('covers/') || cloudPath.includes('images/') || cloudPath.includes('avatar')
@@ -231,8 +339,16 @@ export async function getStorage() {
           console.warn('[CloudBase] canvas 压缩失败, 尝试原始读取', e)
         }
       }
-      // 非图片或 canvas 失败: 原始 base64 (小文件可用, 大文件走 COS 直传)
-      if (!base64) {
+      // 非图片或 canvas 失败: 原始 base64 (仅图片兜底, 视频等非图片直接 COS 直传/分片, 不读内存)
+      // 1.5) 非图片大文件 (视频 >3GB) → 先走分片上传, 避免整文件读内存转 base64 崩溃
+      if (!isImage) {
+        const fileSize = await probeFileSize(filePath)
+        if (fileSize > MULTIPART_THRESHOLD) {
+          console.log(`[CloudBase] 大文件 ${(fileSize / 1024 / 1024 / 1024).toFixed(2)}GB, 走 COS 分片上传`)
+          return uploadMultipartToCos(filePath, cloudPath, onProgress)
+        }
+      }
+      if (isImage && !base64) {
         try {
           let bytes = null
           if (typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
