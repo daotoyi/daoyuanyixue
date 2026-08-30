@@ -2693,6 +2693,7 @@ function resumePercent(rec, size) {
 const uploadQueue = ref([])        // [{ ep, filePath, fileSize }] 等待上传的课时
 let currentUploadingEp = null      // 当前正在上传的课时 (非响应式, 仅流程控制)
 let currentUploadingCourseId = null // 当前上传所属课程 id (切换课程时中止残留任务用)
+let uploadGenCounter = 0           // 上传任务代号 (取消/急停时自增, 旧任务的进度/结果写入全部失效, 防止污染新任务)
 
 /* 出队: 当前无上传中时, 取队列第一个开始 (防重入: 已有上传中则跳过) */
 async function dequeueNext() {
@@ -2722,15 +2723,13 @@ const hasActiveUploads = computed(() =>
 
 /* 强制终止当前课程所有上传 (上传中 + 排队中):
    中断所有分片请求, 保留续传进度, 清空状态与队列 — 解决个别课时暂停/取消失效时无法强制中断的问题 (2026-08-30) */
+/* 强制终止当前课程所有上传 (上传中 + 排队中): **立即强制复位 UI**(不依赖底层请求是否真的中断),
+   保留续传进度, 清空状态与队列 — 解决个别课时暂停/取消失效时无法强制中断的问题 (2026-08-30) */
 function abortAllUploads() {
   let stopped = 0
   courseForm.value.episodes.forEach((ep) => {
-    if (ep._queued) {
-      ep._queued = false
-      ep._status = ''
-      stopped++
-    }
-    if (ep._uploading && ep._control) {
+    const active = ep._uploading || ep._queued
+    if (ep._control) {
       ep._control.cancelled = true
       abortAllParts(ep._control)
       try {
@@ -2738,14 +2737,18 @@ function abortAllUploads() {
           saveResume({ size: ep._fileSize, cloudPath: ep._control.cloudPath || '', uploadId: ep._control.uploadId, partNumbers: ep._control.partNumbers || [], ts: Date.now() })
         }
       } catch (e) {}
-      ep._uploading = false
-      ep._paused = false
-      ep._status = ''
-      stopped++
+      ep._control = null
     }
+    ep._uploading = false
+    ep._queued = false
+    ep._paused = false
+    ep._progress = 0
+    ep._status = ''
+    if (active) stopped++
   })
   uploadQueue.value = []
   currentUploadingEp = null
+  uploadGenCounter++ // 使所有旧上传任务的后续副作用全部失效 (gen 隔离)
   uni.showToast({ title: stopped ? `已强制终止 ${stopped} 个上传（进度已保留）` : '当前没有进行中的上传', icon: 'none' })
   if (stopped) setTimeout(() => uni.showToast({ title: '重新选同一文件可续传；想放弃请选文件后点「重新上传」', icon: 'none' }), 1200)
 }
@@ -2803,6 +2806,9 @@ async function startUpload(ep, filePath, fileSize) {
   }
   currentUploadingEp = ep
   currentUploadingCourseId = courseForm.value.id // 记录所属课程, 切换课程时中止残留任务
+  const myGen = ++uploadGenCounter // 任务代号: 取消/急停后旧任务的进度/结果写入全部失效
+  ep._uploadGen = myGen
+  console.log('[上传] 开始课时 ' + (ep.title || '第' + (i + 1) + '集') + ' gen=' + myGen + ' 续传=' + (resumeInfo ? '是' : '否'))
   const control = { paused: false, cancelled: false, abortFns: new Set() }
   ep._control = control
   ep._fileSize = fileSize // 取消乐观兜底保存续传点用
@@ -2872,7 +2878,9 @@ async function startUpload(ep, filePath, fileSize) {
     if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
     if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
     ep._status = ''
+    console.log('[上传] gen=' + myGen + ' 初始化完成, 开始传分片')
     const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
+      if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 忽略旧任务进度
       const pct = Math.min(99, Math.round(ratio * 100))
       if (pct !== ep._progress) ep._progress = pct
       // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
@@ -2882,10 +2890,13 @@ async function startUpload(ep, filePath, fileSize) {
         saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: now })
       }
     }, control, (s) => {
+      if (ep._uploadGen !== myGen) return
       ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
     }, resumeInfo || null)
     const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
     if (!fileID) throw new Error('上传失败')
+    if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 不再写回结果
+    console.log('[上传] gen=' + myGen + ' 分片合并完成')
     const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
     ep.video = url
     if (!ep.title) ep.title = `第${i + 1}集`
@@ -2953,37 +2964,35 @@ function togglePauseEpisodeUpload(ep) {
     uni.showToast({ title: '已暂停', icon: 'none' })
   }
 }
-/* 取消上传 (立即中断所有分片并清理; 乐观兜底: 3s 后强制复位 UI, 防止"正在取消"卡死) */
+/* 取消上传 (v1.11.264): **点击立即强制复位 UI**, 不依赖底层请求是否中断 —
+   cancelled + abort 全部请求, 界面立刻恢复"上传"按钮, 保留续传进度;
+   旧任务副作用由 gen 隔离 (startUpload 内检查 ep._uploadGen) 防止污染新任务 */
 function cancelEpisodeUpload(ep) {
-  if (!ep || !ep._control || !ep._uploading) return
-  console.log('[上传控制] 点击取消, abortFns=', ep._control.abortFns ? ep._control.abortFns.size : 0)
-  ep._control.cancelled = true
-  ep._cancelled = true
-  ep._status = '正在取消…'
-  abortAllParts(ep._control) // 立即中断所有并发分片, 不等它们自然结束
-  uni.showToast({ title: '正在取消...', icon: 'none' })
-  // 兜底1: 1.5s 后仍未结束则再中断一次
-  setTimeout(() => { if (ep && ep._uploading) abortAllParts(ep._control) }, 1500)
-  // 兜底2 (2026-08-30): 3s 后若上传主流程仍未响应取消(极少数网络僵死场景), 强制复位 UI 并保留进度,
-  // 避免"正在取消…"永久显示; 主流程 catch/finally 幂等, 之后即便返回也不会再改 UI
-  setTimeout(() => {
-    if (!ep || !ep._uploading) return
-    console.warn('[上传控制] 取消 3s 未响应, 强制复位 UI (进度已保留)')
-    ep._uploading = false
-    ep._paused = false
-    ep._status = ''
-    if (ep._control && ep._control.uploadId) {
-      // 尽力保存续传点, 供下次选同文件续传
-      try {
-        const fs = ep._fileSize || 0
-        if (fs) saveResume({ size: fs, cloudPath: ep._control.cloudPath || '', uploadId: ep._control.uploadId, partNumbers: ep._control.partNumbers || [], ts: Date.now() })
-      } catch (e) {}
-    }
-    uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
-    // 强制释放上传锁并开始队列中的下一个
-    if (currentUploadingEp === ep) currentUploadingEp = null
+  if (!ep) return
+  console.log('[上传控制] 点击取消', ep.title || ep._key, 'gen=', ep._uploadGen)
+  if (ep._control) {
+    ep._control.cancelled = true
+    abortAllParts(ep._control) // 立即中断所有并发分片
+    try {
+      if (ep._control.uploadId && ep._fileSize) {
+        saveResume({ size: ep._fileSize, cloudPath: ep._control.cloudPath || '', uploadId: ep._control.uploadId, partNumbers: ep._control.partNumbers || [], ts: Date.now() })
+      }
+    } catch (e) {}
+    ep._control = null
+  }
+  // 立即强制复位 UI (同步执行, 无论底层死活)
+  ep._uploading = false
+  ep._paused = false
+  ep._progress = 0
+  ep._status = ''
+  uploadGenCounter++ // 旧任务后续写入全部失效
+  ep._uploadGen = -1
+  uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+  // 释放上传锁并开始队列中的下一个
+  if (currentUploadingEp === ep) {
+    currentUploadingEp = null
     dequeueNext()
-  }, 3000)
+  }
 }
 /* 遍历中断 control 中所有在传分片的请求 */
 function abortAllParts(control) {
