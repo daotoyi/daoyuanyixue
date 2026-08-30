@@ -1084,7 +1084,10 @@
     <!-- ===== 课程编辑弹窗 ===== -->
     <view class="pp-mask course-mask" v-if="showCourse" @tap="showCourse = false"><view class="pp-sheet course-sheet" @tap.stop>
       <view class="form-sheet">
-        <view class="sheet-title">{{ courseForm.id ? '编辑课程' : '新增课程' }}</view>
+        <view class="sheet-title">
+          {{ courseForm.id ? '编辑课程' : '新增课程' }}
+          <text v-if="hasActiveUploads" class="abort-all-btn" @tap="abortAllUploads">⛔ 终止全部上传</text>
+        </view>
         <view class="f-row"><text class="f-label">标题</text><input class="f-input f-title" v-model="courseForm.title" placeholder="课程名称" /></view>
         <view class="f-row"><text class="f-label">讲师</text><input class="f-input" v-model="courseForm.teacher" /></view>
         <view class="f-row"><text class="f-label">价格</text><input class="f-input" v-model="courseForm.price" /></view>
@@ -2679,6 +2682,41 @@ function removeFromQueue(ep) {
   ep._queued = false
   ep._status = ''
   uni.showToast({ title: '已取消排队', icon: 'none' })
+}
+
+/* 是否有进行中的上传 (上传中或排队中) — 控制"终止全部上传"按钮显示 */
+const hasActiveUploads = computed(() =>
+  (courseForm.value.episodes || []).some((e) => e._uploading || e._queued)
+)
+
+/* 强制终止当前课程所有上传 (上传中 + 排队中):
+   中断所有分片请求, 保留续传进度, 清空状态与队列 — 解决个别课时暂停/取消失效时无法强制中断的问题 (2026-08-30) */
+function abortAllUploads() {
+  let stopped = 0
+  courseForm.value.episodes.forEach((ep) => {
+    if (ep._queued) {
+      ep._queued = false
+      ep._status = ''
+      stopped++
+    }
+    if (ep._uploading && ep._control) {
+      ep._control.cancelled = true
+      abortAllParts(ep._control)
+      try {
+        if (ep._control.uploadId && ep._fileSize) {
+          saveResume({ size: ep._fileSize, cloudPath: ep._control.cloudPath || '', uploadId: ep._control.uploadId, partNumbers: ep._control.partNumbers || [], ts: Date.now() })
+        }
+      } catch (e) {}
+      ep._uploading = false
+      ep._paused = false
+      ep._status = ''
+      stopped++
+    }
+  })
+  uploadQueue.value = []
+  currentUploadingEp = null
+  uni.showToast({ title: stopped ? `已强制终止 ${stopped} 个上传（进度已保留）` : '当前没有进行中的上传', icon: 'none' })
+  if (stopped) setTimeout(() => uni.showToast({ title: '重新选同一文件可续传；想放弃请选文件后点「重新上传」', icon: 'none' }), 1200)
 }
 
 /* 上传某一集视频: 选文件 → 若有课时在上传则入队等待, 否则立即开始 (绑定 ep 对象防索引错位) */
@@ -4742,6 +4780,22 @@ onMounted(async () => {
   font-weight: 500;
   color: #2a2a2a;
   margin-bottom: 24rpx;
+}
+/* 强制终止全部上传按钮 (2026-08-30) */
+.abort-all-btn {
+  display: inline-block;
+  margin-left: 16rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #fff;
+  background: #9c1630;
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.abort-all-btn:hover {
+  background: #7e1126;
 }
 .f-row {
   display: flex;
