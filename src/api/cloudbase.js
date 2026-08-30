@@ -46,8 +46,10 @@ async function waitIfPaused(control) {
   }
 }
 
-/* 探测文件大小 (H5: blob/URL; App/其他: getFileInfo) */
-async function probeFileSize(filePath) {
+/* 探测文件大小 (优先用 File 对象 .size 零开销; 其次 fetch blob; App/其他: getFileInfo)
+   fileObj: 可选 Blob/File — 直接 .size, 解决几 GB 大视频 fetch 全读超时导致的"无法读取文件大小" (2026-08-30) */
+async function probeFileSize(filePath, fileObj) {
+  if (fileObj && fileObj.size !== undefined) return fileObj.size || 0
   try {
     if (typeof fetch === 'function' && typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
       const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('读取超时')), 10000))])
@@ -64,9 +66,13 @@ async function probeFileSize(filePath) {
   return 0
 }
 
-/* 读取指定区间的文件内容 (H5: Blob.slice; App: FileSystemManager position/length)
-   signal: 可选 AbortSignal — 暂停/取消可中断读取 (2026-08-30: 修复读取挂起导致卡死且取消无效) */
-async function readBlobSlice(filePath, start, end, signal) {
+/* 读取指定区间的文件内容 (H5: 优先用 File/Blob 对象直接 slice 零拷贝; 其次 fetch blob; App: FileSystemManager)
+   signal: 可选 AbortSignal — 暂停/取消可中断读取 (2026-08-30: 修复读取挂起导致卡死且取消无效)
+   fileObj: 可选 Blob/File — chooseVideo 的 originalFile, 直接 slice 不读全文件, 解决几 GB 大视频 fetch 全读超时/内存爆 */
+async function readBlobSlice(filePath, start, end, signal, fileObj) {
+  if (fileObj && typeof fileObj.slice === 'function') {
+    return fileObj.slice(start, end) // Blob.slice 零拷贝, 不读全文件
+  }
   if (typeof fetch === 'function' && typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
     const blob = await fetch(filePath, signal ? { signal } : {}).then((r) => r.blob())
     return blob.slice(start, end)
@@ -84,7 +90,7 @@ async function readBlobSlice(filePath, start, end, signal) {
    onStatus('retrying'|'paused'|'resumed'|'cancelling') 状态回调用于界面提示;
    resume = { uploadId, skipPartNumbers } 断点续传: 复用 uploadId 跳过已传分片, 只传缺失的;
    失败/取消【不 abort 分片】→ 已传分片保留在 COS, 供下次续传 (control 上暴露 uploadId/partNumbers/size) */
-async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume) {
+async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume, fileObj) {
   if (!control) control = {}
   if (!control.abortFns) control.abortFns = new Set()
   const status = (s) => { if (onStatus) onStatus(s) }
@@ -103,10 +109,11 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     return Promise.race([promise, cancelP]).finally(() => clearInterval(iv))
   }
   await waitIfPaused(control)
-  const size = await cancelAware(probeFileSize(filePath)).catch((e) => {
-    if (e && e.code === 'UPLOAD_CANCELLED') throw e
-    return 0
-  })
+  // 文件大小: 优先 chooseVideo 返回的 res.size (control.size) → File 对象 .size → 兜底 fetch 探测
+  // (2026-08-30: 几 GB 大视频 fetch 全读会超时/内存爆 → "无法读取文件大小", 必须避免 fetch)
+  let size = control.size || 0
+  if (!size && fileObj && fileObj.size !== undefined) size = fileObj.size || 0
+  if (!size) size = await cancelAware(probeFileSize(filePath, fileObj)).catch(() => 0)
   if (!size) throw new Error('无法读取文件大小')
   const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
   const call = async (action, data, signal) => {
@@ -167,7 +174,7 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       // 读分片: 60s 超时兜底 (blob 读取挂起会拖死整批并发且取消也中断不了)
       const readTimer = setTimeout(() => controller.abort(), 60000)
       try {
-        piece = await readBlobSlice(filePath, start, end, controller.signal)
+        piece = await readBlobSlice(filePath, start, end, controller.signal, fileObj)
       } finally {
         clearTimeout(readTimer)
       }
@@ -500,7 +507,7 @@ export async function getStorage() {
     })
   }
   return {
-    uploadFile: async (filePath, cloudPath, onProgress, control = {}, onStatus, resume) => {
+    uploadFile: async (filePath, cloudPath, onProgress, control = {}, onStatus, resume, fileObj) => {
       // H5: 图片 → canvas 压缩到 <80KB → base64 云函数中转 (云函数网关 body 限制 ~100KB)
       //      非图片 → 云函数 getUploadUrl → COS 直传; >3GB 大文件 → COS 分片上传
       // 1) 图片: canvas 压缩 + base64
@@ -516,7 +523,7 @@ export async function getStorage() {
       // 非图片或 canvas 失败: 原始 base64 (仅图片兜底, 视频等非图片直接 COS 分片, 不读内存)
       // 1.5) 非图片(视频) → 一律走 COS 分片上传: 真实进度 + 暂停/取消 + 断点续传
       if (!isImage) {
-        return uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume)
+        return uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume, fileObj)
       }
       if (isImage && !base64) {
         try {

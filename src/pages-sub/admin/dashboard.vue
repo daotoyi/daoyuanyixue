@@ -2704,7 +2704,7 @@ async function dequeueNext() {
   if (!ep || !item.filePath) return dequeueNext()
   ep._queued = false
   ep._status = ''
-  await startUpload(ep, item.filePath, item.fileSize)
+  await startUpload(ep, item.filePath, item.fileSize, item.fileObj)
 }
 
 /* 取消排队 (等待中的课时): 从队列移除, 恢复"上传"按钮 */
@@ -2767,22 +2767,25 @@ function uploadEpisodeVideo(ep) {
     success: async (res) => {
       const filePath = res.tempFilePath
       const fileSize = Number(res.size) || 0
+      // H5 平台 chooseVideo 返回 File 对象 (originalFile): 用它直接 slice 读分片, 避免 fetch 读全文件 (几GB视频会超时/内存爆) (2026-08-30)
+      const fileObj = res.originalFile || res.file || null
+      console.log('[上传] 选择文件 size=' + fileSize + ' fileObj=' + (fileObj ? '是' : '无'))
       if (currentUploadingEp && currentUploadingEp !== ep) {
         // 已有课时在上传中 → 加入队列等待 (排队策略: 一个完成后自动开始下一个)
-        uploadQueue.value.push({ ep, filePath, fileSize })
+        uploadQueue.value.push({ ep, filePath, fileSize, fileObj })
         ep._queued = true
         ep._status = '等待上传'
         ep._progress = 0
         uni.showToast({ title: '已加入上传队列，前一个完成后自动开始', icon: 'none' })
         return
       }
-      await startUpload(ep, filePath, fileSize)
+      await startUpload(ep, filePath, fileSize, fileObj)
     },
   })
 }
 
 /* 真正开始上传一个课时 (含断点续传检测; 完成/失败/取消后自动出队下一个) */
-async function startUpload(ep, filePath, fileSize) {
+async function startUpload(ep, filePath, fileSize, fileObj) {
   const i = courseForm.value.episodes.indexOf(ep)
   // 断点续传检测: 同尺寸文件有未完成上传 → 询问续传
   let resumeInfo = null
@@ -2809,8 +2812,9 @@ async function startUpload(ep, filePath, fileSize) {
   const myGen = ++uploadGenCounter // 任务代号: 取消/急停后旧任务的进度/结果写入全部失效
   ep._uploadGen = myGen
   console.log('[上传] 开始课时 ' + (ep.title || '第' + (i + 1) + '集') + ' gen=' + myGen + ' 续传=' + (resumeInfo ? '是' : '否'))
-  const control = { paused: false, cancelled: false, abortFns: new Set() }
+  const control = { paused: false, cancelled: false, abortFns: new Set(), size: fileSize } // size: chooseVideo 返回, 避免 fetch 读全文件
   ep._control = control
+  ep._fileObj = fileObj
   ep._fileSize = fileSize // 取消乐观兜底保存续传点用
   ep._uploading = true
   ep._paused = false
@@ -2892,7 +2896,7 @@ async function startUpload(ep, filePath, fileSize) {
     }, control, (s) => {
       if (ep._uploadGen !== myGen) return
       ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
-    }, resumeInfo || null)
+    }, resumeInfo || null, fileObj)
     const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
     if (!fileID) throw new Error('上传失败')
     if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 不再写回结果
