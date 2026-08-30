@@ -2917,8 +2917,11 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     removeResume(fileSize) // 成功清除续传点
     uni.showToast({ title: '已上传', icon: 'success' })
     removeNetListeners()
-    // C/OSS 启用时提示是否搬运到 C/OSS
-    await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
+    // C/OSS 提示改为【不阻塞上传队列】(2026-08-30 修复: 之前 await 会先查设置再弹窗等用户,
+    // 期间 finally/dequeueNext 不执行 → 排队的下一个视频永远不自动开始)
+    setTimeout(() => {
+      maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i }).catch(() => {})
+    }, 1200)
   } catch (e) {
     removeNetListeners()
     const msg = (e && e.message) || ''
