@@ -2655,6 +2655,12 @@ function uploadEpisodeVideo(ep) {
   const i = courseForm.value.episodes.indexOf(ep)
   if (i < 0) return
   if (ep._uploading) return uni.showToast({ title: '该课时正在上传中', icon: 'none' })
+  // 全局单课时上传锁 (2026-08-30): 同时只允许 1 个课时上传 —
+  // 多课时并行时每课时 6 路并发分片会挤爆浏览器连接池(COS域名)与内存(16MB×N片), 互相拖死全部卡住
+  const uploadingOther = courseForm.value.episodes.find((e) => e !== ep && e._uploading)
+  if (uploadingOther) {
+    return uni.showToast({ title: `请先完成「${uploadingOther.title || '第' + (courseForm.value.episodes.indexOf(uploadingOther) + 1) + '集'}」的上传或取消后再传本集`, icon: 'none' })
+  }
   uni.chooseVideo({
     count: 1,
     maxDuration: 3600,
@@ -2684,11 +2690,13 @@ function uploadEpisodeVideo(ep) {
       }
       const control = { paused: false, cancelled: false, abortFns: new Set() }
       ep._control = control
+      ep._fileSize = fileSize // 取消乐观兜底保存续传点用
       ep._uploading = true
       ep._paused = false
       ep._progress = resumeInfo ? resumePercent(resume, fileSize) : 0
       ep._status = resumeInfo ? '续传中…' : ''
       let cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
+      control.cloudPath = cloudPath
       let lastSaveTs = 0
       // 断网自动暂停 / 恢复自动继续 (参考百度网盘: 网络恢复后自动续传, 不用手动干预)
       const onNetOffline = () => {
@@ -2724,7 +2732,7 @@ function uploadEpisodeVideo(ep) {
         ])
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
         if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
-        if (resumeInfo) cloudPath = resume.cloudPath // 续传必须用同一 cloudPath
+        if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
         ep._status = ''
         const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
           const pct = Math.min(99, Math.round(ratio * 100))
@@ -2789,7 +2797,7 @@ function togglePauseEpisodeUpload(ep) {
     uni.showToast({ title: '已暂停', icon: 'none' })
   }
 }
-/* 取消上传 (立即中断所有分片并清理) */
+/* 取消上传 (立即中断所有分片并清理; 乐观兜底: 3s 后强制复位 UI, 防止"正在取消"卡死) */
 function cancelEpisodeUpload(ep) {
   if (!ep || !ep._control || !ep._uploading) return
   console.log('[上传控制] 点击取消, abortFns=', ep._control.abortFns ? ep._control.abortFns.size : 0)
@@ -2798,8 +2806,25 @@ function cancelEpisodeUpload(ep) {
   ep._status = '正在取消…'
   abortAllParts(ep._control) // 立即中断所有并发分片, 不等它们自然结束
   uni.showToast({ title: '正在取消...', icon: 'none' })
-  // 兜底: 1.5s 后仍未结束则再中断一次
+  // 兜底1: 1.5s 后仍未结束则再中断一次
   setTimeout(() => { if (ep && ep._uploading) abortAllParts(ep._control) }, 1500)
+  // 兜底2 (2026-08-30): 3s 后若上传主流程仍未响应取消(极少数网络僵死场景), 强制复位 UI 并保留进度,
+  // 避免"正在取消…"永久显示; 主流程 catch 幂等, 之后即便返回也不会再改 UI
+  setTimeout(() => {
+    if (!ep || !ep._uploading) return
+    console.warn('[上传控制] 取消 3s 未响应, 强制复位 UI (进度已保留)')
+    ep._uploading = false
+    ep._paused = false
+    ep._status = ''
+    if (ep._control && ep._control.uploadId) {
+      // 尽力保存续传点, 供下次选同文件续传
+      try {
+        const fs = ep._fileSize || 0
+        if (fs) saveResume({ size: fs, cloudPath: ep._control.cloudPath || '', uploadId: ep._control.uploadId, partNumbers: ep._control.partNumbers || [], ts: Date.now() })
+      } catch (e) {}
+    }
+    uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+  }, 3000)
 }
 /* 遍历中断 control 中所有在传分片的请求 */
 function abortAllParts(control) {

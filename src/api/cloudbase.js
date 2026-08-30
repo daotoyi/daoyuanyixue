@@ -92,8 +92,8 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   const size = await probeFileSize(filePath)
   if (!size) throw new Error('无法读取文件大小')
   const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
-  const call = async (action, data) => {
-    const res = await apiRequest({ action, data })
+  const call = async (action, data, signal) => {
+    const res = await apiRequest({ action, data }, 30000, signal)
     if (res.status !== 200) throw new Error(res.msg || action + ' 失败')
     return res.data || {}
   }
@@ -152,13 +152,14 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       throw readErr
     }
     try {
-      // 获取本分片 PUT 预签名 URL (有效期 30 分钟, 失败重试 2 次)
+      // 获取本分片 PUT 预签名 URL (有效期 30 分钟, 失败重试 2 次; 取消/暂停可中断取签名)
       let auth = null
       for (let k = 0; k < 3 && !auth; k++) {
         await waitIfPaused(control)
         try {
-          auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber })
+          auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }, controller.signal)
         } catch (e) {
+          if (e && e.code === 'UPLOAD_CANCELLED') throw e
           if (k === 2) throw e
           await sleep(600 * (k + 1))
         }
@@ -296,10 +297,16 @@ async function compressImageToBase64(src, targetKB = 80) {
 
 /**
  * 通用 API 请求 (H5 端用 fetch 绕过 uni.request CORS 问题; 带 30s 超时防挂起)
+ * externalSignal: 可选 AbortSignal — 上传取消/暂停时可中断"取签名"等云函数调用 (2026-08-30)
  */
-async function apiRequest(payload, timeoutMs = 30000) {
+async function apiRequest(payload, timeoutMs = 30000, externalSignal) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const onExtAbort = () => controller.abort()
+  if (externalSignal) {
+    if (externalSignal.aborted) controller.abort()
+    else externalSignal.addEventListener('abort', onExtAbort)
+  }
   try {
     const res = await fetch(API_BASE, {
       method: 'POST',
@@ -311,6 +318,7 @@ async function apiRequest(payload, timeoutMs = 30000) {
     return data
   } finally {
     clearTimeout(timer)
+    if (externalSignal) externalSignal.removeEventListener('abort', onExtAbort)
   }
 }
 
