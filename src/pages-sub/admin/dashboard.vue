@@ -1148,6 +1148,11 @@
                   <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
                   <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
                 </view>
+                <!-- 排队等待中: 显示等待上传 + 可取消排队 (2026-08-30 排队策略: 一次只传一个, 其他依次等待) -->
+                <view class="ep-up queued" v-else-if="ep._queued">
+                  <text class="ep-up-pct queued-txt">⏳ 等待上传</text>
+                  <text class="ep-up-btn danger" @tap="removeFromQueue(ep)">取消排队</text>
+                </view>
                 <text class="btn-p sm" v-else style="margin-left: 10rpx; flex-shrink: 0" @tap="uploadEpisodeVideo(ep)">上传</text>
                 <text
                   class="ep-free"
@@ -2649,18 +2654,40 @@ function resumePercent(rec, size) {
   return Math.min(99, Math.round(((rec.partNumbers || []).length / total) * 100))
 }
 
-/* 上传某一集视频 (行内独立进度 + 暂停/继续/取消 + 断点续传; 绑定 ep 对象防索引错位) */
+/* ===== 上传队列 (2026-08-30 排队策略): 同一时间只允许 1 个课时上传,
+   其余选好文件后进入队列等待, 前一个完成/取消/失败后按顺序自动开始下一个 ===== */
+const uploadQueue = ref([])        // [{ ep, filePath, fileSize }] 等待上传的课时
+let currentUploadingEp = null      // 当前正在上传的课时 (非响应式, 仅流程控制)
+let currentUploadingCourseId = null // 当前上传所属课程 id (切换课程时中止残留任务用)
+
+/* 出队: 当前无上传中时, 取队列第一个开始 (防重入: 已有上传中则跳过) */
+async function dequeueNext() {
+  if (currentUploadingEp) return // 已有上传中, 跳过 (防止 3s 兜底与主流程 finally 重复触发)
+  if (uploadQueue.value.length === 0) return
+  const item = uploadQueue.value.shift()
+  const ep = item && item.ep
+  if (!ep || !item.filePath) return dequeueNext()
+  ep._queued = false
+  ep._status = ''
+  await startUpload(ep, item.filePath, item.fileSize)
+}
+
+/* 取消排队 (等待中的课时): 从队列移除, 恢复"上传"按钮 */
+function removeFromQueue(ep) {
+  if (!ep) return
+  uploadQueue.value = uploadQueue.value.filter((q) => q.ep !== ep)
+  ep._queued = false
+  ep._status = ''
+  uni.showToast({ title: '已取消排队', icon: 'none' })
+}
+
+/* 上传某一集视频: 选文件 → 若有课时在上传则入队等待, 否则立即开始 (绑定 ep 对象防索引错位) */
 function uploadEpisodeVideo(ep) {
   if (!ep) return
   const i = courseForm.value.episodes.indexOf(ep)
   if (i < 0) return
   if (ep._uploading) return uni.showToast({ title: '该课时正在上传中', icon: 'none' })
-  // 全局单课时上传锁 (2026-08-30): 同时只允许 1 个课时上传 —
-  // 多课时并行时每课时 6 路并发分片会挤爆浏览器连接池(COS域名)与内存(16MB×N片), 互相拖死全部卡住
-  const uploadingOther = courseForm.value.episodes.find((e) => e !== ep && e._uploading)
-  if (uploadingOther) {
-    return uni.showToast({ title: `请先完成「${uploadingOther.title || '第' + (courseForm.value.episodes.indexOf(uploadingOther) + 1) + '集'}」的上传或取消后再传本集`, icon: 'none' })
-  }
+  if (ep._queued) return uni.showToast({ title: '该课时正在排队等待中', icon: 'none' })
   uni.chooseVideo({
     count: 1,
     maxDuration: 3600,
@@ -2668,117 +2695,144 @@ function uploadEpisodeVideo(ep) {
     success: async (res) => {
       const filePath = res.tempFilePath
       const fileSize = Number(res.size) || 0
-      // 断点续传检测: 同尺寸文件有未完成上传 → 询问续传
-      let resumeInfo = null
-      const resume = fileSize ? findResume(fileSize) : null
-      if (resume && resume.uploadId) {
-        const confirmRes = await new Promise((r) => {
-          uni.showModal({
-            title: '发现未完成的上传',
-            content: `上次该文件已上传约 ${resumePercent(resume, fileSize)}%，是否从断点继续上传？（若选重新上传将丢弃旧进度）`,
-            confirmText: '继续上传',
-            cancelText: '重新上传',
-            success: (rr) => r(rr.confirm === true),
-            fail: () => r(false),
-          })
-        })
-        if (confirmRes) {
-          resumeInfo = { uploadId: resume.uploadId, skipPartNumbers: resume.partNumbers || [] }
-        } else {
-          removeResume(fileSize)
-        }
-      }
-      const control = { paused: false, cancelled: false, abortFns: new Set() }
-      ep._control = control
-      ep._fileSize = fileSize // 取消乐观兜底保存续传点用
-      ep._uploading = true
-      ep._paused = false
-      ep._progress = resumeInfo ? resumePercent(resume, fileSize) : 0
-      ep._status = resumeInfo ? '续传中…' : ''
-      let cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
-      control.cloudPath = cloudPath
-      let lastSaveTs = 0
-      // 断网自动暂停 / 恢复自动继续 (参考百度网盘: 网络恢复后自动续传, 不用手动干预)
-      const onNetOffline = () => {
-        if (ep._uploading && !ep._control.cancelled) {
-          ep._control.paused = true
-          ep._paused = true
-          ep._status = '网络已断开，等待恢复后自动继续…'
-        }
-      }
-      const onNetOnline = () => {
-        if (ep._uploading && ep._paused && !ep._control.cancelled) {
-          ep._control.paused = false
-          ep._paused = false
-          ep._status = ''
-        }
-      }
-      if (typeof window !== 'undefined') {
-        window.addEventListener('offline', onNetOffline)
-        window.addEventListener('online', onNetOnline)
-      }
-      const removeNetListeners = () => {
-        if (typeof window !== 'undefined') {
-          window.removeEventListener('offline', onNetOffline)
-          window.removeEventListener('online', onNetOnline)
-        }
-      }
-      try {
-        ep._status = '初始化中…'
-        // getStorage 加 15s 超时兜底: 防止 SDK 初始化(匿名登录)网络卡住时上传永远 0% 无反应
-        const storage = await Promise.race([
-          getStorage(),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('云存储初始化超时，请检查网络后重试')), 15000)),
-        ])
-        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
-        if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
-        if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
-        ep._status = ''
-        const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
-          const pct = Math.min(99, Math.round(ratio * 100))
-          if (pct !== ep._progress) ep._progress = pct
-          // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
-          const now = Date.now()
-          if (control.uploadId && now - lastSaveTs > 10000) {
-            lastSaveTs = now
-            saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: now })
-          }
-        }, control, (s) => {
-          ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
-        }, resumeInfo || null)
-        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
-        if (!fileID) throw new Error('上传失败')
-        const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
-        ep.video = url
-        if (!ep.title) ep.title = `第${i + 1}集`
-        ep._uploading = false
-        ep._paused = false
-        ep._progress = 100
-        ep._status = ''
-        removeResume(fileSize) // 成功清除续传点
-        uni.showToast({ title: '已上传', icon: 'success' })
-        removeNetListeners()
-        // C/OSS 启用时提示是否搬运到 C/OSS
-        await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
-      } catch (e) {
-        removeNetListeners()
-        // 失败/取消: 保存续传点 (分片保留在 COS, 下次选同文件可继续)
-        if (control.uploadId) {
-          saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: Date.now() })
-        }
-        ep._uploading = false
-        ep._paused = false
+      if (currentUploadingEp && currentUploadingEp !== ep) {
+        // 已有课时在上传中 → 加入队列等待 (排队策略: 一个完成后自动开始下一个)
+        uploadQueue.value.push({ ep, filePath, fileSize })
+        ep._queued = true
+        ep._status = '等待上传'
         ep._progress = 0
-        ep._status = ''
-        if (e && e.code === 'UPLOAD_CANCELLED') {
-          uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
-        } else {
-          uni.showToast({ title: '上传中断，已保留进度，可重新选择该文件续传', icon: 'none' })
-          console.error('[上传失败]', e)
-        }
+        uni.showToast({ title: '已加入上传队列，前一个完成后自动开始', icon: 'none' })
+        return
       }
+      await startUpload(ep, filePath, fileSize)
     },
   })
+}
+
+/* 真正开始上传一个课时 (含断点续传检测; 完成/失败/取消后自动出队下一个) */
+async function startUpload(ep, filePath, fileSize) {
+  const i = courseForm.value.episodes.indexOf(ep)
+  // 断点续传检测: 同尺寸文件有未完成上传 → 询问续传
+  let resumeInfo = null
+  const resume = fileSize ? findResume(fileSize) : null
+  if (resume && resume.uploadId) {
+    const confirmRes = await new Promise((r) => {
+      uni.showModal({
+        title: '发现未完成的上传',
+        content: `上次该文件已上传约 ${resumePercent(resume, fileSize)}%，是否从断点继续上传？（若选重新上传将丢弃旧进度）`,
+        confirmText: '继续上传',
+        cancelText: '重新上传',
+        success: (rr) => r(rr.confirm === true),
+        fail: () => r(false),
+      })
+    })
+    if (confirmRes) {
+      resumeInfo = { uploadId: resume.uploadId, skipPartNumbers: resume.partNumbers || [] }
+    } else {
+      removeResume(fileSize)
+    }
+  }
+  currentUploadingEp = ep
+  currentUploadingCourseId = courseForm.value.id // 记录所属课程, 切换课程时中止残留任务
+  const control = { paused: false, cancelled: false, abortFns: new Set() }
+  ep._control = control
+  ep._fileSize = fileSize // 取消乐观兜底保存续传点用
+  ep._uploading = true
+  ep._paused = false
+  ep._progress = resumeInfo ? resumePercent(resume, fileSize) : 0
+  ep._status = resumeInfo ? '续传中…' : ''
+  let cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
+  control.cloudPath = cloudPath
+  let lastSaveTs = 0
+  // 断网自动暂停 / 恢复自动继续 (参考百度网盘: 网络恢复后自动续传, 不用手动干预)
+  const onNetOffline = () => {
+    if (ep._uploading && !ep._control.cancelled) {
+      ep._control.paused = true
+      ep._paused = true
+      ep._status = '网络已断开，等待恢复后自动继续…'
+    }
+  }
+  const onNetOnline = () => {
+    if (ep._uploading && ep._paused && !ep._control.cancelled) {
+      ep._control.paused = false
+      ep._paused = false
+      ep._status = ''
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('offline', onNetOffline)
+    window.addEventListener('online', onNetOnline)
+  }
+  const removeNetListeners = () => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('offline', onNetOffline)
+      window.removeEventListener('online', onNetOnline)
+    }
+  }
+  try {
+    ep._status = '初始化中…'
+    // getStorage 加 15s 超时兜底: 防止 SDK 初始化(匿名登录)网络卡住时上传永远 0% 无反应
+    const storage = await Promise.race([
+      getStorage(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('云存储初始化超时，请检查网络后重试')), 15000)),
+    ])
+    if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+    if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
+    if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
+    ep._status = ''
+    const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
+      const pct = Math.min(99, Math.round(ratio * 100))
+      if (pct !== ep._progress) ep._progress = pct
+      // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
+      const now = Date.now()
+      if (control.uploadId && now - lastSaveTs > 10000) {
+        lastSaveTs = now
+        saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: now })
+      }
+    }, control, (s) => {
+      ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
+    }, resumeInfo || null)
+    const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+    if (!fileID) throw new Error('上传失败')
+    const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+    ep.video = url
+    if (!ep.title) ep.title = `第${i + 1}集`
+    // 若弹窗已关闭重开 (episodes 重建为新对象), 按 _key 把 URL/标题同步到界面当前对象, 避免进度丢失 (2026-08-30)
+    const curEp = courseForm.value.episodes.find((e) => e._key && e._key === ep._key)
+    if (curEp && curEp !== ep) {
+      curEp.video = ep.video
+      if (!curEp.title) curEp.title = ep.title
+    }
+    ep._uploading = false
+    ep._paused = false
+    ep._progress = 100
+    ep._status = ''
+    removeResume(fileSize) // 成功清除续传点
+    uni.showToast({ title: '已上传', icon: 'success' })
+    removeNetListeners()
+    // C/OSS 启用时提示是否搬运到 C/OSS
+    await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
+  } catch (e) {
+    removeNetListeners()
+    // 失败/取消: 保存续传点 (分片保留在 COS, 下次选同文件可继续)
+    if (control.uploadId) {
+      saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: Date.now() })
+    }
+    ep._uploading = false
+    ep._paused = false
+    ep._progress = 0
+    ep._status = ''
+    if (e && e.code === 'UPLOAD_CANCELLED') {
+      uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+    } else {
+      uni.showToast({ title: '上传中断，已保留进度，可重新选择该文件续传', icon: 'none' })
+      console.error('[上传失败]', e)
+    }
+  } finally {
+    // 无论成功/失败/取消: 释放上传锁, 自动开始队列中的下一个
+    if (currentUploadingEp === ep) currentUploadingEp = null
+    dequeueNext()
+  }
 }
 /* 暂停/继续 上传 (中断所有进行中的分片, 立即暂停; 恢复后自动续传) */
 function togglePauseEpisodeUpload(ep) {
@@ -2809,7 +2863,7 @@ function cancelEpisodeUpload(ep) {
   // 兜底1: 1.5s 后仍未结束则再中断一次
   setTimeout(() => { if (ep && ep._uploading) abortAllParts(ep._control) }, 1500)
   // 兜底2 (2026-08-30): 3s 后若上传主流程仍未响应取消(极少数网络僵死场景), 强制复位 UI 并保留进度,
-  // 避免"正在取消…"永久显示; 主流程 catch 幂等, 之后即便返回也不会再改 UI
+  // 避免"正在取消…"永久显示; 主流程 catch/finally 幂等, 之后即便返回也不会再改 UI
   setTimeout(() => {
     if (!ep || !ep._uploading) return
     console.warn('[上传控制] 取消 3s 未响应, 强制复位 UI (进度已保留)')
@@ -2824,6 +2878,9 @@ function cancelEpisodeUpload(ep) {
       } catch (e) {}
     }
     uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+    // 强制释放上传锁并开始队列中的下一个
+    if (currentUploadingEp === ep) currentUploadingEp = null
+    dequeueNext()
   }, 3000)
 }
 /* 遍历中断 control 中所有在传分片的请求 */
@@ -2965,6 +3022,29 @@ const showCourse = ref(false)
 const courseForm = ref({})
 
 function openCourseForm(c) {
+  // 切换课程清理 (2026-08-30): 若当前上传/排队的任务属于其他课程, 中止并保留进度, 防止"幽灵上传"残留
+  const newCid = c ? c.id : null
+  if (currentUploadingEp && currentUploadingCourseId !== newCid) {
+    const ctrl = currentUploadingEp._control
+    if (ctrl) {
+      ctrl.cancelled = true
+      abortAllParts(ctrl)
+      if (ctrl.uploadId) {
+        try {
+          if (currentUploadingEp._fileSize) {
+            saveResume({ size: currentUploadingEp._fileSize, cloudPath: ctrl.cloudPath || '', uploadId: ctrl.uploadId, partNumbers: ctrl.partNumbers || [], ts: Date.now() })
+          }
+        } catch (e) {}
+      }
+    }
+    currentUploadingEp._uploading = false
+    currentUploadingEp._status = ''
+    currentUploadingEp = null
+  }
+  if (uploadQueue.value.length) {
+    uploadQueue.value.forEach((q) => { if (q && q.ep) { q.ep._queued = false; q.ep._status = '' } })
+    uploadQueue.value = []
+  }
   courseForm.value = c
     ? { ...c, episodes: Array.isArray(c.episodes) ? c.episodes.map((e) => ({ ...e, _key: e._key || epKey() })) : (c.video ? [{ _key: epKey(), title: '第1集', video: c.video }] : []) }
     : { id: null, title: '', teacher: '', price: '0.00', ot_price: '', cover: '', category_id: courseActiveCate.value || 1, lessons_count: 0, level: '入门', description: '', episodes: [] }
@@ -4761,6 +4841,18 @@ onMounted(async () => {
   width: 100%;
   font-size: 20rpx;
   color: #b07a1e;
+}
+/* 排队等待状态 (2026-08-30) */
+.ep-up.queued {
+  background: #f6f1e8;
+  border: 1rpx dashed #c9b891;
+  border-radius: 10rpx;
+  padding: 8rpx 14rpx;
+}
+.ep-up-pct.queued-txt {
+  color: #8a857c;
+  font-size: 24rpx;
+  letter-spacing: 1rpx;
 }
 .ep-up-bar {
   width: 150rpx;
