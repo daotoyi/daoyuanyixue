@@ -734,9 +734,9 @@
                 </view>
               </view>
               <view class="td w-no">
-                <view v-if="u.openid" class="cred-tag cred-wx">微信一键登录</view>
+                <view v-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
                 <view v-else-if="u.email" class="cred-tag cred-mail">{{ u.email }}</view>
-                <view v-else-if="u.phone" class="cred-tag cred-phone">{{ u.phone }}</view>
+                <view v-else-if="u.openid" class="cred-tag cred-wx">微信一键登录</view>
                 <view v-else class="cred-tag cred-none">无凭证</view>
               </view>
               <view class="td w-price">{{ u.dao_code || '-' }}</view>
