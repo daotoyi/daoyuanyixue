@@ -104,11 +104,22 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   await waitIfPaused(control)
   if (resume && resume.uploadId) {
     uploadId = resume.uploadId
-    const lp = await call('storage.listParts', { cloudPath, uploadId }).catch(() => ({ parts: resume.skipPartNumbers || [] }))
-    donePartNumbers.push(...((lp && lp.parts) || resume.skipPartNumbers || []))
-    uploaded = donePartNumbers.length * MULTIPART_PART_SIZE // 近似 (最后一片略小, 进度显示无碍)
-    if (uploaded > size) uploaded = size
-    console.log('[CloudBase] 断点续传: uploadId=' + uploadId.slice(0, 12) + '... 已传分片=' + donePartNumbers.length + '/' + totalParts)
+    // 校验 uploadId 有效性: listParts 返回空(分片被清理/uploadId失效)时, 丢弃旧续传点重建, 避免合并时"未找到分片"报错
+    // (2026-08-30: 取消/失败留下的旧 uploadId 可能已被 COS 清理, 续传→completeMultipart 必然失败 → 用户反复遇到"上传中断")
+    const lp = await call('storage.listParts', { cloudPath, uploadId }).catch(() => null)
+    if (lp && lp.parts && lp.parts.length) {
+      donePartNumbers.push(...lp.parts)
+      uploaded = donePartNumbers.length * MULTIPART_PART_SIZE // 近似 (最后一片略小, 进度显示无碍)
+      if (uploaded > size) uploaded = size
+      console.log('[CloudBase] 断点续传: uploadId=' + uploadId.slice(0, 12) + '... 已传分片=' + donePartNumbers.length + '/' + totalParts)
+    } else {
+      // uploadId 已失效/分片被清理: 重建新的分片上传 (丢弃旧进度, 从头传)
+      console.warn('[CloudBase] 续传 uploadId 已失效(服务端无分片), 重新创建分片上传')
+      uploadId = ''
+      const init = await call('storage.createMultipart', { cloudPath })
+      if (!init.uploadId) throw new Error('初始化分片上传失败')
+      uploadId = init.uploadId
+    }
   } else {
     const init = await call('storage.createMultipart', { cloudPath })
     if (!init.uploadId) throw new Error('初始化分片上传失败')

@@ -1087,6 +1087,7 @@
         <view class="sheet-title">
           {{ courseForm.id ? '编辑课程' : '新增课程' }}
           <text v-if="hasActiveUploads" class="abort-all-btn" @tap="abortAllUploads">⛔ 终止全部上传</text>
+          <text class="clear-resume-btn" @tap="clearAllResume">清除断点记录</text>
         </view>
         <view class="f-row"><text class="f-label">标题</text><input class="f-input f-title" v-model="courseForm.title" placeholder="课程名称" /></view>
         <view class="f-row"><text class="f-label">讲师</text><input class="f-input" v-model="courseForm.teacher" /></view>
@@ -2652,6 +2653,23 @@ function removeResume(size) {
     uni.setStorageSync(RESUME_KEY, JSON.stringify(list))
   } catch (e) {}
 }
+/* 清除全部断点续传记录 (2026-08-30: 反复取消/失败产生的失效 uploadId 会干扰重新上传, 提供一键清理) */
+function clearAllResume() {
+  uni.showModal({
+    title: '清除断点记录',
+    content: '将清除所有课时的未完成上传记录（不会删除已上传的视频分片）。之后重新上传会从头开始。',
+    confirmColor: '#9c1630',
+    success: (r) => {
+      if (!r.confirm) return
+      try {
+        uni.setStorageSync(RESUME_KEY, '[]')
+        uni.showToast({ title: '断点记录已全部清除', icon: 'none' })
+      } catch (e) {
+        uni.showToast({ title: '清除失败', icon: 'none' })
+      }
+    },
+  })
+}
 function resumePercent(rec, size) {
   const total = Math.max(1, Math.ceil(size / PART_SIZE_BYTES))
   return Math.min(99, Math.round(((rec.partNumbers || []).length / total) * 100))
@@ -2875,6 +2893,11 @@ async function startUpload(ep, filePath, fileSize) {
     await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i })
   } catch (e) {
     removeNetListeners()
+    const msg = (e && e.message) || ''
+    // 合并失败/未找到分片 → 旧 uploadId 已失效, 清除续传点, 下次从头传 (2026-08-30)
+    if (msg.indexOf('未找到已上传的分片') >= 0 || msg.indexOf('合并') >= 0) {
+      removeResume(fileSize)
+    }
     // 失败/取消: 保存续传点 (分片保留在 COS, 下次选同文件可继续)
     if (control.uploadId) {
       saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: Date.now() })
@@ -2885,10 +2908,13 @@ async function startUpload(ep, filePath, fileSize) {
     ep._status = ''
     if (e && e.code === 'UPLOAD_CANCELLED') {
       uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
-    } else if (e && e.message && e.message.indexOf('初始化') >= 0) {
-      uni.showToast({ title: e.message, icon: 'none' }) // 初始化失败: 显示具体原因(网络/代理)
+    } else if (msg.indexOf('初始化') >= 0) {
+      uni.showToast({ title: msg, icon: 'none' }) // 初始化失败: 显示具体原因(网络/代理)
+    } else if (msg.indexOf('未找到已上传的分片') >= 0) {
+      uni.showToast({ title: '上传记录已失效，已重置，请重新上传', icon: 'none' })
     } else {
-      uni.showToast({ title: '上传中断，已保留进度，可重新选择该文件续传', icon: 'none' })
+      // 显示真实失败原因(截断), 便于定位问题
+      uni.showToast({ title: '上传中断：' + (msg.slice(0, 30) || '未知原因'), icon: 'none' })
       console.error('[上传失败]', e)
     }
   } finally {
@@ -4821,6 +4847,23 @@ onMounted(async () => {
 }
 .abort-all-btn:hover {
   background: #7e1126;
+}
+/* 清除断点记录按钮 (2026-08-30) */
+.clear-resume-btn {
+  display: inline-block;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  font-weight: 400;
+  color: #8a857c;
+  border: 1rpx solid #d8d2c8;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  vertical-align: middle;
+  cursor: pointer;
+}
+.clear-resume-btn:hover {
+  color: #9c1630;
+  border-color: #c9a9a3;
 }
 .f-row {
   display: flex;
