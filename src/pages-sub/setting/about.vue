@@ -11,7 +11,7 @@
       <view class="info-row"><text class="info-label">关于我们</text><text class="info-value">真和盛文化</text></view>
       <view class="info-row"><text class="info-label">版本</text><text class="info-value">{{ APP_FULL_VERSION }}（{{ APP_BUILD_DATE }}）</text></view>
       <view class="info-row"><text class="info-label">理念</text><text class="info-value">融合传统智慧与现代科技</text></view>
-      <view class="info-row" @tap="copyContact"><text class="info-label">开发</text><text class="info-value info-link">昊辰（zhenhesheng@126.com）</text></view>
+      <view class="info-row" @tap="copyContact"><text class="info-label">开发</text><text class="info-value">昊辰（zhenhesheng@126.com）</text></view>
       <view class="info-row" @tap="openSite('https://zhenhesheng.cn')"><text class="info-label">网站</text><text class="info-value info-link">https://zhenhesheng.cn</text></view>
       <view class="info-row" @tap="openSite('https://club.zhenhesheng.cn')"><text class="info-label">同修汇</text><text class="info-value info-link">https://club.zhenhesheng.cn</text></view>
     </view>

@@ -3446,11 +3446,11 @@ const VIEWER_ROUTES = [
   'admin.aftersales.list',
 ]
 
-// 操作管理员(operator)禁止的操作: 用户管理 + 系统设置 + 数据库运维 (2026-08-26 用户确认: 用户管理/页面管理/系统设置仅超管可设置)
+// 操作管理员(operator)禁止的操作: 用户创建/编辑 + 系统设置 + 数据库运维 (2026-08-26 用户确认: 用户管理/页面管理/系统设置仅超管可设置)
+// 2026-08-30: admin.users.delete 从黑名单移除 — 操作管理员可删除普通用户 (adminUserDelete 内已有保护: 非超管仅能删 user 角色)
 const OPERATOR_BLOCKED = [
   'admin.users.create',
   'admin.users.update',
-  'admin.users.delete',
   'admin.renumberUids',
   'admin.assignDaoCodes',
   'admin.recalcVip',
@@ -3991,6 +3991,11 @@ async function adminUserDelete(data) {
     if (opRole !== 'admin') return fail('只有超级管理员可以删除管理员账号')
     if (Number(data.opUid) === Number(uid)) return fail('不能删除自己的账号')
     return fail('超管账号不可删除，可先降级为管理员')
+  }
+  // 非超管 (操作管理员) 只能删除普通用户, 后台账号(manager/operator)需超管删除
+  const opRole2 = await dbUserRole(data)
+  if (opRole2 !== 'admin' && res.data[0].role !== 'user') {
+    return fail('仅超级管理员可删除后台账号')
   }
   await db.collection('users').doc(res.data[0]._id).update({
     status: 'deleted',
