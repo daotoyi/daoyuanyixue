@@ -3089,7 +3089,7 @@ function deleteUser(form) {
     title: '删除用户',
     content: isAdminUser
       ? '该账号是超级管理员，不可直接删除。可先将其降级为管理员/员工后再删除。'
-      : '确定删除用户 ' + (form.nickname || form.dao_code || form.uid) + ' 吗？将同时清除其订单/收藏/足迹等数据，不可恢复！',
+      : '确定删除用户 ' + (form.nickname || form.dao_code || form.uid) + ' 吗？将同时清除其订单/收藏/足迹等数据，且该账号将无法再登录，不可恢复！',
     showCancel: !isAdminUser,
     confirmText: isAdminUser ? '知道了' : '删除',
     confirmColor: '#9c1630',
@@ -3097,7 +3097,7 @@ function deleteUser(form) {
       if (!r.confirm || isAdminUser) return
       uni.showModal({
         title: '再次确认',
-        content: '删除后不可恢复，请再次确认！',
+        content: '删除后该账号将无法再登录，且不可恢复，请再次确认！',
         confirmColor: '#9c1630',
         success: async (r2) => {
           if (!r2.confirm) return

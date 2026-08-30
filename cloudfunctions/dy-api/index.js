@@ -290,6 +290,8 @@ async function userHeartbeat(data) {
   if (!uid) return fail('缺少uid')
   const u = (await db.collection('users').where({ uid }).limit(1).get()).data[0]
   if (!u) return ok({ kicked: true, gone: true })
+  // 已被后台注销的账号: 立即踢下线
+  if (u.status === 'deleted') return ok({ kicked: true, gone: true })
   const clientToken = String(data.token || '')
   if (!u.session_token) {
     // 升级前的老账号: 首次心跳直接签发令牌
@@ -753,6 +755,8 @@ async function login(data) {
     user = (await db.collection('users').where(_.or([{ phone: acc }, { dao_code: acc.toUpperCase() }])).limit(1).get()).data[0]
   }
   if (!user) return fail('账号或密码不正确')
+  // 已被后台注销的账号拒绝登录 (软删除: 记录保留 status='deleted', 防止自动注册复活)
+  if (user.status === 'deleted') return fail('该账号已被注销，无法登录')
   // 密码校验: 已设密码按密码; 未设密码(微信一键登录老用户) 默认密码 123456
   const inputPwd = String(data.password || '')
   const valid = user.password ? user.password === inputPwd : inputPwd === '123456'
@@ -1679,6 +1683,8 @@ async function wechatLogin(data) {
   }
   // 查 openid 关联用户
   let user = (await db.collection('users').where({ openid }).limit(1).get()).data[0]
+  // 已被后台注销的账号拒绝登录 (软删除: 记录保留 status='deleted', 防止自动注册复活)
+  if (user && user.status === 'deleted') return fail('该账号已被注销，无法登录')
   if (!user) {
     // 自动注册 (uid 自增, 与 register 一致避免冲突)
     const daoCode = await nextDaoCode()
@@ -1789,6 +1795,8 @@ async function phoneLogin(data) {
   const openid = getWxOpenId()
   // 按手机号查账号 (微信实名手机号可信, 直接登录该账号)
   let user = (await db.collection('users').where({ phone }).limit(1).get()).data[0]
+  // 已被后台注销的账号拒绝登录 (软删除: 记录保留 status='deleted', 防止自动注册复活)
+  if (user && user.status === 'deleted') return fail('该账号已被注销，无法登录')
   if (!user) {
     // 未注册 → 自动注册普通用户
     const maxUid = await db.collection('users').orderBy('uid', 'desc').limit(1).get()
@@ -3566,8 +3574,9 @@ async function adminList(data) {
       })
     }
   }
-  // 用户列表: 管理员 > 受限管理员 > 员工 > 用户, 同级按 uid 升序
+  // 用户列表: 过滤已注销账号 + 管理员 > 受限管理员 > 员工 > 用户, 同级按 uid 升序
   if (collection === 'users') {
+    res.data = res.data.filter((u) => u.status !== 'deleted')
     const rank = { admin: 0, operator: 1, manager: 1, viewer: 1, staff: 2, user: 3 }
     res.data.sort((a, b) => (rank[a.role] ?? 3) - (rank[b.role] ?? 3) || (a.uid - b.uid))
     // 在线标记 (5 分钟内心跳过 = 在线) + 剥离敏感字段
@@ -3983,7 +3992,12 @@ async function adminUserDelete(data) {
     if (Number(data.opUid) === Number(uid)) return fail('不能删除自己的账号')
     return fail('超管账号不可删除，可先降级为管理员')
   }
-  await db.collection('users').doc(res.data[0]._id).remove()
+  await db.collection('users').doc(res.data[0]._id).update({
+    status: 'deleted',
+    deleted_at: new Date().toISOString(),
+    deleted_by: Number(data.opUid) || null,
+    session_token: '', // 使现有会话立即失效, 防止已登录设备继续使用
+  })
   // 删除关联数据
   const rel = ['orders', 'favorites', 'footprints', 'coupons', 'messages', 'user_courses', 'live_bookings']
   for (const c of rel) {
