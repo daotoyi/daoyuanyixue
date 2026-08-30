@@ -2809,12 +2809,35 @@ async function startUpload(ep, filePath, fileSize) {
   }
   try {
     ep._status = '初始化中…'
-    // getStorage 加 15s 超时兜底: 防止 SDK 初始化(匿名登录)网络卡住时上传永远 0% 无反应
-    const storage = await Promise.race([
-      getStorage(),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('云存储初始化超时，请检查网络后重试')), 15000)),
-    ])
-    if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+    // 初始化阶段取消检测: 250ms 轮询 cancelled, 点取消立即抛 UPLOAD_CANCELLED, 不必干等 15s 超时
+    // (2026-08-30: 用户网络波动时 SDK 匿名登录卡住, 之前取消无 abort 目标 → 表现"暂停/取消没反应")
+    const cw = (() => {
+      let iv = null
+      const promise = new Promise((_, rej) => {
+        iv = setInterval(() => {
+          if (control.cancelled) {
+            clearInterval(iv)
+            rej(Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' }))
+          }
+        }, 250)
+      })
+      return { promise, stop: () => clearInterval(iv) }
+    })()
+    let storage
+    try {
+      // getStorage 加 15s 超时兜底: 防止 SDK 初始化(匿名登录)网络卡住时上传永远 0% 无反应
+      storage = await Promise.race([
+        getStorage(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('INIT_TIMEOUT')), 15000)),
+        cw.promise,
+      ])
+    } catch (initErr) {
+      if (initErr && initErr.code === 'UPLOAD_CANCELLED') throw initErr
+      throw new Error('云存储初始化失败（网络波动），请检查网络或关闭代理/VPN 后重试')
+    } finally {
+      cw.stop()
+    }
+    if (!storage || !storage.uploadFile) throw new Error('云存储初始化失败（服务未就绪），请刷新页面重试')
     if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
     if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
     ep._status = ''
@@ -2862,6 +2885,8 @@ async function startUpload(ep, filePath, fileSize) {
     ep._status = ''
     if (e && e.code === 'UPLOAD_CANCELLED') {
       uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+    } else if (e && e.message && e.message.indexOf('初始化') >= 0) {
+      uni.showToast({ title: e.message, icon: 'none' }) // 初始化失败: 显示具体原因(网络/代理)
     } else {
       uni.showToast({ title: '上传中断，已保留进度，可重新选择该文件续传', icon: 'none' })
       console.error('[上传失败]', e)
