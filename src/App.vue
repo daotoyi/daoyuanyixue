@@ -271,6 +271,17 @@ button, input, textarea, .btn-p, .op, .pill, .ft, .menu-item, .op-col {
   user-select: none;
 }
 
+/* 鼠标手势: 所有可点击元素悬停时显示手型图标 (H5 桌面端) */
+uni-button, button, [role="button"], a, .link, uni-navigator,
+uni-picker, uni-checkbox, uni-radio, uni-switch, uni-slider,
+uni-view[hover-class], uni-text[hover-class], uni-image[hover-class],
+[class*="btn"], [class*="pill"], [class*="tab"], [class*="option"], [class*="tag"], [class*="badge"],
+[class*="menu"], [class*="switch"], [class*="icon-btn"], [class*="close"],
+[class*="card"], [class*="item"], [class*="row-click"],
+.ep-op, .ep-free, .ep-up-btn, .ft, .op, .pill, .menu-item, .op-col, .select-option {
+  cursor: pointer;
+}
+
 /* 宽屏: 底部原生 tabbar 与内容面板同宽并居中, 不平铺整个显示器 */
 @media screen and (min-width: 1025px) {
   .uni-tabbar {
