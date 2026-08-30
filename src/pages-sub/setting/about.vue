@@ -11,8 +11,9 @@
       <view class="info-row"><text class="info-label">关于我们</text><text class="info-value">真和盛文化</text></view>
       <view class="info-row"><text class="info-label">版本</text><text class="info-value">{{ APP_FULL_VERSION }}（{{ APP_BUILD_DATE }}）</text></view>
       <view class="info-row"><text class="info-label">理念</text><text class="info-value">融合传统智慧与现代科技</text></view>
-      <view class="info-row"><text class="info-label">开发者</text><text class="info-value">昊辰</text></view>
-      <view class="info-row" @tap="copyContact"><text class="info-label">联系我们</text><text class="info-value info-link">zhenhesheng@126.com</text></view>
+      <view class="info-row" @tap="copyContact"><text class="info-label">开发</text><text class="info-value info-link">昊辰（zhenhesheng@126.com）</text></view>
+      <view class="info-row" @tap="openSite('https://zhenhesheng.cn')"><text class="info-label">网站</text><text class="info-value info-link">https://zhenhesheng.cn</text></view>
+      <view class="info-row" @tap="openSite('https://club.zhenhesheng.cn')"><text class="info-label">同修汇</text><text class="info-value info-link">https://club.zhenhesheng.cn</text></view>
     </view>
 
     <view class="about-foot">
@@ -36,6 +37,19 @@ function copyContact() {
     data: 'zhenhesheng@126.com',
     success: () => uni.showToast({ title: '邮箱已复制', icon: 'success' }),
   })
+}
+
+/* 点击网站 → H5 新窗口打开; 小程序复制链接 */
+function openSite(url) {
+  // #ifdef H5
+  window.open(url, '_blank')
+  // #endif
+  // #ifndef H5
+  uni.setClipboardData({
+    data: url,
+    success: () => uni.showToast({ title: '链接已复制，请在浏览器打开', icon: 'none' }),
+  })
+  // #endif
 }
 </script>
 
