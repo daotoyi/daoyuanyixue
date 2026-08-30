@@ -64,10 +64,11 @@ async function probeFileSize(filePath) {
   return 0
 }
 
-/* 读取指定区间的文件内容 (H5: Blob.slice; App: FileSystemManager position/length) */
-async function readBlobSlice(filePath, start, end) {
+/* 读取指定区间的文件内容 (H5: Blob.slice; App: FileSystemManager position/length)
+   signal: 可选 AbortSignal — 暂停/取消可中断读取 (2026-08-30: 修复读取挂起导致卡死且取消无效) */
+async function readBlobSlice(filePath, start, end, signal) {
   if (typeof fetch === 'function' && typeof filePath === 'string' && /^(blob:|https?:)/.test(filePath)) {
-    const blob = await fetch(filePath).then((r) => r.blob())
+    const blob = await fetch(filePath, signal ? { signal } : {}).then((r) => r.blob())
     return blob.slice(start, end)
   }
   const fs = uni.getFileSystemManager ? uni.getFileSystemManager() : null
@@ -128,11 +129,28 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     }
     const start = partIndex * MULTIPART_PART_SIZE
     const end = Math.min(size, start + MULTIPART_PART_SIZE)
-    const piece = await readBlobSlice(filePath, start, end)
-    // 每片一个 AbortController 注册到 control.abortFns: 暂停/取消可中断所有并发分片
+    // 每片一个 AbortController 注册到 control.abortFns: 暂停/取消可中断【读取分片 + PUT 上传】全阶段
+    // (2026-08-30: 注册提前到读分片前 — 之前读取挂起时取消无法中断, 导致进度卡死且取消无效)
     const controller = new AbortController()
     const abortFn = () => controller.abort()
     if (control && control.abortFns) control.abortFns.add(abortFn)
+    let piece
+    try {
+      // 读分片: 60s 超时兜底 (blob 读取挂起会拖死整批并发且取消也中断不了)
+      const readTimer = setTimeout(() => controller.abort(), 60000)
+      try {
+        piece = await readBlobSlice(filePath, start, end, controller.signal)
+      } finally {
+        clearTimeout(readTimer)
+      }
+    } catch (readErr) {
+      if (readErr && readErr.name === 'AbortError') {
+        // 中止来源: 超时 / 用户暂停 / 用户取消 → 统一先判断控制状态
+        await waitIfPaused(control) // 取消→抛 UPLOAD_CANCELLED; 暂停→等恢复; 纯超时→继续走失败重试
+        throw new Error('分片 ' + partNumber + ' 读取超时')
+      }
+      throw readErr
+    }
     try {
       // 获取本分片 PUT 预签名 URL (有效期 30 分钟, 失败重试 2 次)
       let auth = null
