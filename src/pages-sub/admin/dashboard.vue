@@ -38,7 +38,10 @@
     <!-- ===== 右侧主区 ===== -->
     <view class="main">
       <view class="topbar">
-        <text class="tb-title">{{ currentModule.label }}</text>
+        <view class="tb-left">
+          <text class="tb-title">{{ currentModule.label }}</text>
+          <text class="tb-version" @tap="showVersion">v{{ APP_VERSION }}</text>
+        </view>
         <view class="tb-actions">
           <text class="tb-link rotate-btn" @tap="rotateScreen">🔄 旋转屏幕</text>
           <text class="tb-link" @tap="goFront">返回前台 ›</text>
@@ -1352,7 +1355,7 @@ const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unrece
 const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed, onMounted } from 'vue'
-import { APP_VERSION } from '@/version'
+import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminOrderAnalysis,
@@ -2370,6 +2373,16 @@ async function doSaveAssignId(dao) {
 
 function goFront() {
   uni.switchTab({ url: '/pages/index/index' })
+}
+
+/* 版本号点击: 显示完整版本+构建信息 (便于确认加载的是否最新版) */
+function showVersion() {
+  uni.showModal({
+    title: '当前版本',
+    content: `${APP_VERSION}（commit ${APP_COMMIT}）\n构建日期：${APP_BUILD_DATE}\n\n若此版本号不是最新，请关闭标签页重开并强制刷新（Cmd/Ctrl+Shift+R）`,
+    showCancel: false,
+    confirmText: '知道了',
+  })
 }
 
 /* 旋转屏幕: 管理后台横屏完整显示 (小程序/App/H5 多端支持) */
@@ -3776,6 +3789,25 @@ onMounted(async () => {
   font-size: 32rpx;
   font-weight: 500;
   color: #9c1630;
+}
+.tb-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+/* 版本号徽标 (2026-08-30: 便于确认加载的是否最新版) */
+.tb-version {
+  font-size: 20rpx;
+  color: #8a857c;
+  background: #f3efe8;
+  border: 1rpx solid #e0d9cf;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  cursor: pointer;
+}
+.tb-version:hover {
+  color: #9c1630;
+  border-color: #c9a9a3;
 }
 .tb-actions {
   display: flex;

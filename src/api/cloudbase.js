@@ -88,12 +88,29 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   if (!control) control = {}
   if (!control.abortFns) control.abortFns = new Set()
   const status = (s) => { if (onStatus) onStatus(s) }
+  // 取消感知包装 (2026-08-30): 任意 await 点 250ms 轮询 cancelled,
+  // 点取消立即抛 UPLOAD_CANCELLED — 覆盖初始化/取签名/合并等无 abort 目标的阶段, 杜绝"取消没反应"
+  const cancelAware = (promise) => {
+    let iv = null
+    const cancelP = new Promise((_, rej) => {
+      iv = setInterval(() => {
+        if (control && control.cancelled) {
+          clearInterval(iv)
+          rej(Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' }))
+        }
+      }, 250)
+    })
+    return Promise.race([promise, cancelP]).finally(() => clearInterval(iv))
+  }
   await waitIfPaused(control)
-  const size = await probeFileSize(filePath)
+  const size = await cancelAware(probeFileSize(filePath)).catch((e) => {
+    if (e && e.code === 'UPLOAD_CANCELLED') throw e
+    return 0
+  })
   if (!size) throw new Error('无法读取文件大小')
   const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
   const call = async (action, data, signal) => {
-    const res = await apiRequest({ action, data }, 30000, signal)
+    const res = await cancelAware(apiRequest({ action, data }, 30000, signal))
     if (res.status !== 200) throw new Error(res.msg || action + ' 失败')
     return res.data || {}
   }
