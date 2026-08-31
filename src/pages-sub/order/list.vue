@@ -742,11 +742,23 @@ async function doDelete(o) {
 .of-time {
   font-size: 22rpx;
   color: #8a857c;
+  /* 时间不压缩, 把空间压力交给按钮区(让其换行), 避免时间被挤成省略号 */
+  flex-shrink: 0;
+  max-width: 260rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .of-right {
   display: flex;
   align-items: center;
   gap: 20rpx;
+  /* 按钮较多(如 确认收货 + 售后 + 删除)时换行, 防止溢出屏幕右侧 (2026-09-01) */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 12rpx;
+  /* 关键: 默认 min-width:auto 会阻止收缩, 设 0 后容器才能被压缩并让内部按钮换行 */
+  min-width: 0;
 }
 .of-total {
   font-size: 26rpx;
