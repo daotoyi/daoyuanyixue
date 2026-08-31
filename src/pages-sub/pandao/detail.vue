@@ -214,37 +214,6 @@ async function bookNow() {
   background: #f8f5f0;
   padding: 20rpx 24rpx 160rpx;
 }
-/* PC 宽屏: 详情卡片限宽居中, 封面 16:9 协调比例 (避免左右太宽/上下太矮/图片裁切) */
-@media screen and (min-width: 1025px) {
-  .pd-page {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 30px 24px 150px;
-  }
-  .pd-cover {
-    height: auto;
-    aspect-ratio: 16 / 9;
-  }
-  .pd-title {
-    font-size: 32px;
-  }
-  .pd-meta-item {
-    font-size: 17px;
-  }
-  .pd-content-title {
-    font-size: 20px;
-  }
-  .pd-content-text {
-    font-size: 17px;
-  }
-  .pd-book-bar {
-    max-width: 860px;
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
-    padding: 20px 24px calc(20px + env(safe-area-inset-bottom));
-  }
-}
 .pd-card {
   background: #fffafa;
   border-radius: 16rpx;
@@ -453,9 +422,41 @@ async function bookNow() {
 .pd-book-btn.ok {
   background: #95a5a6;
 }
-/* PC 宽屏: 头像墙用 px 固定尺寸 (避免 rpx 在宽屏等比放大导致头像过大)
-   注意: 必须放在 base 规则【之后】—— 同优先级下后面的规则才生效 (CSS 顺序铁律 08-27) */
+/* ===== PC 宽屏 =====
+   注意: 必须放在所有 base 规则【之后】—— 同优先级下后面的规则才生效 (CSS 顺序铁律 08-27)。
+   本块原位于 style 块最前面, 被其后的 base 规则覆盖 → PC 覆盖长期失效
+   (封面仍是 300rpx 而非 16:9); 2026-08-31 统一后移到此处以真正生效。 */
 @media screen and (min-width: 1025px) {
+  /* 详情卡片限宽居中; 封面 16:9 协调比例 (避免左右太宽/上下太矮/图片裁切) */
+  .pd-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 30px 24px 150px;
+  }
+  .pd-cover {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .pd-title {
+    font-size: 32px;
+  }
+  .pd-meta-item {
+    font-size: 17px;
+  }
+  .pd-content-title {
+    font-size: 20px;
+  }
+  .pd-content-text {
+    font-size: 17px;
+  }
+  .pd-book-bar {
+    max-width: 860px;
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    padding: 20px 24px calc(20px + env(safe-area-inset-bottom));
+  }
+  /* 头像墙: px 固定尺寸 (避免 rpx 在宽屏等比放大导致头像过大) */
   .pd-bookers-title {
     font-size: 20px;
   }
