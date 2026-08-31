@@ -105,11 +105,25 @@
 - **铁律**: 根路径 index.html = 官网首页; 下载页只能传 /download/, **绝不能传根路径** (曾因覆盖导致官网首页变下载页)
 - club.zhenhesheng.cn 根 → 官网 index.html 里 JS 判断 club 域名自动跳 /h5/
 - 上传: manageHosting action=upload localPath=<目录> cloudPath=/ (官网) 或 /h5/ (应用)
+- **⭐ 自定义域名 club.zhenhesheng.cn 路径映射不统一 (铁律 2026-09-01)**:
+  用测试域名访问会弹「CloudBase 测试域名仅供开发测试」警告页 → 必须改用自定义域名;
+  但自定义域名的路径映射**两套并存且不一致**:
+  | 访问 | 实际读取 |
+  |---|---|
+  | `club.zhenhesheng.cn/apk/*` | `h5//apk/*` (走 h5 前缀) |
+  | `club.zhenhesheng.cn/download/` | **根目录** `/download/` |
+  → **发布 APK/下载页时 `/apk`+`/download` 与 `/h5/apk`+`/h5/download` 两处都要传**,
+  只传一处会出现"页面是新版但下载 404"(或反之)。
+  上传时 **cloudPath 严格限定为 /apk/ 或 /download/**, 绝不传根路径(会覆盖官网首页)。
+  排查手法: 故意请求不存在的文件, 从 404 响应体里的 `Key: h5%2F%2F...` 看出真实前缀
 
 ## APP(APK) 构建流程 (2026-08-11 确立)
 
 - mobile/ 是 **Capacitor** 工程 (capacitor.config.json: appId=cn.codebuddy.zhs.workbuddy, appName=道元易学, webDir=../dist/build/h5)
-- 三步: ①`node scripts/bump-version.js`(自动更新 build.gradle 版本) → ②`npx cap sync android` → ③`cd mobile/android && ./gradlew assembleRelease`
+- 三步: ①`node scripts/bump-version.js`(自动更新 build.gradle 版本) → ②sync → ③`cd mobile/android && ./gradlew assembleRelease --no-daemon`
+- ⚠️ **sync 命令 (2026-09-01 修正)**: capacitor 装在 **mobile/** 而非根目录 →
+  必须 `cd mobile && ./node_modules/.bin/cap sync android`; 直接 `npx cap sync android` 会报
+  "could not determine executable to run"
 - 产物: mobile/android/app/build/outputs/apk/release/app-release.apk; 签名 daoyuan.keystore/daoyuan2026 (在 mobile/android/app/ 下)
 - **发布**: APK 复制为 daoyuan-v1.XX.XX.apk + scripts/download-page/index.html → dist/build/h5/apk/ + download/ → 上传静态托管 (文件名由 bump-version.js 自动更新)
 - 下载地址: https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/apk/daoyuan-v1.11.65.apk (下载页 /download/)
