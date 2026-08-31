@@ -5,7 +5,12 @@
       <view class="logo-area">
         <view class="logo-seal" @tap="sidebarCollapsed = !sidebarCollapsed"><text>{{ sidebarCollapsed ? '☰' : '道' }}</text></view>
         <text class="logo-name" v-if="!sidebarCollapsed">道元易学</text>
-        <text class="logo-sub" v-if="!sidebarCollapsed">管理后台（{{ verNum }}）</text>
+        <!-- 版本号: 固定放在「道元易学·管理后台」之后 (2026-08-31: 原在顶栏模块名后, 切菜单时重复出现且多写了一个 v → vv1.11.x) -->
+        <view class="logo-sub" v-if="!sidebarCollapsed">
+          <text class="logo-sub-txt">管理后台</text>
+          <text class="logo-ver" @tap.stop="showVersion">v{{ verNum }}</text>
+        </view>
+        <text v-else class="logo-ver" @tap.stop="showVersion">v{{ verNum }}</text>
       </view>
 
       <scroll-view scroll-y class="menu-scroll">
@@ -40,7 +45,6 @@
       <view class="topbar">
         <view class="tb-left">
           <text class="tb-title">{{ currentModule.label }}</text>
-          <text class="tb-version" @tap="showVersion">v{{ APP_VERSION }}</text>
         </view>
         <view class="tb-actions">
           <text class="tb-link rotate-btn" @tap="rotateScreen">🔄 旋转屏幕</text>
@@ -3748,9 +3752,29 @@ onMounted(async () => {
 }
 .logo-sub {
   margin-top: 6rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.logo-sub-txt {
   font-size: 18rpx;
   color: rgba(240, 230, 205, 0.5);
   letter-spacing: 6rpx;
+}
+/* 版本号徽标 (2026-08-31: 从顶栏移到「管理后台」之后; 深色侧边栏用浅色胶囊; 点击看 commit/构建日期) */
+.logo-ver {
+  font-size: 16rpx;
+  color: rgba(240, 230, 205, 0.72);
+  background: rgba(255, 250, 250, 0.1);
+  border: 1rpx solid rgba(201, 169, 106, 0.45);
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.logo-ver:hover {
+  color: #c9a96a;
+  border-color: #c9a96a;
 }
 
 .menu-scroll {
@@ -3839,20 +3863,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 16rpx;
-}
-/* 版本号徽标 (2026-08-30: 便于确认加载的是否最新版) */
-.tb-version {
-  font-size: 20rpx;
-  color: #8a857c;
-  background: #f3efe8;
-  border: 1rpx solid #e0d9cf;
-  padding: 2rpx 12rpx;
-  border-radius: 999rpx;
-  cursor: pointer;
-}
-.tb-version:hover {
-  color: #9c1630;
-  border-color: #c9a9a3;
 }
 .tb-actions {
   display: flex;
@@ -5270,7 +5280,8 @@ onMounted(async () => {
     padding: 10px 14px;
   }
   .logo-name { font-size: 17px; }
-  .logo-sub { font-size: 12px; }
+  .logo-sub-txt { font-size: 12px; }
+  .logo-ver { font-size: 11px; }
   .logo-area { padding: 18px 12px 14px; }
   .admin-user { padding: 12px 12px; }
   .au-name { font-size: 14px; }
