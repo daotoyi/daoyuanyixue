@@ -2695,23 +2695,51 @@ const uploadQueue = ref([])        // [{ ep, filePath, fileSize }] 等待上传�
 let currentUploadingEp = null      // 当前正在上传的课时 (非响应式, 仅流程控制)
 let currentUploadingCourseId = null // 当前上传所属课程 id (切换课程时中止残留任务用)
 let uploadGenCounter = 0           // 上传任务代号 (取消/急停时自增, 旧任务的进度/结果写入全部失效, 防止污染新任务)
+let _dequeueRunning = false        // 同步锁: 防止两个 dequeueNext 异步交叉执行导致队列卡死 (2026-08-31)
 
-/* 出队: 当前无上传中时, 取队列第一个开始 (防重入: 已有上传中则跳过) */
+/* 出队: 同步锁防竞态 + 对象映射防旧引用 (2026-08-31 根治排队不出队)
+   竞态场景: cancel/finally 调 dequeueNext → async yield → 旧 dequeueNext 也 yield →
+   两个 dequeueNext 都通过 currentUploadingEp 检查 → 互相覆盖 → 队列卡死 */
 async function dequeueNext() {
-  if (currentUploadingEp) return // 已有上传中, 跳过 (防止 3s 兜底与主流程 finally 重复触发)
-  if (uploadQueue.value.length === 0) return
-  const item = uploadQueue.value.shift()
-  const ep = item && item.ep
-  if (!ep || !item.filePath) return dequeueNext()
-  ep._queued = false
-  ep._status = ''
-  await startUpload(ep, item.filePath, item.fileSize, item.fileObj)
+  if (_dequeueRunning) { console.log('[队列] dequeueNext 已在执行中, 跳过'); return } // 同步锁: 防止并发
+  _dequeueRunning = true
+  try {
+    if (uploadQueue.value.length === 0) { console.log('[队列] 队列为空, 无需出队'); return }
+    const item = uploadQueue.value.shift()
+    let ep = item && item.ep
+    if (!ep || !item.filePath) { console.log('[队列] 出队项无效, 递归跳过'); return } // try/finally 保证 _dequeueRunning 清除
+    // 对象映射: 队列中的 ep 可能是旧弹窗的旧对象 (关闭/重开弹窗后 episodes 数组重建),
+    // 按 _key 映射到当前 courseForm.episodes 中的对象, 确保 UI 能显示进度
+    if (ep._key) {
+      const curEp = courseForm.value.episodes && courseForm.value.episodes.find((e) => e._key === ep._key)
+      if (curEp && curEp !== ep) { console.log('[队列] ep 对象已映射到当前弹窗'); ep = curEp }
+    }
+    ep._queued = false
+    ep._status = ''
+    currentUploadingEp = ep // 先设锁再 await, 配合 _dequeueRunning 双保险
+    console.log('[队列] 出队开始上传: ' + (ep.title || '未命名') + ' 剩余排队: ' + uploadQueue.value.length)
+    await startUpload(ep, item.filePath, item.fileSize, item.fileObj)
+  } finally {
+    _dequeueRunning = false
+    // 释放锁后检查: 如果队列还有任务但无上传中 (可能被取消清空), 触发出队
+    if (uploadQueue.value.length > 0 && !currentUploadingEp) {
+      console.log('[队列] 锁释放后发现残留排队项, 重新出队')
+      dequeueNext()
+    }
+  }
 }
 
-/* 取消排队 (等待中的课时): 从队列移除, 恢复"上传"按钮 */
+/* 取消排队 (等待中的课时): 从队列移除, 恢复"上传"按钮
+   按 _key 匹配: 队列中的 ep 可能是旧弹窗对象 (关闭/重开后 episodes 重建) (2026-08-31) */
 function removeFromQueue(ep) {
   if (!ep) return
-  uploadQueue.value = uploadQueue.value.filter((q) => q.ep !== ep)
+  const key = ep._key
+  uploadQueue.value = uploadQueue.value.filter((q) => {
+    if (!q || !q.ep) return false
+    if (q.ep === ep) return false // 同一对象
+    if (key && q.ep._key === key) return false // _key 匹配
+    return true // 保留
+  })
   ep._queued = false
   ep._status = ''
   uni.showToast({ title: '已取消排队', icon: 'none' })
