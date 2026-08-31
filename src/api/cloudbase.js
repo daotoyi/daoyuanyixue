@@ -108,6 +108,20 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     })
     return Promise.race([promise, cancelP]).finally(() => clearInterval(iv))
   }
+  // 硬超时: 不依赖 AbortController 是否生效, 到点必定 reject (2026-08-31 修复代理/VPN网络下
+  // fetch 挂起时 abort 不 reject 导致整批 Promise.allSettled 永久卡死、进度卡在某百分比不动)
+  const withHardTimeout = (promise, ms, onTimeout) => {
+    let to = null
+    const timeoutP = new Promise((_, rej) => {
+      to = setTimeout(() => {
+        if (onTimeout) { try { onTimeout() } catch (e) {} }
+        const err = new Error('请求硬超时')
+        err.code = 'HARD_TIMEOUT'
+        rej(err)
+      }, ms)
+    })
+    return Promise.race([promise, timeoutP]).finally(() => { if (to) clearTimeout(to) })
+  }
   await waitIfPaused(control)
   // 文件大小: 优先 chooseVideo 返回的 res.size (control.size) → File 对象 .size → 兜底 fetch 探测
   // (2026-08-30: 几 GB 大视频 fetch 全读会超时/内存爆 → "无法读取文件大小", 必须避免 fetch)
@@ -209,10 +223,16 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
           try { auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }) } catch (e2) {}
         }
         try {
-          const timer = setTimeout(() => controller.abort(), PUT_TIMEOUT_MS)
+          // 硬超时: 不依赖 abort 是否生效 (代理/VPN网络下 fetch 挂起时 abort 不 reject),
+          // 到点必定 reject, 进入失败→重试, 避免整批 Promise.allSettled 永久卡死 (2026-08-31)
+          const hardRace = Promise.race([
+            fetch(auth.url, { method: 'PUT', body: piece, signal: controller.signal }),
+            new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('分片上传硬超时'), { code: 'HARD_TIMEOUT' })), PUT_TIMEOUT_MS + 3000))
+          ])
+          const timer = setTimeout(() => { try { controller.abort() } catch (e) {} }, PUT_TIMEOUT_MS)
           let resp
           try {
-            resp = await fetch(auth.url, { method: 'PUT', body: piece, signal: controller.signal })
+            resp = await hardRace
           } finally {
             clearTimeout(timer)
           }
@@ -343,12 +363,18 @@ async function apiRequest(payload, timeoutMs = 30000, externalSignal) {
     else externalSignal.addEventListener('abort', onExtAbort)
   }
   try {
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    })
+    // 硬超时: 不依赖 abort 是否生效 (代理/VPN网络下 fetch 挂起时 abort 不 reject),
+    // 到点必定 reject, 避免"取签名/合并分片"等云函数调用永久挂起拖垮整段上传 (2026-08-31)
+    const hardRace = Promise.race([
+      fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      }),
+      new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('云函数请求硬超时'), { code: 'HARD_TIMEOUT' })), timeoutMs + 3000)),
+    ])
+    const res = await hardRace
     const data = await res.json()
     return data
   } finally {
