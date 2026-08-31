@@ -275,11 +275,11 @@
         >
           <swiper-item v-for="(u, i) in pandaoBannerList" :key="i">
             <view class="pb-item">
-              <!-- aspectFit: 完整显示, 不裁切不拉伸; @load 取原图尺寸用于自适应高度 -->
+              <!-- aspectFill: 等比缩放填满容器, 溢出部分裁切(矮图放大后裁左右), 绝不拉伸变形 -->
               <image
                 class="pb-img"
                 :src="u"
-                mode="aspectFit"
+                mode="aspectFill"
                 @load="onBannerLoad"
                 @tap="previewPandaoBanner(i)"
               ></image>
@@ -522,12 +522,13 @@ async function resolvePandaoBannerUrls() {
   if (urls.filter(Boolean).length) nextTick(() => measureBannerBox())
 }
 
-/* ===== 轮播图尺寸: 屏幕内并排 2 张 + 高度按原图长宽比自适应 =====
-   写死高度会导致竖图被裁/横图留白 → 这里用图片真实 高/宽 反推容器高度,
-   配合 mode="aspectFit" 做到既不裁切也不拉伸。 */
+/* ===== 轮播图尺寸: 屏幕内并排 2 张 + 所有图等高展示 =====
+   规则 (2026-08-31): 所有轮播图展示高度保持一致; 高度偏小的图等比例放大,
+   放大后横向溢出的部分裁掉 → 对应 mode="aspectFill"(等比缩放填满容器, 溢出部分裁切, 不拉伸变形)。
+   基准高度取**所有图中最高的那张**的比例: 这样其余图只会被横向裁, 不会纵向裁掉内容。 */
 const BANNER_GAP = 6 // 两张之间的间隙(px, 每张单边)
 const bannerBoxW = ref(0) // 单张图的显示宽度(px)
-const bannerRatio = ref(0) // 原图 高/宽, 0=未测到
+const bannerRatio = ref(0) // 基准比例 = 所有图中最大的 高/宽, 0=未测到
 
 /* 屏幕内并排显示 2 张(仅 1 张时就显示 1 张) */
 const bannerPerView = computed(() => (pandaoBannerList.value.length > 1 ? 2 : 1))
@@ -543,8 +544,11 @@ const bannerSwiperH = computed(() => {
 function onBannerLoad(e) {
   const w = e && e.detail && e.detail.width
   const h = e && e.detail && e.detail.height
-  // 只取第一张的比例: 同一批轮播图通常尺寸一致, 取首个即可稳定
-  if (w && h && !bannerRatio.value) bannerRatio.value = h / w
+  if (!w || !h) return
+  // 取所有图中"最高"的比例作为统一高度基准:
+  // 最矮的图等比放大到该高度后宽度会溢出 → 由 aspectFill 裁掉左右多余部分, 内容不拉伸
+  const r = h / w
+  if (!bannerRatio.value || r > bannerRatio.value) bannerRatio.value = r
 }
 
 /* 测量轮播容器实际宽度 → 单张宽度 = 容器宽 / 并排张数 - 间隙 */
