@@ -31,6 +31,13 @@ let _initPromise = null
 const MULTIPART_PART_SIZE = 16 * 1024 * 1024        // 16MB / 片 (参考百度网盘细粒度分片: 单片失败影响小, 重试易成功)
 const MULTIPART_CONCURRENCY = 6                     // 并发片数 (吃满浏览器同域名连接上限, 提速)
 const PUT_TIMEOUT_MS = 90000                        // 单片 PUT 超时: 防请求挂起卡死进度
+/* 云函数网关请求体上限实测 ≈100KB (2026-08-31):
+   base64 长度 100,184 → HTTP 200 成功; 109,908 → HTTP 413 EXCEED_MAX_PAYLOAD_SIZE。
+   压缩器 compressImageToBase64(80KB) 产出的 base64 上限约 109KB, 正好落在
+   "网关拒收(≈100KB) 与 旧阈值 110000" 之间的死区 → 稍大一点的封面图必然 413 上传失败。
+   → 超过此值必须改走 COS 直传(已实测 199KB 原图 POST → HTTP 204 成功)。
+   取 90,000 为阈值: 给 JSON 包裹字段(action/data/cloudPath)留约 10KB 余量 */
+const BASE64_GATEWAY_LIMIT = 90000
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -577,18 +584,25 @@ export async function getStorage() {
           console.warn('[CloudBase] base64 读取失败', e)
         }
       }
-      // 2) 有 base64 且 <80KB → 云函数中转上传
-      if (base64 && base64.length < 110000) {
-        const res = await fetch(API_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'storage.uploadBase64', data: { cloudPath, base64 } }),
-        }).then(r => r.json())
-        if (res.status === 200) {
-          if (res.data && res.data.fileID) return { fileID: res.data.fileID }
-          throw new Error('云函数上传未返回 fileID')
+      // 2) base64 在网关安全线内 → 云函数中转上传
+      //    (超过则降级 COS 直传; 阈值依据见 BASE64_GATEWAY_LIMIT 注释, 勿再调回 110000)
+      if (base64 && base64.length < BASE64_GATEWAY_LIMIT) {
+        try {
+          const res = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'storage.uploadBase64', data: { cloudPath, base64 } }),
+          }).then(r => r.json())
+          if (res.status === 200) {
+            if (res.data && res.data.fileID) return { fileID: res.data.fileID }
+            throw new Error('云函数上传未返回 fileID')
+          }
+          throw new Error(res.msg || '上传失败')
+        } catch (e) {
+          // 云函数中转失败(网关 413 体积超限 / 网络抖动等) → 不直接抛错,
+          // 继续往下走 COS 直传兜底, 避免用户看到"上传失败"却无路可走 (2026-08-31)
+          console.warn('[CloudBase] 云函数 base64 上传失败, 降级 COS 直传:', (e && e.message) || e)
         }
-        throw new Error(res.msg || '上传失败')
       }
       // 3) 降级: 直传 COS (增强版 - 增加详细错误诊断)
       console.log('[CloudBase] 准备获取上传凭证 cloudPath:', cloudPath)
