@@ -48,7 +48,10 @@
   步骤: `pip install git-filter-repo` → 替换文件每行 `原密钥==>占位符` → `PATH=<venv>/bin:$PATH git filter-repo --replace-text <file> --force` → **重新 `git remote add origin`**(filter-repo 会删远端) → `git log --all -S "<旧密钥>"` 验证为空 → 强推。
   ⚠️ **main 与 tag 必须分开推**: 一次推 97 提交 + 340 tag 会 `RPC failed; HTTP 400`, 且输出末尾**误导性显示 "Everything up-to-date"(实际完全没推上)**。先 `git config http.postBuffer 1048576000`, 再 `git push --force origin main`, 成功后 `git push --force --tags origin`。
   ⚠️ **443 超时先重试**: `Failed to connect to github.com port 443` 常是**瞬时抖动**而非被墙(此时 `api.github.com` 往往返回 200), 重试几次即恢复, 别急着下结论。
-- **agent 记忆笔记是密钥泄漏高危区 (08-31)**: `.workbuddy/memory/*.md` 已**两次**把真实密钥带进公开仓库(腾讯云 SecretId/Key、微信小程序 app_secret)。GitHub 只识别前者会拦, **后者照样泄漏在公开仓库**。铁律: **记忆笔记不得记录明文密钥/Cookie/Token**
+- **agent 记忆笔记是密钥泄漏高危区 (08-31)**: `.workbuddy/memory/*.md` 已**两次**把真实密钥带进公开仓库(腾讯云 SecretId/Key、微信小程序 app_secret)。GitHub 只识别前者会拦, **后者照样泄漏在公开仓库**。
+  用户 2026-08-31 明确决定: **暂不把 `.workbuddy/` 加入 .gitignore**(要保留记忆的 GitHub 备份)
+  → 既然记忆笔记继续入库且仓库是 public, **写笔记时一律用脱敏写法**(如 `AKIDvv5x****` / `FONEva9Y****`),
+  **绝不落明文密钥/Cookie/Token**, 否则推送会再次被 GH013 拦截
 
 ## 版本管理 (Git)
 
