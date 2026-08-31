@@ -40,6 +40,7 @@
 - **TDZ 崩溃铁律 (08-14)**: `<script setup>` 中**顶层立即执行的代码(非函数体内/非 computed/非 watch 回调)绝不能引用后面才声明的 const 变量**(如 form 定义在 614 行, 前面顶层写了 ref(form.value...) 立即执行 → TDZ ReferenceError → 整个页面白屏进不去)。computed/函数体是惰性求值才安全。**页面整体进不去时优先怀疑顶层 TDZ**; 顶层初始化需要 form 时用固定值/惰性写法(事件回调里再读 form)
 - **CSS 顺序铁律 (08-27)**: index.vue 中 rec- base 样式块曾在 @media(min-width:1025px) **之后** → 同优先级下 base 的 rpx 值覆盖了 media 的 px 值 → **PC media query 从未生效**, 改 base 就"连累"PC。**凡 media query 想覆盖的 base 规则, base 必须在 media 之前**。PC/移动端独立显示的可靠做法: base 在前(移动端 rpx 值), media 在后(PC 值, 可用 rpx 亦可 px); 改移动端尺寸前先确认对应 PC media 规则存在且位于其后, 否则 PC 会跟着变
 - **云存储图片铁律 (08-15)**: 存储桶 ACL=**PRIVATE**(私有读), 直接存 CDN publicUrl(636c-...tcb.qcloud.la/...) 一律 **403 不显示**。正确模式(复用头像): **数据库存 cloud:// fileID**, 前端显示用 `resolveCloudUrl/resolveCloudListField`(走云函数 app.fileUrl getTempFileURL → 签名 URL, 1小时有效, 前端 _cache 缓存; 小程序原生渲染 cloud:// 不转换)。上传函数不要 replace 成 636c URL。MCP `updateResourcePermission` 改 READONLY **报成功但实际未生效**(COS 层 ACL), 勿依赖。测试: curl 直连 403 / fileUrl 签名 200
+- **网络硬超时铁律 (08-31)**: **AbortController 在网络"挂起(hang)"场景下不保证 reject** —— 代理/VPN 下 fetch 卡住时 `controller.abort()` 不一定让 promise reject, 只写 `setTimeout(()=>controller.abort(), ms)` 会**永久卡死**(表现为上传进度冻结在某一百分比、取消/暂停也无反应)。**凡网络请求的超时兜底, 必须叠加 `Promise.race([请求, 定时 reject])` 硬超时**(到点必定 reject, 不依赖 abort 生效)。已在 v1.11.269 应用于 `src/api/cloudbase.js`: ①分片 PUT 硬超时 `PUT_TIMEOUT_MS+3000`(93s) ②`apiRequest` 云函数硬超时 `timeoutMs+3000`。**排查"进度不动/按钮无反应"类卡死时, 优先怀疑网络挂起而非业务逻辑**
 
 ## 版本管理 (Git)
 
