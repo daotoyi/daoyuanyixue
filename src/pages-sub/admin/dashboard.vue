@@ -260,8 +260,22 @@
               <view class="f-input-wrap">
                 <view class="f-row-inline" v-if="canManageHome">
                   <view class="btn-p plain sm" @click="uploadPandaoCover">上传封面</view>
-                  <image class="cover-preview" v-if="pdForm.cover" :src="pdForm._coverUrl || pdForm.cover" mode="aspectFill" @tap="previewPandaoCover"></image>
-                  <text class="f-label-sm" v-if="pdForm.cover" @tap="pdForm.cover = ''">移除</text>
+                  <text class="f-label-sm">可多张（最多 {{ MAX_PD_COVERS }} 张，详情页左右滑动）</text>
+                </view>
+                <!-- 多封面缩略图: 点击看大图, × 移除单张 -->
+                <view class="pd-cover-grid" v-if="(pdForm.covers || []).length">
+                  <view class="pd-cover-cell" v-for="(c, i) in pdForm.covers" :key="i">
+                    <image
+                      class="pd-cover-thumb"
+                      v-if="pdForm._coverUrls && pdForm._coverUrls[i]"
+                      :src="pdForm._coverUrls[i]"
+                      mode="aspectFill"
+                      @tap="previewPandaoCover(i)"
+                    ></image>
+                    <view class="pd-cover-thumb ph" v-else><text>图</text></view>
+                    <text class="pd-cover-idx">{{ i + 1 }}</text>
+                    <text class="pd-cover-del" v-if="canManageHome" @tap.stop="removePandaoCover(i)">×</text>
+                  </view>
                 </view>
               </view>
             </view>
@@ -275,6 +289,38 @@
             <view class="settings-actions" v-if="canManageHome">
               <view class="btn-p plain sm" v-if="pdForm.id" @click="pdForm = emptyPdForm()">取消编辑</view>
               <view class="btn-p sm" @click="addPandaoSession">{{ pdForm.id ? '保存修改' : '添加场次' }}</view>
+            </view>
+          </view>
+
+          <!-- 动态轮播图: 首页-盘道「关注公众号」板块上方自动循环播放 -->
+          <view class="settings-card">
+            <view class="settings-desc">
+              <text class="sd-title">动态轮播图</text>
+              <text class="sd-text">显示在首页-盘道「关注公众号」板块上方，自动左右循环播放</text>
+            </view>
+            <view class="f-row">
+              <text class="f-label">轮播图</text>
+              <view class="f-input-wrap">
+                <view class="f-row-inline" v-if="canManageHome">
+                  <view class="btn-p plain sm" @click="uploadPandaoBanner">上传图片</view>
+                  <text class="f-label-sm">已选 {{ (pandaoBanners || []).length }} / {{ MAX_PD_BANNERS }} 张（上传后自动保存生效）</text>
+                </view>
+                <view class="pd-cover-grid" v-if="(pandaoBanners || []).length">
+                  <view class="pd-cover-cell" v-for="(b, i) in pandaoBanners" :key="i">
+                    <image
+                      class="pd-cover-thumb"
+                      v-if="pandaoBannerUrls && pandaoBannerUrls[i]"
+                      :src="pandaoBannerUrls[i]"
+                      mode="aspectFill"
+                      @tap="previewPandaoBanner(i)"
+                    ></image>
+                    <view class="pd-cover-thumb ph" v-else><text>图</text></view>
+                    <text class="pd-cover-idx">{{ i + 1 }}</text>
+                    <text class="pd-cover-del" v-if="canManageHome" @tap.stop="removePandaoBanner(i)">×</text>
+                  </view>
+                </view>
+                <text class="f-label-sm" v-if="!(pandaoBanners || []).length">暂无轮播图，前台不显示该板块</text>
+              </view>
             </view>
           </view>
 
@@ -1612,6 +1658,11 @@ const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开�
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
+/* 首页盘道「动态轮播图」: cloud:// fileID 数组, 存 settings(pandao 组) 的 banners 字段, 前台自动循环播放 */
+const MAX_PD_BANNERS = 9
+const pandaoBanners = ref([])
+const pandaoBannerUrls = ref([])
+
 const fixedPandaoWeekLabels = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const fpForm = ref({ _idx: -1, weekday: 3, name: '', time: '', teacher: '', type: 'offline' })
 function editFixedPandao(i) {
@@ -1694,8 +1745,10 @@ const pdTimeValue = computed(() => {
   return t.includes('-') ? t.split('-')[0].trim() : t
 })
 
+const MAX_PD_COVERS = 9 // 盘道封面最多张数 (详情页左右滑动轮播)
 function emptyPdForm() {
-  return { id: 0, title: '', day: '', start_date: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '' }
+  // covers: 多张封面 (cloud:// fileID 数组); cover 保留为首图以兼容列表页/订单
+  return { id: 0, title: '', day: '', start_date: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '', covers: [], _coverUrls: [] }
 }
 const pdForm = ref(emptyPdForm())
 
@@ -1729,6 +1782,8 @@ async function loadHomeConfig() {
     // 固定盘道活动配置
     const pf = await adminSettingsGet({ group: 'pandao' })
     homePandaoFixed.value = Array.isArray(pf.configs.fixed) ? pf.configs.fixed : []
+    pandaoBanners.value = Array.isArray(pf.configs.banners) ? pf.configs.banners.slice(0, MAX_PD_BANNERS) : []
+    refreshPandaoBannerUrls()
   } catch (e) {}
 }
 
@@ -1740,6 +1795,8 @@ async function loadPandaoConfig() {
     await resolveCloudListField(homePandaoList.value, 'cover')
     const pf = await adminSettingsGet({ group: 'pandao' })
     homePandaoFixed.value = Array.isArray(pf.configs.fixed) ? pf.configs.fixed : []
+    pandaoBanners.value = Array.isArray(pf.configs.banners) ? pf.configs.banners.slice(0, MAX_PD_BANNERS) : []
+    refreshPandaoBannerUrls()
   } catch (e) {}
 }
 
@@ -1776,11 +1833,12 @@ async function addPandaoSession() {
   const f = pdForm.value
   if (!f.title.trim()) return uni.showToast({ title: '请输入活动标题', icon: 'none' })
   try {
+    const covers = (f.covers || []).slice(0, MAX_PD_COVERS)
     if (f.id) {
-      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
+      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: covers[0] || '', covers })
       uni.showToast({ title: '已保存', icon: 'success' })
     } else {
-      await adminPandaoCreate({ title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: f.cover || '' })
+      await adminPandaoCreate({ title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: covers[0] || '', covers })
       uni.showToast({ title: '已添加', icon: 'success' })
     }
     pdForm.value = emptyPdForm()
@@ -1804,8 +1862,93 @@ function editPandaoSession(pd) {
     content: pd.content || '',
     status: pd.status || '即将开始',
     cover: pd.cover || '',
+    // 兼容旧数据: 没有 covers 字段的场次用单图 cover 构造数组
+    covers: Array.isArray(pd.covers) && pd.covers.length ? pd.covers.slice() : (pd.cover ? [pd.cover] : []),
+    _coverUrls: [],
   }
-  pdForm.value._coverUrl = pd._coverUrl || ''
+  refreshPdCoverUrls()
+}
+
+/* 盘道多封面: cloud:// fileID → 签名 URL (私有桶, 直接渲染不显示) */
+async function refreshPdCoverUrls() {
+  const covers = pdForm.value.covers || []
+  const urls = await Promise.all(covers.map((c) => resolveCloudUrl(c).catch(() => '')))
+  pdForm.value._coverUrls = urls
+}
+
+/* ===== 首页盘道动态轮播图 ===== */
+async function refreshPandaoBannerUrls() {
+  const urls = await Promise.all((pandaoBanners.value || []).map((c) => resolveCloudUrl(c).catch(() => '')))
+  pandaoBannerUrls.value = urls
+}
+
+function uploadPandaoBanner() {
+  const room = MAX_PD_BANNERS - (pandaoBanners.value || []).length
+  if (room <= 0) {
+    uni.showToast({ title: `最多 ${MAX_PD_BANNERS} 张`, icon: 'none' })
+    return
+  }
+  uni.chooseImage({
+    count: room,
+    sizeType: ['compressed'],
+    success: async (res) => {
+      const files = res.tempFilePaths || []
+      if (!files.length) return
+      uni.showLoading({ title: '上传中...' })
+      const okIds = []
+      try {
+        const storage = await getStorage()
+        if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
+        for (let i = 0; i < files.length; i++) {
+          try {
+            const cloudPath = 'pandao/banner_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png'
+            const upRes = await storage.uploadFile(files[i], cloudPath)
+            const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+            if (fileID) okIds.push(fileID)
+          } catch (e2) {
+            console.error('[盘道轮播] 第 ' + (i + 1) + ' 张上传失败', e2)
+          }
+        }
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+        return
+      }
+      uni.hideLoading()
+      if (!okIds.length) {
+        uni.showToast({ title: '上传失败，请重试', icon: 'none' })
+        return
+      }
+      pandaoBanners.value = (pandaoBanners.value || []).concat(okIds).slice(0, MAX_PD_BANNERS)
+      await refreshPandaoBannerUrls()
+      await savePandaoBanners(true)
+    },
+  })
+}
+
+async function removePandaoBanner(idx) {
+  const list = (pandaoBanners.value || []).slice()
+  if (idx < 0 || idx >= list.length) return
+  list.splice(idx, 1)
+  pandaoBanners.value = list
+  await refreshPandaoBannerUrls()
+  await savePandaoBanners(true)
+}
+
+/* 保存轮播图到 settings(pandao 组) 的 banners 字段; adminSettingsSave 是字段级合并, 不影响同组 fixed */
+async function savePandaoBanners(silent) {
+  try {
+    await adminSettingsSave({ group: 'pandao', configs: { banners: pandaoBanners.value || [] } })
+    if (!silent) uni.showToast({ title: '已保存', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '保存失败', icon: 'none' })
+  }
+}
+
+function previewPandaoBanner(idx) {
+  const urls = (pandaoBannerUrls.value || []).filter(Boolean)
+  if (!urls.length) return
+  uni.previewImage({ urls, current: typeof idx === 'number' ? idx : 0 })
 }
 
 /* 盘道场次排序: 交换 sort (后台顺序与首页推荐页同步) */
@@ -2491,36 +2634,70 @@ async function resolveCloudListField(list, field = 'cover') {
   }))
 }
 
-/* 盘道封面: 上传 + 预览 */
+/* 盘道封面: 多图上传 (详情页左右滑动轮播) */
 function uploadPandaoCover() {
+  const room = MAX_PD_COVERS - (pdForm.value.covers || []).length
+  if (room <= 0) {
+    uni.showToast({ title: `最多 ${MAX_PD_COVERS} 张`, icon: 'none' })
+    return
+  }
   uni.chooseImage({
-    count: 1,
+    count: room,
     sizeType: ['compressed'],
     success: async (res) => {
-      const filePath = res.tempFilePaths[0]
+      const files = res.tempFilePaths || []
+      if (!files.length) return
       uni.showLoading({ title: '上传中...' })
+      const okIds = []
       try {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
-        const cloudPath = 'pandao/p' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png'
-        const upRes = await storage.uploadFile(filePath, cloudPath)
-        const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
-        if (!fileID) throw new Error('上传失败')
-        // 存 cloud:// fileID (私有桶, 显示时由 resolveCloudUrl 转签名 URL)
-        pdForm.value.cover = fileID
-        pdForm.value._coverUrl = await resolveCloudUrl(fileID).catch(() => '')
-        uni.showToast({ title: '封面已上传', icon: 'success' })
+        for (let i = 0; i < files.length; i++) {
+          const filePath = files[i]
+          // 逐张上传: 单张失败不拖垮整批 (大图会走 COS 直传, 由 cloudbase.js 自动处理)
+          try {
+            const cloudPath = 'pandao/p' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.png'
+            const upRes = await storage.uploadFile(filePath, cloudPath)
+            const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
+            if (fileID) okIds.push(fileID)
+          } catch (e2) {
+            console.error('[盘道封面] 第 ' + (i + 1) + ' 张上传失败', e2)
+          }
+        }
       } catch (e) {
-        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
-      } finally {
         uni.hideLoading()
+        uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
+        return
       }
+      uni.hideLoading()
+      if (!okIds.length) {
+        uni.showToast({ title: '上传失败，请重试', icon: 'none' })
+        return
+      }
+      // 追加到 covers (超出上限截断), 并同步首图 cover
+      const covers = (pdForm.value.covers || []).concat(okIds).slice(0, MAX_PD_COVERS)
+      pdForm.value.covers = covers
+      pdForm.value.cover = covers[0] || ''
+      await refreshPdCoverUrls()
+      uni.showToast({ title: `已上传 ${okIds.length} 张`, icon: 'success' })
     },
   })
 }
-function previewPandaoCover() {
-  const url = pdForm.value._coverUrl || pdForm.value.cover
-  if (url) uni.previewImage({ urls: [url] })
+
+/* 盘道封面: 移除指定一张 */
+async function removePandaoCover(idx) {
+  const covers = (pdForm.value.covers || []).slice()
+  if (idx < 0 || idx >= covers.length) return
+  covers.splice(idx, 1)
+  pdForm.value.covers = covers
+  pdForm.value.cover = covers[0] || ''
+  await refreshPdCoverUrls()
+}
+
+function previewPandaoCover(idx) {
+  const urls = (pdForm.value._coverUrls || []).filter(Boolean)
+  if (!urls.length) return
+  uni.previewImage({ urls, current: typeof idx === 'number' ? idx : 0 })
 }
 
 /* 直播封面: 上传 (表单 UI 在直播弹窗) */
@@ -4366,6 +4543,55 @@ onMounted(async () => {
   height: 90rpx;
   border-radius: 8rpx;
   border: 1rpx solid #e8e2da;
+}
+/* 盘道多封面缩略图 (可多张, 详情页左右滑动; 角标序号=轮播顺序, × 移除单张) */
+.pd-cover-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 12rpx;
+}
+.pd-cover-cell {
+  position: relative;
+  width: 140rpx;
+  height: 100rpx;
+}
+.pd-cover-thumb {
+  width: 140rpx;
+  height: 100rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #e8e2da;
+  background: #f8f5f0;
+}
+.pd-cover-thumb.ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b8b0a4;
+  font-size: 22rpx;
+}
+.pd-cover-idx {
+  position: absolute;
+  left: 4rpx;
+  bottom: 4rpx;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 18rpx;
+  padding: 0 8rpx;
+  border-radius: 6rpx;
+}
+.pd-cover-del {
+  position: absolute;
+  right: -6rpx;
+  top: -6rpx;
+  width: 34rpx;
+  height: 34rpx;
+  line-height: 30rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: #c0392b;
+  color: #fff;
+  font-size: 24rpx;
 }
 /* 上传封面: 按钮+预览 同行 */
 .f-row-inline {

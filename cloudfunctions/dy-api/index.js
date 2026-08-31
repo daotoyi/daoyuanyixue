@@ -3341,6 +3341,10 @@ async function adminPandaoCreate(data) {
   await ensureCollection('pandao_sessions')
   const max = await db.collection('pandao_sessions').orderBy('id', 'desc').limit(1).get().catch(() => ({ data: [] }))
   const nextId = max.data && max.data.length ? (max.data[0].id || 0) + 1 : 1
+  // 多封面: covers 为 cloud:// fileID 数组(最多 9 张); cover 取首图, 兼容列表页/订单等旧逻辑
+  const covers = Array.isArray(data.covers)
+    ? data.covers.slice(0, 9).map((c) => String(c || '').slice(0, 500)).filter(Boolean)
+    : []
   const doc = {
     id: nextId,
     sort: data.sort || nextId,
@@ -3352,7 +3356,8 @@ async function adminPandaoCreate(data) {
     price: String(data.price || '0'),
     desc: String(data.desc || '').slice(0, 2000),
     content: String(data.content || ''), // 详情页富内容: 不限字数
-    cover: String(data.cover || '').slice(0, 500),
+    cover: covers.length ? covers[0] : String(data.cover || '').slice(0, 500),
+    covers,
     status: String(data.status || '即将开始'),
   }
   if (!doc.title) return fail('请输入活动标题')
@@ -3381,7 +3386,15 @@ async function adminPandaoUpdate(data) {
   if (data.price !== undefined) doc.price = String(data.price)
   if (data.desc !== undefined) doc.desc = String(data.desc).slice(0, 2000)
   if (data.content !== undefined) doc.content = String(data.content) // 详情页富内容: 不限字数
-  if (data.cover !== undefined) doc.cover = String(data.cover).slice(0, 500) // 封面图
+  if (data.cover !== undefined) doc.cover = String(data.cover).slice(0, 500) // 封面图(单图, 兼容旧数据)
+  // 多封面: covers 为 cloud:// fileID 数组(最多 9 张); 传了 covers 时 cover 同步为首图
+  if (data.covers !== undefined) {
+    const covers = Array.isArray(data.covers)
+      ? data.covers.slice(0, 9).map((c) => String(c || '').slice(0, 500)).filter(Boolean)
+      : []
+    doc.covers = covers
+    doc.cover = covers.length ? covers[0] : ''
+  }
   if (data.status !== undefined) doc.status = String(data.status) // 即将开始/已结束/已发布
   const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).update(doc)
   return ok({ updated: res.updated })
@@ -4275,6 +4288,7 @@ async function appPayConfig() {
       show_follow: homeDoc.show_follow === '1' || homeDoc.show_follow === true || false, // 首页关注tab, 默认隐藏
       show_wechat_login: homeDoc.show_wechat_login === '1' || homeDoc.show_wechat_login === true || false, // 登录页显示微信一键登录, 默认隐藏
       pandao_fixed: Array.isArray(pandaoDoc.fixed) && pandaoDoc.fixed.length ? pandaoDoc.fixed : DEFAULT_PANDAO_FIXED, // 固定盘道活动(周几+老师)
+      pandao_banners: Array.isArray(pandaoDoc.banners) ? pandaoDoc.banners : [], // 首页盘道动态轮播图 (cloud:// fileID 数组)
       // 首页-推荐页展示模块 (直播默认隐藏, 其余默认显示)
       rec_show_live: recDoc.rec_show_live === '1' || recDoc.rec_show_live === true || false,
       rec_show_pandao: recDoc.rec_show_pandao !== '0',
@@ -4287,7 +4301,7 @@ async function appPayConfig() {
       show_tools: mypageDoc.show_tools === '1' || mypageDoc.show_tools === true || false,
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: false })
   }
 }
 

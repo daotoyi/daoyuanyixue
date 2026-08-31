@@ -259,6 +259,24 @@
           </view>
         </view>
       </view>
+      <!-- 动态轮播图: 后台盘道管理上传, 位于「关注公众号」板块之上, 自动左右循环播放 -->
+      <view class="pandao-banners" v-if="pandaoBannerList.length">
+        <swiper
+          class="pb-swiper"
+          :indicator-dots="pandaoBannerList.length > 1"
+          indicator-color="rgba(255,255,255,0.55)"
+          indicator-active-color="#c41e3a"
+          :autoplay="pandaoBannerList.length > 1"
+          :interval="4000"
+          :duration="600"
+          circular
+        >
+          <swiper-item v-for="(u, i) in pandaoBannerList" :key="i">
+            <image class="pb-img" :src="u" mode="aspectFill" @tap="previewPandaoBanner(i)"></image>
+          </swiper-item>
+        </swiper>
+      </view>
+
       <view class="pandao-follow">
         <text class="pf-icon">📢</text>
         <view class="pf-info">
@@ -364,6 +382,11 @@ const currentTab = ref('recommend')
 const momentList = ref([])
 const liveList = ref([])
 const pandaoList = ref([])
+/* 盘道动态轮播图 (后台盘道管理上传, 显示在活动列表下方/关注公众号板块上方, 自动循环播放) */
+const pandaoBanners = ref([])
+const pandaoBannerUrls = ref([])
+/* 过滤掉转换失败的空 URL, 避免渲染空白页 */
+const pandaoBannerList = computed(() => (pandaoBannerUrls.value || []).filter(Boolean))
 const homeShowPublish = ref(false) // 后台可配置: 首页是否显示发布动态按钮 (默认隐藏)
 const allowPublishMoment = ref(true) // 后台可配置: 普通用户是否允许发布动态 (默认允许)
 /* 推荐页内容模块开关 (后台 recommend 组配置, 默认全显) */
@@ -478,6 +501,18 @@ async function refreshMoments() {
 /* 盘道详情页 */
 function goPandaoDetail(pd) {
   uni.navigateTo({ url: '/pages-sub/pandao/detail?id=' + pd.id })
+}
+
+/* 盘道动态轮播图: cloud:// fileID 转签名 URL (存储桶私有读, 直接渲染不显示) */
+async function resolvePandaoBannerUrls() {
+  const urls = await Promise.all((pandaoBanners.value || []).map((c) => resolveCloudUrl(c).catch(() => '')))
+  pandaoBannerUrls.value = urls
+}
+
+function previewPandaoBanner(i) {
+  const urls = (pandaoBannerUrls.value || []).filter(Boolean)
+  if (!urls.length) return
+  uni.previewImage({ urls, current: typeof i === 'number' ? i : 0 })
 }
 
 /* 推荐页商品/课程: 点击详情 / 更多跳 tabBar */
@@ -884,6 +919,14 @@ onShow(async () => {
     allowPublishMoment.value = cfg.allow_publish_moment !== false
     buildTabs(cfg)
     if (Array.isArray(cfg.pandao_fixed) && cfg.pandao_fixed.length) pandaoFixed.value = cfg.pandao_fixed
+    // 盘道动态轮播图 (cloud:// fileID → 签名 URL 后才能渲染)
+    if (Array.isArray(cfg.pandao_banners) && cfg.pandao_banners.length) {
+      pandaoBanners.value = cfg.pandao_banners
+      resolvePandaoBannerUrls()
+    } else {
+      pandaoBanners.value = []
+      pandaoBannerUrls.value = []
+    }
     // 推荐页内容模块开关
     recShowLive.value = cfg.rec_show_live !== false
     recShowPandao.value = cfg.rec_show_pandao !== false
@@ -1412,6 +1455,21 @@ onShow(async () => {
 .pandao-notify {
   border: 1rpx solid #d8c9a8;
 }
+/* 盘道动态轮播图 (后台盘道管理上传, 自动循环; 位于活动列表下方/关注公众号板块之上) */
+.pandao-banners {
+  margin-top: 20rpx;
+}
+.pb-swiper {
+  width: 100%;
+  height: 260rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  background: #f8f5f0;
+}
+.pb-img {
+  width: 100%;
+  height: 100%;
+}
 .pandao-follow {
   display: flex;
   align-items: center;
@@ -1741,6 +1799,10 @@ onShow(async () => {
     margin: 0 auto;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
+  }
+  /* 盘道动态轮播图: PC 用 px 固定高度 (避免 rpx 在宽屏等比放大导致过高) */
+  .pb-swiper {
+    height: 240px;
   }
   /* 品牌横幅: 不做 PC 特殊放大, 保持与"我的"页头部一致的 rpx 缩放比例 */
   /* 频道 Tab: PC 放大 */

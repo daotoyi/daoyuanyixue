@@ -1,7 +1,32 @@
 <template>
   <view class="pd-page">
     <view class="pd-card" v-if="session">
-      <image class="pd-cover" v-if="session.cover" :src="session._coverUrl || session.cover" mode="aspectFill"></image>
+      <!-- 封面: 多图左右滑动轮播; 单图沿用原来的静态展示 -->
+      <swiper
+        v-if="(session._covers || []).length > 1"
+        class="pd-cover-swiper"
+        :indicator-dots="true"
+        indicator-color="rgba(255,255,255,0.55)"
+        indicator-active-color="#c41e3a"
+        circular
+      >
+        <swiper-item v-for="(c, i) in session._covers" :key="i">
+          <image
+            class="pd-cover in-swiper"
+            v-if="session._coverUrls && session._coverUrls[i]"
+            :src="session._coverUrls[i]"
+            mode="aspectFill"
+            @tap="previewCovers(i)"
+          ></image>
+        </swiper-item>
+      </swiper>
+      <image
+        v-else-if="session._coverUrls && session._coverUrls[0]"
+        class="pd-cover"
+        :src="session._coverUrls[0]"
+        mode="aspectFill"
+        @tap="previewCovers(0)"
+      ></image>
       <view class="pd-badge-row">
         <text class="pd-badge">{{ session.day || '盘道' }}</text>
         <text class="pd-near" v-if="session._near">{{ session._near }}</text>
@@ -112,6 +137,13 @@ function openUserProfile(b) {
   uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + b.uid })
 }
 
+/* 封面点击查看大图 (多图时可左右翻) */
+function previewCovers(idx) {
+  const urls = ((session.value && session.value._coverUrls) || []).filter(Boolean)
+  if (!urls.length) return
+  uni.previewImage({ urls, current: typeof idx === 'number' ? idx : 0 })
+}
+
 // 微信分享: 分享给好友
 onShareAppMessage(() => {
   return {
@@ -136,6 +168,14 @@ async function loadDetail() {
     session.value = res || null
     if (session.value && session.value.cover) {
       session.value._coverUrl = await resolveCloudUrl(session.value.cover).catch(() => '')
+    }
+    // 多封面轮播: covers 数组 (兼容旧数据 —— 没有 covers 字段时用单图 cover 构造)
+    if (session.value) {
+      const covers = Array.isArray(session.value.covers) && session.value.covers.length
+        ? session.value.covers
+        : (session.value.cover ? [session.value.cover] : [])
+      session.value._covers = covers
+      session.value._coverUrls = await Promise.all(covers.map((c) => resolveCloudUrl(c).catch(() => '')))
     }
     if (session.value) session.value._near = nearLabel(session.value)
     if (session.value && userStore.isLoggedIn) {
@@ -226,6 +266,20 @@ async function bookNow() {
   border-radius: 12rpx;
   margin-bottom: 20rpx;
   background: #f8f5f0;
+}
+/* 多封面轮播容器 (单图时不渲染 swiper, 沿用 .pd-cover) */
+.pd-cover-swiper {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+  background: #f8f5f0;
+  overflow: hidden;
+}
+.pd-cover.in-swiper {
+  height: 100%;
+  margin-bottom: 0;
+  border-radius: 0;
 }
 .pd-badge-row {
   display: flex;
@@ -434,6 +488,10 @@ async function bookNow() {
     padding: 30px 24px 150px;
   }
   .pd-cover {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .pd-cover-swiper {
     height: auto;
     aspect-ratio: 16 / 9;
   }
