@@ -81,10 +81,16 @@
   `src/version.js` 与 `build.gradle`, 还会生成垃圾 tag、versionCode 连加两次。
   **推论: 不要在仓库里留非版本格式的 tag, 临时备份 tag 用完即删**。
   已写坏时: `git checkout -- src/version.js mobile/android/app/build.gradle` 还原 + 删垃圾 tag(本地+远端)后重跑 bump
-- **轮播/多图自适应高度套路 (08-31)**: 想"保持原图长宽比"就不能写死高度 ——
-  `<image mode="aspectFit" @load>` 取 `e.detail.width/height` 算比例(注意 aspectFill 会裁切, 要换成 aspectFit),
+- **gen-version 覆盖 bump 铁律 (08-31)**: **`gen-version.js` 原先也用 `git describe`**, 会重新取标签
+  **覆盖掉 bump 刚写入 version.js 的版本**; 多 tag 指向同一提交时结果不确定 →
+  出现 "bump 写入 277、gen 覆盖成 276" 且残留两个 tag 同指 HEAD。
+  已改为 **以 bump 写入 `src/version.js` 的 APP_VERSION 为准**(保证两脚本一致), 不合法才退回版本标签查询。
+  **教训: 修掉一处 bug 后必须 grep 全项目找同类调用 —— 同一次只改一个脚本导致二次踩坑**
+- **轮播/多图等高展示套路 (08-31)**: 需求"所有图等高、矮图等比放大后裁宽" → 用
+  `mode="aspectFill"`(等比缩放填满容器, 溢出裁切, 不变形), 注意它和 `aspectFit`(完整显示留白)相反。
   容器宽度用 `uni.createSelectorQuery().select(sel).boundingClientRect()` 实测
   (⚠️ **必须包 `nextTick`**, 数据赋值后元素尚未渲染, 立即测量拿不到宽度),
+  **基准比例取所有图中最大的 高/宽** (取最大 → 最高那张刚好铺满, 其余矮图放大后只被横向裁, 不纵向裁内容);
   高度 = (容器宽 / 并排张数 − 间隙) × 比例, 再用 `Math.min/max` 夹上下限。并排 N 张用 `:display-multiple-items="N"`
 
 ## 静态托管路径布局 (铁律 2026-08-21)
