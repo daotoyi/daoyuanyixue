@@ -43,6 +43,13 @@
 - **网络硬超时铁律 (08-31)**: **AbortController 在网络"挂起(hang)"场景下不保证 reject** —— 代理/VPN 下 fetch 卡住时 `controller.abort()` 不一定让 promise reject, 只写 `setTimeout(()=>controller.abort(), ms)` 会**永久卡死**(表现为上传进度冻结在某一百分比、取消/暂停也无反应)。**凡网络请求的超时兜底, 必须叠加 `Promise.race([请求, 定时 reject])` 硬超时**(到点必定 reject, 不依赖 abort 生效)。已在 v1.11.269 应用于 `src/api/cloudbase.js`: ①分片 PUT 硬超时 `PUT_TIMEOUT_MS+3000`(93s) ②`apiRequest` 云函数硬超时 `timeoutMs+3000`。**排查"进度不动/按钮无反应"类卡死时, 优先怀疑网络挂起而非业务逻辑**
 - **云函数网关体积上限铁律 (08-31)**: 云函数 HTTP 网关请求体上限**实测约 100KB**(base64 长度 100,184 → 200; 109,908 → **413 EXCEED_MAX_PAYLOAD_SIZE**)。`src/api/cloudbase.js` 的 `BASE64_GATEWAY_LIMIT = 90000` 即据此设定(给 JSON 包裹字段留约 10KB 余量), **勿再调回 110000**。因压缩器 `compressImageToBase64(80KB)` 产出 base64 上限约 109KB, 前端分支阈值一旦高于网关上限就形成**死区**: 稍大的图必然 413、小图正常 → 表现为**"有时能传有时不能"**。**压缩目标 / 网关上限 / 前端分支阈值 三者必须自洽**。排查"上传失败"用脚本直接打线上接口探测体积边界最快; 大图应走 `storage.getUploadUrl` → COS 直传(已端到端实测: 199KB 原图 POST → 204 成功, 返回 url/token/authorization/fileId), 且云函数中转失败应 **catch 后降级 COS, 而非直接抛错**
 
+- **GitHub 推送被密钥拦截的处理 (08-31, 已实战解决)**: 报错 `GH013: Repository rule violations — Push cannot contain secrets`。**PR 绕不过**(推送分支同样被扫);**只删当前文件也无效**(会扫描本次推送的所有提交);只剩两条路:①点 GitHub 给的放行链接(密钥永久留在公开仓库)②**用 `git filter-repo --replace-text` 抹除历史后强推**。
+  **推荐②**: 用户零操作, 且密钥从未外泄 → **连轮换都不需要, 短信/COS 服务不受影响**。
+  步骤: `pip install git-filter-repo` → 替换文件每行 `原密钥==>占位符` → `PATH=<venv>/bin:$PATH git filter-repo --replace-text <file> --force` → **重新 `git remote add origin`**(filter-repo 会删远端) → `git log --all -S "<旧密钥>"` 验证为空 → 强推。
+  ⚠️ **main 与 tag 必须分开推**: 一次推 97 提交 + 340 tag 会 `RPC failed; HTTP 400`, 且输出末尾**误导性显示 "Everything up-to-date"(实际完全没推上)**。先 `git config http.postBuffer 1048576000`, 再 `git push --force origin main`, 成功后 `git push --force --tags origin`。
+  ⚠️ **443 超时先重试**: `Failed to connect to github.com port 443` 常是**瞬时抖动**而非被墙(此时 `api.github.com` 往往返回 200), 重试几次即恢复, 别急着下结论。
+- **agent 记忆笔记是密钥泄漏高危区 (08-31)**: `.workbuddy/memory/*.md` 已**两次**把真实密钥带进公开仓库(腾讯云 SecretId/Key、微信小程序 app_secret)。GitHub 只识别前者会拦, **后者照样泄漏在公开仓库**。铁律: **记忆笔记不得记录明文密钥/Cookie/Token**
+
 ## 版本管理 (Git)
 
 - **2026-08-05 建立**: 基线提交 977fb9d (v1.0.0 完整源码, 171 文件)
