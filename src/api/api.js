@@ -342,6 +342,8 @@ export const pandaoBook = (data) => _callFunction('pandao.book', data)
 export const pandaoCancel = (data) => _callFunction('pandao.cancel', data)
 export const getPandaoMine = (data) => _callFunction('pandao.mine', data)
 export const getPandaoDetail = (data) => _callFunction('pandao.detail', data)
+/* 盘道场次: 已预约用户列表 (不论是否支付成功) */
+export const getPandaoBookers = (data) => _callFunction('pandao.bookers', data)
 export const orderPayBalance = (data) => _callFunction('order.payBalance', data)
 export const orderFreeConfirm = (data) => _callFunction('order.freeConfirm', data)
 export const alipayPrepay = (data) => _callFunction('order.alipayPrepay', data)

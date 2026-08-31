@@ -16,6 +16,25 @@
       </view>
     </view>
 
+    <!-- 已预约用户 (不论是否支付成功都展示; 点击头像进个人主页) -->
+    <view class="pd-bookers" v-if="bookers.length">
+      <view class="pd-bookers-head">
+        <text class="pd-bookers-title">已预约 {{ bookers.length }} 人</text>
+        <text class="pd-bookers-tip">点击头像查看主页</text>
+      </view>
+      <view class="pd-bookers-list">
+        <view class="pd-booker" v-for="b in visibleBookers" :key="b.uid" @tap="openUserProfile(b)">
+          <image class="pd-booker-avatar" v-if="b._avatarUrl" :src="b._avatarUrl" mode="aspectFill"></image>
+          <view class="pd-booker-fb" v-else><text>{{ b.nickname ? b.nickname[0] : '?' }}</text></view>
+        </view>
+        <view
+          class="pd-booker-more"
+          v-if="bookers.length > MAX_BOOKER_AVATARS"
+          @tap="showAllBookers = !showAllBookers"
+        ><text>{{ showAllBookers ? '收起' : '+' + (bookers.length - MAX_BOOKER_AVATARS) }}</text></view>
+      </view>
+    </view>
+
     <view class="pd-content" v-if="session">
       <text class="pd-content-title">活动介绍</text>
       <text class="pd-content-text">{{ session.content || session.desc || '暂无详细介绍' }}</text>
@@ -36,9 +55,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
-import { getPandaoDetail, pandaoBook, pandaoCancel, getPandaoMine } from '../../api/api'
+import { getPandaoDetail, pandaoBook, pandaoCancel, getPandaoMine, getPandaoBookers } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudUrl } from '../../utils/avatar'
 import { isFreePrice, fmtPrice } from '../../utils/price'
@@ -65,6 +84,33 @@ function statusKey(st) {
   return { '即将开始': 'upcoming', '进行中': 'live', '已结束': 'end' }[st] || 'upcoming'
 }
 const sessionId = ref(0)
+
+/* 已预约用户头像墙: 不论是否支付成功都展示, 点击头像进个人主页 (2026-08-31) */
+const MAX_BOOKER_AVATARS = 10 // 最多显示个数, 超出折叠为 +N
+const bookers = ref([])
+const showAllBookers = ref(false)
+const visibleBookers = computed(() =>
+  showAllBookers.value ? bookers.value : bookers.value.slice(0, MAX_BOOKER_AVATARS)
+)
+
+async function loadBookers() {
+  try {
+    const res = await getPandaoBookers({ session_id: sessionId.value })
+    const list = (res && res.bookers) || []
+    // cloud:// 头像转可访问签名 URL (存储桶私有读, 直接渲染不显示)
+    await Promise.all(list.map(async (b) => {
+      if (b.avatar) b._avatarUrl = await resolveCloudUrl(b.avatar).catch(() => '')
+    }))
+    bookers.value = list
+  } catch (e) {
+    bookers.value = [] // 预约列表失败不影响详情页主内容
+  }
+}
+
+function openUserProfile(b) {
+  if (!b || !b.uid) return
+  uni.navigateTo({ url: '/pages-sub/user/profile?uid=' + b.uid })
+}
 
 // 微信分享: 分享给好友
 onShareAppMessage(() => {
@@ -98,6 +144,7 @@ async function loadDetail() {
         session.value._booked = mine.some((o) => Number(o.session_id) === sessionId.value)
       } catch (e) {}
     }
+    loadBookers() // 不 await: 头像墙加载慢/失败都不阻塞详情主内容
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
   }
@@ -132,6 +179,7 @@ async function bookNow() {
           await pandaoCancel({ uid: userStore.userInfo.uid, session_id: sessionId.value })
           session.value._booked = false
           uni.showToast({ title: '已取消预约', icon: 'success' })
+          loadBookers()
         } catch (e) {
           uni.showToast({ title: (e && e.message) || '取消失败', icon: 'none' })
         }
@@ -146,6 +194,7 @@ async function bookNow() {
         // 免费场次: 直接预约成功, 无需支付
         session.value._booked = true
         uni.showToast({ title: '预约成功', icon: 'success' })
+        loadBookers()
       } else {
         uni.showToast({ title: '已创建预约订单，请完成支付', icon: 'none' })
         setTimeout(() => {
@@ -273,6 +322,69 @@ async function bookNow() {
   font-weight: bold;
   font-size: 30rpx;
 }
+/* 已预约用户头像墙 (不论是否支付成功都展示) */
+.pd-bookers {
+  background: #fffafa;
+  border-radius: 16rpx;
+  border: 1rpx solid #e8e2da;
+  padding: 24rpx;
+  margin-top: 20rpx;
+}
+.pd-bookers-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.pd-bookers-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #3a2a18;
+}
+.pd-bookers-tip {
+  font-size: 22rpx;
+  color: #a89f92;
+}
+.pd-bookers-list {
+  margin-top: 18rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16rpx;
+}
+.pd-booker,
+.pd-booker-more {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.pd-booker-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+}
+/* 无头像时取昵称首字兜底 */
+.pd-booker-fb {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c41e3a, #b8860b);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pd-booker-more {
+  background: #f3efe8;
+  border: 1rpx solid #e0d9cf;
+  color: #8a857c;
+  font-size: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .pd-content {
   background: #fffafa;
   border-radius: 16rpx;
@@ -340,5 +452,31 @@ async function bookNow() {
 }
 .pd-book-btn.ok {
   background: #95a5a6;
+}
+/* PC 宽屏: 头像墙用 px 固定尺寸 (避免 rpx 在宽屏等比放大导致头像过大)
+   注意: 必须放在 base 规则【之后】—— 同优先级下后面的规则才生效 (CSS 顺序铁律 08-27) */
+@media screen and (min-width: 1025px) {
+  .pd-bookers-title {
+    font-size: 20px;
+  }
+  .pd-bookers-tip {
+    font-size: 14px;
+  }
+  .pd-bookers-list {
+    gap: 12px;
+  }
+  .pd-booker,
+  .pd-booker-more,
+  .pd-booker-avatar,
+  .pd-booker-fb {
+    width: 44px;
+    height: 44px;
+  }
+  .pd-booker-fb {
+    font-size: 19px;
+  }
+  .pd-booker-more {
+    font-size: 15px;
+  }
 }
 </style>

@@ -3008,6 +3008,44 @@ async function pandaoCancel(data) {
   return ok({ refunded: false, message: '预约已取消' })
 }
 
+/* 盘道场次: 已预约用户列表 (2026-08-31 新增)
+   —— 不论是否支付成功都算已预约(待付款/已完成都展示), 仅排除已取消/已退款; 同一用户去重 */
+async function pandaoBookers(data) {
+  const session_id = Number(data.session_id)
+  if (!session_id) return fail('缺少场次')
+  const orders = (await db.collection('orders')
+    .where({ session_id, order_type: 'appointment' })
+    .limit(200).get()).data || []
+  // 已取消/已退款 = 未预约; 同用户按创建时间倒序只保留最新一条
+  const sorted = orders
+    .filter((o) => o.status !== '已取消' && o.status !== '已退款')
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+  const seen = new Set()
+  const uids = []
+  const paidMap = {}
+  sorted.forEach((o) => {
+    const uid = Number(o.uid)
+    if (!uid || seen.has(uid)) return
+    seen.add(uid)
+    uids.push(uid)
+    paidMap[uid] = o.status === '已完成' || o.status === '待发货' || o.status === '待收货'
+  })
+  if (!uids.length) return ok({ bookers: [], count: 0 })
+  const usersRes = await db.collection('users').where({ uid: _.in(uids) }).limit(200).get().catch(() => ({ data: [] }))
+  const map = {}
+  ;(usersRes.data || []).forEach((u) => { map[Number(u.uid)] = u })
+  const bookers = uids.map((uid) => {
+    const u = map[uid] || {}
+    return {
+      uid,
+      nickname: u.nickname || ('用户' + uid),
+      avatar: u.avatar || '',
+      paid: !!paidMap[uid],
+    }
+  })
+  return ok({ bookers, count: bookers.length })
+}
+
 /* 订单余额支付 (H5 端无微信支付能力, 用元宝余额真实扣款; 支持商品/课程/预约等所有订单) */
 async function orderPayBalance(data) {
   const { order_no, uid } = data
@@ -4593,6 +4631,7 @@ const ROUTES = {
   'pandao.list': pandaoList,
   'pandao.book': pandaoBook,
   'pandao.cancel': pandaoCancel,
+  'pandao.bookers': pandaoBookers,
   'pandao.mine': pandaoMine,
   'order.payBalance': orderPayBalance,
   'order.freeConfirm': orderFreeConfirm,
