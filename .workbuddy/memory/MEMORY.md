@@ -74,6 +74,18 @@
 - **APK 构建时序铁律 (2026-08-25)**: ①升版本(bump+gen) ②**先重建 H5** ③`cap sync android`(复制最新 dist/build/h5) ④`gradlew assembleRelease` ⑤复制上传。⚠️ **cap sync 复制的是 dist/build/h5, 若 H5 未重建, APK 内部是旧版本**; ⚠️ **H5 构建会清空 dist/build/h5(含 apk/ 子目录), APK 需在 H5 构建后重新复制**; 验证: `unzip -p app-release.apk "assets/public/assets/version*.js"` 看内部版本号
 - **版本迭代 (2026-08-07 13:30 用户要求)**: 每次提交都升小版本 — 每次改动完成提交前先 `node scripts/bump-version.js && node scripts/gen-version.js` (patch+1), 再构建提交推送
 - **构建策略 (2026-08-07 18:25 用户约定)**: 每次迭代**同步构建 H5 + 小程序并部署**; **APP(APK) 单独提需求才构建**, 不随每次迭代自动构建
+- **版本号 NaN 铁律 (08-31)**: `bump-version.js` 已改为用
+  `git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1` 取版本, 并加了 `/^\d+\.\d+\.\d+$/` 兜底校验(不合法直接报错退出)。
+  原因: 原 `git describe --tags --abbrev=0` **会把任意 tag 当作最新版本**, 仓库里一旦有非版本格式的 tag
+  (如临时备份 tag `backup-before-purge-xxx`), 版本号就被算成 `vNaN.NaN.NaN` 并写坏
+  `src/version.js` 与 `build.gradle`, 还会生成垃圾 tag、versionCode 连加两次。
+  **推论: 不要在仓库里留非版本格式的 tag, 临时备份 tag 用完即删**。
+  已写坏时: `git checkout -- src/version.js mobile/android/app/build.gradle` 还原 + 删垃圾 tag(本地+远端)后重跑 bump
+- **轮播/多图自适应高度套路 (08-31)**: 想"保持原图长宽比"就不能写死高度 ——
+  `<image mode="aspectFit" @load>` 取 `e.detail.width/height` 算比例(注意 aspectFill 会裁切, 要换成 aspectFit),
+  容器宽度用 `uni.createSelectorQuery().select(sel).boundingClientRect()` 实测
+  (⚠️ **必须包 `nextTick`**, 数据赋值后元素尚未渲染, 立即测量拿不到宽度),
+  高度 = (容器宽 / 并排张数 − 间隙) × 比例, 再用 `Math.min/max` 夹上下限。并排 N 张用 `:display-multiple-items="N"`
 
 ## 静态托管路径布局 (铁律 2026-08-21)
 
