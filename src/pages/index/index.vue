@@ -263,16 +263,27 @@
       <view class="pandao-banners" v-if="pandaoBannerList.length">
         <swiper
           class="pb-swiper"
-          :indicator-dots="pandaoBannerList.length > 1"
+          :style="{ height: bannerSwiperH }"
+          :display-multiple-items="bannerPerView"
+          :indicator-dots="pandaoBannerList.length > bannerPerView"
           indicator-color="rgba(255,255,255,0.55)"
           indicator-active-color="#c41e3a"
-          :autoplay="pandaoBannerList.length > 1"
+          :autoplay="pandaoBannerList.length > bannerPerView"
           :interval="4000"
           :duration="600"
           circular
         >
           <swiper-item v-for="(u, i) in pandaoBannerList" :key="i">
-            <image class="pb-img" :src="u" mode="aspectFill" @tap="previewPandaoBanner(i)"></image>
+            <view class="pb-item">
+              <!-- aspectFit: 完整显示, 不裁切不拉伸; @load 取原图尺寸用于自适应高度 -->
+              <image
+                class="pb-img"
+                :src="u"
+                mode="aspectFit"
+                @load="onBannerLoad"
+                @tap="previewPandaoBanner(i)"
+              ></image>
+            </view>
           </swiper-item>
         </swiper>
       </view>
@@ -352,7 +363,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import dayjs from 'dayjs'
 import { getMoments, getLiveStreams, bookLive as apiBookLive, getMyBookings, getComments, addComment, deleteOwnMoment, getPandaoList, getPandaoMine, pandaoBook, pandaoCancel, getPayConfig, momentLike, myLikes, fileUrl, getProducts, getCourses, getRecommendedMoments } from '../../api/api'
@@ -507,6 +518,56 @@ function goPandaoDetail(pd) {
 async function resolvePandaoBannerUrls() {
   const urls = await Promise.all((pandaoBanners.value || []).map((c) => resolveCloudUrl(c).catch(() => '')))
   pandaoBannerUrls.value = urls
+  // 必须等 swiper 渲染出来后再测量宽度, 否则 boundingClientRect 拿不到
+  if (urls.filter(Boolean).length) nextTick(() => measureBannerBox())
+}
+
+/* ===== 轮播图尺寸: 屏幕内并排 2 张 + 高度按原图长宽比自适应 =====
+   写死高度会导致竖图被裁/横图留白 → 这里用图片真实 高/宽 反推容器高度,
+   配合 mode="aspectFit" 做到既不裁切也不拉伸。 */
+const BANNER_GAP = 6 // 两张之间的间隙(px, 每张单边)
+const bannerBoxW = ref(0) // 单张图的显示宽度(px)
+const bannerRatio = ref(0) // 原图 高/宽, 0=未测到
+
+/* 屏幕内并排显示 2 张(仅 1 张时就显示 1 张) */
+const bannerPerView = computed(() => (pandaoBannerList.value.length > 1 ? 2 : 1))
+
+const bannerSwiperH = computed(() => {
+  const w = bannerBoxW.value
+  if (!w) return '150px' // 未完成测量前的兜底
+  const r = bannerRatio.value || 1 // 未拿到原图比例时按 1:1 兜底
+  const h = w * r
+  return Math.round(Math.min(Math.max(h, 110), 460)) + 'px' // 夹取, 防止极端比例过高/过矮
+})
+
+function onBannerLoad(e) {
+  const w = e && e.detail && e.detail.width
+  const h = e && e.detail && e.detail.height
+  // 只取第一张的比例: 同一批轮播图通常尺寸一致, 取首个即可稳定
+  if (w && h && !bannerRatio.value) bannerRatio.value = h / w
+}
+
+/* 测量轮播容器实际宽度 → 单张宽度 = 容器宽 / 并排张数 - 间隙 */
+function measureBannerBox() {
+  try {
+    uni.createSelectorQuery().select('.pb-swiper').boundingClientRect((rect) => {
+      if (rect && rect.width) {
+        bannerBoxW.value = Math.round(rect.width / bannerPerView.value) - BANNER_GAP
+        return
+      }
+      fallbackBannerBox()
+    }).exec()
+  } catch (e) {
+    fallbackBannerBox()
+  }
+}
+
+/* 测量失败兜底: 用窗口宽度估算 (左右各 24rpx 内边距) */
+function fallbackBannerBox() {
+  let winW = 375
+  try { winW = (uni.getSystemInfoSync() || {}).windowWidth || 375 } catch (e) {}
+  const pad = (24 * winW) / 750 * 2
+  bannerBoxW.value = Math.round(Math.max(winW - pad, 0) / bannerPerView.value) - BANNER_GAP
 }
 
 function previewPandaoBanner(i) {
@@ -1455,20 +1516,31 @@ onShow(async () => {
 .pandao-notify {
   border: 1rpx solid #d8c9a8;
 }
-/* 盘道动态轮播图 (后台盘道管理上传, 自动循环; 位于活动列表下方/关注公众号板块之上) */
+/* 盘道动态轮播图 (后台盘道管理上传; 屏幕内并排 2 张, 高度按原图长宽比自适应) */
 .pandao-banners {
-  margin-top: 20rpx;
+  padding: 20rpx 24rpx;
 }
 .pb-swiper {
   width: 100%;
-  height: 260rpx;
+  /* 高度由 :style 按原图比例动态计算, 此处不写死 */
   border-radius: 16rpx;
   overflow: hidden;
-  background: #f8f5f0;
+}
+/* 每张图外层: 左右各留间隙, 形成并排两张之间的分隔 */
+.pb-item {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .pb-img {
   width: 100%;
   height: 100%;
+  border-radius: 12rpx;
+  display: block;
 }
 .pandao-follow {
   display: flex;
@@ -1800,9 +1872,13 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
-  /* 盘道动态轮播图: PC 用 px 固定高度 (避免 rpx 在宽屏等比放大导致过高) */
-  .pb-swiper {
-    height: 240px;
+  /* 盘道动态轮播图: 高度由 :style 按原图比例动态计算(px), PC 无需额外覆盖;
+     仅在窄屏/宽屏下给单张图一个更宽松的高度上限区间 */
+  .pb-item {
+    padding: 0 8px;
+  }
+  .pb-img {
+    border-radius: 10px;
   }
   /* 品牌横幅: 不做 PC 特殊放大, 保持与"我的"页头部一致的 rpx 缩放比例 */
   /* 频道 Tab: PC 放大 */

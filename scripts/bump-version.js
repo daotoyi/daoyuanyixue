@@ -21,9 +21,16 @@ function read(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8') }
 function write(p, c) { fs.writeFileSync(path.join(ROOT, p), c) }
 
 // 读取当前版本 (以 git 最新 tag 为准, 避免与 gen-version.js 互相覆盖)
-let cur = sh('git describe --tags --abbrev=0').replace(/^v/, '')
+/* 只认 vX.Y.Z 形式的版本标签。
+   原先用 `git describe --tags --abbrev=0`: 它会把任意标签当成"最新版本"返回,
+   一旦仓库里有非版本标签(如备份标签 backup-xxx), 版本号就会被算成 NaN
+   (2026-08-31 踩坑: 历史重写后残留的备份标签导致 version.js/build.gradle 被写成 NaN)。
+   --sort=-v:refname 按版本号自然序倒排, 保证 v1.11.270 正确排在 v1.11.27 之后。 */
+let cur = sh("git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1").replace(/^v/, '')
 if (!cur) cur = (read('src/version.js').match(/APP_VERSION = 'v([\d.]+)'/) || [])[1]
 if (!cur) { console.error('无法识别当前版本'); process.exit(1) }
+// 兜底校验: 三段都必须是数字, 否则宁可报错也不要写出 NaN 版本号
+if (!/^\d+\.\d+\.\d+$/.test(cur)) { console.error(`识别到的版本号不合法: "${cur}"，请检查 git tag`); process.exit(1) }
 
 const [major, minor, patch] = cur.split('.').map(Number)
 const type = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'patch'
