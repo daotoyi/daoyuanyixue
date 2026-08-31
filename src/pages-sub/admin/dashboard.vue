@@ -1137,6 +1137,7 @@
         <view class="f-row" style="align-items: flex-start">
           <text class="f-label">课程大纲</text>
           <view class="ep-list" style="flex: 1">
+            <view class="ep-tip">上传排队保存在当前页面：刷新/关闭页面后需重新选文件，系统会自动续传（不从头传）</view>
             <view class="ep-item" v-for="(ep, ei) in courseForm.episodes" :key="ep._key || ('ep' + ei)">
               <view class="ep-row">
                 <text class="ep-index">{{ ei + 1 }}</text>
@@ -4922,6 +4923,17 @@ onMounted(async () => {
 .ep-list {
   display: flex;
   flex-direction: column;
+}
+/* 上传排队提示 (2026-08-31) */
+.ep-tip {
+  font-size: 20rpx;
+  color: #a0834a;
+  background: #faf6ee;
+  border: 1rpx dashed #e0d3b8;
+  border-radius: 8rpx;
+  padding: 8rpx 12rpx;
+  margin-bottom: 12rpx;
+  line-height: 1.5;
 }
 .ep-item {
   background: #fbe9ec;
