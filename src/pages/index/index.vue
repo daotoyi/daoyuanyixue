@@ -275,12 +275,11 @@
         >
           <swiper-item v-for="(u, i) in pandaoBannerList" :key="i">
             <view class="pb-item">
-              <!-- aspectFill: 等比缩放填满容器, 溢出部分裁切(矮图放大后裁左右), 绝不拉伸变形 -->
+              <!-- aspectFill: 等比缩放填满 16:9 容器, 溢出部分裁切, 绝不拉伸变形 -->
               <image
                 class="pb-img"
                 :src="u"
                 mode="aspectFill"
-                @load="onBannerLoad"
                 @tap="previewPandaoBanner(i)"
               ></image>
             </view>
@@ -522,34 +521,22 @@ async function resolvePandaoBannerUrls() {
   if (urls.filter(Boolean).length) nextTick(() => measureBannerBox())
 }
 
-/* ===== 轮播图尺寸: 屏幕内并排 2 张 + 所有图等高展示 =====
-   规则 (2026-08-31): 所有轮播图展示高度保持一致; 高度偏小的图等比例放大,
-   放大后横向溢出的部分裁掉 → 对应 mode="aspectFill"(等比缩放填满容器, 溢出部分裁切, 不拉伸变形)。
-   基准高度取**所有图中最高的那张**的比例: 这样其余图只会被横向裁, 不会纵向裁掉内容。 */
+/* ===== 轮播图尺寸: 屏幕内并排 2 张, 每张固定 16:9 =====
+   2026-08-31: 展示比例固定 16:9(高 = 宽 × 9/16), 不再跟随原图比例 ——
+   早期"取最高那张图的比例"会把板块撑成近似方形, 现统一为 16:9 横幅。
+   图片用 mode="aspectFill": 等比缩放填满 16:9 容器, 溢出部分裁切, 绝不拉伸变形。 */
 const BANNER_GAP = 6 // 两张之间的间隙(px, 每张单边)
+const BANNER_RATIO = 9 / 16 // 16:9 → 高/宽
 const bannerBoxW = ref(0) // 单张图的显示宽度(px)
-const bannerRatio = ref(0) // 基准比例 = 所有图中最大的 高/宽, 0=未测到
 
 /* 屏幕内并排显示 2 张(仅 1 张时就显示 1 张) */
 const bannerPerView = computed(() => (pandaoBannerList.value.length > 1 ? 2 : 1))
 
 const bannerSwiperH = computed(() => {
   const w = bannerBoxW.value
-  if (!w) return '150px' // 未完成测量前的兜底
-  const r = bannerRatio.value || 1 // 未拿到原图比例时按 1:1 兜底
-  const h = w * r
-  return Math.round(Math.min(Math.max(h, 110), 460)) + 'px' // 夹取, 防止极端比例过高/过矮
+  if (!w) return '100px' // 未完成测量前的兜底
+  return Math.round(w * BANNER_RATIO) + 'px'
 })
-
-function onBannerLoad(e) {
-  const w = e && e.detail && e.detail.width
-  const h = e && e.detail && e.detail.height
-  if (!w || !h) return
-  // 取所有图中"最高"的比例作为统一高度基准:
-  // 最矮的图等比放大到该高度后宽度会溢出 → 由 aspectFill 裁掉左右多余部分, 内容不拉伸
-  const r = h / w
-  if (!bannerRatio.value || r > bannerRatio.value) bannerRatio.value = r
-}
 
 /* 测量轮播容器实际宽度 → 单张宽度 = 容器宽 / 并排张数 - 间隙 */
 function measureBannerBox() {
