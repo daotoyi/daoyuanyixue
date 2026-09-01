@@ -256,7 +256,7 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       //   该连接被限速 ~778KB/s → 单分片实际要 ~85s, 远超旧固定 45s → 误超时→重试→最终自我放弃("自己退出")。
       //   故用 实测聚合速度 / 当前并发 = 单连接吞吐 推算每片耗时, 再给 2.5 倍余量 + 15s, 下限 60s, 上限 10min;
       //   这样"慢但仍在传"的分片永不被误杀, 同时真挂起仍有硬超时兜底 (2026-09-01 修复上传自动退出)
-      const perConnBps = speedBps ? Math.max(64 * 1024, speedBps / Math.max(1, concurrency)) : 128 * 1024
+      const perConnBps = speedBps ? Math.max(64 * 1024, speedBps / Math.max(1, concurrency)) : 64 * 1024
       const partTimeout = Math.min(600000, Math.max(60000, Math.round(PART_SIZE / perConnBps * 2.5) + 15000))
       let okFlag = false
       let lastErr = null
@@ -347,10 +347,20 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       const waveBps = waveBytes / (waveMs / 1000)
       if (waveBytes > 0) {
         speedBps = speedBps ? speedBps * 0.6 + waveBps * 0.4 : waveBps // 指数平滑, 避免抖动误判
-        // 反转自适应: 单连接被限速(慢)恰恰需要更多连接聚合带宽, 故"慢不降并发";
-        // 仅当本波出现分片失败/超时(网络真不稳)才临时降并发, 否则缓慢拉满到 MAX
-        if (failedParts.length > 0 && concurrency > MULTIPART_MIN_CONCURRENCY) concurrency = Math.max(MULTIPART_MIN_CONCURRENCY, concurrency - 1)
-        else if (concurrency < MULTIPART_MAX_CONCURRENCY) concurrency = Math.min(MULTIPART_MAX_CONCURRENCY, concurrency + 1)
+        // 自适应并发(按"实测聚合带宽 / 单分片安全时长"反推安全并发, 默认每片 ≤ SAFE_PART_SEC 秒):
+        //  - 单连接限速(未开全球加速): 并发拉高不会提速(总带宽封顶), 但每片耗时 = 分片大小 ÷ (总带宽 ÷ 并发)
+        //    会随并发飙升 → 触碰代理/网络超时(30~120s) → 分片真失败 → 重试耗尽 → "自己退出"。
+        //    故按"保持每片 ≤20s"反推并发(778KB/s 下单连接≈3), 既安全又不丢速(单连接总带宽不变)。
+        //  - 开全球加速/多域名后聚合带宽飙升 → 安全并发自动放开到 MAX, 多连接聚合提速。
+        //  - 本波有分片失败(网络真不稳)则立即降并发(同前); 无实测速度时保持当前并发不强行下压。
+        if (failedParts.length > 0) {
+          concurrency = Math.max(MULTIPART_MIN_CONCURRENCY, concurrency - 1)
+        } else if (speedBps > 0) {
+          const SAFE_PART_SEC = 20
+          const safeConc = Math.max(1, Math.min(MULTIPART_MAX_CONCURRENCY, Math.floor(speedBps / (PART_SIZE / SAFE_PART_SEC))))
+          if (safeConc > concurrency) concurrency = Math.min(MULTIPART_MAX_CONCURRENCY, concurrency + 1)
+          else concurrency = Math.max(1, Math.min(concurrency, safeConc))
+        }
       }
       if (failedParts.length === 0) break // 全部成功
       round++

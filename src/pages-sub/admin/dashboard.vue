@@ -1214,11 +1214,13 @@
                 <input class="f-input" v-model="ep.video" placeholder="本课时视频地址" />
                 <!-- 上传中: 行内独立显示该课时进度 + 暂停/取消 (按钮绑定 ep 对象, 避免并行上传中索引错位) -->
                 <view class="ep-up" v-if="ep._uploading">
-                  <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
-                  <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
-                  <text class="ep-up-speed" v-if="ep._speed">{{ formatSpeed(ep._speed) }} · 剩 {{ formatEta(ep._eta) }}</text>
-                  <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ep)">{{ ep._paused ? '继续' : '暂停' }}</text>
-                  <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
+                  <view class="ep-up-row">
+                    <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
+                    <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
+                    <text class="ep-up-speed" v-if="ep._speed">{{ formatSpeed(ep._speed) }} · 剩 {{ formatEta(ep._eta) }}</text>
+                    <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ep)">{{ ep._paused ? '继续' : '暂停' }}</text>
+                    <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
+                  </view>
                   <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
                 </view>
                 <!-- 排队等待中: 显示等待上传 + 可取消排队 (2026-08-30 排队策略: 一次只传一个, 其他依次等待) -->
@@ -5480,20 +5482,27 @@ onMounted(async () => {
 /* 课时行内上传进度 (多课时并行, 各自独立) */
 .ep-up {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6rpx;
+  margin-left: 10rpx;
+  flex-shrink: 0;
+}
+.ep-up-row {
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10rpx;
-  margin-left: 10rpx;
-  flex-shrink: 0;
 }
 .ep-up-status {
-  width: 100%;
   font-size: 20rpx;
   color: #b07a1e;
+  text-align: right;
 }
 /* 排队等待状态 (2026-08-30) */
 .ep-up.queued {
+  flex-direction: row;
   background: #f6f1e8;
   border: 1rpx dashed #c9b891;
   border-radius: 10rpx;
