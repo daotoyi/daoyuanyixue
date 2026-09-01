@@ -1202,6 +1202,7 @@
                 <view class="ep-up" v-if="ep._uploading">
                   <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
                   <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
+                  <text class="ep-up-speed" v-if="ep._speed">{{ formatSpeed(ep._speed) }} · 剩 {{ formatEta(ep._eta) }}</text>
                   <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ep)">{{ ep._paused ? '继续' : '暂停' }}</text>
                   <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
                   <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
@@ -2777,11 +2778,12 @@ function uploadCourseVideo() {
         const storage = await getStorage()
         if (!storage || !storage.uploadFile) throw new Error('云存储不可用')
         const cloudPath = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.mp4`
-        const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
+        const upRes = await storage.uploadFile(filePath, cloudPath, (ratio, _u, _s, info) => {
           const pct = Math.min(99, Math.floor(ratio * 100))
           if (pct !== lastPct && pct % 2 === 0) {
             lastPct = pct
-            uni.showLoading({ title: '上传中 ' + pct + '%', mask: true })
+            const sp = info && info.speedBps ? ' ' + formatSpeed(info.speedBps) : ''
+            uni.showLoading({ title: '上传中 ' + pct + '%' + sp, mask: true })
           }
         })
         const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
@@ -2848,6 +2850,19 @@ function removeResume(size) {
     uni.setStorageSync(RESUME_KEY, JSON.stringify(list))
   } catch (e) {}
 }
+/* 上传速度 / 剩余时间 格式化 (抖音/视频号同款反馈) */
+function formatSpeed(bps) {
+  if (!bps || bps <= 0) return ''
+  if (bps >= 1024 * 1024) return (bps / 1048576).toFixed(1) + ' MB/s'
+  if (bps >= 1024) return (bps / 1024).toFixed(0) + ' KB/s'
+  return Math.round(bps) + ' B/s'
+}
+function formatEta(sec) {
+  if (!sec || sec <= 0) return '—'
+  if (sec < 60) return sec + '秒'
+  if (sec < 3600) return Math.floor(sec / 60) + '分' + (sec % 60) + '秒'
+  return Math.floor(sec / 3600) + '时' + Math.floor((sec % 3600) / 60) + '分'
+}
 /* 清除全部断点续传记录 (2026-08-30: 反复取消/失败产生的失效 uploadId 会干扰重新上传, 提供一键清理) */
 function clearAllResume() {
   uni.showModal({
@@ -2866,7 +2881,9 @@ function clearAllResume() {
   })
 }
 function resumePercent(rec, size) {
-  const total = Math.max(1, Math.ceil(size / PART_SIZE_BYTES))
+  // 自适应分片后, 用记录里保存的真实分片大小估算总分片数(兜底用 16MB)
+  const ps = (rec && rec.partSize) || PART_SIZE_BYTES
+  const total = Math.max(1, Math.ceil(size / ps))
   return Math.min(99, Math.round(((rec.partNumbers || []).length / total) * 100))
 }
 
@@ -3093,15 +3110,17 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
     ep._status = ''
     console.log('[上传] gen=' + myGen + ' 初始化完成, 开始传分片')
-    const upRes = await storage.uploadFile(filePath, cloudPath, (ratio) => {
+    const upRes = await storage.uploadFile(filePath, cloudPath, (ratio, _u, _s, info) => {
       if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 忽略旧任务进度
       const pct = Math.min(99, Math.round(ratio * 100))
       if (pct !== ep._progress) ep._progress = pct
+      // 实时速度 / 预计剩余 (抖音/视频号同款反馈, 让用户看到"在动", 慢网不再以为卡死)
+      if (info) { ep._speed = info.speedBps || 0; ep._eta = info.etaSec || 0 }
       // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
       const now = Date.now()
       if (control.uploadId && now - lastSaveTs > 10000) {
         lastSaveTs = now
-        saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: now })
+        saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], partSize: control.partSize || PART_SIZE_BYTES, ts: now })
       }
     }, control, (s) => {
       if (ep._uploadGen !== myGen) return
@@ -3141,7 +3160,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     }
     // 失败/取消: 保存续传点 (分片保留在 COS, 下次选同文件可继续)
     if (control.uploadId) {
-      saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], ts: Date.now() })
+      saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], partSize: control.partSize || PART_SIZE_BYTES, ts: Date.now() })
     }
     ep._uploading = false
     ep._paused = false
@@ -5318,6 +5337,11 @@ onMounted(async () => {
   color: #c41e3a;
   min-width: 52rpx;
   text-align: right;
+}
+.ep-up-speed {
+  font-size: 20rpx;
+  color: #5a6b7b;
+  flex-shrink: 0;
 }
 .ep-up-btn {
   font-size: 22rpx;

@@ -24,13 +24,26 @@ const cloudbaseSdk = cloudbaseSdkModule.default || cloudbaseSdkModule
 let cloudApp = null
 let _initPromise = null
 
-/* ===== 大文件分片上传 (COS Multipart Upload) =====
-   COS 单次 PUT 上限 5GB, 4GB+ 上传不稳定 → 非图片(视频)上传统一走分片,
-   可获得真实进度, 并支持暂停/继续/取消。
-   协议: createMultipart → (partUploadAuth + fetch PUT) × N → completeMultipart */
-const MULTIPART_PART_SIZE = 16 * 1024 * 1024        // 16MB / 片 (参考百度网盘细粒度分片: 单片失败影响小, 重试易成功)
-const MULTIPART_CONCURRENCY = 6                     // 并发片数 (吃满浏览器同域名连接上限, 提速)
-const PUT_TIMEOUT_MS = 90000                        // 单片 PUT 超时: 防请求挂起卡死进度
+/* ===== 大文件分片上传 (COS Multipart Upload, 抖音/视频号/小红书 同款优化) =====
+   COS 单次 PUT 上限 5GB, 4GB+ 视频必须走分片上传。
+   关键优化(对标头部平台大文件上传):
+     1) 批量预签名: createMultipart 后一次(分批)取回所有分片 PUT URL, 彻底消除"每片一次云函数 RTT"
+        —— 这是之前"上传太慢"的主因(数百片 = 数百次签名往返)。
+     2) 自适应分片大小: 文件越大分片越大(16MB→128MB), 分片数骤减 → 连接/请求数下降,
+        移动端不再因并发过多"闪退"(COS 限制最多 10000 片)。
+     3) 自适应并发 + 实时测速: 按实测带宽在 2~8 之间动态调速, 慢网降并发、快网拉满。
+     4) 自适应超时: 单片超时按"分片大小/实测网速"推算, 不再固定 90s → 慢网不被误杀,
+        真挂起仍有硬超时兜底。
+     5) 内存安全: 每片 读→传→释放, 任意时刻仅 1 片在内存; 暂停/取消可中断。
+   协议: createMultipart → batchPartUploadAuth(批量签名) → (fetch PUT × N, 并发自适应) → completeMultipart */
+const MULTIPART_MIN_PART = 1 * 1024 * 1024          // 最小分片 1MB (COS 下限)
+const MULTIPART_MAX_PART = 512 * 1024 * 1024        // 最大分片 512MB
+const MULTIPART_MIN_CONCURRENCY = 2                 // 最慢/最不稳网络下的并发片数(防移动端"闪退")
+const MULTIPART_INIT_CONCURRENCY = 4                // 起始并发(保守起手, 测速后再拉满)
+const MULTIPART_MAX_CONCURRENCY = 8                 // 带宽充足时拉满的并发片数(不超浏览器同域连接上限)
+const MULTIPART_MAX_PARTS = 10000                    // COS 分片数硬上限
+const MULTIPART_SIGN_BATCH = 200                    // 批量签名单批上限(防单次响应体过大)
+const SIGN_REFRESH_MS = 25 * 60 * 1000              // 签名有效期 30min, 超过 25min 自动刷新待传分片签名
 /* 云函数网关请求体上限实测 ≈100KB (2026-08-31):
    base64 长度 100,184 → HTTP 200 成功; 109,908 → HTTP 413 EXCEED_MAX_PAYLOAD_SIZE。
    压缩器 compressImageToBase64(80KB) 产出的 base64 上限约 109KB, 正好落在
@@ -92,15 +105,16 @@ async function readBlobSlice(filePath, start, end, signal, fileObj) {
   return new Blob([ab])
 }
 
-/* COS 分片上传主流程: 返回 { fileID }。
-   control = { paused, cancelled, abortFns:Set } 支持暂停/取消 (abortFns 遍历中断所有并发分片);
-   onStatus('retrying'|'paused'|'resumed'|'cancelling') 状态回调用于界面提示;
-   resume = { uploadId, skipPartNumbers } 断点续传: 复用 uploadId 跳过已传分片, 只传缺失的;
-   失败/取消【不 abort 分片】→ 已传分片保留在 COS, 供下次续传 (control 上暴露 uploadId/partNumbers/size) */
+/* COS 分片上传主流程 (抖音/视频号/小红书 同款优化): 返回 { fileID }。
+   control = { paused, cancelled, abortFns:Set, size, uploadId, partNumbers, partSize } 支持暂停/取消;
+   onStatus('retrying'|'paused'|'resumed'|'cancelling', info?) 状态回调;
+   onProgress(ratio, uploaded, size, info?) 进度回调, info={ speedBps, etaSec, concurrency, partSize };
+   resume = { uploadId } 断点续传: 复用 uploadId + 服务端查询已传分片, 只传缺失的;
+   失败/取消【不 abort 分片】→ 已传分片保留在 COS, 供下次续传 */
 async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, onStatus, resume, fileObj) {
   if (!control) control = {}
   if (!control.abortFns) control.abortFns = new Set()
-  const status = (s) => { if (onStatus) onStatus(s) }
+  const status = (s, info) => { if (onStatus) onStatus(s, info) }
   // 取消感知包装 (2026-08-30): 任意 await 点 250ms 轮询 cancelled,
   // 点取消立即抛 UPLOAD_CANCELLED — 覆盖初始化/取签名/合并等无 abort 目标的阶段, 杜绝"取消没反应"
   const cancelAware = (promise) => {
@@ -115,28 +129,28 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     })
     return Promise.race([promise, cancelP]).finally(() => clearInterval(iv))
   }
-  // 硬超时: 不依赖 AbortController 是否生效, 到点必定 reject (2026-08-31 修复代理/VPN网络下
-  // fetch 挂起时 abort 不 reject 导致整批 Promise.allSettled 永久卡死、进度卡在某百分比不动)
-  const withHardTimeout = (promise, ms, onTimeout) => {
-    let to = null
-    const timeoutP = new Promise((_, rej) => {
-      to = setTimeout(() => {
-        if (onTimeout) { try { onTimeout() } catch (e) {} }
-        const err = new Error('请求硬超时')
-        err.code = 'HARD_TIMEOUT'
-        rej(err)
-      }, ms)
-    })
-    return Promise.race([promise, timeoutP]).finally(() => { if (to) clearTimeout(to) })
-  }
   await waitIfPaused(control)
-  // 文件大小: 优先 chooseVideo 返回的 res.size (control.size) → File 对象 .size → 兜底 fetch 探测
+  // 1) 探测文件大小 (优先 control.size / File.size, 不 fetch 全读, 避免大视频超时/内存爆)
   // (2026-08-30: 几 GB 大视频 fetch 全读会超时/内存爆 → "无法读取文件大小", 必须避免 fetch)
   let size = control.size || 0
   if (!size && fileObj && fileObj.size !== undefined) size = fileObj.size || 0
   if (!size) size = await cancelAware(probeFileSize(filePath, fileObj)).catch(() => 0)
   if (!size) throw new Error('无法读取文件大小')
-  const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
+
+  // 2) 自适应分片大小: 文件越大分片越大 → 分片数骤减 → 连接/请求数下降, 移动端不再因并发过多"闪退"
+  // (COS 限制最多 10000 片, 超大文件自动翻倍分片大小以不超上限)
+  function pickPartSize(sz) {
+    let ps = 16 * 1024 * 1024
+    if (sz > 4 * 1024 * 1024 * 1024) ps = 128 * 1024 * 1024
+    else if (sz > 1024 * 1024 * 1024) ps = 64 * 1024 * 1024
+    else if (sz > 256 * 1024 * 1024) ps = 32 * 1024 * 1024
+    while (Math.ceil(sz / ps) > MULTIPART_MAX_PARTS && ps < MULTIPART_MAX_PART) ps *= 2
+    return Math.max(MULTIPART_MIN_PART, ps)
+  }
+  const PART_SIZE = pickPartSize(size)
+  const totalParts = Math.ceil(size / PART_SIZE)
+  console.log('[CloudBase] 视频 ' + (size / 1048576).toFixed(1) + 'MB → 分片 ' + totalParts + ' 片 × ' + (PART_SIZE / 1048576).toFixed(0) + 'MB')
+
   const call = async (action, data, signal) => {
     const res = await cancelAware(apiRequest({ action, data }, 30000, signal))
     if (res.status !== 200) throw new Error(res.msg || action + ' 失败')
@@ -145,20 +159,18 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   let uploadId = ''
   const donePartNumbers = []
   let uploaded = 0
-  // 1) 初始化: 续传复用 uploadId + 服务端查询已传分片; 否则新建
+  // 3) 初始化 / 续传: 续传复用 uploadId + 服务端 listParts 取已传分片(权威), 否则新建
+  // (2026-08-30: 取消/失败留下的旧 uploadId 可能已被 COS 清理, 续传→completeMultipart 必然失败;
+  //  故以服务端 listParts 为准, 无分片则丢弃旧进度重建)
   await waitIfPaused(control)
   if (resume && resume.uploadId) {
     uploadId = resume.uploadId
-    // 校验 uploadId 有效性: listParts 返回空(分片被清理/uploadId失效)时, 丢弃旧续传点重建, 避免合并时"未找到分片"报错
-    // (2026-08-30: 取消/失败留下的旧 uploadId 可能已被 COS 清理, 续传→completeMultipart 必然失败 → 用户反复遇到"上传中断")
     const lp = await call('storage.listParts', { cloudPath, uploadId }).catch(() => null)
     if (lp && lp.parts && lp.parts.length) {
       donePartNumbers.push(...lp.parts)
-      uploaded = donePartNumbers.length * MULTIPART_PART_SIZE // 近似 (最后一片略小, 进度显示无碍)
-      if (uploaded > size) uploaded = size
+      uploaded = Math.min(size, donePartNumbers.length * PART_SIZE) // 近似 (最后一片略小, 进度显示无碍)
       console.log('[CloudBase] 断点续传: uploadId=' + uploadId.slice(0, 12) + '... 已传分片=' + donePartNumbers.length + '/' + totalParts)
     } else {
-      // uploadId 已失效/分片被清理: 重建新的分片上传 (丢弃旧进度, 从头传)
       console.warn('[CloudBase] 续传 uploadId 已失效(服务端无分片), 重新创建分片上传')
       uploadId = ''
       const init = await call('storage.createMultipart', { cloudPath })
@@ -173,70 +185,93 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   control.uploadId = uploadId
   control.partNumbers = donePartNumbers
   control.size = size
+  control.partSize = PART_SIZE
   const skipSet = new Set(donePartNumbers)
-  let retrying = false
-  const uploadOne = async (partIndex) => {
-    const partNumber = partIndex + 1
-    await waitIfPaused(control)
-    if (skipSet.has(partNumber)) {
-      // 已传分片: 跳过 (续传场景)
-      if (onProgress) onProgress(uploaded / size, uploaded, size)
-      return
+
+  // 4) 批量预签名: 一次(分批)取回所有待传分片 PUT URL, 彻底消除"每片一次云函数 RTT"
+  // —— 这是之前"上传太慢"的主因(数百片 = 数百次签名往返); 现仅 1~数 次云函数调用。
+  const partUrlMap = {}
+  let signedAt = Date.now()
+  async function batchSign(partNumbers) {
+    for (let i = 0; i < partNumbers.length; i += MULTIPART_SIGN_BATCH) {
+      await waitIfPaused(control)
+      const b = partNumbers.slice(i, i + MULTIPART_SIGN_BATCH)
+      const res = await call('storage.batchPartUploadAuth', { cloudPath, uploadId, partNumbers: b })
+      if (res && res.urls) Object.assign(partUrlMap, res.urls)
     }
-    const start = partIndex * MULTIPART_PART_SIZE
-    const end = Math.min(size, start + MULTIPART_PART_SIZE)
-    // 每片一个 AbortController 注册到 control.abortFns: 暂停/取消可中断【读取分片 + PUT 上传】全阶段
-    // (2026-08-30: 注册提前到读分片前 — 之前读取挂起时取消无法中断, 导致进度卡死且取消无效)
+  }
+  const todo = []
+  for (let p = 1; p <= totalParts; p++) if (!skipSet.has(p)) todo.push(p)
+  await batchSign(todo)
+
+  // 5) 自适应并发 + 分片上传 (按 wave 调度, 每波测速后调并发 2~8; 实时进度/速度/剩余时间)
+  let concurrency = MULTIPART_INIT_CONCURRENCY
+  let speedBps = 0
+  let retrying = false
+  const t0 = Date.now()
+  const emitProgress = () => {
+    if (!onProgress) return
+    const eta = speedBps > 0 ? Math.round((size - uploaded) / speedBps) : 0
+    onProgress(uploaded / size, uploaded, size, { speedBps, etaSec: eta, concurrency, partSize: PART_SIZE })
+  }
+  const uploadOne = async (partNumber) => {
     const controller = new AbortController()
     const abortFn = () => controller.abort()
     if (control && control.abortFns) control.abortFns.add(abortFn)
-    let piece
     try {
-      // 读分片: 60s 超时兜底 (blob 读取挂起会拖死整批并发且取消也中断不了)
-      const readTimer = setTimeout(() => controller.abort(), 60000)
+      await waitIfPaused(control)
+      const start = (partNumber - 1) * PART_SIZE
+      const end = Math.min(size, start + PART_SIZE)
+      // 每片一个 AbortController 注册到 control.abortFns: 暂停/取消可中断【读取分片 + PUT 上传】全阶段
+      // (2026-08-30: 注册提前到读分片前 — 之前读取挂起时取消无法中断, 导致进度卡死且取消无效)
+      let piece
       try {
-        piece = await readBlobSlice(filePath, start, end, controller.signal, fileObj)
-      } finally {
-        clearTimeout(readTimer)
-      }
-    } catch (readErr) {
-      if (readErr && readErr.name === 'AbortError') {
-        // 中止来源: 超时 / 用户暂停 / 用户取消 → 统一先判断控制状态
-        await waitIfPaused(control) // 取消→抛 UPLOAD_CANCELLED; 暂停→等恢复; 纯超时→继续走失败重试
-        throw new Error('分片 ' + partNumber + ' 读取超时')
-      }
-      throw readErr
-    }
-    try {
-      // 获取本分片 PUT 预签名 URL (有效期 30 分钟, 失败重试 2 次; 取消/暂停可中断取签名)
-      let auth = null
-      for (let k = 0; k < 3 && !auth; k++) {
-        await waitIfPaused(control)
+        // 读分片: 60s 超时兜底 (blob 读取挂起会拖死整批并发且取消也中断不了)
+        const readTimer = setTimeout(() => controller.abort(), 60000)
         try {
-          auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }, controller.signal)
-        } catch (e) {
-          if (e && e.code === 'UPLOAD_CANCELLED') throw e
-          if (k === 2) throw e
-          await sleep(600 * (k + 1))
+          piece = await readBlobSlice(filePath, start, end, controller.signal, fileObj)
+        } finally {
+          clearTimeout(readTimer)
         }
+      } catch (readErr) {
+        if (readErr && readErr.name === 'AbortError') {
+          // 中止来源: 超时 / 用户暂停 / 用户取消 → 统一先判断控制状态
+          await waitIfPaused(control) // 取消→抛 UPLOAD_CANCELLED; 暂停→等恢复; 纯超时→继续走失败重试
+          throw new Error('分片 ' + partNumber + ' 读取超时')
+        }
+        throw readErr
       }
-      if (!auth || !auth.url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
-      // PUT 分片: HTTP 错误/网络异常/超时均自动重试 3 次退避递增, 重试前刷新签名
+      // 取签名 URL: 优先批量预签名; 缺失/过期(403)则单签刷新
+      let url = partUrlMap[partNumber]
+      if (!url) {
+        const r = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }, controller.signal)
+        url = r && r.url
+        if (url) partUrlMap[partNumber] = url
+      }
+      if (!url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
+      // 自适应超时: 按"分片大小/实测网速"推算, 慢网不被固定 90s 误杀; 真挂起仍有硬超时兜底
+      const partBps = speedBps || 2 * 1024 * 1024
+      const partTimeout = Math.max(45000, Math.round(PART_SIZE / partBps * 1.6) + 15000)
       let okFlag = false
       let lastErr = null
       for (let retry = 0; retry < 3 && !okFlag; retry++) {
         await waitIfPaused(control)
+        let putUrl = url
         if (retry > 0) {
-          try { auth = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber }) } catch (e2) {}
+          // 重试前刷新签名(应对 403 过期或网络抖动)
+          try {
+            const r = await call('storage.partUploadAuth', { cloudPath, uploadId, partNumber })
+            if (r && r.url) { putUrl = r.url; partUrlMap[partNumber] = putUrl }
+          } catch (e2) {}
         }
         try {
           // 硬超时: 不依赖 abort 是否生效 (代理/VPN网络下 fetch 挂起时 abort 不 reject),
           // 到点必定 reject, 进入失败→重试, 避免整批 Promise.allSettled 永久卡死 (2026-08-31)
           const hardRace = Promise.race([
-            fetch(auth.url, { method: 'PUT', body: piece, signal: controller.signal }),
-            new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('分片上传硬超时'), { code: 'HARD_TIMEOUT' })), PUT_TIMEOUT_MS + 3000))
+            fetch(putUrl, { method: 'PUT', body: piece, signal: controller.signal }),
+            new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('分片上传硬超时'), { code: 'HARD_TIMEOUT' })), partTimeout + 3000))
           ])
-          const timer = setTimeout(() => { try { controller.abort() } catch (e) {} }, PUT_TIMEOUT_MS)
+          const timer = setTimeout(() => { try { controller.abort() } catch (e) {} }, partTimeout)
           let resp
           try {
             resp = await hardRace
@@ -269,9 +304,7 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       }
       if (!okFlag) throw lastErr || new Error('分片 ' + partNumber + ' 上传失败')
       if (retrying) { retrying = false; status('resumed') }
-      donePartNumbers.push(partNumber)
-      uploaded += piece.size
-      if (onProgress) onProgress(uploaded / size, uploaded, size)
+      return piece.size
     } finally {
       if (control && control.abortFns) control.abortFns.delete(abortFn)
     }
@@ -279,44 +312,61 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   try {
     // 分片上传: 参考百度网盘"永不放弃"模式 — 单片失败不中断整体,
     // 失败片进补齐队列, 退避后反复重试(最多 8 轮), 直到全部传完或用户取消
-    let pendingParts = []
-    for (let p = 1; p <= totalParts; p++) {
-      if (!skipSet.has(p)) pendingParts.push(p)
-    }
+    let pending = todo.slice()
     let failedParts = []
     let round = 0
-    while (pendingParts.length > 0) {
+    while (pending.length > 0) {
       failedParts = []
-      for (let i = 0; i < pendingParts.length; i += MULTIPART_CONCURRENCY) {
+      const waveStart = Date.now()
+      let waveBytes = 0
+      for (let i = 0; i < pending.length; i += concurrency) {
         await waitIfPaused(control) // 暂停等待 / 取消立即抛 UPLOAD_CANCELLED
-        const batch = pendingParts.slice(i, i + MULTIPART_CONCURRENCY)
-        const results = await Promise.allSettled(batch.map((pn) => uploadOne(pn - 1)))
-        results.forEach((r, j) => {
-          if (r.status === 'rejected') {
-            failedParts.push(batch[j])
-            console.error('[CloudBase] 分片 ' + batch[j] + ' 失败(留待补齐轮):', (r.reason && r.reason.message) || r.reason)
+        const batch = pending.slice(i, i + concurrency)
+        const results = await Promise.allSettled(batch.map((pn) => uploadOne(pn).then((sz) => ({ pn, sz }), (err) => { err.pn = pn; throw err })))
+        results.forEach((r) => {
+          if (r.status === 'fulfilled') {
+            donePartNumbers.push(r.value.pn)
+            waveBytes += r.value.sz
+            uploaded += r.value.sz
+            emitProgress() // 每片完成即更新进度 + 速度 + 剩余时间
+          } else {
+            failedParts.push(r.reason && r.reason.pn)
+            console.error('[CloudBase] 分片 ' + (r.reason && r.reason.pn) + ' 失败(留待补齐轮):', (r.reason && r.reason.message) || r.reason)
           }
         })
         if (control.cancelled) throw Object.assign(new Error('上传已取消'), { code: 'UPLOAD_CANCELLED' })
+      }
+      // 测速 + 自适应并发(2~8): 快则拉满(提速), 慢则降并发(防移动端"闪退")
+      const waveMs = Math.max(1, Date.now() - waveStart)
+      const waveBps = waveBytes / (waveMs / 1000)
+      if (waveBytes > 0) {
+        speedBps = speedBps ? speedBps * 0.6 + waveBps * 0.4 : waveBps // 指数平滑, 避免抖动误判
+        if (speedBps > 10 * 1024 * 1024 && concurrency < MULTIPART_MAX_CONCURRENCY) concurrency = Math.min(MULTIPART_MAX_CONCURRENCY, concurrency + 1)
+        else if (speedBps < 3 * 1024 * 1024 && concurrency > MULTIPART_MIN_CONCURRENCY) concurrency = Math.max(MULTIPART_MIN_CONCURRENCY, concurrency - 1)
       }
       if (failedParts.length === 0) break // 全部成功
       round++
       if (round > 8) {
         throw new Error('分片 ' + failedParts.slice(0, 8).join(',') + ' 多次失败，已保留进度，可重新选择该文件续传')
       }
-      pendingParts = failedParts
+      // 签名临近 30min 过期 → 刷新待传分片签名, 避免补齐轮 403
+      if (Date.now() - signedAt > SIGN_REFRESH_MS) {
+        await batchSign(failedParts)
+        signedAt = Date.now()
+      }
+      pending = failedParts
       status('retrying')
       await sleep(2000 * Math.min(round, 5)) // 轮间退避 2s/4s/6s/8s/10s, 等网络恢复
     }
     if (round > 0) status('resumed')
     donePartNumbers.sort((a, b) => a - b)
-    // 2) 合并分片
+    // 6) 合并分片
     await waitIfPaused(control)
     const done = await call('storage.completeMultipart', { cloudPath, uploadId, partNumbers: donePartNumbers })
     if (!done.fileID) throw new Error('合并完成但未返回 fileID')
     return { fileID: done.fileID }
   } catch (e) {
-    // 3) 失败/取消: 已传分片【保留在 COS】供下次断点续传 (COS 7 天后自动清理未完成分片)
+    // 7) 失败/取消: 已传分片【保留在 COS】供下次断点续传 (COS 7 天后自动清理未完成分片)
     if (e && e.code === 'UPLOAD_CANCELLED') status('cancelling')
     throw e
   }

@@ -3194,6 +3194,34 @@ async function storagePartUploadAuth(data) {
     return fail('生成分片签名失败: ' + (e.message || e))
   }
 }
+/* 2b. 批量生成多个分片的 PUT 预签名 URL (一次调用返回所有分片签名, 前端直传)。
+   解决"每片一次云函数取签名"带来的 N 次 RTT 开销 —— 抖音/视频号/小红书同款批量预签名思路:
+   大文件(数百片)上传速度显著提升, 且请求数骤减 → 移动端连接压力下降, 减少"闪退" */
+async function storageBatchPartUploadAuth(data) {
+  const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
+  const uploadId = String(data.uploadId || '')
+  const partNumbers = Array.isArray(data.partNumbers) ? data.partNumbers.map(Number).filter((n) => n > 0) : []
+  if (!cloudPath || !uploadId || !partNumbers.length) return fail('缺少 cloudPath/uploadId/partNumbers')
+  try {
+    const cos = getCos()
+    const BATCH = 50 // 单批上限: 防单次响应体过大, 前端按此分批请求
+    const urls = {}
+    for (let i = 0; i < partNumbers.length; i += BATCH) {
+      const batch = partNumbers.slice(i, i + BATCH)
+      const results = await Promise.all(batch.map((partNumber) => new Promise((resolve, reject) => {
+        cos.getObjectUrl({
+          Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath,
+          Method: 'PUT', Query: { partNumber, uploadId }, Expires: 1800, // 30 分钟, 留足慢网/暂停重试余量
+        }, (err, d) => (err ? reject(err) : resolve({ partNumber, url: d.Url })))
+      })))
+      for (const r of results) urls[r.partNumber] = r.url
+    }
+    return ok({ urls, count: partNumbers.length })
+  } catch (e) {
+    console.error('[storageBatchPartUploadAuth] error:', e.stack || e)
+    return fail('批量生成分片签名失败: ' + (e.message || e))
+  }
+}
 /* 3. 完成分片上传 (合并)。parts 缺省时服务端查询已传分片 ETag (规避浏览器 CORS 读不到 ETag 头) */
 async function storageCompleteMultipart(data) {
   const cloudPath = String(data.cloudPath || '').replace(/^\/+/, '')
@@ -4654,6 +4682,7 @@ const ROUTES = {
   'storage.uploadBase64': storageUploadBase64,
   'storage.createMultipart': storageCreateMultipart,
   'storage.partUploadAuth': storagePartUploadAuth,
+  'storage.batchPartUploadAuth': storageBatchPartUploadAuth,
   'storage.completeMultipart': storageCompleteMultipart,
   'storage.listParts': storageListParts,
   'storage.abortMultipart': storageAbortMultipart,
