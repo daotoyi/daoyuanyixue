@@ -4442,6 +4442,31 @@ function httpsPutBuffer(url, buf) {
   })
 }
 
+/* https DELETE 请求 (用于删除 C/OSS 对象; COS/OSS 无论对象是否存在均返回 2xx) */
+function httpsDelete(url) {
+  return new Promise((resolve, reject) => {
+    try {
+      const https = require('https')
+      const u = new URL(url)
+      const req = https.request(
+        { hostname: u.hostname, path: u.pathname + u.search, method: 'DELETE' },
+        (res) => {
+          let d = ''
+          res.on('data', (c) => (d += c))
+          res.on('end', () => {
+            if (res.statusCode >= 200 && res.statusCode < 300) resolve()
+            else reject(new Error('HTTP ' + res.statusCode + ' ' + d.slice(0, 160)))
+          })
+        }
+      )
+      req.on('error', reject)
+      req.end()
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
 /* 判断视频是否已存储到 C/OSS (对象存储): 本地 = tcb.qcloud.la / cloud://; C/OSS = cos.myqcloud.com 或 settings.oss.domain */
 function isVideoOnOss(url, ossCfg) {
   if (!url || typeof url !== 'string') return false
@@ -4563,6 +4588,109 @@ async function adminOssVideoMigrate(data) {
   await db.collection('courses').doc(course._id).update({ episodes: newEps })
 
   return ok({ migrated: true, video: newUrl })
+}
+
+/* 腾讯云 COS: 生成预签名 DELETE URL (删除对象, 复用上传时的用户凭证) */
+function cosDeleteUrl(cfg, key) {
+  return new Promise((resolve, reject) => {
+    try {
+      const crypto = require('crypto')
+      const now = Math.floor(Date.now() / 1000)
+      const keyTime = `${now - 60};${now + 3600}`
+      const signKey = crypto.createHmac('sha1', cfg.secret_key).update(keyTime).digest('hex')
+      const host = `${cfg.bucket}.cos.${cfg.region}.myqcloud.com`
+      const httpString = `delete\n/${key}\n\nhost=${host}\n`
+      const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
+      const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
+      const signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
+      const auth = `q-sign-algorithm=sha1&q-ak=${cfg.access_key}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
+      resolve(`https://${host}/${key}?${auth}`)
+    } catch (e) {
+      reject(new Error('COS 删除签名失败: ' + (e.message || e)))
+    }
+  })
+}
+
+/* 阿里云 OSS: 生成预签名 DELETE URL */
+function ossDeleteUrl(cfg, key) {
+  return new Promise((resolve, reject) => {
+    try {
+      const crypto = require('crypto')
+      const now = Math.floor(Date.now() / 1000)
+      const expires = now + 3600
+      const resource = `/${cfg.bucket}/${key}`
+      const strToSign = `DELETE\n\n\n${expires}\n${resource}`
+      const signature = crypto.createHmac('sha1', cfg.secret_key).update(strToSign).digest('base64')
+      const auth = encodeURIComponent(signature)
+      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com/${key}?OSSAccessKeyId=${cfg.access_key}&Expires=${expires}&Signature=${auth}`)
+    } catch (e) {
+      reject(new Error('OSS 删除签名失败: ' + (e.message || e)))
+    }
+  })
+}
+
+/* 本地云存储 URL → cloud:// fileID (用于 deleteFile) */
+function localFileIdFromUrl(url) {
+  if (url.indexOf('cloud://') === 0) return url
+  const m = url.match(/https:\/\/[^/]+\.tcb\.qcloud\.la\/(.+)$/)
+  if (m) return `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${decodeURIComponent(m[1])}`
+  return null
+}
+
+/* 删除指定课程课时视频 (本地 CloudBase 存储 或 C/OSS 对象存储) + 清空课时 video 字段, 便于重新上传替换 */
+async function adminOssVideoDelete(data) {
+  const course_id = Number(data.course_id)
+  const episode_index = Number(data.episode_index)
+  if (!course_id && course_id !== 0) return fail('缺少 course_id')
+  if (episode_index === undefined || episode_index === null) return fail('缺少课时序号')
+
+  const [ossRes, courseRes] = await Promise.all([
+    db.collection('settings').where({ group: 'oss' }).limit(1).get(),
+    db.collection('courses').where({ id: course_id }).limit(1).get(),
+  ])
+  const ossCfg = ossRes.data[0] || {}
+  const course = courseRes.data[0]
+  if (!course) return fail('课程不存在')
+  const eps = Array.isArray(course.episodes) ? course.episodes : []
+  const ep = eps[episode_index]
+  if (!ep || !ep.video) return fail('该课时没有可删除的视频')
+
+  const video = ep.video
+  const onOss = isVideoOnOss(video, ossCfg)
+  try {
+    if (onOss) {
+      if (ossCfg.enabled !== '1' && ossCfg.enabled !== true) return fail('C/OSS 配置不可用，无法删除对象')
+      let provider = (ossCfg.provider || '').toLowerCase()
+      if (!provider) {
+        const host = new URL(video).hostname
+        if (host.indexOf('myqcloud.com') !== -1) provider = 'cos'
+        else if (host.indexOf('aliyuncs.com') !== -1) provider = 'oss'
+      }
+      const key = decodeURIComponent(new URL(video).pathname.replace(/^\/+/, ''))
+      if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
+        await httpsDelete(await cosDeleteUrl(ossCfg, key))
+      } else if (provider.indexOf('ali') !== -1 || provider.indexOf('阿里') !== -1 || provider.indexOf('oss') !== -1) {
+        await httpsDelete(await ossDeleteUrl(ossCfg, key))
+      } else {
+        return fail('不支持的服务商: ' + (provider || '未知') + '（仅支持腾讯云COS/阿里云OSS）')
+      }
+    } else {
+      const fileID = localFileIdFromUrl(video)
+      if (!fileID) return fail('无法解析本地视频地址: ' + video)
+      const dr = await app.deleteFile({ fileList: [fileID] })
+      const f = dr && dr.fileList && dr.fileList[0]
+      // status 0=成功, -1=文件不存在(已被删, 视为成功)
+      if (f && f.status !== 0 && f.status !== -1) {
+        console.warn('[adminOssVideoDelete] 本地删除返回非预期状态:', JSON.stringify(f))
+      }
+    }
+  } catch (e) {
+    return fail('删除存储文件失败: ' + (e.message || e))
+  }
+  // 清空课时 video 字段 (保留课时标题/价格等其它信息)
+  const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: '' } : e))
+  await db.collection('courses').doc(course._id).update({ episodes: newEps })
+  return ok({ deleted: true, storage: onOss ? 'oss' : 'local' })
 }
 
 /* 腾讯云 COS: 生成预签名 PUT URL */
@@ -4750,6 +4878,7 @@ const ROUTES = {
   'admin.settings.save': adminSettingsSave,
   'admin.oss.videos.list': adminOssVideosList,
   'admin.oss.videos.migrate': adminOssVideoMigrate,
+  'admin.oss.videos.delete': adminOssVideoDelete,
   'admin.categories.list': adminCateList,
   'admin.categories.create': adminCateCreate,
   'admin.categories.update': adminCateUpdate,

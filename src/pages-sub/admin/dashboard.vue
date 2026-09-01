@@ -1013,7 +1013,10 @@
                 <text class="td oss-col-size">{{ fmtFileSize(v.size_bytes) }}</text>
                 <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? 'C/OSS' : '本地' }}</text>
                 <view class="td oss-col-ops ops">
-                  <text class="op" v-if="!v.inOss && canManageSettings" @tap="migrateOssVideo(v)">搬运到 C/OSS</text>
+                  <template v-if="canManageSettings">
+                    <text class="op" v-if="!v.inOss" @tap="migrateOssVideo(v)">搬运到 C/OSS</text>
+                    <text class="op del" @tap="deleteOssVideo(v)">删除</text>
+                  </template>
                   <text class="op done" v-else>已就绪</text>
                 </view>
               </view>
@@ -1416,7 +1419,7 @@ import {
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
-  adminVideosList, adminVideoMigrate,
+  adminVideosList, adminVideoMigrate, adminVideoDelete,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
@@ -3863,6 +3866,30 @@ async function migrateOssVideo(v) {
   }
 }
 
+/* 删除单个视频 (本地 CloudBase 存储 或 C/OSS 对象存储) 并清空课时 video, 便于重新上传替换 */
+function deleteOssVideo(v) {
+  const storageLabel = v.inOss ? 'C/OSS 对象存储' : '本地云存储'
+  uni.showModal({
+    title: '删除视频',
+    content: `确认删除「${v.course_title} - ${v.episode_title}」的视频吗？\n存储位置：${storageLabel}\n删除后需重新上传替换。`,
+    confirmText: '删除',
+    confirmColor: '#e64340',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        uni.showLoading({ title: '删除中...' })
+        await adminVideoDelete({ course_id: v.course_id, episode_index: v.episode_index })
+        uni.hideLoading()
+        uni.showToast({ title: '已删除', icon: 'success' })
+        await loadOssVideos()
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: e.message || '删除失败', icon: 'none' })
+      }
+    },
+  })
+}
+
 onMounted(async () => {
   // 仅 admin(超管)/manager(管理员,只读)/operator(操作管理员) 可访问后台; 员工(staff)/普通用户(user)拒绝
   if (!userStore.isLoggedIn || !['admin', 'manager', 'operator'].includes(userStore.userInfo.role)) {
@@ -5148,6 +5175,16 @@ onMounted(async () => {
 }
 .op.done {
   color: #3d7a4e;
+}
+/* 删除(危险操作): 加深红 + 描边, 与"搬运到 C/OSS"区分 */
+.op.del {
+  color: #fff;
+  background: #c41e3a;
+  border-radius: 6rpx;
+  font-weight: 600;
+}
+.op.del:active {
+  background: #9c1630;
 }
 
 /* 弹窗表单 */
