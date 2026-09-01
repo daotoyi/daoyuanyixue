@@ -4733,15 +4733,17 @@ function cosDeleteUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
+      const ak = String(cfg.access_key || '').trim()
+      const sk = String(cfg.secret_key || '').trim()
       const now = Math.floor(Date.now() / 1000)
       const keyTime = `${now - 60};${now + 3600}`
-      const signKey = crypto.createHmac('sha1', cfg.secret_key).update(keyTime).digest('hex')
+      const signKey = crypto.createHmac('sha1', sk).update(keyTime).digest('hex')
       const host = `${cfg.bucket}.cos.${cfg.region}.myqcloud.com`
       const httpString = `delete\n/${key}\n\nhost=${host}\n`
       const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
       const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
       const signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
-      const auth = `q-sign-algorithm=sha1&q-ak=${cfg.access_key}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
+      const auth = `q-sign-algorithm=sha1&q-ak=${ak}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
       resolve(`https://${host}/${key}?${auth}`)
     } catch (e) {
       reject(new Error('COS 删除签名失败: ' + (e.message || e)))
@@ -4754,13 +4756,15 @@ function ossDeleteUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
+      const ak = String(cfg.access_key || '').trim()
+      const sk = String(cfg.secret_key || '').trim()
       const now = Math.floor(Date.now() / 1000)
       const expires = now + 3600
       const resource = `/${cfg.bucket}/${key}`
       const strToSign = `DELETE\n\n\n${expires}\n${resource}`
-      const signature = crypto.createHmac('sha1', cfg.secret_key).update(strToSign).digest('base64')
+      const signature = crypto.createHmac('sha1', sk).update(strToSign).digest('base64')
       const auth = encodeURIComponent(signature)
-      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com/${key}?OSSAccessKeyId=${cfg.access_key}&Expires=${expires}&Signature=${auth}`)
+      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com/${key}?OSSAccessKeyId=${ak}&Expires=${expires}&Signature=${auth}`)
     } catch (e) {
       reject(new Error('OSS 删除签名失败: ' + (e.message || e)))
     }
@@ -4886,15 +4890,17 @@ function cosPutUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
+      const ak = String(cfg.access_key || '').trim()
+      const sk = String(cfg.secret_key || '').trim()
       const now = Math.floor(Date.now() / 1000)
       const keyTime = `${now - 60};${now + 3600}`
-      const signKey = crypto.createHmac('sha1', cfg.secret_key).update(keyTime).digest('hex')
+      const signKey = crypto.createHmac('sha1', sk).update(keyTime).digest('hex')
       const host = `${cfg.bucket}.cos.${cfg.region}.myqcloud.com`
       const httpString = `put\n/${key}\n\nhost=${host}\n`
       const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
       const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
       const signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
-      const auth = `q-sign-algorithm=sha1&q-ak=${cfg.access_key}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
+      const auth = `q-sign-algorithm=sha1&q-ak=${ak}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
       resolve(`https://${host}/${key}?${auth}`)
     } catch (e) {
       reject(new Error('COS 签名失败: ' + (e.message || e)))
@@ -4907,13 +4913,15 @@ function ossPutUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
+      const ak = String(cfg.access_key || '').trim()
+      const sk = String(cfg.secret_key || '').trim()
       const now = Math.floor(Date.now() / 1000)
       const expires = now + 3600
       const object = '/' + key
       const strToSign = `PUT\n\nvideo/mp4\n${expires}\n/${cfg.bucket}${object}`
-      const signature = crypto.createHmac('sha1', cfg.secret_key).update(strToSign).digest('base64')
+      const signature = crypto.createHmac('sha1', sk).update(strToSign).digest('base64')
       const auth = encodeURIComponent(signature)
-      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com${object}?OSSAccessKeyId=${cfg.access_key}&Expires=${expires}&Signature=${auth}`)
+      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com${object}?OSSAccessKeyId=${ak}&Expires=${expires}&Signature=${auth}`)
     } catch (e) {
       reject(new Error('OSS 签名失败: ' + (e.message || e)))
     }
