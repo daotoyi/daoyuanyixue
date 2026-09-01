@@ -4648,10 +4648,12 @@ async function adminOssVideoMigrate(data) {
   if (!course) return fail('课程不存在')
   const eps = Array.isArray(course.episodes) ? course.episodes : []
   const ep = eps[episode_index]
-  if (!ep || !ep.video) return fail('课时不存在或无视频')
-  if (isVideoOnOss(ep.video, ossCfg)) return ok({ migrated: true, already: true, video: ep.video })
+  if (!ep) return fail('课时不存在')
+  // srcUrl 优先用前端传入(解决上传后数据库 video 字段尚未回写的时序竞态), 否则用数据库 ep.video
+  const srcUrl = (data.video && /^(https?:|cloud:)/.test(String(data.video))) ? data.video : (ep && ep.video)
+  if (!srcUrl) return fail('课时不存在或无视频')
+  if (isVideoOnOss(srcUrl, ossCfg)) return ok({ migrated: true, already: true, video: srcUrl })
 
-  const srcUrl = ep.video
   // 1) 下载源视频 (CloudBase 云存储 CDN URL → 用 getTempFileURL 换签名 URL → fetch 下载)
   let dlUrl = srcUrl
   if (srcUrl.indexOf('tcb.qcloud.la') !== -1) {

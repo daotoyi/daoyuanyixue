@@ -989,17 +989,17 @@
           <view class="settings-card" v-if="activeSettingsTab === 'oss' && ossEnabled">
             <view class="settings-desc">
               <text class="sd-title">视频存储管理（{{ ossVideoFiltered.length }}）</text>
-              <text class="sd-text">本地存储 = CloudBase 云存储；对象存储（{{ ossStorageLabel() }}）= 课程视频迁移目标。点击「搬运到 {{ ossStorageLabel() }}」将视频迁移到对象存储。</text>
+              <text class="sd-text">云开发COS = CloudBase 云存储（课程视频默认存储）；对象存储（{{ ossStorageLabel() }}）= 迁移目标。点击「搬运到 {{ ossStorageLabel() }}」将视频复制到对象存储。</text>
             </view>
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
               <view class="oss-filter">
                 <text class="of-btn" :class="{ on: ossFilter === 'all' }" @tap="ossFilter = 'all'">全部</text>
-                <text class="of-btn" :class="{ on: ossFilter === 'local' }" @tap="ossFilter = 'local'">本地</text>
+                <text class="of-btn" :class="{ on: ossFilter === 'local' }" @tap="ossFilter = 'local'">云开发COS</text>
                 <text class="of-btn" :class="{ on: ossFilter === 'remote' }" @tap="ossFilter = 'remote'">{{ ossStorageLabel() }}</text>
               </view>
               <text class="oss-summary" v-if="ossVideoList.length">
-                <text class="oss-stat">本地 {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
+                <text class="oss-stat">云开发COS {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
                 <text class="oss-stat">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
               </text>
             </view>
@@ -1016,7 +1016,7 @@
                   <text class="oss-episode">{{ v.episode_title }}</text>
                 </view>
                 <text class="td oss-col-size">{{ fmtFileSize(v.size_bytes) }}</text>
-                <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? ossStorageLabel() : '本地' }}</text>
+                <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? ossStorageLabel() : '云开发COS' }}</text>
                 <view class="td oss-col-ops ops">
                   <template v-if="canManageSettings">
                     <view v-if="v._migrating" class="migrate-progress">
@@ -3165,7 +3165,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     // C/OSS 提示改为【不阻塞上传队列】(2026-08-30 修复: 之前 await 会先查设置再弹窗等用户,
     // 期间 finally/dequeueNext 不执行 → 排队的下一个视频永远不自动开始)
     setTimeout(() => {
-      maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i }).catch(() => {})
+      maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i, video: ep.video }).catch(() => {})
     }, 1200)
   } catch (e) {
     removeNetListeners()
@@ -3927,11 +3927,19 @@ async function migrateOssVideo(v) {
   }
   const timer = setInterval(refresh, 1000)
   try {
-    await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index, taskId })
+    await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index, taskId, video: v.video })
     done = true
   } catch (e) {
+    const mMsg = (e && e.message) || ''
+    // 明确业务失败(云函数返回 fail 消息, 非网络断开) → 直接提示并停止, 不进轮询傻等
+    const isNetDrop = mMsg.indexOf('request:fail') >= 0 || mMsg.indexOf('timeout') >= 0 || mMsg.indexOf('网络') >= 0
+    if (!isNetDrop) {
+      if (item) { item._migrating = false; item._migratePercent = 0 }
+      uni.showToast({ title: mMsg || '搬运失败', icon: 'none' })
+      return
+    }
     // 连接被网关空闲超时断开属预期: 云端仍在后台搬运, 转由下方轮询等待完成
-    console.warn('[migrate] 请求连接断开(后台继续搬运):', e && e.message)
+    console.warn('[migrate] 请求连接断开(后台继续搬运):', mMsg)
   }
   // 等待云端真正搬完 (函数最长 900s, 这里留 880s 余量); 进度冻结 30s 视为真失败
   const deadline = Date.now() + 880000
@@ -3959,7 +3967,7 @@ async function migrateOssVideo(v) {
 
 /* 删除单个视频 (本地 CloudBase 存储 或 C/OSS 对象存储) 并清空课时 video, 便于重新上传替换 */
 function deleteOssVideo(v) {
-  const storageLabel = v.inOss ? `${ossStorageLabel()} 对象存储` : '本地云存储'
+  const storageLabel = v.inOss ? `${ossStorageLabel()} 对象存储` : '云开发COS'
   uni.showModal({
     title: '删除视频',
     content: `确认删除「${v.course_title} - ${v.episode_title}」的视频吗？\n存储位置：${storageLabel}\n删除后需重新上传替换。`,
