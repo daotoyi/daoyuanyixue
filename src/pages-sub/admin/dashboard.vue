@@ -1002,17 +1002,15 @@
               <view class="tr th">
                 <view class="td oss-col-title oss-th-filter">
                   <text class="oss-th-label">课程 / 课时</text>
-                  <view id="ossCourseSel" class="oss-select" @tap.stop="toggleOssCourseFilter">
-                    <text class="oss-select-label">{{ ossCourseLabel }}</text>
-                    <text class="oss-select-caret">▾</text>
+                  <view id="ossCourseSel" class="oss-caret-btn" :class="{ on: ossCourseFilter !== 'all' }" @tap.stop="toggleOssCourseFilter">
+                    <text class="oss-caret-ico">▾</text>
                   </view>
                 </view>
                 <text class="td oss-col-size">大小</text>
                 <view class="td oss-col-type oss-th-filter">
                   <text class="oss-th-label">存储</text>
-                  <view id="ossStorageSel" class="oss-select" @tap.stop="toggleOssStorageFilter">
-                    <text class="oss-select-label">{{ ossStorageLabel2 }}</text>
-                    <text class="oss-select-caret">▾</text>
+                  <view id="ossStorageSel" class="oss-caret-btn" :class="{ on: ossStorageFilter !== 'all' }" @tap.stop="toggleOssStorageFilter">
+                    <text class="oss-caret-ico">▾</text>
                   </view>
                 </view>
                 <text class="td oss-col-ops">操作</text>
@@ -5389,45 +5387,29 @@ onMounted(async () => {
   min-width: 56rpx;
   text-align: right;
 }
-/* 存储筛选下拉(课程/课时 + 存储位置) */
-.oss-select {
-  position: relative;
+/* 表头筛选: 仅保留倒三角按钮(课程/课时、存储 旁) */
+.oss-caret-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 18rpx;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #f6f1ea;
   border: 1rpx solid #e2c9d0;
-  border-radius: 20rpx;
-  background: #fff;
-  font-size: 22rpx;
-  color: #5a6b7b;
-  white-space: nowrap;
   cursor: pointer;
 }
-.oss-select-label {
-  max-width: 300rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.oss-caret-btn.on {
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
-.oss-select-caret {
-  font-size: 18rpx;
+.oss-caret-ico {
+  font-size: 20rpx;
+  line-height: 1;
   color: #b07a1e;
 }
-.oss-select-panel {
-  position: absolute;
-  top: calc(100% + 8rpx);
-  left: 0;
-  min-width: 100%;
-  max-height: 480rpx;
-  overflow-y: auto;
-  background: #fff;
-  border: 1rpx solid #e7ded5;
-  border-radius: 12rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
+.oss-caret-btn.on .oss-caret-ico {
+  color: #fff;
 }
 .oss-opt {
   padding: 14rpx 22rpx;
