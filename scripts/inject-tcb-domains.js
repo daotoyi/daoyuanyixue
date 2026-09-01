@@ -18,8 +18,8 @@ const path = require('path');
 // --- 项目根目录 (macOS 兼容：使用 path.resolve，不假设 cwd) ---
 const ROOT = path.resolve(__dirname, '..');
 
-// --- 读取 manifest.json ---
-const manifestPath = path.join(ROOT, 'manifest.json');
+// --- 读取 manifest.json (uni-app Vite 版源码在 src/ 下) ---
+const manifestPath = path.join(ROOT, 'src', 'manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
 
 // --- 读取 cloudbaserc.json ---

@@ -1,5 +1,5 @@
 {
-  "description": "TCB 域名自动注入 — env: zhenhesheng-d6gkez7p221305432, region: ap-shanghai",
+  "description": "TCB 域名自动注入 — env: cloud1-d8gs2k9m311f7272f, region: ap-shanghai",
   "condition": {},
   "setting": {
     "urlCheck": true
@@ -8,8 +8,8 @@
     "_description": "以下域名需要手动添加到微信小程序管理后台的「服务器域名」配置中",
     "_mpAdminUrl": "https://mp.weixin.qq.com/wxamp/devsetting/domain",
     "request": [
-      "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
-      "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+      "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
+      "https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
       "https://tcb-api.tencentcloudapi.com",
       "https://ap-shanghai.tcb-api.tencentcloudapi.com",
       "https://api.weixin.qq.com",
@@ -17,18 +17,18 @@
       "https://static.cloudbase.net"
     ],
     "uploadFile": [
-      "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
-      "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+      "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
+      "https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
       "https://tcb-api.tencentcloudapi.com"
     ],
     "downloadFile": [
-      "https://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
-      "https://7a68-zhenhesheng-d6gkez7p221305432-1309518368.tcb.qcloud.la",
+      "https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
+      "https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la",
       "https://tcb-api.tencentcloudapi.com",
       "https://static.cloudbase.net"
     ],
     "socket": [
-      "wss://zhenhesheng-d6gkez7p221305432-1309518368.tcloudbaseapp.com",
+      "wss://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com",
       "wss://tcb-api.tencentcloudapi.com"
     ]
   }
