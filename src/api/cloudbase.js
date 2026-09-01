@@ -360,7 +360,34 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     }
     if (round > 0) status('resumed')
     donePartNumbers.sort((a, b) => a - b)
-    // 6) 合并分片
+    // 6) 合并前校验: 以服务端 listParts 为权威, 补齐"客户端以为传完但服务端缺失"的分片
+    // (PUT 偶发 200 但未真正落盘 / 上传中断留下半片 / COS 一致性窗口)。否则 complete 会报
+    // "One or more of the specified parts could not be found", 或静默生成缺片损坏文件。
+    let verifyRounds = 0
+    while (verifyRounds < 4) {
+      await waitIfPaused(control)
+      const lp = await call('storage.listParts', { cloudPath, uploadId }).catch(() => null)
+      const serverParts = new Set((lp && lp.parts) || [])
+      const missing = []
+      for (let p = 1; p <= totalParts; p++) if (!serverParts.has(p)) missing.push(p)
+      if (!missing.length) break
+      console.warn('[CloudBase] 合并前发现服务端缺失分片 ' + missing.join(',') + '，补齐中(' + (verifyRounds + 1) + '/4)')
+      await batchSign(missing)
+      let allOk = true
+      for (const pn of missing) {
+        await waitIfPaused(control)
+        try {
+          const sz = await uploadOne(pn)
+          if (!donePartNumbers.includes(pn)) { donePartNumbers.push(pn); uploaded += sz; emitProgress() }
+        } catch (e2) { allOk = false; console.error('[CloudBase] 补齐分片 ' + pn + ' 失败:', e2 && e2.message) }
+      }
+      if (!allOk) throw new Error('补齐缺失分片失败，已保留进度，可重新选择该文件续传')
+      verifyRounds++
+    }
+    if (verifyRounds >= 4) throw new Error('分片补齐多次仍未与服务端一致，已保留进度，可重新选择该文件续传')
+    donePartNumbers.sort((a, b) => a - b)
+    // 7) 合并分片 (云函数侧对"part not found"做重试兜底)
+    status('completing')
     await waitIfPaused(control)
     const done = await call('storage.completeMultipart', { cloudPath, uploadId, partNumbers: donePartNumbers })
     if (!done.fileID) throw new Error('合并完成但未返回 fileID')

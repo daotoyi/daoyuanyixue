@@ -3233,20 +3233,49 @@ async function storageCompleteMultipart(data) {
   if (!cloudPath || !uploadId) return fail('缺少 cloudPath/uploadId')
   try {
     const cos = getCos()
-    if (!parts.length) {
-      // 服务端查询已上传分片 (multipartListPart 返回字段为 Part), 按 partNumbers 过滤
-      const listRes = await cos.multipartListPart({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
-      const uploaded = (listRes.Part || []).filter(
-        (p) => p && p.PartNumber && (!partNumbers.length || partNumbers.indexOf(Number(p.PartNumber)) !== -1)
-      )
-      if (!uploaded.length) return fail('未找到已上传的分片, 请重试')
-      parts = uploaded.map((p) => ({ PartNumber: p.PartNumber, ETag: String(p.ETag).startsWith('"') ? p.ETag : '"' + p.ETag + '"' }))
+    // 合并重试: COS 分片列表为最终一致, 高并发上传后紧接 complete 可能偶发
+    // "One or more of the specified parts could not be found" (刚传完的分片尚未被 listParts 看到)。
+    // 每次重试重新 listParts 取最新 ETag + PartNumber 再 complete, 通常 1~2 次即命中;
+    // 若分片真的未上传成功(客户端已校验仍缺失), 重试耗尽后明确报出缺失分片号便于定向重传。
+    let lastErr = null
+    for (let attempt = 0; attempt < 5; attempt++) {
+      let useParts = Array.isArray(data.parts)
+        ? data.parts.filter((p) => p && p.PartNumber && p.ETag)
+        : []
+      if (!useParts.length) {
+        const listRes = await cos.multipartListPart({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
+        const uploaded = (listRes.Part || []).filter(
+          (p) => p && p.PartNumber && (!partNumbers.length || partNumbers.indexOf(Number(p.PartNumber)) !== -1)
+        )
+        if (!uploaded.length) return fail('未找到已上传的分片, 请重试')
+        useParts = uploaded.map((p) => ({ PartNumber: p.PartNumber, ETag: String(p.ETag).startsWith('"') ? p.ETag : '"' + p.ETag + '"' }))
+      }
+      try {
+        await cos.multipartComplete({
+          Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId, Parts: useParts,
+        })
+        const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${cloudPath}`
+        return ok({ fileID, url: `https://${COS_BUCKET}.cos.${COS_REGION}.myqcloud.com/${encodeURIComponent(cloudPath)}` })
+      } catch (ce) {
+        lastErr = ce
+        const m = (ce && ce.message ? String(ce.message) : '')
+        const transient = /part.*not found/i.test(m) || /no such upload/i.test(m) || /specified part/i.test(m)
+        if (transient && attempt < 4) {
+          console.warn('[storageCompleteMultipart] part not found, 重试 ' + (attempt + 1) + '/5 (退避后重新 listParts)')
+          await new Promise((r) => setTimeout(r, 800 * Math.pow(2, attempt)))
+          continue
+        }
+        throw ce
+      }
     }
-    await cos.multipartComplete({
-      Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId, Parts: parts,
-    })
-    const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${cloudPath}`
-    return ok({ fileID, url: `https://${COS_BUCKET}.cos.${COS_REGION}.myqcloud.com/${encodeURIComponent(cloudPath)}` })
+    // 重试耗尽仍失败: 诊断缺失分片号, 便于客户端定向重传(断点续传只补这些分片)
+    try {
+      const lr = await cos.multipartListPart({ Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath, UploadId: uploadId })
+      const have = new Set((lr.Part || []).map((p) => Number(p.PartNumber)))
+      const miss = (partNumbers.length ? partNumbers : []).filter((n) => !have.has(n))
+      if (miss.length) return fail('合并分片失败: 分片 ' + miss.join(',') + ' 在云端缺失，请重新上传这些分片后合并')
+    } catch (e2) {}
+    return fail('合并分片失败(重试后仍失败): ' + (lastErr && lastErr.message ? lastErr.message : lastErr))
   } catch (e) {
     console.error('[storageCompleteMultipart] error:', e.stack || e)
     return fail('合并分片失败: ' + (e.message || e))
