@@ -993,15 +993,30 @@
             </view>
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
-              <view class="oss-filter">
-                <text class="of-btn" :class="{ on: ossFilter === 'all' }" @tap="ossFilter = 'all'">全部</text>
-                <text class="of-btn" :class="{ on: ossFilter === 'local' }" @tap="ossFilter = 'local'">云开发COS</text>
-                <text class="of-btn" :class="{ on: ossFilter === 'remote' }" @tap="ossFilter = 'remote'">{{ ossStorageLabel() }}</text>
+              <!-- 课程/课时 下拉筛选 -->
+              <view class="oss-select" @tap="ossCourseOpen = !ossCourseOpen">
+                <text class="oss-select-label">{{ ossCourseLabel }}</text>
+                <text class="oss-select-caret">▾</text>
+                <view class="oss-select-panel" v-if="ossCourseOpen" @tap.stop>
+                  <text class="oss-opt" :class="{ on: ossCourseFilter === 'all' }" @tap="selectOssCourse('all')">全部课程</text>
+                  <text class="oss-opt" v-for="c in ossCourseOptions" :key="c.course_id" :class="{ on: ossCourseFilter === c.course_id }" @tap="selectOssCourse(c.course_id)">{{ c.course_title }}</text>
+                </view>
+              </view>
+              <!-- 存储位置 下拉筛选 -->
+              <view class="oss-select" @tap="ossStorageOpen = !ossStorageOpen">
+                <text class="oss-select-label">{{ ossStorageLabel2 }}</text>
+                <text class="oss-select-caret">▾</text>
+                <view class="oss-select-panel" v-if="ossStorageOpen" @tap.stop>
+                  <text class="oss-opt" :class="{ on: ossStorageFilter === 'all' }" @tap="selectOssStorage('all')">全部位置</text>
+                  <text class="oss-opt" :class="{ on: ossStorageFilter === 'local' }" @tap="selectOssStorage('local')">云开发COS</text>
+                  <text class="oss-opt" :class="{ on: ossStorageFilter === 'remote' }" @tap="selectOssStorage('remote')">{{ storageTargetLabel }}</text>
+                </view>
               </view>
               <text class="oss-summary" v-if="ossVideoList.length">
                 <text class="oss-stat">云开发COS {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
                 <text class="oss-stat">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
               </text>
+              <view class="oss-dropdown-mask" v-if="ossCourseOpen || ossStorageOpen" @tap="ossCourseOpen = false; ossStorageOpen = false"></view>
             </view>
             <view class="table oss-video-table" v-if="ossVideoFiltered.length">
               <view class="tr th">
@@ -3856,13 +3871,46 @@ const ossLocalBytes = computed(() => ossVideosLocal.value.reduce((s, v) => s + (
 const ossRemoteBytes = computed(() => ossVideosRemote.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
 /* 服务商(cos/oss): 决定"对象存储"显示为 COS 还是 OSS, 以及搬运按钮/筛选文案 */
 const ossProvider = ref('cos')
-/* 列表筛选: all 全部 / local 本地 / remote 对象存储 */
-const ossFilter = ref('all')
+/* 列表筛选: 存储位置(全部/云开发COS=本地/腾讯COS=对象存储) + 课程(按 course_id) */
+const ossStorageFilter = ref('all')
+const ossCourseFilter = ref('all')
+const ossCourseOpen = ref(false)
+const ossStorageOpen = ref(false)
 const ossVideoFiltered = computed(() => {
-  if (ossFilter.value === 'local') return ossVideoList.value.filter((v) => !v.inOss)
-  if (ossFilter.value === 'remote') return ossVideoList.value.filter((v) => v.inOss)
-  return ossVideoList.value
+  let list = ossVideoList.value
+  if (ossCourseFilter.value !== 'all') list = list.filter((v) => v.course_id === ossCourseFilter.value)
+  if (ossStorageFilter.value === 'local') list = list.filter((v) => !v.inOss)
+  else if (ossStorageFilter.value === 'remote') list = list.filter((v) => v.inOss)
+  return list
 })
+/* 课程下拉选项: 从列表去重得到 课程ID→标题 */
+const ossCourseOptions = computed(() => {
+  const map = new Map()
+  ossVideoList.value.forEach((v) => {
+    if (v.course_id && !map.has(v.course_id)) map.set(v.course_id, v.course_title)
+  })
+  return Array.from(map, ([course_id, course_title]) => ({ course_id, course_title }))
+})
+const ossCourseLabel = computed(() => {
+  if (ossCourseFilter.value === 'all') return '全部课程'
+  const c = ossCourseOptions.value.find((x) => x.course_id === ossCourseFilter.value)
+  return c ? c.course_title : '全部课程'
+})
+/* 存储位置下拉当前显示名 (对象存储目标随服务商显示 腾讯COS / 阿里云OSS) */
+const storageTargetLabel = computed(() => (ossProvider.value === 'oss' ? '阿里云OSS' : '腾讯COS'))
+const ossStorageLabel2 = computed(() => {
+  if (ossStorageFilter.value === 'all') return '全部位置'
+  if (ossStorageFilter.value === 'local') return '云开发COS'
+  return storageTargetLabel.value
+})
+function selectOssCourse(id) {
+  ossCourseFilter.value = id
+  ossCourseOpen.value = false
+}
+function selectOssStorage(val) {
+  ossStorageFilter.value = val
+  ossStorageOpen.value = false
+}
 /* 对象存储显示名: 根据服务商返回 COS / OSS */
 function ossStorageLabel() {
   return ossProvider.value === 'oss' ? 'OSS' : 'COS'
@@ -5309,26 +5357,68 @@ onMounted(async () => {
   min-width: 56rpx;
   text-align: right;
 }
-/* 存储筛选(全部 / 本地 / 对象存储) */
-.oss-filter {
-  display: flex;
-  flex-direction: row;
+/* 存储筛选下拉(课程/课时 + 存储位置) */
+.oss-select {
+  position: relative;
+  display: inline-flex;
   align-items: center;
   gap: 8rpx;
-  margin-left: 16rpx;
-}
-.of-btn {
-  font-size: 20rpx;
-  color: #5a6b7b;
-  padding: 4rpx 16rpx;
+  padding: 8rpx 18rpx;
   border: 1rpx solid #e2c9d0;
   border-radius: 20rpx;
+  background: #fff;
+  font-size: 22rpx;
+  color: #5a6b7b;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.oss-select-label {
+  max-width: 300rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.of-btn.on {
-  color: #fff;
-  background: #c41e3a;
-  border-color: #c41e3a;
+.oss-select-caret {
+  font-size: 18rpx;
+  color: #b07a1e;
+}
+.oss-select-panel {
+  position: absolute;
+  top: calc(100% + 8rpx);
+  left: 0;
+  min-width: 100%;
+  max-height: 480rpx;
+  overflow-y: auto;
+  background: #fff;
+  border: 1rpx solid #e7ded5;
+  border-radius: 12rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+}
+.oss-opt {
+  padding: 14rpx 22rpx;
+  font-size: 22rpx;
+  color: #33302b;
+  white-space: nowrap;
+  border-bottom: 1rpx solid #f3eee8;
+}
+.oss-opt:last-child {
+  border-bottom: none;
+}
+.oss-opt.on {
+  color: #c41e3a;
+  background: #fdf3f5;
+  font-weight: 600;
+}
+.oss-opt:active {
+  background: #f6f1ea;
+}
+.oss-dropdown-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
 }
 .op.done {
   color: #3d7a4e;
