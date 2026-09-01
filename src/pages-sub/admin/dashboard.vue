@@ -3167,14 +3167,14 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 不再写回结果
     console.log('[上传] gen=' + myGen + ' 分片合并完成')
     const url = fileID.replace(/^cloud:\/\/[^/]+\//, 'https://636c-cloud1-d8gs2k9m311f7272f-1464523137.tcb.qcloud.la/')
+    // 稳健写回: 优先按 _key 命中当前弹窗活对象, 否则按原对象引用(索引), 弹窗重建/课时重排也不丢视频 (2026-09-02 修复)
+    const liveEp = (courseForm.value.episodes || []).find((e) => ep._key && e._key === ep._key)
+      || (courseForm.value.episodes || [])[courseForm.value.episodes.indexOf(ep)]
+      || ep
+    liveEp.video = url
+    if (!liveEp.title) liveEp.title = `第${(courseForm.value.episodes || []).indexOf(liveEp) + 1}集`
     ep.video = url
-    if (!ep.title) ep.title = `第${i + 1}集`
-    // 若弹窗已关闭重开 (episodes 重建为新对象), 按 _key 把 URL/标题同步到界面当前对象, 避免进度丢失 (2026-08-30)
-    const curEp = courseForm.value.episodes.find((e) => e._key && e._key === ep._key)
-    if (curEp && curEp !== ep) {
-      curEp.video = ep.video
-      if (!curEp.title) curEp.title = ep.title
-    }
+    if (!ep.title) ep.title = liveEp.title
     ep._uploading = false
     ep._paused = false
     ep._progress = 100
@@ -3425,6 +3425,12 @@ const courseForm = ref({})
 function openCourseForm(c) {
   // 切换课程清理 (2026-08-30): 若当前上传/排队的任务属于其他课程, 中止并保留进度, 防止"幽灵上传"残留
   const newCid = c ? c.id : null
+  // 同一课程且仍有上传/排队任务 → 保留内存表单(含未保存视频与上传状态), 不重建 episodes,
+  // 否则队列里 ep 引用会脱离新数组, 前面排队的视频写回失效(只生效最后两个) (2026-09-02 修复)
+  if (newCid != null && courseForm.value.id === newCid && ((currentUploadingEp && currentUploadingCourseId === newCid) || uploadQueue.value.length > 0)) {
+    showCourse.value = true
+    return
+  }
   if (currentUploadingEp && currentUploadingCourseId !== newCid) {
     const ctrl = currentUploadingEp._control
     if (ctrl) {
