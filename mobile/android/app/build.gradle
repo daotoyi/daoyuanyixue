@@ -7,8 +7,8 @@ android {
         applicationId "cn.codebuddy.zhs.workbuddy"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 383
-        versionName "1.11.287"
+        versionCode 384
+        versionName "1.11.288"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

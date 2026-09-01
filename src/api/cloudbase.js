@@ -251,9 +251,13 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
         if (url) partUrlMap[partNumber] = url
       }
       if (!url) throw new Error('获取分片 ' + partNumber + ' 上传签名失败')
-      // 自适应超时: 按"分片大小/实测网速"推算, 慢网不被固定 90s 误杀; 真挂起仍有硬超时兜底
-      const partBps = speedBps || 2 * 1024 * 1024
-      const partTimeout = Math.max(45000, Math.round(PART_SIZE / partBps * 1.6) + 15000)
+      // 自适应超时: 按"单分片大小 / 单连接实测吞吐"推算, 不再写死 45s。
+      // 关键: 16 个分片在 HTTP/2 下被合并成【一条 TCP 连接】(COS_UPLOAD_HOSTS 为空时),
+      //   该连接被限速 ~778KB/s → 单分片实际要 ~85s, 远超旧固定 45s → 误超时→重试→最终自我放弃("自己退出")。
+      //   故用 实测聚合速度 / 当前并发 = 单连接吞吐 推算每片耗时, 再给 2.5 倍余量 + 15s, 下限 60s, 上限 10min;
+      //   这样"慢但仍在传"的分片永不被误杀, 同时真挂起仍有硬超时兜底 (2026-09-01 修复上传自动退出)
+      const perConnBps = speedBps ? Math.max(64 * 1024, speedBps / Math.max(1, concurrency)) : 128 * 1024
+      const partTimeout = Math.min(600000, Math.max(60000, Math.round(PART_SIZE / perConnBps * 2.5) + 15000))
       let okFlag = false
       let lastErr = null
       for (let retry = 0; retry < 3 && !okFlag; retry++) {
@@ -350,7 +354,7 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       }
       if (failedParts.length === 0) break // 全部成功
       round++
-      if (round > 8) {
+      if (round > 16) {
         throw new Error('分片 ' + failedParts.slice(0, 8).join(',') + ' 多次失败，已保留进度，可重新选择该文件续传')
       }
       // 签名临近 30min 过期 → 刷新待传分片签名, 避免补齐轮 403
