@@ -3890,7 +3890,10 @@ async function loadOssVideos() {
   }
 }
 
-/* 搬运单个视频到 C/OSS (带行内进度条: 云端写字节级进度, 前端按 taskId 轮询展示) */
+/* 搬运单个视频到 C/OSS (带行内进度条: 云端写字节级进度, 前端按 taskId 轮询展示)
+   健壮性: 搬运是云端长连接任务, 网关空闲超时可能先掐断 HTTP 连接(报 request:fail),
+   但云端仍在后台继续搬运 —— 因此请求断开后不立即判失败, 改为继续轮询 DB 进度,
+   直到云端真正写入 phase='done'(搬完) 或进度冻结超时才判定结果 */
 async function migrateOssVideo(v) {
   const taskId = `${v.course_id}_${v.episode_index}_${Date.now()}`
   // 行内进度标记 (ossVideoList 为 ref 深层响应, 修改子属性可触发更新)
@@ -3900,30 +3903,55 @@ async function migrateOssVideo(v) {
     item._migratePhase = 'transfer'
     item._migratePercent = 0
   }
-  let timer = null
-  const poll = async () => {
+  let done = false
+  let lastPercent = -1
+  let frozenSince = 0
+  const refresh = async () => {
     try {
       const p = await adminVideoMigrateProgress({ taskId })
-      if (item && p) {
+      if (!p) return
+      if (item) {
         item._migratePercent = p.percent || 0
         item._migratePhase = p.phase || 'transfer'
       }
+      if (p.phase === 'done' || p.percent >= 100) done = true
+      if (p.percent === lastPercent) {
+        if (!frozenSince) frozenSince = Date.now()
+      } else {
+        frozenSince = 0
+        lastPercent = p.percent || 0
+      }
     } catch (e) {}
   }
-  timer = setInterval(poll, 1000)
+  const timer = setInterval(refresh, 1000)
   try {
     await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index, taskId })
-    if (timer) clearInterval(timer)
-    await poll()
+    done = true
+  } catch (e) {
+    // 连接被网关空闲超时断开属预期: 云端仍在后台搬运, 转由下方轮询等待完成
+    console.warn('[migrate] 请求连接断开(后台继续搬运):', e && e.message)
+  }
+  // 等待云端真正搬完 (函数最长 900s, 这里留 880s 余量); 进度冻结 30s 视为真失败
+  const deadline = Date.now() + 880000
+  while (!done && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 1000))
+    await refresh()
+    if (frozenSince && Date.now() - frozenSince > 30000) break
+  }
+  clearInterval(timer)
+  if (done) {
+    if (item) {
+      item._migrating = false
+      item._migratePercent = 100
+    }
     uni.showToast({ title: `已搬运到 ${ossStorageLabel()}`, icon: 'success' })
     await loadOssVideos()
-  } catch (e) {
-    if (timer) clearInterval(timer)
+  } else {
     if (item) {
       item._migrating = false
       item._migratePercent = 0
     }
-    uni.showToast({ title: e.message || '搬运失败', icon: 'none' })
+    uni.showToast({ title: '搬运失败或超时，请重试', icon: 'none' })
   }
 }
 
@@ -5454,6 +5482,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10rpx;
   margin-left: 10rpx;
   flex-shrink: 0;
