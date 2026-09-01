@@ -4645,6 +4645,7 @@ async function adminOssVideoMigrate(data) {
   if (ossCfg.enabled !== '1' && ossCfg.enabled !== true) return fail('C/OSS 存储未启用，请先在系统设置中开启')
   const provider = (ossCfg.provider || '').toLowerCase()
   if (!ossCfg.access_key || !ossCfg.secret_key || !ossCfg.bucket || !ossCfg.region) return fail('C/OSS 配置不完整（AccessKey/Bucket/Region 必填）')
+  const targetHost = `${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`
 
   const course = courseRes.data[0]
   if (!course) return fail('课程不存在')
@@ -4704,7 +4705,9 @@ async function adminOssVideoMigrate(data) {
     return ok({ migrated: true, video: newUrl, taskId })
   } catch (migErr) {
     // 把真实错误落库(phase=error), 前端轮询可拿到并提示, 避免只看到笼统的"搬运失败或超时"
-    const msg = (migErr && migErr.message) || '搬运失败'
+    const raw = (migErr && migErr.message) || '搬运失败'
+    // 在错误信息里带上目标桶域名, 便于一眼区分是 配置/权限/区域 问题还是源下载问题
+    const msg = raw.indexOf(targetHost) !== -1 ? raw : `${raw}（目标桶：${targetHost}）`
     console.error('[adminOssVideoMigrate] 搬运失败:', msg)
     try { await reportProgress(0, 'error', msg) } catch (e) {}
     return fail(msg)
@@ -4826,6 +4829,56 @@ async function adminOssVideoDelete(data) {
   const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: '' } : e))
   await db.collection('courses').doc(course._id).update({ episodes: newEps })
   return ok({ deleted: true, storage: onOss ? 'oss' : 'local' })
+}
+
+/* 测试 C/OSS 配置是否正确(后台「测试连接」按钮): 用配置密钥做一次极小预签名 PUT + DELETE 探测, 返回腾讯云精确错误码 */
+async function adminOssConfigTest() {
+  let ossRes
+  try {
+    ossRes = await db.collection('settings').where({ group: 'oss' }).limit(1).get()
+  } catch (e) { return fail('读取配置失败: ' + (e.message || e)) }
+  const ossCfg = ossRes.data[0] || {}
+  if (ossCfg.enabled !== '1' && ossCfg.enabled !== true) return fail('C/OSS 存储未启用（请先在开关处开启）')
+  const provider = (ossCfg.provider || '').toLowerCase()
+  if (!ossCfg.access_key || !ossCfg.secret_key || !ossCfg.bucket || !ossCfg.region) {
+    return fail('C/OSS 配置不完整：需填写 AccessKeyId / AccessKeySecret / Bucket / Region')
+  }
+  const targetHost = `${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`
+  const probeKey = `_migrate_probe_${Date.now()}.txt`
+  try {
+    let upUrl
+    let delUrl
+    if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
+      upUrl = await cosPutUrl(ossCfg, probeKey)
+      delUrl = await cosDeleteUrl(ossCfg, probeKey)
+    } else if (provider.indexOf('ali') !== -1 || provider.indexOf('阿里') !== -1 || provider.indexOf('oss') !== -1) {
+      upUrl = await ossPutUrl(ossCfg, probeKey)
+      delUrl = await ossDeleteUrl(ossCfg, probeKey)
+    } else {
+      return fail('不支持的服务商: ' + (provider || '未知') + '（仅支持腾讯云COS/阿里云OSS）')
+    }
+    // 极小的探测对象(1 字节): 验证密钥 / 权限 / 区域 / 桶名 全链路
+    await httpsPutBuffer(upUrl, Buffer.from('1'))
+    // 清理探测对象(失败仅告警, 不阻断)
+    try { await httpsDelete(delUrl) } catch (e) { console.warn('[adminOssConfigTest] 清理探测对象失败:', e.message || e) }
+    const tip = ossCfg.domain ? `（访问域名：${ossCfg.domain}）` : `（默认域名：https://${targetHost}）`
+    return ok({ ok: true, message: `配置正确，可正常写入 ${ossCfg.bucket}（${ossCfg.region}）` + tip })
+  } catch (e) {
+    const raw = String(e && e.message ? e.message : e)
+    const code = (raw.match(/<Code>([^<]+)<\/Code>/) || [])[1] || ''
+    const cosMsg = (raw.match(/<Message>([^<]+)<\/Message>/) || [])[1] || ''
+    let reason = '未知错误'
+    if (code === 'AccessDenied') reason = '密钥无权限：子账号需授予 COS 数据写入权限（QcloudCOSDataWrite 或该桶 PutObject），主账号密钥则可直接写'
+    else if (code === 'NoSuchBucket') reason = 'Bucket 不存在：请核对 Bucket 名称（需含 APPID 后缀，如 xxx-1250000000），且属于当前密钥所在账号'
+    else if (code === 'SignatureDoesNotMatch') reason = '签名不匹配：AccessKeySecret 填写错误（多了空格/换行，或复制不全）'
+    else if (code === 'InvalidAccessKeyId') reason = 'AccessKeyId 不存在或已禁用/过期'
+    else if (code === 'AuthorizationHeaderExpired') reason = '请求已过期：服务器时间偏差过大，或签名有效期过短'
+    else if (raw.indexOf('getaddrinfo') !== -1 || raw.indexOf('ENOTFOUND') !== -1 || raw.indexOf('ECONNREFUSED') !== -1) reason = '无法连接域名：Region 可能填错（桶不在该地域），或 Bucket 名称有误'
+    else if (code) reason = code + (cosMsg ? '：' + cosMsg : '')
+    else if (cosMsg) reason = cosMsg
+    else if (raw) reason = raw.slice(0, 160)
+    return ok({ ok: false, error: reason, target: targetHost, raw: raw.slice(0, 300) })
+  }
 }
 
 /* 腾讯云 COS: 生成预签名 PUT URL */
@@ -5015,6 +5068,7 @@ const ROUTES = {
   'admin.oss.videos.migrate': adminOssVideoMigrate,
   'admin.oss.videos.migrate.progress': adminOssVideoMigrateProgress,
   'admin.oss.videos.delete': adminOssVideoDelete,
+  'admin.oss.config.test': adminOssConfigTest,
   'admin.categories.list': adminCateList,
   'admin.categories.create': adminCateCreate,
   'admin.categories.update': adminCateUpdate,

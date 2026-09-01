@@ -981,7 +981,12 @@
 
             <view class="settings-actions">
               <text class="settings-tip">敏感字段保存后不显示明文，留空保存则保持原值</text>
+              <view class="btn-p sm" v-if="activeSettingsTab === 'oss' && canManageSettings" @click="testOssConfig">{{ ossTesting ? '测试中...' : '测试连接' }}</view>
               <view class="btn-p sm" v-if="canManageSettings" @click="saveSettings">{{ settingsSaving ? '保存中...' : '保存配置' }}</view>
+            </view>
+            <view class="oss-test-result" v-if="activeSettingsTab === 'oss' && ossTestResult">
+              <text :class="['oss-test-icon', ossTestResult.ok ? 'ok' : 'bad']">{{ ossTestResult.ok ? '✓' : '✗' }}</text>
+              <text class="oss-test-msg">{{ ossTestResult.ok ? ossTestResult.message : ossTestResult.error }}</text>
             </view>
           </view>
 
@@ -3878,6 +3883,30 @@ function clearSettingsSecret(f) {
   settingsForm.value[f.key] = ''
 }
 
+/* 测试 C/OSS 配置是否正确: 调云函数做一次极小预签名 PUT+DELETE 探测, 直出腾讯云错误码 */
+const ossTesting = ref(false)
+const ossTestResult = ref(null)
+async function testOssConfig() {
+  ossTesting.value = true
+  ossTestResult.value = null
+  try {
+    const res = await adminOssConfigTest({})
+    // 云函数一律返回 ok({ ok, ... }); 用内部 ok 字段判断
+    const d = (res && res.data) || res || {}
+    if (d.ok === true) {
+      ossTestResult.value = { ok: true, message: d.message || '配置正确' }
+      uni.showToast({ title: '连接成功', icon: 'success' })
+    } else {
+      ossTestResult.value = { ok: false, error: d.error || '配置有误' }
+      uni.showToast({ title: '配置有误，见下方说明', icon: 'none' })
+    }
+  } catch (e) {
+    ossTestResult.value = { ok: false, error: (e && e.message) || '测试失败' }
+  } finally {
+    ossTesting.value = false
+  }
+}
+
 /* ===== C/OSS 视频存储管理 ===== */
 const ossEnabled = computed(() => settingsForm.value.enabled === '1' || settingsForm.value.enabled === true)
 const ossVideoList = ref([])
@@ -5029,6 +5058,29 @@ onMounted(async () => {
   color: #8a857c;
   flex: 1;
   margin-right: 20rpx;
+}
+/* C/OSS 配置测试连接结果 */
+.oss-test-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  background: #f6f1ea;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+.oss-test-icon {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.oss-test-icon.ok { color: #2e9e5b; }
+.oss-test-icon.bad { color: #c41e3a; }
+.oss-test-msg {
+  color: #4a443d;
+  flex: 1;
+  white-space: pre-wrap;
 }
 /* 动态管理: 发布权限开关 一行显示 */
 .moment-cfg-row {

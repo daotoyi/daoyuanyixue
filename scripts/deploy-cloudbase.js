@@ -112,27 +112,17 @@ async function deployFunctions() {
 
   for (const fn of dirs) {
     log(`📦 部署云函数: ${fn}...`)
+    const fnRoot = path.join(fnDir, fn)
     try {
       execSync(
-        `npx -y mcporter call cloudbase.manageFunctions action=createFunction ` +
+        `npx -y mcporter call cloudbase.manageFunctions action=updateFunctionCode ` +
         `envId=${ENV_ID} functionName=${fn} ` +
-        `localPath=${path.join(fnDir, fn)}`,
+        `functionRootPath=${fnRoot}`,
         { stdio: 'inherit', cwd: ROOT }
       )
-      ok(`云函数 ${fn} 部署成功`)
+      ok(`云函数 ${fn} 更新成功`)
     } catch (e) {
-      warn(`云函数 ${fn} 部署失败 (可能已存在, 尝试更新)`)
-      try {
-        execSync(
-          `npx -y mcporter call cloudbase.manageFunctions action=updateFunctionCode ` +
-          `envId=${ENV_ID} functionName=${fn} ` +
-          `localPath=${path.join(fnDir, fn)}`,
-          { stdio: 'inherit', cwd: ROOT }
-        )
-        ok(`云函数 ${fn} 更新成功`)
-      } catch (e2) {
-        console.error(e2.message)
-      }
+      warn(`云函数 ${fn} 更新失败: ${e.message || e}`)
     }
   }
 }
