@@ -32,16 +32,17 @@ let _initPromise = null
      2) 小分片优先(默认 4MB): 长连接极短 → 几乎不被网络/代理/NAT 掐断(这是"上传自动断"的根因,
         曾因放大到 32~128MB 长连接导致频繁中断); 单分片失败只丢 4MB、秒级补齐。仅 >40GB 逼近
         10000 片上限时才按需放大。移动端"闪退"由并发(2~8)+小分片内存可控共同规避。
-     3) 自适应并发 + 实时测速: 按实测带宽在 2~8 之间动态调速, 慢网降并发、快网拉满。
+     3) 自适应并发 + 实时测速: 默认拉满并发(8~16)聚合多连接带宽; "慢网降并发"是反模式(单连接被限速恰恰需要更多连接),
+        故仅在分片失败/超时(网络真不稳)时临时降并发, 成功则维持并缓慢拉满。配合多上传域名可突破单 TCP 连接限速。
      4) 自适应超时: 单片超时按"分片大小/实测网速"推算, 不再固定 90s → 慢网不被误杀,
         真挂起仍有硬超时兜底。
      5) 内存安全: 每片 读→传→释放, 任意时刻仅 1 片在内存; 暂停/取消可中断。
    协议: createMultipart → batchPartUploadAuth(批量签名) → (fetch PUT × N, 并发自适应) → completeMultipart */
 const MULTIPART_MIN_PART = 1 * 1024 * 1024          // 最小分片 1MB (COS 下限)
 const MULTIPART_MAX_PART = 512 * 1024 * 1024        // 最大分片 512MB
-const MULTIPART_MIN_CONCURRENCY = 2                 // 最慢/最不稳网络下的并发片数(防移动端"闪退")
-const MULTIPART_INIT_CONCURRENCY = 4                // 起始并发(保守起手, 测速后再拉满)
-const MULTIPART_MAX_CONCURRENCY = 8                 // 带宽充足时拉满的并发片数(不超浏览器同域连接上限)
+const MULTIPART_MIN_CONCURRENCY = 6                 // 最小并发片数: 单 TCP 连接常被代理/COS 限速(~1MB/s), 需多连接聚合带宽, 故下限提到 6
+const MULTIPART_INIT_CONCURRENCY = 8                // 起始并发(高起手, 立即铺满多条连接聚合带宽)
+const MULTIPART_MAX_CONCURRENCY = 16                // 并发上限(单域名 h1 浏览器限 6 连接→实际 6 生效; 配多上传域名后可到 16)
 const MULTIPART_MAX_PARTS = 10000                    // COS 分片数硬上限
 const MULTIPART_SIGN_BATCH = 200                    // 批量签名单批上限(防单次响应体过大)
 const SIGN_REFRESH_MS = 25 * 60 * 1000              // 签名有效期 30min, 超过 25min 自动刷新待传分片签名
@@ -205,7 +206,7 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   for (let p = 1; p <= totalParts; p++) if (!skipSet.has(p)) todo.push(p)
   await batchSign(todo)
 
-  // 5) 自适应并发 + 分片上传 (按 wave 调度, 每波测速后调并发 2~8; 实时进度/速度/剩余时间)
+  // 5) 自适应并发 + 分片上传 (按 wave 调度, 成功拉满/失败降并发; 实时进度/速度/剩余时间)
   let concurrency = MULTIPART_INIT_CONCURRENCY
   let speedBps = 0
   let retrying = false
@@ -342,8 +343,10 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       const waveBps = waveBytes / (waveMs / 1000)
       if (waveBytes > 0) {
         speedBps = speedBps ? speedBps * 0.6 + waveBps * 0.4 : waveBps // 指数平滑, 避免抖动误判
-        if (speedBps > 10 * 1024 * 1024 && concurrency < MULTIPART_MAX_CONCURRENCY) concurrency = Math.min(MULTIPART_MAX_CONCURRENCY, concurrency + 1)
-        else if (speedBps < 3 * 1024 * 1024 && concurrency > MULTIPART_MIN_CONCURRENCY) concurrency = Math.max(MULTIPART_MIN_CONCURRENCY, concurrency - 1)
+        // 反转自适应: 单连接被限速(慢)恰恰需要更多连接聚合带宽, 故"慢不降并发";
+        // 仅当本波出现分片失败/超时(网络真不稳)才临时降并发, 否则缓慢拉满到 MAX
+        if (failedParts.length > 0 && concurrency > MULTIPART_MIN_CONCURRENCY) concurrency = Math.max(MULTIPART_MIN_CONCURRENCY, concurrency - 1)
+        else if (concurrency < MULTIPART_MAX_CONCURRENCY) concurrency = Math.min(MULTIPART_MAX_CONCURRENCY, concurrency + 1)
       }
       if (failedParts.length === 0) break // 全部成功
       round++

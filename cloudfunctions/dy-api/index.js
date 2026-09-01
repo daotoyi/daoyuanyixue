@@ -3146,6 +3146,10 @@ let cosSdk = null
 try { cosSdk = require('cos-nodejs-sdk-v5') } catch (e) { console.warn('[cos] cos-nodejs-sdk-v5 未安装:', e.message) }
 const COS_BUCKET = '636c-cloud1-d8gs2k9m311f7272f-1464523137'   // COS 桶名 (bucket-appid)
 const COS_REGION = 'ap-shanghai'
+// 多上传域名轮询(突破单 TCP 连接限速): 留空=单域名(桶默认 host); 开启 COS 全球加速后填入加速域名(同桶),
+// 批量预签名会按 partNumber 取模轮流分配不同 host → 前端 PUT 形成多条独立 TCP 连接, 聚合带宽。
+// 例: ['636c-cloud1-d8gs2k9m311f7272f-1464523137.cos.accelerate.myqcloud.com']
+const COS_UPLOAD_HOSTS = []
 let _cosInst = null
 function getCos() {
   if (!cosSdk) throw new Error('cos-nodejs-sdk-v5 未安装')
@@ -3206,13 +3210,23 @@ async function storageBatchPartUploadAuth(data) {
     const cos = getCos()
     const BATCH = 50 // 单批上限: 防单次响应体过大, 前端按此分批请求
     const urls = {}
+    // 多上传域名轮询: 按 partNumber 取模分配不同 host, 形成多条独立 TCP 连接聚合带宽(需对应域名已开启 + CORS 覆盖)
+    const HOSTS = Array.isArray(COS_UPLOAD_HOSTS) && COS_UPLOAD_HOSTS.length ? COS_UPLOAD_HOSTS : []
     for (let i = 0; i < partNumbers.length; i += BATCH) {
       const batch = partNumbers.slice(i, i + BATCH)
       const results = await Promise.all(batch.map((partNumber) => new Promise((resolve, reject) => {
         cos.getObjectUrl({
           Bucket: COS_BUCKET, Region: COS_REGION, Key: cloudPath,
           Method: 'PUT', Query: { partNumber, uploadId }, Expires: 1800, // 30 分钟, 留足慢网/暂停重试余量
-        }, (err, d) => (err ? reject(err) : resolve({ partNumber, url: d.Url })))
+        }, (err, d) => {
+          if (err) return reject(err)
+          let url = d.Url
+          if (HOSTS.length) {
+            const h = HOSTS[partNumber % HOSTS.length]
+            if (h) url = url.replace(/^https?:\/\/[^/]+/, 'https://' + h)
+          }
+          resolve({ partNumber, url })
+        })
       })))
       for (const r of results) urls[r.partNumber] = r.url
     }
