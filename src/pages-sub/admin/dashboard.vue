@@ -959,10 +959,10 @@
                 />
                 <picker
                   v-else-if="f.type === 'select'"
-                  :range="f.options || []"
-                  @change="settingsForm[f.key] = (f.options || [])[$event.detail.value]"
+                  :range="(f.options || []).map((o) => (typeof o === 'object' ? o.label : o))"
+                  @change="onSelectSetting(f, $event)"
                 >
-                  <view class="f-input" :class="{ ph: !settingsForm[f.key] }">{{ settingsForm[f.key] || (f.options && f.options[0]) || '请选择' }}</view>
+                  <view class="f-input" :class="{ ph: !settingsForm[f.key] }">{{ settingSelectLabel(f) }}</view>
                 </picker>
                 <input
                   v-else
@@ -988,40 +988,45 @@
           <!-- ===== C/OSS 存储管理 (启用后显示视频存储列表) ===== -->
           <view class="settings-card" v-if="activeSettingsTab === 'oss' && ossEnabled">
             <view class="settings-desc">
-              <text class="sd-title">视频存储管理（{{ ossVideoList.length }}）</text>
-              <text class="sd-text">本地存储 = CloudBase 云存储；C/OSS = 对象存储。点击「搬运到 C/OSS」将视频迁移到对象存储。</text>
+              <text class="sd-title">视频存储管理（{{ ossVideoFiltered.length }}）</text>
+              <text class="sd-text">本地存储 = CloudBase 云存储；对象存储（{{ ossStorageLabel() }}）= 课程视频迁移目标。点击「搬运到 {{ ossStorageLabel() }}」将视频迁移到对象存储。</text>
             </view>
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
+              <view class="oss-filter">
+                <text class="of-btn" :class="{ on: ossFilter === 'all' }" @tap="ossFilter = 'all'">全部</text>
+                <text class="of-btn" :class="{ on: ossFilter === 'local' }" @tap="ossFilter = 'local'">本地</text>
+                <text class="of-btn" :class="{ on: ossFilter === 'remote' }" @tap="ossFilter = 'remote'">{{ ossStorageLabel() }}</text>
+              </view>
               <text class="oss-summary" v-if="ossVideoList.length">
                 <text class="oss-stat">本地 {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
-                <text class="oss-stat">C/OSS {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
+                <text class="oss-stat">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
               </text>
             </view>
-            <view class="table oss-video-table" v-if="ossVideoList.length">
+            <view class="table oss-video-table" v-if="ossVideoFiltered.length">
               <view class="tr th">
                 <text class="td oss-col-title">课程 / 课时</text>
                 <text class="td oss-col-size">大小</text>
                 <text class="td oss-col-type">存储</text>
                 <text class="td oss-col-ops">操作</text>
               </view>
-              <view class="tr" v-for="(v, vi) in ossVideoList" :key="vi">
+              <view class="tr" v-for="(v, vi) in ossVideoFiltered" :key="vi">
                 <view class="td oss-col-title">
                   <text class="oss-course">{{ v.course_title }}</text>
                   <text class="oss-episode">{{ v.episode_title }}</text>
                 </view>
                 <text class="td oss-col-size">{{ fmtFileSize(v.size_bytes) }}</text>
-                <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? 'C/OSS' : '本地' }}</text>
+                <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? ossStorageLabel() : '本地' }}</text>
                 <view class="td oss-col-ops ops">
                   <template v-if="canManageSettings">
-                    <text class="op" v-if="!v.inOss" @tap="migrateOssVideo(v)">搬运到 C/OSS</text>
+                    <text class="op" v-if="!v.inOss" @tap="migrateOssVideo(v)">搬运到 {{ ossStorageLabel() }}</text>
                     <text class="op del" @tap="deleteOssVideo(v)">删除</text>
                   </template>
                   <text class="op done" v-else>已就绪</text>
                 </view>
               </view>
             </view>
-            <view class="empty-tip" v-else-if="!ossLoading">暂无可管理的视频</view>
+            <view class="empty-tip" v-else-if="!ossLoading">暂无可管理的视频（或当前筛选无结果）</view>
           </view>
 
           <!-- ===== 小程序接管 (仅"小程序接管"tab 显示) ===== -->
@@ -3699,7 +3704,7 @@ const settingsTabs = [
     group: 'oss', label: 'C/OSS 存储', desc: '对象存储，用于图片/文件上传；开启后可管理课程视频本地/C/OSS 存储',
     fields: [
       { key: 'enabled', label: '启用 C/OSS 存储', type: 'switch', desc: '开启后上传视频时可选择存储到 C/OSS，并可搬运本地视频' },
-      { key: 'provider', label: '服务商', placeholder: '腾讯云COS / 阿里云OSS' },
+      { key: 'provider', label: '服务商', type: 'select', options: [{ label: '腾讯云COS', value: 'cos' }, { label: '阿里云OSS', value: 'oss' }], placeholder: '选择对象存储服务商' },
       { key: 'access_key', label: 'AccessKeyId', secret: true },
       { key: 'secret_key', label: 'AccessKeySecret', secret: true },
       { key: 'bucket', label: 'Bucket 名称' },
@@ -3762,6 +3767,19 @@ const currentSettingsTab = computed(
 
 function hasSecret(key) {
   return !!(settingsOriginal.value[activeSettingsTab.value] || {})[key]
+}
+
+/* 设置表单 select: 兼容 string[] 与 { label, value }[] 两种 options */
+function settingSelectLabel(f) {
+  const val = settingsForm.value[f.key]
+  const opts = f.options || []
+  if (!val) return (opts[0] && (typeof opts[0] === 'object' ? opts[0].label : opts[0])) || '请选择'
+  const hit = opts.find((o) => (typeof o === 'object' ? o.value : o) === val)
+  return hit ? (typeof hit === 'object' ? hit.label : hit) : val
+}
+function onSelectSetting(f, e) {
+  const opt = (f.options || [])[e.detail.value]
+  settingsForm.value[f.key] = typeof opt === 'object' ? opt.value : opt
 }
 
 function switchSettingsTab(group) {
@@ -3828,6 +3846,19 @@ const ossVideosRemote = computed(() => ossVideoList.value.filter((v) => v.inOss)
 /* 本地 / C/OSS 存储体积合计 (size_bytes 为 null 的跳过) */
 const ossLocalBytes = computed(() => ossVideosLocal.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
 const ossRemoteBytes = computed(() => ossVideosRemote.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
+/* 服务商(cos/oss): 决定"对象存储"显示为 COS 还是 OSS, 以及搬运按钮/筛选文案 */
+const ossProvider = ref('cos')
+/* 列表筛选: all 全部 / local 本地 / remote 对象存储 */
+const ossFilter = ref('all')
+const ossVideoFiltered = computed(() => {
+  if (ossFilter.value === 'local') return ossVideoList.value.filter((v) => !v.inOss)
+  if (ossFilter.value === 'remote') return ossVideoList.value.filter((v) => v.inOss)
+  return ossVideoList.value
+})
+/* 对象存储显示名: 根据服务商返回 COS / OSS */
+function ossStorageLabel() {
+  return ossProvider.value === 'oss' ? 'OSS' : 'COS'
+}
 
 /* 文件大小格式化: null/0 → "-"; B/KB/MB/GB 智能显示 */
 function fmtFileSize(bytes) {
@@ -3845,6 +3876,7 @@ async function loadOssVideos() {
   try {
     const res = await adminVideosList({})
     ossVideoList.value = Array.isArray(res.videos) ? res.videos : []
+    ossProvider.value = (res.oss_provider || 'cos').toLowerCase()
   } catch (e) {
     uni.showToast({ title: e.message || '加载视频列表失败', icon: 'none' })
   } finally {
@@ -3858,7 +3890,7 @@ async function migrateOssVideo(v) {
     uni.showLoading({ title: '搬运中...' })
     await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index })
     uni.hideLoading()
-    uni.showToast({ title: '已搬运到 C/OSS', icon: 'success' })
+    uni.showToast({ title: `已搬运到 ${ossStorageLabel()}`, icon: 'success' })
     await loadOssVideos()
   } catch (e) {
     uni.hideLoading()
@@ -3868,7 +3900,7 @@ async function migrateOssVideo(v) {
 
 /* 删除单个视频 (本地 CloudBase 存储 或 C/OSS 对象存储) 并清空课时 video, 便于重新上传替换 */
 function deleteOssVideo(v) {
-  const storageLabel = v.inOss ? 'C/OSS 对象存储' : '本地云存储'
+  const storageLabel = v.inOss ? `${ossStorageLabel()} 对象存储` : '本地云存储'
   uni.showModal({
     title: '删除视频',
     content: `确认删除「${v.course_title} - ${v.episode_title}」的视频吗？\n存储位置：${storageLabel}\n删除后需重新上传替换。`,
@@ -4485,8 +4517,16 @@ onMounted(async () => {
   border-radius: 8rpx;
   background: #fbe9ec;
 }
+/* 操作列: 搬运/删除 按钮同一行, 不换行 */
+.ops {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10rpx;
+}
 .op {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: #c41e3a;
   padding: 4rpx 10rpx;
   white-space: nowrap;
@@ -5130,12 +5170,14 @@ onMounted(async () => {
 .oss-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16rpx;
   margin: 16rpx 0;
 }
 .oss-summary {
   display: flex;
   gap: 16rpx;
+  margin-left: auto;
   font-size: 22rpx;
   color: #55524c;
 }
@@ -5170,8 +5212,29 @@ onMounted(async () => {
   color: #55524c;
 }
 .oss-col-ops {
-  width: 180rpx;
+  width: 240rpx;
   flex-shrink: 0;
+}
+/* 存储筛选(全部 / 本地 / 对象存储) */
+.oss-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8rpx;
+  margin-left: 16rpx;
+}
+.of-btn {
+  font-size: 20rpx;
+  color: #5a6b7b;
+  padding: 4rpx 16rpx;
+  border: 1rpx solid #e2c9d0;
+  border-radius: 20rpx;
+  white-space: nowrap;
+}
+.of-btn.on {
+  color: #fff;
+  background: #c41e3a;
+  border-color: #c41e3a;
 }
 .op.done {
   color: #3d7a4e;

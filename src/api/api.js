@@ -24,7 +24,7 @@ function delay(ms = 150) {
  * 调用 CloudBase 云函数 dy-api
  * 统一响应: { status, data, msg }
  */
-async function _callFunction(action, data = {}) {
+async function _callFunction(action, data = {}, opts = {}) {
   // #ifdef MP-WEIXIN
   // 微信小程序: 走 wx.cloud.callFunction (已绑定环境)
   // 注意: 不能用动态 import() —— 微信小程序不支持, 编译产物会变成 await 字符串导致运行时报错
@@ -41,12 +41,13 @@ async function _callFunction(action, data = {}) {
 
   // #ifndef MP-WEIXIN
   // H5 / App: HTTP 网关直调
+  // timeout 可被调用方覆盖(如搬运大视频到 C/OSS 需较长时间, 默认 15s 会触发 request:fail timeout)
   return new Promise((resolve, reject) => {
     uni.request({
       url: API_BASE,
       method: 'POST',
       data: { action, data },
-      timeout: 15000,
+      timeout: opts.timeout || 15000,
       success: (res) => {
         if (res.data && res.data.status === 200) {
           resolve(res.data.data)
@@ -285,7 +286,7 @@ function _adminAuth(data = {}) {
   }
 }
 
-const _admin = (action) => (data = {}) => _callFunction(action, _adminAuth(data))
+const _admin = (action, opts) => (data = {}) => _callFunction(action, _adminAuth(data), opts)
 
 export const adminDashboard = _admin('admin.dashboard')
 
@@ -323,7 +324,7 @@ export const adminOrderReconcile = _admin('admin.orders.reconcile')
 export const adminSettingsGet = _admin('admin.settings.get')
 export const adminSettingsSave = _admin('admin.settings.save')
 export const adminVideosList = _admin('admin.oss.videos.list')
-export const adminVideoMigrate = _admin('admin.oss.videos.migrate')
+export const adminVideoMigrate = _admin('admin.oss.videos.migrate', { timeout: 120000 })
 export const adminVideoDelete = _admin('admin.oss.videos.delete')
 export const adminCateList = _admin('admin.categories.list')
 export const adminCateCreate = _admin('admin.categories.create')

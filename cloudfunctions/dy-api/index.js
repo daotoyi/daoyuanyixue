@@ -4467,6 +4467,50 @@ function httpsDelete(url) {
   })
 }
 
+/* 流式搬运: GET 源视频 → 直传 PUT 目标 (不整段缓冲, 规避大文件 OOM/超时) */
+function httpsPipe(srcUrl, dstUrl) {
+  return new Promise((resolve, reject) => {
+    try {
+      const https = require('https')
+      const su = new URL(srcUrl)
+      const getReq = https.request(
+        { hostname: su.hostname, path: su.pathname + su.search, method: 'GET' },
+        (getRes) => {
+          if (getRes.statusCode !== 200) {
+            getRes.resume()
+            reject(new Error('下载源视频失败 HTTP ' + getRes.statusCode))
+            return
+          }
+          const cl = getRes.headers['content-length']
+          const du = new URL(dstUrl)
+          const putReq = https.request(
+            {
+              hostname: du.hostname,
+              path: du.pathname + du.search,
+              method: 'PUT',
+              headers: { 'Content-Type': 'video/mp4', ...(cl ? { 'Content-Length': cl } : {}) },
+            },
+            (putRes) => {
+              let d = ''
+              putRes.on('data', (c) => (d += c))
+              putRes.on('end', () => {
+                if (putRes.statusCode >= 200 && putRes.statusCode < 300) resolve()
+                else reject(new Error('上传到对象存储失败 HTTP ' + putRes.statusCode + ' ' + d.slice(0, 160)))
+              })
+            }
+          )
+          putReq.on('error', reject)
+          getRes.pipe(putReq)
+        }
+      )
+      getReq.on('error', reject)
+      getReq.end()
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
 /* 判断视频是否已存储到 C/OSS (对象存储): 本地 = tcb.qcloud.la / cloud://; C/OSS = cos.myqcloud.com 或 settings.oss.domain */
 function isVideoOnOss(url, ossCfg) {
   if (!url || typeof url !== 'string') return false
@@ -4521,7 +4565,11 @@ async function adminOssVideosList() {
       v.size_bytes = null
     }
   }
-  return ok({ videos, oss_enabled: ossCfg.enabled === '1' || ossCfg.enabled === true })
+  return ok({
+    videos,
+    oss_enabled: ossCfg.enabled === '1' || ossCfg.enabled === true,
+    oss_provider: (ossCfg.provider || 'cos').toLowerCase(),
+  })
 }
 
 /* 将指定课程课时视频从本地(CloudBase 云存储)搬运到 C/OSS (复制到目标 COS 桶) */
@@ -4559,27 +4607,29 @@ async function adminOssVideoMigrate(data) {
       dlUrl = (fl && (fl.tempFileURL || fl.download_url)) || srcUrl
     }
   }
-  let buf = null
-  try {
-    buf = await httpsGetBuffer(dlUrl)
-  } catch (e) {
-    return fail('下载源视频失败: ' + (e.message || e))
-  }
-  if (!buf || !buf.length) return fail('下载源视频内容为空')
 
   // 2) 上传到目标对象存储 (腾讯云 COS: PUT 直传带签名; 阿里云 OSS: 同理 PUT)
   const extMatch = srcUrl.match(/\.([a-zA-Z0-9]+)(\?|$)/)
   const ext = extMatch ? extMatch[1] : 'mp4'
   const key = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`
 
+  let upUrl
   if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
-    const upUrl = await cosPutUrl(ossCfg, key)
-    await httpsPutBuffer(upUrl, buf)
+    upUrl = await cosPutUrl(ossCfg, key)
   } else if (provider.indexOf('ali') !== -1 || provider.indexOf('阿里') !== -1 || provider.indexOf('oss') !== -1) {
-    const upUrl = await ossPutUrl(ossCfg, key)
-    await httpsPutBuffer(upUrl, buf)
+    upUrl = await ossPutUrl(ossCfg, key)
   } else {
     return fail('不支持的服务商: ' + (provider || '未知') + '（仅支持腾讯云COS/阿里云OSS）')
+  }
+
+  // 流式搬运(优先, 不整段缓冲大文件): GET 源 → PUT 目标; 源无 Content-Length 时退回缓冲模式
+  try {
+    await httpsPipe(dlUrl, upUrl)
+  } catch (pipeErr) {
+    console.warn('[adminOssVideoMigrate] 流式搬运失败, 退回缓冲模式:', pipeErr.message || pipeErr)
+    const buf = await httpsGetBuffer(dlUrl)
+    if (!buf || !buf.length) return fail('下载源视频内容为空')
+    await httpsPutBuffer(upUrl, buf)
   }
 
   // 3) 更新课程课时视频地址为 C/OSS 访问地址
