@@ -16,7 +16,7 @@
 
 ## MCP 工具铁律
 - 云函数部署: manageFunctions action=updateFunctionCode functionRootPath=cloudfunctions/dy-api **绝对路径**
-- H5 部署: manageHosting action=upload localPath=dist/build/h5 cloudPath=/
+- H5 部署: manageHosting action=upload localPath=dist/build/h5 cloudPath=/h5/ (**务必 /h5/ 子路径; 曾误写 / 把 H5 传到根目录覆盖官网首页, deploy-cloudbase.js 已修正)
 - 认证: 设备码 auth 浏览器授权 (会话过期重授权)
 - 云函数新增路由 **必须重部署**; write update 是**整体替换语义**(改字段带全字段)
 - 私有读桶直连 CDN 一律 403 → 走 app.fileUrl getTempFileURL 签名 URL (数据库存 cloud:// fileID)
@@ -39,6 +39,7 @@
 ## 静态托管路径布局 (铁律)
 - 根 `/` = 官网; `/h5/` = H5 应用; `/download/` = 下载页; `/apk/` = APK 文件
 - **自定义域名 club.zhenhesheng.cn 路径映射不统一**: `/apk/*` 走 h5 前缀, `/download/` 走根目录 → 发布 APK 时 `/apk`+`/download` 与 `/h5/apk`+`/h5/download` **两处都传**; 上传 cloudPath 严格限定 `/apk/` 或 `/download/`, **绝不传根** (覆盖官网首页)
+- **H5 应用部署 cloudPath 必须 = /h5/** (deploy-cloudbase.js 已固定为 /h5/), 与官网根 / 严格分离; 切勿改回 / (会覆盖官网首页, 且 /h5/ 路径长期不更新导致用户看到旧版本, 见 2026-09-01 v1.11.289 部署事故)
 - 测试域名访问会弹警告 → 下载页/APK 链接一律用 club.zhenhesheng.cn
 
 ## CSS / 展示铁律

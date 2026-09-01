@@ -61,7 +61,7 @@ async function deployH5() {
   try {
     execSync(
       `npx -y mcporter call cloudbase.manageHosting action=upload ` +
-      `envId=${ENV_ID} localPath=${distPath} cloudPath=/`,
+      `envId=${ENV_ID} localPath=${distPath} cloudPath=/h5/`,
       { stdio: 'inherit', cwd: ROOT }
     )
     ok('H5 部署完成')

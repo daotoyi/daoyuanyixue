@@ -993,37 +993,39 @@
             </view>
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
-              <!-- 课程/课时 下拉筛选 -->
-              <view class="oss-select" @tap="ossCourseOpen = !ossCourseOpen">
-                <text class="oss-select-label">{{ ossCourseLabel }}</text>
-                <text class="oss-select-caret">▾</text>
-                <view class="oss-select-panel" v-if="ossCourseOpen" @tap.stop>
-                  <text class="oss-opt" :class="{ on: ossCourseFilter === 'all' }" @tap="selectOssCourse('all')">全部课程</text>
-                  <text class="oss-opt" v-for="c in ossCourseOptions" :key="c.course_id" :class="{ on: ossCourseFilter === c.course_id }" @tap="selectOssCourse(c.course_id)">{{ c.course_title }}</text>
-                </view>
-              </view>
-              <!-- 存储位置 下拉筛选 -->
-              <view class="oss-select" @tap="ossStorageOpen = !ossStorageOpen">
-                <text class="oss-select-label">{{ ossStorageLabel2 }}</text>
-                <text class="oss-select-caret">▾</text>
-                <view class="oss-select-panel" v-if="ossStorageOpen" @tap.stop>
-                  <text class="oss-opt" :class="{ on: ossStorageFilter === 'all' }" @tap="selectOssStorage('all')">全部位置</text>
-                  <text class="oss-opt" :class="{ on: ossStorageFilter === 'local' }" @tap="selectOssStorage('local')">云开发COS</text>
-                  <text class="oss-opt" :class="{ on: ossStorageFilter === 'remote' }" @tap="selectOssStorage('remote')">{{ storageTargetLabel }}</text>
-                </view>
-              </view>
               <text class="oss-summary" v-if="ossVideoList.length">
                 <text class="oss-stat">云开发COS {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
                 <text class="oss-stat">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
               </text>
-              <view class="oss-dropdown-mask" v-if="ossCourseOpen || ossStorageOpen" @tap="ossCourseOpen = false; ossStorageOpen = false"></view>
             </view>
             <view class="table oss-video-table" v-if="ossVideoFiltered.length">
               <view class="tr th">
-                <text class="td oss-col-title">课程 / 课时</text>
+                <view class="td oss-col-title oss-th-filter">
+                  <text class="oss-th-label">课程 / 课时</text>
+                  <view id="ossCourseSel" class="oss-select" @tap.stop="toggleOssCourseFilter">
+                    <text class="oss-select-label">{{ ossCourseLabel }}</text>
+                    <text class="oss-select-caret">▾</text>
+                  </view>
+                </view>
                 <text class="td oss-col-size">大小</text>
-                <text class="td oss-col-type">存储</text>
+                <view class="td oss-col-type oss-th-filter">
+                  <text class="oss-th-label">存储</text>
+                  <view id="ossStorageSel" class="oss-select" @tap.stop="toggleOssStorageFilter">
+                    <text class="oss-select-label">{{ ossStorageLabel2 }}</text>
+                    <text class="oss-select-caret">▾</text>
+                  </view>
+                </view>
                 <text class="td oss-col-ops">操作</text>
+              </view>
+              <view class="oss-th-panel-mask" v-if="ossCourseOpen || ossStorageOpen" @tap="closeOssFilters"></view>
+              <view v-if="ossCourseOpen" class="oss-th-panel" :style="coursePanelStyle">
+                <text class="oss-opt" :class="{ on: ossCourseFilter === 'all' }" @tap="selectOssCourse('all')">全部课程</text>
+                <text class="oss-opt" v-for="c in ossCourseOptions" :key="c.course_id" :class="{ on: ossCourseFilter === c.course_id }" @tap="selectOssCourse(c.course_id)">{{ c.course_title }}</text>
+              </view>
+              <view v-if="ossStorageOpen" class="oss-th-panel" :style="storagePanelStyle">
+                <text class="oss-opt" :class="{ on: ossStorageFilter === 'all' }" @tap="selectOssStorage('all')">全部位置</text>
+                <text class="oss-opt" :class="{ on: ossStorageFilter === 'local' }" @tap="selectOssStorage('local')">云开发COS</text>
+                <text class="oss-opt" :class="{ on: ossStorageFilter === 'remote' }" @tap="selectOssStorage('remote')">{{ storageTargetLabel }}</text>
               </view>
               <view class="tr" v-for="(v, vi) in ossVideoFiltered" :key="vi">
                 <view class="td oss-col-title">
@@ -1232,10 +1234,10 @@
                   <view class="ep-up-row">
                     <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
                     <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
-                    <text class="ep-up-speed" v-if="ep._speed">{{ formatSpeed(ep._speed) }} · 剩 {{ formatEta(ep._eta) }}</text>
                     <text class="ep-up-btn" @tap="togglePauseEpisodeUpload(ep)">{{ ep._paused ? '继续' : '暂停' }}</text>
                     <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
                   </view>
+                  <text class="ep-up-meta">网速 {{ ep._speed > 0 ? formatSpeed(ep._speed) : '计算中…' }} · 剩余 {{ ep._speed > 0 ? formatEta(ep._eta) : '计算中…' }}</text>
                   <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
                 </view>
                 <!-- 排队等待中: 显示等待上传 + 可取消排队 (2026-08-30 排队策略: 一次只传一个, 其他依次等待) -->
@@ -3911,6 +3913,36 @@ function selectOssStorage(val) {
   ossStorageFilter.value = val
   ossStorageOpen.value = false
 }
+/* 表头筛选下拉: 用 fixed 定位弹出面板, 避免被 .table 的 overflow:auto 裁剪 (绝对定位会被裁) */
+const coursePanelStyle = ref({})
+const storagePanelStyle = ref({})
+function placeOssFilterPanel(id) {
+  return new Promise((resolve) => {
+    uni.createSelectorQuery().select('#' + id).boundingClientRect((r) => {
+      if (!r) return resolve({})
+      let top = r.bottom + 6
+      const estH = 340
+      try {
+        const wh = uni.getSystemInfoSync().windowHeight || 800
+        if (top + estH > wh) top = Math.max(6, r.top - estH - 6)
+      } catch (e) {}
+      resolve({ position: 'fixed', top: top + 'px', left: r.left + 'px', minWidth: r.width + 'px', maxWidth: '82vw' })
+    }).exec()
+  })
+}
+async function toggleOssCourseFilter() {
+  if (ossCourseOpen.value) { ossCourseOpen.value = false; return }
+  ossStorageOpen.value = false
+  coursePanelStyle.value = await placeOssFilterPanel('ossCourseSel')
+  ossCourseOpen.value = true
+}
+async function toggleOssStorageFilter() {
+  if (ossStorageOpen.value) { ossStorageOpen.value = false; return }
+  ossCourseOpen.value = false
+  storagePanelStyle.value = await placeOssFilterPanel('ossStorageSel')
+  ossStorageOpen.value = true
+}
+function closeOssFilters() { ossCourseOpen.value = false; ossStorageOpen.value = false }
 /* 对象存储显示名: 根据服务商返回 COS / OSS */
 function ossStorageLabel() {
   return ossProvider.value === 'oss' ? 'OSS' : 'COS'
@@ -5315,7 +5347,7 @@ onMounted(async () => {
   color: #8a857c;
 }
 .oss-col-type {
-  width: 160rpx;
+  width: 200rpx;
   flex-shrink: 0;
   white-space: nowrap;
   font-size: 22rpx;
@@ -5414,6 +5446,43 @@ onMounted(async () => {
 }
 .oss-opt:active {
   background: #f6f1ea;
+}
+/* 表头筛选: 下拉入口嵌入表头单元格(课程/课时、存储 旁) */
+.oss-video-table .tr.th .oss-th-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  flex-wrap: nowrap;
+}
+.oss-th-label {
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* 表头筛选下拉面板: fixed 定位(避免被 .table overflow 裁剪) */
+.oss-th-panel {
+  position: fixed;
+  z-index: 80;
+  background: #fff;
+  border: 1rpx solid #e7ded5;
+  border-radius: 12rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
+  max-height: 480rpx;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.oss-th-panel-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+/* 进度条下方的网速/剩余时间(总是显示) */
+.ep-up-meta {
+  font-size: 20rpx;
+  color: #5a6b7b;
+  text-align: right;
 }
 .oss-dropdown-mask {
   position: fixed;
