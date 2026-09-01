@@ -2824,7 +2824,7 @@ function uploadCourseVideo() {
         uni.hideLoading()
         uni.showToast({ title: '视频已上传', icon: 'success' })
         // C/OSS 启用时提示是否搬运到 C/OSS (单视频 → 第一课时)
-        await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: 0 })
+        await maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: 0, video: courseForm.value.video, course_title: courseForm.value.title })
       } catch (e) {
         uni.hideLoading()
         uni.showToast({ title: uploadErrMsg(e), icon: 'none' })
@@ -3180,7 +3180,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     // C/OSS 提示改为【不阻塞上传队列】(2026-08-30 修复: 之前 await 会先查设置再弹窗等用户,
     // 期间 finally/dequeueNext 不执行 → 排队的下一个视频永远不自动开始)
     setTimeout(() => {
-      maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i, video: ep.video }).catch(() => {})
+      maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i, video: ep.video, course_title: courseForm.value.title, episode_title: ep.title || ('第' + (i + 1) + '集') }).catch(() => {})
     }, 1200)
   } catch (e) {
     removeNetListeners()
@@ -3267,6 +3267,19 @@ function abortAllParts(control) {
   control.abortFns.forEach((fn) => { try { fn() } catch (e) {} })
 }
 
+/* 从视频 URL 取文件名(便于弹窗标明是哪个文件) */
+function ossFileNameOf(videoUrl) {
+  if (!videoUrl) return ''
+  try {
+    const u = new URL(videoUrl)
+    const parts = u.pathname.split('/')
+    return decodeURIComponent(parts[parts.length - 1] || '')
+  } catch (e) {
+    const parts = String(videoUrl).split('?')[0].split('/')
+    return parts[parts.length - 1] || ''
+  }
+}
+
 /* C/OSS 启用时: 询问是否将刚上传的本地视频搬运到 C/OSS */
 async function maybeMigrateToOss(v) {
   let ossEnabledFlag = false
@@ -3276,9 +3289,14 @@ async function maybeMigrateToOss(v) {
     ossEnabledFlag = cfg.enabled === '1' || cfg.enabled === true
   } catch (e) { /* 忽略, 默认不提示 */ }
   if (!ossEnabledFlag) return
+  const label = [v.course_title, v.episode_title].filter(Boolean).join(' · ')
+  const fname = ossFileNameOf(v.video)
+  let content = '是否将该视频同时存储到 C/OSS（对象存储）？'
+  if (label) content += '\n课程：' + label
+  if (fname) content += '\n文件：' + fname
   uni.showModal({
     title: 'C/OSS 存储',
-    content: '是否将该视频同时存储到 C/OSS（对象存储）？',
+    content,
     confirmText: '存储到 C/OSS',
     cancelText: '暂存本地',
     success: async (r) => {
