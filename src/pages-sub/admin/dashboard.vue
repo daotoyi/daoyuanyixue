@@ -1452,7 +1452,7 @@ import {
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
-  adminVideosList, adminVideoMigrate, adminVideoMigrateProgress, adminVideoDelete,
+  adminVideosList, adminVideoMigrate, adminVideoMigrateProgress, adminVideoDelete, adminOssConfigTest,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
