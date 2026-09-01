@@ -4619,10 +4619,11 @@ async function adminOssVideoMigrate(data) {
   // 搬运进度 taskId: 供前端轮询展示进度条 (云端写出字节级进度, 前端按 taskId 读)
   const taskId = String(data.taskId || `${course_id}_${episode_index}_${Date.now()}`)
   let _lastReport = 0
-  const reportProgress = async (percent, phase) => {
+  const reportProgress = async (percent, phase, error) => {
     const now = Date.now()
     const isDone = phase === 'done'
-    if (now - _lastReport < 800 && !isDone) return
+    // 终态(done/error)或节流到期才写入; error 即时落库便于前端轮询拿到真实错误
+    if (now - _lastReport < 800 && !isDone && phase !== 'error') return
     _lastReport = now
     const finalPercent = isDone ? 100 : Math.max(0, Math.min(99, Math.floor(percent || 0)))
     await upsertMigrateProgress({
@@ -4631,6 +4632,7 @@ async function adminOssVideoMigrate(data) {
       episode_index,
       phase: phase || 'transfer',
       percent: finalPercent,
+      error: error || '',
       updatedAt: now,
     })
   }
@@ -4654,51 +4656,59 @@ async function adminOssVideoMigrate(data) {
   if (!srcUrl) return fail('课时不存在或无视频')
   if (isVideoOnOss(srcUrl, ossCfg)) return ok({ migrated: true, already: true, video: srcUrl })
 
-  // 1) 下载源视频 (CloudBase 云存储 CDN URL → 用 getTempFileURL 换签名 URL → fetch 下载)
-  let dlUrl = srcUrl
-  if (srcUrl.indexOf('tcb.qcloud.la') !== -1) {
-    const m = srcUrl.match(/https:\/\/[^/]+\.tcb\.qcloud\.la\/(.+)$/)
-    if (m) {
-      const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${decodeURIComponent(m[1])}`
-      const tres = await app.getTempFileURL({ fileList: [{ fileID, maxAge: 7200 }] })
-      const fl = tres && tres.fileList && tres.fileList[0]
-      dlUrl = (fl && (fl.tempFileURL || fl.download_url)) || srcUrl
-    }
-  }
-
-  // 2) 上传到目标对象存储 (腾讯云 COS: PUT 直传带签名; 阿里云 OSS: 同理 PUT)
-  const extMatch = srcUrl.match(/\.([a-zA-Z0-9]+)(\?|$)/)
-  const ext = extMatch ? extMatch[1] : 'mp4'
-  const key = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`
-
-  let upUrl
-  if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
-    upUrl = await cosPutUrl(ossCfg, key)
-  } else if (provider.indexOf('ali') !== -1 || provider.indexOf('阿里') !== -1 || provider.indexOf('oss') !== -1) {
-    upUrl = await ossPutUrl(ossCfg, key)
-  } else {
-    return fail('不支持的服务商: ' + (provider || '未知') + '（仅支持腾讯云COS/阿里云OSS）')
-  }
-
-  // 流式搬运(优先, 不整段缓冲大文件): GET 源 → PUT 目标; 源无 Content-Length 时退回缓冲模式
   try {
-    await httpsPipe(dlUrl, upUrl, (loaded, total) => {
-      if (total && total > 0) reportProgress((loaded / total) * 100, 'transfer')
-    })
-  } catch (pipeErr) {
-    console.warn('[adminOssVideoMigrate] 流式搬运失败, 退回缓冲模式:', pipeErr.message || pipeErr)
-    const buf = await httpsGetBuffer(dlUrl)
-    if (!buf || !buf.length) return fail('下载源视频内容为空')
-    await httpsPutBuffer(upUrl, buf)
+    // 1) 下载源视频 (CloudBase 云存储 CDN URL → 用 getTempFileURL 换签名 URL → fetch 下载)
+    let dlUrl = srcUrl
+    if (srcUrl.indexOf('tcb.qcloud.la') !== -1) {
+      const m = srcUrl.match(/https:\/\/[^/]+\.tcb\.qcloud\.la\/(.+)$/)
+      if (m) {
+        const fileID = `cloud://${COURSE_STORAGE_ENV}.${COURSE_STORAGE_BUCKET}/${decodeURIComponent(m[1])}`
+        const tres = await app.getTempFileURL({ fileList: [{ fileID, maxAge: 7200 }] })
+        const fl = tres && tres.fileList && tres.fileList[0]
+        dlUrl = (fl && (fl.tempFileURL || fl.download_url)) || srcUrl
+      }
+    }
+
+    // 2) 上传到目标对象存储 (腾讯云 COS: PUT 直传带签名; 阿里云 OSS: 同理 PUT)
+    const extMatch = srcUrl.match(/\.([a-zA-Z0-9]+)(\?|$)/)
+    const ext = extMatch ? extMatch[1] : 'mp4'
+    const key = `course_videos/v${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`
+
+    let upUrl
+    if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
+      upUrl = await cosPutUrl(ossCfg, key)
+    } else if (provider.indexOf('ali') !== -1 || provider.indexOf('阿里') !== -1 || provider.indexOf('oss') !== -1) {
+      upUrl = await ossPutUrl(ossCfg, key)
+    } else {
+      throw new Error('不支持的服务商: ' + (provider || '未知') + '（仅支持腾讯云COS/阿里云OSS）')
+    }
+
+    // 流式搬运(优先, 不整段缓冲大文件): GET 源 → PUT 目标; 源无 Content-Length 时退回缓冲模式
+    try {
+      await httpsPipe(dlUrl, upUrl, (loaded, total) => {
+        if (total && total > 0) reportProgress((loaded / total) * 100, 'transfer')
+      })
+    } catch (pipeErr) {
+      console.warn('[adminOssVideoMigrate] 流式搬运失败, 退回缓冲模式:', pipeErr.message || pipeErr)
+      const buf = await httpsGetBuffer(dlUrl)
+      if (!buf || !buf.length) throw new Error('下载源视频内容为空')
+      await httpsPutBuffer(upUrl, buf)
+    }
+
+    // 3) 更新课程课时视频地址为 C/OSS 访问地址
+    await reportProgress(100, 'done')
+    const newUrl = (ossCfg.domain ? ossCfg.domain.replace(/\/+$/, '') : `https://${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`) + '/' + key
+    const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: newUrl } : e))
+    await db.collection('courses').doc(course._id).update({ episodes: newEps })
+
+    return ok({ migrated: true, video: newUrl, taskId })
+  } catch (migErr) {
+    // 把真实错误落库(phase=error), 前端轮询可拿到并提示, 避免只看到笼统的"搬运失败或超时"
+    const msg = (migErr && migErr.message) || '搬运失败'
+    console.error('[adminOssVideoMigrate] 搬运失败:', msg)
+    try { await reportProgress(0, 'error', msg) } catch (e) {}
+    return fail(msg)
   }
-
-  // 3) 更新课程课时视频地址为 C/OSS 访问地址
-  await reportProgress(100, 'done')
-  const newUrl = (ossCfg.domain ? ossCfg.domain.replace(/\/+$/, '') : `https://${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`) + '/' + key
-  const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: newUrl } : e))
-  await db.collection('courses').doc(course._id).update({ episodes: newEps })
-
-  return ok({ migrated: true, video: newUrl, taskId })
 }
 
 /* 查询搬运进度 (前端按 taskId 轮询展示进度条) */
@@ -4709,7 +4719,7 @@ async function adminOssVideoMigrateProgress(data) {
     const res = await db.collection('oss_migrate_progress').where({ taskId }).limit(1).get()
     const doc = res.data && res.data[0]
     if (!doc) return ok({ phase: 'unknown', percent: 0 })
-    return ok({ taskId, phase: doc.phase || 'transfer', percent: doc.percent || 0, updatedAt: doc.updatedAt || 0 })
+    return ok({ taskId, phase: doc.phase || 'transfer', percent: doc.percent || 0, error: doc.error || '', updatedAt: doc.updatedAt || 0 })
   } catch (e) {
     return ok({ phase: 'unknown', percent: 0 })
   }

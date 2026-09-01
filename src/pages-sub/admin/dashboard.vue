@@ -3906,8 +3906,8 @@ async function migrateOssVideo(v) {
     item._migratePercent = 0
   }
   let done = false
-  let lastPercent = -1
-  let frozenSince = 0
+  let errored = ''
+  let lastUpdate = 0
   const refresh = async () => {
     try {
       const p = await adminVideoMigrateProgress({ taskId })
@@ -3917,12 +3917,9 @@ async function migrateOssVideo(v) {
         item._migratePhase = p.phase || 'transfer'
       }
       if (p.phase === 'done' || p.percent >= 100) done = true
-      if (p.percent === lastPercent) {
-        if (!frozenSince) frozenSince = Date.now()
-      } else {
-        frozenSince = 0
-        lastPercent = p.percent || 0
-      }
+      // 云端已把真实错误落库(phase=error): 优先用其提示, 不再笼统报"超时"
+      if (p.phase === 'error') errored = p.error || '搬运失败'
+      if (p.updatedAt) lastUpdate = p.updatedAt
     } catch (e) {}
   }
   const timer = setInterval(refresh, 1000)
@@ -3938,15 +3935,16 @@ async function migrateOssVideo(v) {
       uni.showToast({ title: mMsg || '搬运失败', icon: 'none' })
       return
     }
-    // 连接被网关空闲超时断开属预期: 云端仍在后台搬运, 转由下方轮询等待完成
+    // 连接被网关空闲超时断开属预期: 云端仍在后台搬运(已把进度/错误写入 DB), 转由下方轮询等待完成
     console.warn('[migrate] 请求连接断开(后台继续搬运):', mMsg)
   }
-  // 等待云端真正搬完 (函数最长 900s, 这里留 880s 余量); 进度冻结 30s 视为真失败
+  // 等待云端真正搬完 (函数最长 900s, 这里留 880s 余量)
   const deadline = Date.now() + 880000
-  while (!done && Date.now() < deadline) {
+  while (!done && !errored && Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 1000))
     await refresh()
-    if (frozenSince && Date.now() - frozenSince > 30000) break
+    // 用 DB 写入时间(updatedAt)判卡死: 进度超 45s 未更新且未 done → 云端真卡死(慢速传输也会持续写进度, 不会误杀)
+    if (!done && lastUpdate && Date.now() - lastUpdate > 45000) break
   }
   clearInterval(timer)
   if (done) {
@@ -3961,7 +3959,7 @@ async function migrateOssVideo(v) {
       item._migrating = false
       item._migratePercent = 0
     }
-    uni.showToast({ title: '搬运失败或超时，请重试', icon: 'none' })
+    uni.showToast({ title: errored || '搬运失败或超时，请重试', icon: 'none' })
   }
 }
 
@@ -5269,8 +5267,10 @@ onMounted(async () => {
   color: #8a857c;
 }
 .oss-col-type {
-  width: 100rpx;
+  width: 160rpx;
   flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 22rpx;
 }
 .oss-col-size {
   width: 120rpx;
