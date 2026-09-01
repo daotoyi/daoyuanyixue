@@ -4467,8 +4467,9 @@ function httpsDelete(url) {
   })
 }
 
-/* 流式搬运: GET 源视频 → 直传 PUT 目标 (不整段缓冲, 规避大文件 OOM/超时) */
-function httpsPipe(srcUrl, dstUrl) {
+/* 流式搬运: GET 源视频 → 直传 PUT 目标 (不整段缓冲, 规避大文件 OOM/超时)
+ * onProgress(loaded, total): 可选, 每收到一块源数据回调(loaded=已下载字节, total=文件总字节, 无 content-length 时 total=0) */
+function httpsPipe(srcUrl, dstUrl, onProgress) {
   return new Promise((resolve, reject) => {
     try {
       const https = require('https')
@@ -4482,6 +4483,14 @@ function httpsPipe(srcUrl, dstUrl) {
             return
           }
           const cl = getRes.headers['content-length']
+          const total = cl ? Number(cl) : 0
+          let loaded = 0
+          getRes.on('data', (c) => {
+            loaded += c.length
+            if (onProgress) {
+              try { onProgress(loaded, total) } catch (e) {}
+            }
+          })
           const du = new URL(dstUrl)
           const putReq = https.request(
             {
@@ -4509,6 +4518,20 @@ function httpsPipe(srcUrl, dstUrl) {
       reject(e)
     }
   })
+}
+
+/* 搬运进度 upsert (腾讯云 TCB 数据库写入不存在集合会自动创建; 首次 add, 之后 update) */
+async function upsertMigrateProgress(rec) {
+  try {
+    const ex = await db.collection('oss_migrate_progress').where({ taskId: rec.taskId }).limit(1).get()
+    if (ex.data && ex.data.length) {
+      await db.collection('oss_migrate_progress').doc(ex.data[0]._id).update(rec)
+    } else {
+      await db.collection('oss_migrate_progress').add(rec)
+    }
+  } catch (e) {
+    /* 进度丢失不阻断搬运 */
+  }
 }
 
 /* 判断视频是否已存储到 C/OSS (对象存储): 本地 = tcb.qcloud.la / cloud://; C/OSS = cos.myqcloud.com 或 settings.oss.domain */
@@ -4579,6 +4602,25 @@ async function adminOssVideoMigrate(data) {
   if (!course_id && course_id !== 0) return fail('缺少 course_id')
   if (episode_index === undefined || episode_index === null) return fail('缺少课时序号')
 
+  // 搬运进度 taskId: 供前端轮询展示进度条 (云端写出字节级进度, 前端按 taskId 读)
+  const taskId = String(data.taskId || `${course_id}_${episode_index}_${Date.now()}`)
+  let _lastReport = 0
+  const reportProgress = async (percent, phase) => {
+    const now = Date.now()
+    const isDone = phase === 'done'
+    if (now - _lastReport < 800 && !isDone) return
+    _lastReport = now
+    const finalPercent = isDone ? 100 : Math.max(0, Math.min(99, Math.floor(percent || 0)))
+    await upsertMigrateProgress({
+      taskId,
+      course_id,
+      episode_index,
+      phase: phase || 'transfer',
+      percent: finalPercent,
+      updatedAt: now,
+    })
+  }
+
   const [ossRes, courseRes] = await Promise.all([
     db.collection('settings').where({ group: 'oss' }).limit(1).get(),
     db.collection('courses').where({ id: course_id }).limit(1).get(),
@@ -4624,7 +4666,9 @@ async function adminOssVideoMigrate(data) {
 
   // 流式搬运(优先, 不整段缓冲大文件): GET 源 → PUT 目标; 源无 Content-Length 时退回缓冲模式
   try {
-    await httpsPipe(dlUrl, upUrl)
+    await httpsPipe(dlUrl, upUrl, (loaded, total) => {
+      if (total && total > 0) reportProgress((loaded / total) * 100, 'transfer')
+    })
   } catch (pipeErr) {
     console.warn('[adminOssVideoMigrate] 流式搬运失败, 退回缓冲模式:', pipeErr.message || pipeErr)
     const buf = await httpsGetBuffer(dlUrl)
@@ -4633,11 +4677,26 @@ async function adminOssVideoMigrate(data) {
   }
 
   // 3) 更新课程课时视频地址为 C/OSS 访问地址
+  await reportProgress(100, 'done')
   const newUrl = (ossCfg.domain ? ossCfg.domain.replace(/\/+$/, '') : `https://${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`) + '/' + key
   const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: newUrl } : e))
   await db.collection('courses').doc(course._id).update({ episodes: newEps })
 
-  return ok({ migrated: true, video: newUrl })
+  return ok({ migrated: true, video: newUrl, taskId })
+}
+
+/* 查询搬运进度 (前端按 taskId 轮询展示进度条) */
+async function adminOssVideoMigrateProgress(data) {
+  const taskId = String(data.taskId || '')
+  if (!taskId) return fail('缺少 taskId')
+  try {
+    const res = await db.collection('oss_migrate_progress').where({ taskId }).limit(1).get()
+    const doc = res.data && res.data[0]
+    if (!doc) return ok({ phase: 'unknown', percent: 0 })
+    return ok({ taskId, phase: doc.phase || 'transfer', percent: doc.percent || 0, updatedAt: doc.updatedAt || 0 })
+  } catch (e) {
+    return ok({ phase: 'unknown', percent: 0 })
+  }
 }
 
 /* 腾讯云 COS: 生成预签名 DELETE URL (删除对象, 复用上传时的用户凭证) */
@@ -4928,6 +4987,7 @@ const ROUTES = {
   'admin.settings.save': adminSettingsSave,
   'admin.oss.videos.list': adminOssVideosList,
   'admin.oss.videos.migrate': adminOssVideoMigrate,
+  'admin.oss.videos.migrate.progress': adminOssVideoMigrateProgress,
   'admin.oss.videos.delete': adminOssVideoDelete,
   'admin.categories.list': adminCateList,
   'admin.categories.create': adminCateCreate,

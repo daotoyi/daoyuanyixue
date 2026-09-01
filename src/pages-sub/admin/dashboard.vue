@@ -1019,8 +1019,14 @@
                 <text class="td oss-col-type" :class="v.inOss ? 'st-done' : 'st-wait'">{{ v.inOss ? ossStorageLabel() : '本地' }}</text>
                 <view class="td oss-col-ops ops">
                   <template v-if="canManageSettings">
-                    <text class="op" v-if="!v.inOss" @tap="migrateOssVideo(v)">搬运到 {{ ossStorageLabel() }}</text>
-                    <text class="op del" @tap="deleteOssVideo(v)">删除</text>
+                    <view v-if="v._migrating" class="migrate-progress">
+                      <view class="mp-bar"><view class="mp-fill" :style="{ width: (v._migratePercent || 0) + '%' }"></view></view>
+                      <text class="mp-pct">{{ v._migratePercent || 0 }}%</text>
+                    </view>
+                    <template v-else>
+                      <text class="op" v-if="!v.inOss" @tap="migrateOssVideo(v)">搬运到 {{ ossStorageLabel() }}</text>
+                      <text class="op del" @tap="deleteOssVideo(v)">删除</text>
+                    </template>
                   </template>
                   <text class="op done" v-else>已就绪</text>
                 </view>
@@ -1424,7 +1430,7 @@ import {
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
-  adminVideosList, adminVideoMigrate, adminVideoDelete,
+  adminVideosList, adminVideoMigrate, adminVideoMigrateProgress, adminVideoDelete,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
@@ -3884,16 +3890,39 @@ async function loadOssVideos() {
   }
 }
 
-/* 搬运单个视频到 C/OSS */
+/* 搬运单个视频到 C/OSS (带行内进度条: 云端写字节级进度, 前端按 taskId 轮询展示) */
 async function migrateOssVideo(v) {
+  const taskId = `${v.course_id}_${v.episode_index}_${Date.now()}`
+  // 行内进度标记 (ossVideoList 为 ref 深层响应, 修改子属性可触发更新)
+  const item = ossVideoList.value.find((x) => x.course_id === v.course_id && x.episode_index === v.episode_index)
+  if (item) {
+    item._migrating = true
+    item._migratePhase = 'transfer'
+    item._migratePercent = 0
+  }
+  let timer = null
+  const poll = async () => {
+    try {
+      const p = await adminVideoMigrateProgress({ taskId })
+      if (item && p) {
+        item._migratePercent = p.percent || 0
+        item._migratePhase = p.phase || 'transfer'
+      }
+    } catch (e) {}
+  }
+  timer = setInterval(poll, 1000)
   try {
-    uni.showLoading({ title: '搬运中...' })
-    await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index })
-    uni.hideLoading()
+    await adminVideoMigrate({ course_id: v.course_id, episode_index: v.episode_index, taskId })
+    if (timer) clearInterval(timer)
+    await poll()
     uni.showToast({ title: `已搬运到 ${ossStorageLabel()}`, icon: 'success' })
     await loadOssVideos()
   } catch (e) {
-    uni.hideLoading()
+    if (timer) clearInterval(timer)
+    if (item) {
+      item._migrating = false
+      item._migratePercent = 0
+    }
     uni.showToast({ title: e.message || '搬运失败', icon: 'none' })
   }
 }
@@ -5214,6 +5243,33 @@ onMounted(async () => {
 .oss-col-ops {
   width: 240rpx;
   flex-shrink: 0;
+}
+.migrate-progress {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  width: 100%;
+}
+.mp-bar {
+  flex: 1;
+  height: 14rpx;
+  border-radius: 8rpx;
+  background: #e7ecf1;
+  overflow: hidden;
+  min-width: 80rpx;
+}
+.mp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a90d9, #2f6fb0);
+  border-radius: 8rpx;
+  transition: width 0.4s ease;
+}
+.mp-pct {
+  font-size: 20rpx;
+  color: #2f6fb0;
+  flex-shrink: 0;
+  min-width: 56rpx;
+  text-align: right;
 }
 /* 存储筛选(全部 / 本地 / 对象存储) */
 .oss-filter {
