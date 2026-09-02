@@ -2874,6 +2874,10 @@ function moveEpisode(i, dir) {
 /* ===== 断点续传记录 (localStorage): 失败/取消后保留已传分片, 下次选同一文件自动续传 ===== */
 const RESUME_KEY = 'zhs_upload_resume'
 const PART_SIZE_BYTES = 16 * 1024 * 1024
+/* 看门狗 (v1.11.309 根治"卡半天"): 上传(非初始化)阶段若超过此时长【没有任何进度变化】,
+   判定网络挂起/连接僵死 → 强制中止本任务(续传点已定期保存), 释放上传通道, 队列自动继续下一个 */
+const UPLOAD_IDLE_TIMEOUT_MS = 120 * 1000
+const UPLOAD_WATCHDOG_INTERVAL_MS = 15000
 function saveResume(rec) {
   try {
     let list = JSON.parse(uni.getStorageSync(RESUME_KEY) || '[]')
@@ -3044,8 +3048,9 @@ function uploadEpisodeVideo(ep) {
       // H5 平台 chooseVideo 返回 File 对象 (originalFile): 用它直接 slice 读分片, 避免 fetch 读全文件 (几GB视频会超时/内存爆) (2026-08-30)
       const fileObj = res.originalFile || res.file || null
       console.log('[上传] 选择文件 size=' + fileSize + ' fileObj=' + (fileObj ? '是' : '无'))
-      if (currentUploadingEp && currentUploadingEp !== ep) {
-        // 已有课时在上传中 → 加入队列等待 (排队策略: 一个完成后自动开始下一个)
+      if (currentUploadingEp || uploadQueue.value.length > 0) {
+        // 通道被占用 或 队列已有排队 → 一律入队等待 (v1.11.309 修复: 之前仅判 currentUploadingEp,
+        // 取消/暂停让位后通道瞬时为空, 此时新上传会绕过队列直接开始 → 表现为"排队机制失效")
         uploadQueue.value.push({ ep, filePath, fileSize, fileObj })
         ep._queued = true
         ep._status = '等待上传'
@@ -3087,6 +3092,22 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
   ep._uploadGen = myGen
   console.log('[上传] 开始课时 ' + (ep.title || '第' + (i + 1) + '集') + ' gen=' + myGen + ' 续传=' + (resumeInfo ? '是' : '否'))
   const control = { paused: false, cancelled: false, abortFns: new Set(), size: fileSize } // size: chooseVideo 返回, 避免 fetch 读全文件
+  let lastProgressTs = Date.now() // 看门狗基准: 进度一有变化即刷新; 超时无变化 → 网络挂起
+  control.timedOut = false
+  control.watchdog = setInterval(() => {
+    if (control.cancelled || control.paused || ep._uploadGen !== myGen) {
+      clearInterval(control.watchdog) // 已取消/主动暂停/任务过期 → 停止看门狗
+      return
+    }
+    if (Date.now() - lastProgressTs > UPLOAD_IDLE_TIMEOUT_MS) {
+      // 超过阈值没有任何进度 → 网络挂起, 强制中止本任务; 续传点已定期保存,
+      // 由 catch/finally 释放通道并 dequeueNext 自动开始下一个 (不再"卡半天"卡死整个队列)
+      console.log('[上传看门狗] ' + UPLOAD_IDLE_TIMEOUT_MS / 1000 + 's 无进度, 自动中止并让位给队列')
+      control.timedOut = true
+      control.cancelled = true
+      abortAllParts(control)
+    }
+  }, UPLOAD_WATCHDOG_INTERVAL_MS)
   ep._control = control
   ep._fileObj = fileObj
   ep._filePath = filePath // 暂停让位后续传用(避免重新选文件)
@@ -3161,7 +3182,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     const upRes = await storage.uploadFile(filePath, cloudPath, (ratio, _u, _s, info) => {
       if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 忽略旧任务进度
       const pct = Math.min(99, Math.round(ratio * 100))
-      if (pct !== ep._progress) ep._progress = pct
+      if (pct !== ep._progress) { ep._progress = pct; lastProgressTs = Date.now() } // 进度变化即刷新看门狗
       // 实时速度 / 预计剩余 (抖音/视频号同款反馈, 让用户看到"在动", 慢网不再以为卡死)
       if (info) { ep._speed = info.speedBps || 0; ep._eta = info.etaSec || 0 }
       // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
@@ -3221,7 +3242,10 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
       ep._progress = 0
       ep._status = ''
     }
-    if (e && e.code === 'UPLOAD_CANCELLED') {
+    if (control.timedOut) {
+      // 看门狗触发: 网络长时间无进度, 自动跳过本任务(进度已保留), 队列继续下一个
+      uni.showToast({ title: '上传超时（网络长时间无进度），已自动跳过，队列继续', icon: 'none' })
+    } else if (e && e.code === 'UPLOAD_CANCELLED') {
       // pausedYield 让位: 显示"已暂停, 队列继续"; 普通取消: 显示"已取消(进度已保留)"
       uni.showToast({ title: ep._paused ? '已暂停，队列继续下一个' : '已取消(进度已保留)', icon: 'none' })
     } else if (msg.indexOf('初始化') >= 0) {
@@ -3234,6 +3258,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
       console.error('[上传失败]', e)
     }
   } finally {
+    if (control.watchdog) clearInterval(control.watchdog) // 清理看门狗, 防定时器泄漏
     // 无论成功/失败/取消: 释放上传锁, 自动开始队列中的下一个
     if (currentUploadingEp === ep) currentUploadingEp = null
     dequeueNext()
@@ -3327,7 +3352,20 @@ function cancelEpisodeUpload(ep) {
   ep._status = ''
   uploadGenCounter++ // 旧任务后续写入全部失效
   ep._uploadGen = -1
+  // v1.11.309 修复: 取消"正在上传"的任务时, 旧代码不释放 currentUploadingEp,
+  // 残留引用让 dequeueNext 判定通道仍被占用 → 后面排队的永远不出队(队列停摆)
+  if (currentUploadingEp === ep) currentUploadingEp = null
+  // 若该课时还在排队中 → 从队列移除, 否则取消后仍会被出队上传
+  uploadQueue.value = uploadQueue.value.filter((q) => {
+    if (!q || !q.ep) return true
+    if (q.ep === ep) return false // 同一对象
+    if (ep._key && q.ep._key === ep._key) return false // _key 匹配
+    return true
+  })
+  ep._queued = false
   uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+  // 通道已释放且队列还有待传项 → 触发出队(与 startUpload 的 finally 双保险, _dequeueRunning 防重入)
+  if (uploadQueue.value.length > 0 && !currentUploadingEp) setTimeout(() => dequeueNext(), 0)
   // 释放上传锁并开始队列中的下一个
   if (currentUploadingEp === ep) {
     currentUploadingEp = null
