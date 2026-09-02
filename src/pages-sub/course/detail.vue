@@ -322,7 +322,7 @@ function startLearn() {
 }
 .lesson {
   display: flex;
-  align-items: flex-start;
+  align-items: center; /* 课时名与左侧序号块垂直居中对齐 (2026-09-02: 原 flex-start 导致名称偏上) */
   padding: 18rpx 0;
   border-bottom: 1rpx solid #e8e2da;
 }
@@ -337,7 +337,6 @@ function startLearn() {
   font-size: 22rpx;
   color: #c41e3a;
   flex-shrink: 0;
-  margin-top: 2rpx;
 }
 .lesson-main {
   flex: 1;
