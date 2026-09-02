@@ -20,13 +20,6 @@
       <!-- 左侧分类 -->
       <scroll-view scroll-y class="cate-side" :scroll-top="0">
         <view
-          :class="{ 'cate-item active': activeCate === 0 }"
-          @tap="switchCate(0)"
-        >
-          <view class="cate-indicator" v-if="activeCate === 0"></view>
-          <text class="cate-name">全部（{{ products.length }}）</text>
-        </view>
-        <view
           v-for="c in cateList"
           :key="c.id"
           class="cate-item"
