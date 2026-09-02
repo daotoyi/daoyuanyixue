@@ -6,7 +6,7 @@
     <text class="ls-lock-desc">购买课程后即可观看全部课时</text>
     <view class="ls-btn ls-lock-btn" @tap="goBuy">去购买</view>
   </view>
-  <view class="ls-page" v-else-if="lesson">
+  <view class="ls-page" v-else-if="lesson && !waitingOwned">
     <!-- 课时标题 -->
     <view class="ls-head">
       <text class="ls-title">{{ lesson.title || '第 ' + (index + 1) + ' 课' }}</text>
@@ -18,6 +18,8 @@
       <video
         class="ls-player"
         :src="lesson.video"
+        :poster="course.cover || ''"
+        autoplay
         controls
         object-fit="contain"
         :show-center-play-btn="true"
@@ -52,12 +54,15 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCourse, getMyCourses } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { getCourseCache, setCourseCache } from '../../utils/courseCache'
 
 const userStore = useUserStore()
 const course = ref(null)
 const index = ref(0)
 const loaded = ref(false)
 const owned = ref(false)
+/* owned 是否已确定: 付费课时必须等它才能判定锁定; 从详情页跳转时由 URL 参数直接带入, 无需等待 */
+const ownedReady = ref(false)
 const lesson = computed(() => {
   const eps = Array.isArray(course.value && course.value.episodes) ? course.value.episodes : []
   return eps[index.value] || null
@@ -72,28 +77,57 @@ const isFreeCourse = computed(() => {
   const n = Number(s.replace(/[^\d.\-]/g, ''))
   return !isNaN(n) && n <= 0
 })
-const locked = computed(() => loaded.value && !!lesson.value && !isFreeCourse.value && lesson.value.free === false && !owned.value)
+/* 是否需要付费鉴权: 仅"付费课程 + 该课时非免费"才需要查已购状态 */
+const needOwned = computed(() => !!lesson.value && !isFreeCourse.value && lesson.value.free === false)
+/* 付费课时在已购状态确定前, 先显示加载态(不能提前露出付费视频) */
+const waitingOwned = computed(() => needOwned.value && !ownedReady.value)
+const locked = computed(() => loaded.value && needOwned.value && ownedReady.value && !owned.value)
 
 onLoad(async (options) => {
   index.value = Number(options.index) || 0
+  const cid = Number(options.course_id)
+
+  /* 优化1: 先用详情页留下的缓存立即渲染(视频秒开), 再后台静默刷新最新数据 */
+  const cached = getCourseCache(cid)
+  if (cached) {
+    course.value = cached
+    loaded.value = true
+    uni.setNavigationBarTitle({ title: cached.title })
+  }
+
+  /* 优化2: 详情页已完成已购判断, 通过 URL 参数带过来 → 不必等 getMyCourses 即可解锁
+     (仅作 UI 提速, 下面仍会用真实已购状态校正, 防止手改参数绕过) */
+  if (options.owned === '1') {
+    owned.value = true
+    ownedReady.value = true
+  }
+
+  /* 优化3: 课程详情 与 已购状态 并行请求, 不再串行叠加耗时 */
+  const mineP = userStore.isLoggedIn
+    ? getMyCourses({ uid: userStore.userInfo.uid }).catch(() => [])
+    : Promise.resolve(null)
+
   try {
-    course.value = await getCourse(Number(options.course_id))
-    if (!course.value) {
-      uni.showToast({ title: '课程不存在', icon: 'none' })
+    const c = await getCourse(cid)
+    if (!c) {
+      if (!cached) uni.showToast({ title: '课程不存在', icon: 'none' })
     } else {
-      uni.setNavigationBarTitle({ title: course.value.title })
-      // 已购判断
-      if (userStore.isLoggedIn) {
-        try {
-          const mine = await getMyCourses({ uid: userStore.userInfo.uid })
-          owned.value = mine.some((c) => c.id === course.value.id)
-        } catch (e) { /* 忽略 */ }
-      }
+      course.value = c
+      setCourseCache(c) // 回填缓存, 供下次进入/详情页复用
+      uni.setNavigationBarTitle({ title: c.title })
     }
   } catch (e) {
-    uni.showToast({ title: e.message || '加载失败', icon: 'none' })
+    if (!cached) uni.showToast({ title: e.message || '加载失败', icon: 'none' })
   }
   loaded.value = true
+
+  // 真实已购状态校正(缓存/参数只是提速手段, 以此为准)
+  const mine = await mineP
+  if (mine) {
+    const id = course.value && course.value.id
+    owned.value = (mine || []).some((x) => x.id === id)
+  }
+  ownedReady.value = true
 })
 
 function go(i) {

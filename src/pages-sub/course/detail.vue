@@ -1,5 +1,6 @@
 <template>
-  <view class="cd-page" v-if="course">
+  <view class="cd-page">
+  <template v-if="course">
     <!-- 封面 -->
     <view class="cover">
       <image class="cover-img" :src="course.cover" mode="aspectFill"></image>
@@ -80,7 +81,33 @@
         </view>
       </template>
     </view>
-  </view>
+  </template>
+
+  <!-- 骨架屏: 数据未到位时立即渲染页面框架, 消除白屏等待 (2026-09-02 加载优化) -->
+  <template v-else>
+    <view class="cover sk-block sk-cover"></view>
+    <view class="card">
+      <view class="sk-line sk-w40 sk-h40"></view>
+      <view class="sk-row">
+        <view class="sk-avatar sk-block"></view>
+        <view class="sk-line sk-w50"></view>
+      </view>
+    </view>
+    <view class="card">
+      <view class="sk-line sk-w30 sk-bold"></view>
+      <view class="sk-line sk-w100"></view>
+      <view class="sk-line sk-w90"></view>
+      <view class="sk-line sk-w60"></view>
+    </view>
+    <view class="card">
+      <view class="sk-line sk-w30 sk-bold"></view>
+      <view class="sk-row sk-lesson" v-for="i in 5" :key="i">
+        <view class="sk-idx sk-block"></view>
+        <view class="sk-line sk-w70"></view>
+      </view>
+    </view>
+  </template>
+</view>
 </template>
 
 <script setup>
@@ -92,6 +119,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getCourse, teacherInfo, getMyCourses, updateCourseProgress } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
+import { getCourseCache, setCourseCache } from '../../utils/courseCache'
 
 const userStore = useUserStore()
 const course = ref(null)
@@ -130,7 +158,8 @@ function openLesson(i) {
     const total = episodesList.value.length || course.value.lessons_count || outlineList.value.length
     updateCourseProgress({ uid: userStore.userInfo.uid, course_id: course.value.id, lesson_idx: i, total_lessons: total }).catch(() => {})
   }
-  uni.navigateTo({ url: `/pages-sub/course/lesson?course_id=${course.value.id}&index=${i}` })
+  // 带上已购状态: 播放页可据此立即开播, 无需再等一次 getMyCourses(仅 UI 提速, 播放页仍会用真实状态校正)
+  uni.navigateTo({ url: `/pages-sub/course/lesson?course_id=${course.value.id}&index=${i}&owned=${isOwned.value ? 1 : 0}` })
 }
 async function showTeacher() {
   try {
@@ -149,18 +178,28 @@ const isOwned = computed(() => owned.value)
 const isFreeCourse = computed(() => isFreePrice(course.value && course.value.price))
 
 onLoad(async (options) => {
-  course.value = await getCourse(options.id)
-  if (course.value) {
-    uni.setNavigationBarTitle({ title: course.value.title })
+  const cid = options.id
+  /* 优化1: 先用内存缓存立即渲染(从列表页进入/播放页返回时几乎零等待), 再后台刷新最新数据 */
+  const cached = getCourseCache(cid)
+  if (cached) {
+    course.value = cached
+    uni.setNavigationBarTitle({ title: cached.title })
   }
-  // 检查是否已购
-  if (userStore.isLoggedIn) {
-    try {
-      const mine = await getMyCourses({ uid: userStore.userInfo.uid })
-      owned.value = mine.some((c) => c.id === course.value.id)
-    } catch (e) {
-      /* 忽略 */
+  /* 优化2: 课程详情 与 已购状态 并行请求 (原为串行 await, 耗时叠加) */
+  const mineP = userStore.isLoggedIn
+    ? getMyCourses({ uid: userStore.userInfo.uid }).catch(() => null)
+    : Promise.resolve(null)
+  try {
+    const c = await getCourse(cid)
+    if (c) {
+      course.value = c
+      setCourseCache(c) // 回填缓存, 供播放页/下次进入直接复用
+      uni.setNavigationBarTitle({ title: c.title })
     }
+  } catch (e) { /* 失败时保留缓存或骨架屏, 不打断页面 */ }
+  const mine = await mineP
+  if (mine && course.value) {
+    owned.value = (mine || []).some((c) => c.id === course.value.id)
   }
 })
 
@@ -193,6 +232,38 @@ function startLearn() {
   background: #f8f5f0;
   padding-bottom: 140rpx;
 }
+/* ===== 骨架屏 (数据未到位时先出框架, 消除白屏) ===== */
+.sk-block,
+.sk-line {
+  background: linear-gradient(90deg, #efe9e0 25%, #f7f3ec 37%, #efe9e0 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.2s ease-in-out infinite;
+  border-radius: 8rpx;
+}
+@keyframes sk-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+.sk-line {
+  height: 26rpx;
+  margin: 18rpx 0;
+  width: 80%;
+}
+.sk-cover { height: 420rpx; border-radius: 0; }
+.sk-row { display: flex; align-items: center; gap: 18rpx; }
+.sk-avatar { width: 72rpx; height: 72rpx; border-radius: 999rpx; flex-shrink: 0; }
+.sk-idx { width: 48rpx; height: 48rpx; border-radius: 10rpx; flex-shrink: 0; }
+.sk-lesson { margin: 22rpx 0; }
+.sk-lesson .sk-line { flex: 1; margin: 0; }
+.sk-w30 { width: 30%; }
+.sk-w40 { width: 40%; }
+.sk-w50 { width: 50%; }
+.sk-w60 { width: 60%; }
+.sk-w70 { width: 70%; }
+.sk-w90 { width: 90%; }
+.sk-w100 { width: 100%; }
+.sk-h40 { height: 40rpx; }
+.sk-bold { height: 32rpx; }
 
 .cover {
   position: relative;

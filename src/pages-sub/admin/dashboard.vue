@@ -1519,6 +1519,7 @@ import {
 import { useUserStore } from '../../store/index'
 import { getStorage } from '../../api/cloudbase'
 import { resolveCloudList, resolveCloudUrl } from '../../utils/avatar'
+import { clearCourseCache } from '../../utils/courseCache'
 
 const userStore = useUserStore()
 const verNum = computed(() => APP_VERSION.replace(/^v/, ''))
@@ -3342,7 +3343,10 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     // 即使用户传完前已切走课程、内存表单对象失效, 视频也不会丢
     if (myCourseId) {
       adminCourseEpisodeUpdate({ course_id: myCourseId, episode_index: myEpIndex, video: url })
-        .then(() => console.log('[上传] 课时已落库 course=' + myCourseId + ' ep=' + myEpIndex))
+        .then(() => {
+          console.log('[上传] 课时已落库 course=' + myCourseId + ' ep=' + myEpIndex)
+          clearCourseCache(myCourseId) // 清前台课程缓存, 避免刚传完的视频在前台看不到
+        })
         .catch((e2) => console.warn('[上传] 课时落库失败(已写入表单, 需点保存):', (e2 && e2.message) || e2))
     }
     // C/OSS 提示改为【不阻塞上传队列】(2026-08-30 修复: 之前 await 会先查设置再弹窗等用户,
