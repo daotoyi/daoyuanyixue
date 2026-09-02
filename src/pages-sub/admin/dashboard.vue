@@ -3200,11 +3200,19 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
       saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], partSize: control.partSize || PART_SIZE_BYTES, ts: Date.now() })
     }
     ep._uploading = false
-    ep._paused = false
-    ep._progress = 0
-    ep._status = ''
+    if (ep._pausedYield) {
+      // 暂停让位: 保留进度与"已暂停"态, 不显示"已取消"; UI 回到上传按钮(重新选文件可续传)
+      ep._paused = true
+      ep._status = '已暂停（可重新上传续传）'
+      ep._pausedYield = false
+    } else {
+      ep._paused = false
+      ep._progress = 0
+      ep._status = ''
+    }
     if (e && e.code === 'UPLOAD_CANCELLED') {
-      uni.showToast({ title: '已取消(进度已保留)', icon: 'none' })
+      // pausedYield 让位: 显示"已暂停, 队列继续"; 普通取消: 显示"已取消(进度已保留)"
+      uni.showToast({ title: ep._paused ? '已暂停，队列继续下一个' : '已取消(进度已保留)', icon: 'none' })
     } else if (msg.indexOf('初始化') >= 0) {
       uni.showToast({ title: msg, icon: 'none' }) // 初始化失败: 显示具体原因(网络/代理)
     } else if (msg.indexOf('未找到已上传的分片') >= 0) {
@@ -3220,21 +3228,38 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     dequeueNext()
   }
 }
-/* 暂停/继续 上传 (中断所有进行中的分片, 立即暂停; 恢复后自动续传) */
+/* 暂停/继续 上传 (中断所有进行中的分片, 立即暂停; 恢复后自动续传)
+   队列友好: 若还有其他课时在排队等待, 暂停当前会阻塞队列(单并发上传通道) —
+   此时改为"让位": 中止当前上传(SDK 因 cancelled 结束), 保留续传进度, 释放上传锁,
+   由 startUpload 的 finally 自动 dequeueNext 让队列下一个开始 (修复: 暂停后整个队列停摆) */
 function togglePauseEpisodeUpload(ep) {
   if (!ep || !ep._control || !ep._uploading) return
-  console.log('[上传控制] 点击暂停/继续, 当前 paused=', ep._paused, 'abortFns=', ep._control.abortFns ? ep._control.abortFns.size : 0)
+  console.log('[上传控制] 点击暂停/继续, 当前 paused=', ep._paused, 'abortFns=', ep._control.abortFns ? ep._control.abortFns.size : 0, '排队数=', uploadQueue.value.length)
   if (ep._paused) {
+    // 继续: 仅当没有其他任务占用上传通道时才能直接 resume
+    if (currentUploadingEp && currentUploadingEp !== ep) {
+      uni.showToast({ title: '请先暂停当前正在上传的任务', icon: 'none' })
+      return
+    }
     ep._control.paused = false
     ep._paused = false
     ep._status = ''
     uni.showToast({ title: '继续上传', icon: 'none' })
   } else {
-    ep._control.paused = true
-    ep._paused = true
-    ep._status = '已暂停'
-    abortAllParts(ep._control) // 中断所有并发分片请求
-    uni.showToast({ title: '已暂停', icon: 'none' })
+    if (uploadQueue.value.length > 0) {
+      // 有排队任务: 让位给队列 — 中止当前(SDK 结束 uploadFile), 保留续传进度, finally 自动开始下一个
+      ep._pausedYield = true
+      ep._control.cancelled = true
+      abortAllParts(ep._control)
+      uni.showToast({ title: '已暂停，队列继续下一个', icon: 'none' })
+    } else {
+      // 无排队: 真暂停(SDK 内部暂停), 进度保留, 稍后点继续可 resume
+      ep._control.paused = true
+      ep._paused = true
+      ep._status = '已暂停'
+      abortAllParts(ep._control)
+      uni.showToast({ title: '已暂停', icon: 'none' })
+    }
   }
 }
 /* 取消上传 (v1.11.264): **点击立即强制复位 UI**, 不依赖底层请求是否中断 —
