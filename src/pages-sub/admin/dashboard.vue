@@ -1142,6 +1142,25 @@
       </view>
     </view>
 
+    <!-- ===== 上传完成后 C/OSS 存储确认弹窗 (5s 未选择默认存储本地) ===== -->
+    <view class="pp-mask center" v-if="ossMigrateConfirm">
+      <view class="pp-sheet" @tap.stop>
+        <view class="form-sheet rc-sheet">
+          <view class="sheet-title">C/OSS 存储</view>
+          <view class="rc-body">
+            <text class="rc-main">是否将该视频同时存储到 C/OSS（对象存储）？</text>
+            <text class="rc-info" v-if="ossMigrateConfirm.label">课程：{{ ossMigrateConfirm.label }}</text>
+            <text class="rc-info" v-if="ossMigrateConfirm.fname">文件：{{ ossMigrateConfirm.fname }}</text>
+            <text class="rc-count">{{ ossMigrateConfirm.left }}s 后默认「存储本地」</text>
+          </view>
+          <view class="sheet-actions">
+            <view class="btn-p plain sm" @click="closeOssMigrateConfirm(false)">存储本地</view>
+            <view class="btn-p sm" @click="closeOssMigrateConfirm(true)">存储到 C/OSS</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- ===== 商品编辑弹窗 ===== -->
     <view class="pp-mask" v-if="showProduct" @tap="showProduct = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
@@ -3490,6 +3509,40 @@ function ossFileNameOf(videoUrl) {
   }
 }
 
+/* ===== 上传完成后 C/OSS 存储确认弹窗 (2026-09-02 用户需求) =====
+   询问「存储到 C/OSS / 存储本地」, 5 秒未选择 → 默认「存储本地」(不搬运), 不打断上传流程。
+   同样因 uni.showModal 文案静态且无法程序化关闭, 用自定义弹窗实现倒计时。 */
+const ossMigrateConfirm = ref(null) // { label, fname, left } | null
+let ossMigrateResolve = null
+let ossMigrateTimer = null
+const OSS_MIGRATE_AUTO_SEC = 5 // 倒计时秒数, 到 0 默认存储本地
+
+function closeOssMigrateConfirm(choice) {
+  if (ossMigrateTimer) { clearInterval(ossMigrateTimer); ossMigrateTimer = null }
+  ossMigrateConfirm.value = null
+  const r = ossMigrateResolve
+  ossMigrateResolve = null
+  if (r) r(choice === true) // true=存储到 C/OSS, false=存储本地
+}
+
+function askOssMigrateConfirm(label, fname) {
+  return new Promise((resolve) => {
+    if (ossMigrateTimer) { clearInterval(ossMigrateTimer); ossMigrateTimer = null } // 兜底防重入
+    ossMigrateResolve = resolve
+    let left = OSS_MIGRATE_AUTO_SEC
+    ossMigrateConfirm.value = { label, fname, left }
+    ossMigrateTimer = setInterval(() => {
+      left -= 1
+      if (left <= 0) {
+        closeOssMigrateConfirm(false) // 超时未选择 → 默认存储本地(不搬运)
+        uni.showToast({ title: '已默认存储本地', icon: 'none' })
+        return
+      }
+      ossMigrateConfirm.value = { label, fname, left }
+    }, 1000)
+  })
+}
+
 /* C/OSS 启用时: 询问是否将刚上传的本地视频搬运到 C/OSS */
 async function maybeMigrateToOss(v) {
   let ossEnabledFlag = false
@@ -3501,27 +3554,18 @@ async function maybeMigrateToOss(v) {
   if (!ossEnabledFlag) return
   const label = [v.course_title, v.episode_title].filter(Boolean).join(' · ')
   const fname = ossFileNameOf(v.video)
-  let content = '是否将该视频同时存储到 C/OSS（对象存储）？'
-  if (label) content += '\n课程：' + label
-  if (fname) content += '\n文件：' + fname
-  uni.showModal({
-    title: 'C/OSS 存储',
-    content,
-    confirmText: '存储到 C/OSS',
-    cancelText: '暂存本地',
-    success: async (r) => {
-      if (!r.confirm) return
-      try {
-        uni.showLoading({ title: '搬运中...' })
-        await adminVideoMigrate(v)
-        uni.hideLoading()
-        uni.showToast({ title: '已存储到 C/OSS', icon: 'success' })
-      } catch (e) {
-        uni.hideLoading()
-        uni.showToast({ title: e.message || '搬运失败', icon: 'none' })
-      }
-    },
-  })
+  // 5s 未选择 → 默认「存储本地」(v1.11.312)
+  const goOss = await askOssMigrateConfirm(label, fname)
+  if (!goOss) return // 存储本地: 不做搬运
+  try {
+    uni.showLoading({ title: '搬运中...' })
+    await adminVideoMigrate(v)
+    uni.hideLoading()
+    uni.showToast({ title: '已存储到 C/OSS', icon: 'success' })
+  } catch (e) {
+    uni.hideLoading()
+    uni.showToast({ title: e.message || '搬运失败', icon: 'none' })
+  }
 }
 
 function openProductForm(p) {
@@ -6101,6 +6145,8 @@ onMounted(async () => {
 .rc-main { display: block; font-size: 27rpx; color: #2b2b2b; line-height: 1.7; }
 .rc-pct { color: #c41e3a; font-weight: 600; }
 .rc-tip { display: block; font-size: 22rpx; color: #8a857c; margin-top: 12rpx; line-height: 1.6; }
+.rc-info { display: block; font-size: 24rpx; color: #5a5a5a; margin-top: 10rpx; line-height: 1.6; word-break: break-all; }
+.rc-count { display: block; font-size: 22rpx; color: #c41e3a; margin-top: 16rpx; }
 .wxmp-qr-img { width: 400rpx; margin: 20rpx auto; display: block; }
 .wxmp-qr-tip { font-size: 22rpx; color: #8a857c; margin: 30rpx 0; }
 .f-pills {
