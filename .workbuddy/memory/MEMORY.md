@@ -20,6 +20,14 @@
 - 认证: 设备码 auth 浏览器授权 (会话过期重授权)
 - 云函数新增路由 **必须重部署**; write update 是**整体替换语义**(改字段带全字段)
 - 私有读桶直连 CDN 一律 403 → 走 app.fileUrl getTempFileURL 签名 URL (数据库存 cloud:// fileID)
+- **functions 部署脚本铁律**: `scripts/deploy-cloudbase.js functions` 必须用 `updateFunctionCode` + `functionName=dy-api` + `functionRootPath=<绝对路径>/cloudfunctions/dy-api`(函数目录本身, 非父目录); mcporter 不接受 `localPath`(updateFunctionCode 报 paths[0] undefined, createFunction 报 func.name 必需) → 旧脚本用 localPath 会**静默不更新**, 2026-09-02 已修
+
+## C/OSS 搬运到 COS 排查 (2026-09-02 深度定位)
+- **结论**: 搬运代码路径本身正确(COS 预签名 v1 签名算法已逐行核对无误, 流式 GET→PUT 管道 `getRes.pipe(putReq)` 正确接好); 反复"报错"的根因在**目标 C/OSS 配置/密钥**, 非代码 bug
+- 失败点: `adminOssVideoMigrate` 用 settings(oss) 里的 access_key/secret_key/bucket/region 生成预签名 PUT URL, 再 httpsPipe 上传; 任一不对 → COS 返回 403/404/AccessDenied/NoSuchBucket/SignatureDoesNotMatch
+- **常见错因**: ① Region 填错(如照搬云开发 ap-shanghai, 实际桶在 ap-beijing) ② Bucket 名不含 APPID 后缀 ③ 子账号密钥无该桶 PutObject 权限 ④ SecretKey 复制带空格/换行
+- **自诊断**: 新增 `admin.oss.config.test` 路由 — 用配置做一次极小预签名 PUT+DELETE 探测, 直出腾讯云精确错误码与中文原因; 后台「系统设置→C/OSS 存储」新增「测试连接」按钮。先点它再搬运, 报错即知是哪项错误
+- `db.settings(group='oss')` 字段: enabled/provider(cos|oss)/access_key/secret_key/bucket/region/domain; 缺任一项 → "配置不完整"
 - 网络硬超时: 必须叠加 Promise.race 硬超时 (AbortController 在 hang 下不保证 reject)
 - 云函数网关请求体 ~100KB → BASE64_GATEWAY_LIMIT=90000 勿调高 (调高形成 413 死区)
 

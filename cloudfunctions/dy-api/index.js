@@ -4645,7 +4645,7 @@ async function adminOssVideoMigrate(data) {
   if (ossCfg.enabled !== '1' && ossCfg.enabled !== true) return fail('C/OSS 存储未启用，请先在系统设置中开启')
   const provider = (ossCfg.provider || '').toLowerCase()
   if (!ossCfg.access_key || !ossCfg.secret_key || !ossCfg.bucket || !ossCfg.region) return fail('C/OSS 配置不完整（AccessKey/Bucket/Region 必填）')
-  const targetHost = `${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`
+  const targetHost = `${cleanKey(ossCfg.bucket)}.cos.${cleanKey(ossCfg.region)}.myqcloud.com`
 
   const course = courseRes.data[0]
   if (!course) return fail('课程不存在')
@@ -4698,7 +4698,7 @@ async function adminOssVideoMigrate(data) {
 
     // 3) 更新课程课时视频地址为 C/OSS 访问地址
     await reportProgress(100, 'done')
-    const newUrl = (ossCfg.domain ? ossCfg.domain.replace(/\/+$/, '') : `https://${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`) + '/' + key
+    const newUrl = (ossCfg.domain ? ossCfg.domain.replace(/\/+$/, '') : `https://${cleanKey(ossCfg.bucket)}.cos.${cleanKey(ossCfg.region)}.myqcloud.com`) + '/' + key
     const newEps = eps.map((e, i) => (i === episode_index ? { ...e, video: newUrl } : e))
     await db.collection('courses').doc(course._id).update({ episodes: newEps })
 
@@ -4733,12 +4733,12 @@ function cosDeleteUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
-      const ak = String(cfg.access_key || '').trim()
-      const sk = String(cfg.secret_key || '').trim()
+      const ak = cleanKey(cfg.access_key)
+      const sk = cleanKey(cfg.secret_key)
       const now = Math.floor(Date.now() / 1000)
       const keyTime = `${now - 60};${now + 3600}`
       const signKey = crypto.createHmac('sha1', sk).update(keyTime).digest('hex')
-      const host = `${cfg.bucket}.cos.${cfg.region}.myqcloud.com`
+      const host = `${cleanKey(cfg.bucket)}.cos.${cleanKey(cfg.region)}.myqcloud.com`
       const httpString = `delete\n/${key}\n\nhost=${host}\n`
       const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
       const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
@@ -4756,15 +4756,15 @@ function ossDeleteUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
-      const ak = String(cfg.access_key || '').trim()
-      const sk = String(cfg.secret_key || '').trim()
+      const ak = cleanKey(cfg.access_key)
+      const sk = cleanKey(cfg.secret_key)
       const now = Math.floor(Date.now() / 1000)
       const expires = now + 3600
-      const resource = `/${cfg.bucket}/${key}`
+      const resource = `/${cleanKey(cfg.bucket)}/${key}`
       const strToSign = `DELETE\n\n\n${expires}\n${resource}`
       const signature = crypto.createHmac('sha1', sk).update(strToSign).digest('base64')
       const auth = encodeURIComponent(signature)
-      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com/${key}?OSSAccessKeyId=${ak}&Expires=${expires}&Signature=${auth}`)
+      resolve(`https://${cleanKey(cfg.bucket)}.${cleanKey(cfg.region)}.aliyuncs.com/${key}?OSSAccessKeyId=${ak}&Expires=${expires}&Signature=${auth}`)
     } catch (e) {
       reject(new Error('OSS 删除签名失败: ' + (e.message || e)))
     }
@@ -4835,6 +4835,11 @@ async function adminOssVideoDelete(data) {
   return ok({ deleted: true, storage: onOss ? 'oss' : 'local' })
 }
 
+/* 清洗密钥: 去除所有空白字符(含中间换行/制表/全角空格)与零宽字符, 避免复制带入不可见字符导致签名失败 */
+function cleanKey(s) {
+  return String(s == null ? '' : s).replace(/[\s\u3000\u200b\u200c\u200d\ufeff]/g, '').trim()
+}
+
 /* 测试 C/OSS 配置是否正确(后台「测试连接」按钮): 用配置密钥做一次极小预签名 PUT + DELETE 探测, 返回腾讯云精确错误码 */
 async function adminOssConfigTest() {
   let ossRes
@@ -4847,7 +4852,18 @@ async function adminOssConfigTest() {
   if (!ossCfg.access_key || !ossCfg.secret_key || !ossCfg.bucket || !ossCfg.region) {
     return fail('C/OSS 配置不完整：需填写 AccessKeyId / AccessKeySecret / Bucket / Region')
   }
-  const targetHost = `${ossCfg.bucket}.cos.${ossCfg.region}.myqcloud.com`
+  // 格式启发式校验(腾讯云): 提前指出"复制不全/填反", 避免笼统的签名错
+  if (provider.indexOf('cos') !== -1 || provider.indexOf('腾讯') !== -1 || provider.indexOf('tencent') !== -1) {
+    const rawAk = String(ossCfg.access_key || '')
+    if (!/^AKID/.test(rawAk)) {
+      return fail('AccessKeyId 格式异常：腾讯云 AccessKeyId 应以 AKID 开头。请确认：①没有把 SecretKey 填到 Id 栏；②不是复制不全（控制台「访问密钥」整段复制）')
+    }
+    const skClean = cleanKey(ossCfg.secret_key)
+    if (skClean.length && skClean.length !== 32) {
+      return fail(`AccessKeySecret 长度异常（实际 ${skClean.length} 位，标准应为 32 位）：极可能是复制不全或多/少了字符。请到腾讯云控制台「访问管理→访问密钥→API密钥管理」点「显示」后整段全选复制 SecretKey 重新保存`)
+    }
+  }
+  const targetHost = `${cleanKey(ossCfg.bucket)}.cos.${cleanKey(ossCfg.region)}.myqcloud.com`
   const probeKey = `_migrate_probe_${Date.now()}.txt`
   try {
     let upUrl
@@ -4890,12 +4906,12 @@ function cosPutUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
-      const ak = String(cfg.access_key || '').trim()
-      const sk = String(cfg.secret_key || '').trim()
+      const ak = cleanKey(cfg.access_key)
+      const sk = cleanKey(cfg.secret_key)
       const now = Math.floor(Date.now() / 1000)
       const keyTime = `${now - 60};${now + 3600}`
       const signKey = crypto.createHmac('sha1', sk).update(keyTime).digest('hex')
-      const host = `${cfg.bucket}.cos.${cfg.region}.myqcloud.com`
+      const host = `${cleanKey(cfg.bucket)}.cos.${cleanKey(cfg.region)}.myqcloud.com`
       const httpString = `put\n/${key}\n\nhost=${host}\n`
       const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
       const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
@@ -4913,15 +4929,15 @@ function ossPutUrl(cfg, key) {
   return new Promise((resolve, reject) => {
     try {
       const crypto = require('crypto')
-      const ak = String(cfg.access_key || '').trim()
-      const sk = String(cfg.secret_key || '').trim()
+      const ak = cleanKey(cfg.access_key)
+      const sk = cleanKey(cfg.secret_key)
       const now = Math.floor(Date.now() / 1000)
       const expires = now + 3600
       const object = '/' + key
-      const strToSign = `PUT\n\nvideo/mp4\n${expires}\n/${cfg.bucket}${object}`
+      const strToSign = `PUT\n\nvideo/mp4\n${expires}\n/${cleanKey(cfg.bucket)}${object}`
       const signature = crypto.createHmac('sha1', sk).update(strToSign).digest('base64')
       const auth = encodeURIComponent(signature)
-      resolve(`https://${cfg.bucket}.${cfg.region}.aliyuncs.com${object}?OSSAccessKeyId=${ak}&Expires=${expires}&Signature=${auth}`)
+      resolve(`https://${cleanKey(cfg.bucket)}.${cleanKey(cfg.region)}.aliyuncs.com${object}?OSSAccessKeyId=${ak}&Expires=${expires}&Signature=${auth}`)
     } catch (e) {
       reject(new Error('OSS 签名失败: ' + (e.message || e)))
     }

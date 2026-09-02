@@ -990,17 +990,18 @@
             </view>
           </view>
 
-          <!-- ===== C/OSS 存储管理 (启用后显示视频存储列表) ===== -->
-          <view class="settings-card" v-if="activeSettingsTab === 'oss' && ossEnabled">
+          <!-- ===== C/OSS 存储管理 (始终显示, 关闭 C/OSS 时仅展示云开发COS 本地视频) ===== -->
+          <view class="settings-card" v-if="activeSettingsTab === 'oss'">
             <view class="settings-desc">
               <text class="sd-title">视频存储管理（{{ ossVideoFiltered.length }}）</text>
-              <text class="sd-text">云开发COS = CloudBase 云存储（课程视频默认存储）；对象存储（{{ ossStorageLabel() }}）= 迁移目标。点击「搬运到 {{ ossStorageLabel() }}」将视频复制到对象存储。</text>
+              <text class="sd-text" v-if="ossEnabled">云开发COS = CloudBase 云存储（课程视频默认存储）；对象存储（{{ ossStorageLabel() }}）= 迁移目标。点击「搬运到 {{ ossStorageLabel() }}」将视频复制到对象存储。</text>
+              <text class="sd-text" v-else>未启用 C/OSS 对象存储，下方仅展示云开发COS（CloudBase 云存储）中的课程视频，可查看与管理本地视频。开启对象存储后即可搬运到 {{ ossStorageLabel() }}。</text>
             </view>
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
               <text class="oss-summary" v-if="ossVideoList.length">
                 <text class="oss-stat">云开发COS {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
-                <text class="oss-stat">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
+                <text class="oss-stat" v-if="ossEnabled">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
               </text>
             </view>
             <view class="table oss-video-table" v-if="ossVideoFiltered.length">
@@ -1028,7 +1029,7 @@
               <view v-if="ossStorageOpen" class="oss-th-panel" :style="storagePanelStyle">
                 <text class="oss-opt" :class="{ on: ossStorageFilter === 'all' }" @tap="selectOssStorage('all')">全部位置</text>
                 <text class="oss-opt" :class="{ on: ossStorageFilter === 'local' }" @tap="selectOssStorage('local')">云开发COS</text>
-                <text class="oss-opt" :class="{ on: ossStorageFilter === 'remote' }" @tap="selectOssStorage('remote')">{{ storageTargetLabel }}</text>
+                <text class="oss-opt" v-if="ossEnabled" :class="{ on: ossStorageFilter === 'remote' }" @tap="selectOssStorage('remote')">{{ storageTargetLabel }}</text>
               </view>
               <view class="tr" v-for="(v, vi) in ossVideoFiltered" :key="vi">
                 <view class="td oss-col-title">
@@ -1044,7 +1045,7 @@
                       <text class="mp-pct">{{ v._migratePercent || 0 }}%</text>
                     </view>
                     <template v-else>
-                      <text class="op" v-if="!v.inOss" @tap="migrateOssVideo(v)">搬运到 {{ ossStorageLabel() }}</text>
+                      <text class="op" v-if="!v.inOss && ossEnabled" @tap="migrateOssVideo(v)">搬运到 {{ ossStorageLabel() }}</text>
                       <text class="op del" @tap="deleteOssVideo(v)">删除</text>
                     </template>
                   </template>
@@ -3838,9 +3839,10 @@ function switchSettingsTab(group) {
   activeSettingsTab.value = group
   loadSettings(group)
   if (group === 'oss') {
-    // 稍后等设置加载完成判断是否启用
+    // 稍后等设置加载完成; 无论是否启用 C/OSS, 都加载视频列表(关闭时仅含云开发COS 本地视频)
     setTimeout(() => {
-      if (ossEnabled.value) loadOssVideos()
+      if (!ossEnabled.value) ossStorageFilter.value = 'local'
+      loadOssVideos()
     }, 400)
   }
 }
@@ -3876,8 +3878,11 @@ async function saveSettings() {
     await adminSettingsSave({ group: cur.group, configs })
     uni.showToast({ title: '配置已保存', icon: 'success' })
     await loadSettings(cur.group)
-    // 保存 C/OSS 配置后若启用则刷新视频列表
-    if (cur.group === 'oss' && ossEnabled.value) loadOssVideos()
+    // 保存 C/OSS 配置后刷新视频列表(无论是否启用, 关闭时仅含云开发COS 本地视频)
+    if (cur.group === 'oss') {
+      if (!ossEnabled.value) ossStorageFilter.value = 'local'
+      loadOssVideos()
+    }
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })
   } finally {
