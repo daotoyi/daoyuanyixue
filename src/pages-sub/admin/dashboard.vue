@@ -999,9 +999,9 @@
             </view>
             <view class="oss-toolbar">
               <view class="btn-p plain sm" @click="loadOssVideos">{{ ossLoading ? '加载中...' : '刷新列表' }}</view>
-              <text class="oss-summary" v-if="ossVideoList.length">
-                <text class="oss-stat">云开发COS {{ ossVideosLocal.length }} 个 · {{ fmtFileSize(ossLocalBytes) }}</text>
-                <text class="oss-stat" v-if="ossEnabled">{{ ossStorageLabel() }} {{ ossVideosRemote.length }} 个 · {{ fmtFileSize(ossRemoteBytes) }}</text>
+              <text class="oss-summary" v-if="ossVideoFiltered.length">
+                <text class="oss-stat" v-if="ossStorageFilter !== 'remote'">云开发COS {{ ossFilteredLocalCount }} 个 · {{ fmtFileSize(ossFilteredLocalBytes) }}</text>
+                <text class="oss-stat" v-if="ossEnabled && ossStorageFilter !== 'local'">{{ ossStorageLabel() }} {{ ossFilteredRemoteCount }} 个 · {{ fmtFileSize(ossFilteredRemoteBytes) }}</text>
               </text>
             </view>
             <view class="table oss-video-table" v-if="ossVideoFiltered.length">
@@ -3927,6 +3927,13 @@ const ossVideosRemote = computed(() => ossVideoList.value.filter((v) => v.inOss)
 /* 本地 / C/OSS 存储体积合计 (size_bytes 为 null 的跳过) */
 const ossLocalBytes = computed(() => ossVideosLocal.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
 const ossRemoteBytes = computed(() => ossVideosRemote.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
+/* 筛选后(当前展示列表 ossVideoFiltered) 的本地/对象存储体积与计数 —— 右上角统计随筛选同步更新 */
+const ossFilteredLocal = computed(() => ossVideoFiltered.value.filter((v) => !v.inOss))
+const ossFilteredRemote = computed(() => ossVideoFiltered.value.filter((v) => v.inOss))
+const ossFilteredLocalCount = computed(() => ossFilteredLocal.value.length)
+const ossFilteredRemoteCount = computed(() => ossFilteredRemote.value.length)
+const ossFilteredLocalBytes = computed(() => ossFilteredLocal.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
+const ossFilteredRemoteBytes = computed(() => ossFilteredRemote.value.reduce((s, v) => s + (Number(v.size_bytes) || 0), 0))
 /* 服务商(cos/oss): 决定"对象存储"显示为 COS 还是 OSS, 以及搬运按钮/筛选文案 */
 const ossProvider = ref('cos')
 /* 列表筛选: 存储位置(全部/云开发COS=本地/腾讯COS=对象存储) + 课程(按 course_id) */
