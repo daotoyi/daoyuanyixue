@@ -947,9 +947,9 @@
               <text class="sd-text">{{ currentSettingsTab.desc }}</text>
             </view>
 
-            <view class="f-row" v-for="f in currentSettingsTab.fields" :key="f.key">
+            <view class="f-row set-row" v-for="f in currentSettingsTab.fields" :key="f.key">
               <text class="f-label">{{ f.label }}</text>
-              <view class="f-input-wrap">
+              <view class="f-input-wrap" :class="{ 'with-eye': !!f.secret, 'has-clear': !!f.secret && hasSecret(f.key) && !!settingsForm[f.key] }">
                 <switch
                   v-if="f.type === 'switch'"
                   :checked="settingsForm[f.key] === '1' || settingsForm[f.key] === true"
@@ -967,10 +967,17 @@
                 <input
                   v-else
                   class="f-input"
-                  :password="!!f.secret"
+                  :password="!!f.secret && !secretVisible(f)"
                   v-model="settingsForm[f.key]"
                   :placeholder="f.secret && settingsLoaded[activeSettingsTab] ? (f.secret && !settingsForm[f.key] && hasSecret(f.key) ? '•••••• 已配置（留空不修改）' : f.placeholder || '') : f.placeholder || ''"
                 />
+                <!-- 小眼睛: 点击切换明文/密文, 方便核对密钥是否填全 -->
+                <text
+                  v-if="f.secret"
+                  class="f-eye"
+                  :class="{ on: secretVisible(f) }"
+                  @tap="toggleSecretVisible(f)"
+                >{{ secretVisible(f) ? '🙈' : '👁' }}</text>
                 <text
                   v-if="f.secret && hasSecret(f.key) && settingsForm[f.key]"
                   class="f-clear-secret"
@@ -1489,7 +1496,7 @@
 const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已取消':'cancelled','已退款':'refunded','全部':'all'}
 const stCls = (v) => ST_CLS[v] || v
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
@@ -4048,6 +4055,15 @@ const settingsTabs = [
 ]
 
 const activeSettingsTab = ref(settingsTabs[0].group)
+/* 敏感字段「小眼睛」明文/密文切换 (2026-09-02):
+   key 用 "分组.字段名" —— 不同分组存在同名字段(如 sms 与 oss 都有 secret_key), 必须按分组隔离 */
+const secretVisibleMap = reactive({})
+const secretKeyOf = (f) => `${activeSettingsTab.value}.${f.key}`
+const secretVisible = (f) => !!secretVisibleMap[secretKeyOf(f)]
+function toggleSecretVisible(f) {
+  const k = secretKeyOf(f)
+  secretVisibleMap[k] = !secretVisibleMap[k]
+}
 const settingsForm = ref({})
 const settingsSaving = ref(false)
 const settingsLoaded = ref({})
@@ -5302,6 +5318,25 @@ onMounted(async () => {
   color: #9c1630;
   padding: 8rpx;
 }
+/* 系统设置行: 标签加宽, 保证 AccessKeyId / AccessKeySecret 等长字段名完整显示 (2026-09-02)
+   三级选择器覆盖 .settings-card .f-label(150rpx) 与基础 .f-label(150rpx) */
+.settings-card .set-row .f-label { width: 210rpx; }
+/* 小眼睛: 敏感字段明文/密文切换 */
+.f-eye {
+  position: absolute;
+  right: 14rpx;
+  font-size: 30rpx;
+  line-height: 1;
+  padding: 10rpx 8rpx;
+  color: #9a958c;
+  z-index: 2;
+}
+.f-eye.on { color: #c41e3a; }
+/* 输入框右侧留白, 避免内容被小眼睛/清空遮挡 */
+.f-input-wrap.with-eye .f-input { padding-right: 76rpx; }
+.f-input-wrap.with-eye.has-clear .f-input { padding-right: 152rpx; }
+/* 清空按钮左移, 给小眼睛让位 */
+.f-input-wrap.with-eye .f-clear-secret { right: 74rpx; }
 .settings-actions {
   display: flex;
   align-items: center;
