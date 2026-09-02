@@ -1132,42 +1132,6 @@
       </view>
     </view></view>
 
-    <!-- ===== 断点续传确认弹窗 (5s 未选择默认继续上传) ===== -->
-    <view class="pp-mask center" v-if="resumeConfirm">
-      <view class="pp-sheet" @tap.stop>
-        <view class="form-sheet rc-sheet">
-          <view class="sheet-title">发现未完成的上传</view>
-          <view class="rc-body">
-            <text class="rc-main">上次该文件已上传约 <text class="rc-pct">{{ resumeConfirm.percent }}%</text>，是否从断点继续上传？</text>
-            <text class="rc-tip">选「重新上传」将丢弃旧进度，从头开始</text>
-          </view>
-          <view class="sheet-actions">
-            <view class="btn-p plain sm" @click="closeResumeConfirm(false)">重新上传</view>
-            <view class="btn-p sm" @click="closeResumeConfirm(true)">继续上传（{{ resumeConfirm.left }}s）</view>
-          </view>
-        </view>
-      </view>
-    </view>
-
-    <!-- ===== 上传完成后 C/OSS 存储确认弹窗 (5s 未选择默认存储本地) ===== -->
-    <view class="pp-mask center" v-if="ossMigrateConfirm">
-      <view class="pp-sheet" @tap.stop>
-        <view class="form-sheet rc-sheet">
-          <view class="sheet-title">C/OSS 存储</view>
-          <view class="rc-body">
-            <text class="rc-main">是否将该视频同时存储到 C/OSS（对象存储）？</text>
-            <text class="rc-info" v-if="ossMigrateConfirm.label">课程：{{ ossMigrateConfirm.label }}</text>
-            <text class="rc-info" v-if="ossMigrateConfirm.fname">文件：{{ ossMigrateConfirm.fname }}</text>
-            <text class="rc-count">{{ ossMigrateConfirm.left }}s 后默认「存储本地」</text>
-          </view>
-          <view class="sheet-actions">
-            <view class="btn-p plain sm" @click="closeOssMigrateConfirm(false)">存储本地</view>
-            <view class="btn-p sm" @click="closeOssMigrateConfirm(true)">存储到 C/OSS</view>
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- ===== 商品编辑弹窗 ===== -->
     <view class="pp-mask" v-if="showProduct" @tap="showProduct = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
@@ -1489,6 +1453,46 @@
         </view>
       </view>
     </view></view>
+
+    <!-- ===== 以下两个确认弹窗必须放在模板【最末尾】(2026-09-02) =====
+         它们由上传流程触发, 而上传是在「课程编辑弹窗」内进行的; 若按 DOM 顺序排在课程弹窗之前,
+         就会被课程弹窗盖住看不见。放到最后 + .topmost 更高层级, 保证浮在所有编辑弹窗之上 -->
+
+    <!-- ===== 断点续传确认弹窗 (5s 未选择默认继续上传) ===== -->
+    <view class="pp-mask center topmost" v-if="resumeConfirm">
+      <view class="pp-sheet" @tap.stop>
+        <view class="form-sheet rc-sheet">
+          <view class="sheet-title">发现未完成的上传</view>
+          <view class="rc-body">
+            <text class="rc-main">上次该文件已上传约 <text class="rc-pct">{{ resumeConfirm.percent }}%</text>，是否从断点继续上传？</text>
+            <text class="rc-tip">选「重新上传」将丢弃旧进度，从头开始</text>
+          </view>
+          <view class="sheet-actions">
+            <view class="btn-p plain sm" @click="closeResumeConfirm(false)">重新上传</view>
+            <view class="btn-p sm" @click="closeResumeConfirm(true)">继续上传（{{ resumeConfirm.left }}s）</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ===== 上传完成后 C/OSS 存储确认弹窗 (5s 未选择默认存储本地) ===== -->
+    <view class="pp-mask center topmost" v-if="ossMigrateConfirm">
+      <view class="pp-sheet" @tap.stop>
+        <view class="form-sheet rc-sheet">
+          <view class="sheet-title">C/OSS 存储</view>
+          <view class="rc-body">
+            <text class="rc-main">是否将该视频同时存储到 C/OSS（对象存储）？</text>
+            <text class="rc-info" v-if="ossMigrateConfirm.label">课程：{{ ossMigrateConfirm.label }}</text>
+            <text class="rc-info" v-if="ossMigrateConfirm.fname">文件：{{ ossMigrateConfirm.fname }}</text>
+            <text class="rc-count">{{ ossMigrateConfirm.left }}s 后默认「存储本地」</text>
+          </view>
+          <view class="sheet-actions">
+            <view class="btn-p plain sm" @click="closeOssMigrateConfirm(false)">存储本地</view>
+            <view class="btn-p sm" @click="closeOssMigrateConfirm(true)">存储到 C/OSS</view>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -6174,6 +6178,9 @@ onMounted(async () => {
 }
 .btn-copy text { font-size: 24rpx; color: #fffafa; }
 .qr-sheet { text-align: center; }
+/* 上传流程触发的确认弹窗必须高于「课程编辑弹窗」(同为 .pp-mask 时由 DOM 顺序决定层级,
+   故该弹窗已置于模板最末尾, 这里再抬高层级做双保险) */
+.pp-mask.topmost { z-index: 9999; }
 /* 断点续传确认弹窗 (5s 倒计时, 默认继续上传) */
 .rc-sheet { padding: 40rpx 34rpx 30rpx; }
 .rc-body { padding: 6rpx 0 24rpx; }
