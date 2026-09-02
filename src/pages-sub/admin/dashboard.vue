@@ -1244,6 +1244,16 @@
                   <text class="ep-up-meta">网速 {{ ep._speed > 0 ? formatSpeed(ep._speed) : '计算中…' }} · 剩余 {{ ep._speed > 0 ? formatEta(ep._eta) : '计算中…' }}</text>
                   <text class="ep-up-status" v-if="ep._status">{{ ep._status }}</text>
                 </view>
+                <!-- 已暂停(让位给队列): 保留进度与续传点, 显示继续/取消, 队列继续下一个 (v1.11.308 修复: 之前让位后按钮消失只能重选文件) -->
+                <view class="ep-up paused" v-else-if="ep._paused && !ep._uploading">
+                  <view class="ep-up-row">
+                    <view class="ep-up-bar"><view class="ep-up-fill" :style="{ width: (ep._progress || 0) + '%' }"></view></view>
+                    <text class="ep-up-pct">{{ ep._progress || 0 }}%</text>
+                    <text class="ep-up-btn" @tap="resumePausedUpload(ep)">继续</text>
+                    <text class="ep-up-btn danger" @tap="cancelEpisodeUpload(ep)">取消</text>
+                  </view>
+                  <text class="ep-up-status">已暂停（点继续可续传，队列已继续下一个）</text>
+                </view>
                 <!-- 排队等待中: 显示等待上传 + 可取消排队 (2026-08-30 排队策略: 一次只传一个, 其他依次等待) -->
                 <view class="ep-up queued" v-else-if="ep._queued">
                   <text class="ep-up-pct queued-txt">⏳ 等待上传</text>
@@ -3079,6 +3089,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
   const control = { paused: false, cancelled: false, abortFns: new Set(), size: fileSize } // size: chooseVideo 返回, 避免 fetch 读全文件
   ep._control = control
   ep._fileObj = fileObj
+  ep._filePath = filePath // 暂停让位后续传用(避免重新选文件)
   ep._fileSize = fileSize // 取消乐观兜底保存续传点用
   ep._uploading = true
   ep._paused = false
@@ -3203,7 +3214,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     if (ep._pausedYield) {
       // 暂停让位: 保留进度与"已暂停"态, 不显示"已取消"; UI 回到上传按钮(重新选文件可续传)
       ep._paused = true
-      ep._status = '已暂停（可重新上传续传）'
+      ep._status = '已暂停（点继续可续传）'
       ep._pausedYield = false
     } else {
       ep._paused = false
@@ -3251,7 +3262,7 @@ function togglePauseEpisodeUpload(ep) {
       ep._pausedYield = true
       ep._control.cancelled = true
       abortAllParts(ep._control)
-      uni.showToast({ title: '已暂停，队列继续下一个', icon: 'none' })
+      uni.showToast({ title: '已暂停，队列继续下一个（可点继续续传）', icon: 'none' })
     } else {
       // 无排队: 真暂停(SDK 内部暂停), 进度保留, 稍后点继续可 resume
       ep._control.paused = true
@@ -3261,6 +3272,37 @@ function togglePauseEpisodeUpload(ep) {
       uni.showToast({ title: '已暂停', icon: 'none' })
     }
   }
+}
+/* 继续已暂停(让位)的上传: 用保留的文件引用 + 续传记录, 无需重新选文件 (v1.11.308)
+   - 通道空闲: 立即 startUpload, 内部 findResume(fileSize) 自动续传同一 uploadId
+   - 通道被占用(其他课时在传): 入队, 轮到自动续传
+   - 文件引用丢失(如刷新页面): 回退到重新选文件 */
+function resumePausedUpload(ep) {
+  if (!ep) return
+  if (ep._uploading) return uni.showToast({ title: '该课时正在上传中', icon: 'none' })
+  if (ep._queued) return uni.showToast({ title: '该课时正在排队等待中', icon: 'none' })
+  const filePath = ep._filePath
+  const fileObj = ep._fileObj
+  const fileSize = ep._fileSize || 0
+  if (!filePath && !fileObj) {
+    // 文件引用已丢失(多为刷新页面) → 只能重新选文件
+    return uploadEpisodeVideo(ep)
+  }
+  if (currentUploadingEp && currentUploadingEp !== ep) {
+    // 通道被占用 → 入队, 轮到自动续传
+    uploadQueue.value.push({ ep, filePath, fileSize, fileObj })
+    ep._queued = true
+    ep._paused = false
+    ep._status = '等待上传'
+    ep._progress = ep._progress || 0
+    uni.showToast({ title: '已加入队列，轮到后自动续传', icon: 'none' })
+    return
+  }
+  ep._paused = false
+  ep._uploading = true
+  ep._status = ''
+  uni.showToast({ title: '继续上传', icon: 'none' })
+  startUpload(ep, filePath, fileSize, fileObj)
 }
 /* 取消上传 (v1.11.264): **点击立即强制复位 UI**, 不依赖底层请求是否中断 —
    cancelled + abort 全部请求, 界面立刻恢复"上传"按钮, 保留续传进度;
