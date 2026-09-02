@@ -1458,7 +1458,7 @@ import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminOrderAnalysis,
-  adminCourseCreate, adminCourseUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
+  adminCourseCreate, adminCourseUpdate, adminCourseEpisodeUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
   adminOrderReconcile,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
@@ -2874,9 +2874,11 @@ function moveEpisode(i, dir) {
 /* ===== 断点续传记录 (localStorage): 失败/取消后保留已传分片, 下次选同一文件自动续传 ===== */
 const RESUME_KEY = 'zhs_upload_resume'
 const PART_SIZE_BYTES = 16 * 1024 * 1024
-/* 看门狗 (v1.11.309 根治"卡半天"): 上传(非初始化)阶段若超过此时长【没有任何进度变化】,
-   判定网络挂起/连接僵死 → 强制中止本任务(续传点已定期保存), 释放上传通道, 队列自动继续下一个 */
-const UPLOAD_IDLE_TIMEOUT_MS = 120 * 1000
+/* 看门狗 (v1.11.310 改为"重连续传"而非"放弃"): SDK 每 10s 上报一次心跳, 故"长时间连心跳都没有"
+   = 上传循环真死(事件循环阻塞/请求僵死), 而非"传得慢"。
+   判定真死后【重启本轮并用续传点接着传】, 绝不放弃任务、绝不清零进度 (用户要求: 可以慢, 但不能中断)。
+   3 分钟 >> 10s 心跳间隔, 慢速上传(哪怕单片十几分钟)也不会被误杀。 */
+const UPLOAD_STALL_TIMEOUT_MS = 180 * 1000
 const UPLOAD_WATCHDOG_INTERVAL_MS = 15000
 function saveResume(rec) {
   try {
@@ -3087,22 +3089,29 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     }
   }
   currentUploadingEp = ep
-  currentUploadingCourseId = courseForm.value.id // 记录所属课程, 切换课程时中止残留任务
+  currentUploadingCourseId = courseForm.value.id // 记录所属课程(切课不再中止, 仅用于标识归属)
+  // 捕获所属课程/课时坐标 (v1.11.310): 上传期间用户可能切走课程, 届时 courseForm 已指向别的课,
+  // 必须用【开始时】捕获的坐标落库与提示, 否则会写错课程
+  const myCourseId = courseForm.value.id
+  const myEpIndex = i
+  const myCourseTitle = courseForm.value.title
   const myGen = ++uploadGenCounter // 任务代号: 取消/急停后旧任务的进度/结果写入全部失效
   ep._uploadGen = myGen
   console.log('[上传] 开始课时 ' + (ep.title || '第' + (i + 1) + '集') + ' gen=' + myGen + ' 续传=' + (resumeInfo ? '是' : '否'))
   const control = { paused: false, cancelled: false, abortFns: new Set(), size: fileSize } // size: chooseVideo 返回, 避免 fetch 读全文件
-  let lastProgressTs = Date.now() // 看门狗基准: 进度一有变化即刷新; 超时无变化 → 网络挂起
-  control.timedOut = false
+  // 意图标记: 用于区分"谁中止了这次上传"(用户取消 / 暂停让位 / 卡死重启), 决定是否重试
+  control.userCancelled = false // 用户点「取消」→ 不再重试
+  control.yieldPause = false    // 用户点「暂停」让位给队列 → 不再重试
+  control.timedOut = false      // 看门狗判定真卡死 → 必须重试(不是放弃)
+  control.inAttempt = false     // 是否处于"正在传"区间(退避等待期间不计入卡死)
+  let lastActivityTs = Date.now() // 心跳/进度/状态事件任一上报都刷新 → 证明"还活着"
   control.watchdog = setInterval(() => {
-    if (control.cancelled || control.paused || ep._uploadGen !== myGen) {
-      clearInterval(control.watchdog) // 已取消/主动暂停/任务过期 → 停止看门狗
-      return
-    }
-    if (Date.now() - lastProgressTs > UPLOAD_IDLE_TIMEOUT_MS) {
-      // 超过阈值没有任何进度 → 网络挂起, 强制中止本任务; 续传点已定期保存,
-      // 由 catch/finally 释放通道并 dequeueNext 自动开始下一个 (不再"卡半天"卡死整个队列)
-      console.log('[上传看门狗] ' + UPLOAD_IDLE_TIMEOUT_MS / 1000 + 's 无进度, 自动中止并让位给队列')
+    if (ep._uploadGen !== myGen) { clearInterval(control.watchdog); return } // 任务过期 → 停止
+    if (!control.inAttempt) return            // 退避等待/初始化阶段: 不计入卡死
+    if (control.paused || control.cancelled) return // 用户暂停或已取消中: 不算卡死
+    if (Date.now() - lastActivityTs > UPLOAD_STALL_TIMEOUT_MS) {
+      // 连心跳都没有 → 真卡死: 中止本轮请求(不是放弃任务!), 由重试循环用续传点自动接上
+      console.log('[上传看门狗] ' + UPLOAD_STALL_TIMEOUT_MS / 1000 + 's 无任何响应, 自动重连续传(进度保留)')
       control.timedOut = true
       control.cancelled = true
       abortAllParts(control)
@@ -3179,22 +3188,62 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     if (resumeInfo) { cloudPath = resume.cloudPath; control.cloudPath = cloudPath } // 续传必须用同一 cloudPath
     ep._status = ''
     console.log('[上传] gen=' + myGen + ' 初始化完成, 开始传分片')
-    const upRes = await storage.uploadFile(filePath, cloudPath, (ratio, _u, _s, info) => {
-      if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 忽略旧任务进度
-      const pct = Math.min(99, Math.round(ratio * 100))
-      if (pct !== ep._progress) { ep._progress = pct; lastProgressTs = Date.now() } // 进度变化即刷新看门狗
-      // 实时速度 / 预计剩余 (抖音/视频号同款反馈, 让用户看到"在动", 慢网不再以为卡死)
-      if (info) { ep._speed = info.speedBps || 0; ep._eta = info.etaSec || 0 }
-      // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
-      const now = Date.now()
-      if (control.uploadId && now - lastSaveTs > 10000) {
-        lastSaveTs = now
-        saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], partSize: control.partSize || PART_SIZE_BYTES, ts: now })
+    /* ===== 永不放弃重试循环 (v1.11.310) =====
+       除【用户主动取消 / 暂停让位 / 急停】外, 任何失败(网络波动、分片失败、合并前补齐失败、
+       看门狗判定真卡死)都一律【自动续传重试】, 绝不退出、进度绝不清零 —— 用户要求"可以慢, 但不能中断"。
+       每次重试都用已传分片构造续传信息, 从断点接着传, 已传部分不丢。 */
+    let attempt = 0
+    let upRes = null
+    let attemptResume = resumeInfo || null
+    while (true) {
+      attempt++
+      control.inAttempt = true
+      try {
+        upRes = await storage.uploadFile(filePath, cloudPath, (ratio, uploaded, size, info) => {
+          if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 忽略旧任务进度
+          lastActivityTs = Date.now() // 心跳/真实进度都算"还活着", 看门狗据此区分慢 vs 卡死
+          if (info && info.heartbeat) return // 纯心跳: 不改写显示, 仅刷新活跃时间
+          const pct = Math.min(99, Math.round(ratio * 100))
+          if (pct !== ep._progress) ep._progress = pct
+          // 实时速度 / 预计剩余 (抖音/视频号同款反馈, 让用户看到"在动", 慢网不再以为卡死)
+          if (info) { ep._speed = info.speedBps || 0; ep._eta = info.etaSec || 0 }
+          // 节流保存续传点 (10s 一次, 防直接关页面丢进度)
+          const now = Date.now()
+          if (control.uploadId && now - lastSaveTs > 10000) {
+            lastSaveTs = now
+            saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], partSize: control.partSize || PART_SIZE_BYTES, ts: now })
+          }
+        }, control, (s) => {
+          if (ep._uploadGen !== myGen) return
+          lastActivityTs = Date.now() // 状态事件也证明还活着
+          ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
+        }, attemptResume || null, fileObj)
+        control.inAttempt = false
+        break // 上传成功 → 跳出重试循环
+      } catch (upErr) {
+        control.inAttempt = false
+        // 用户主动取消 / 暂停让位 / 任务已过期 → 不重试, 交外层 catch 按取消或让位处理
+        if (control.userCancelled || control.yieldPause || ep._uploadGen !== myGen) throw upErr
+        if (upErr && upErr.code === 'UPLOAD_CANCELLED' && !control.timedOut) throw upErr
+        // 其余(网络错误 / 分片失败 / 补齐失败 / 卡死重启)一律重试
+        const waitSec = Math.min(30, 3 * Math.pow(2, Math.min(attempt - 1, 3))) // 3/6/12/24s, 上限 30s
+        ep._status = control.timedOut ? '检测到无响应，自动重连续传…' : `网络较慢，自动续传中…（第 ${attempt} 次）`
+        console.warn('[上传] 第 ' + attempt + ' 次中断, ' + waitSec + 's 后自动续传重试:', (upErr && upErr.message) || upErr)
+        // 用当前已传分片构造续传信息 → 下次尝试从断点接着传(已传分片不丢)
+        if (control.uploadId) {
+          saveResume({ size: fileSize, cloudPath, uploadId: control.uploadId, partNumbers: control.partNumbers || [], partSize: control.partSize || PART_SIZE_BYTES, ts: Date.now() })
+          attemptResume = { uploadId: control.uploadId, skipPartNumbers: (control.partNumbers || []).slice() }
+        }
+        await new Promise((r) => setTimeout(r, waitSec * 1000))
+        // 退避期间用户取消/让位/急停 → 停止重试
+        if (control.userCancelled || control.yieldPause || ep._uploadGen !== myGen) throw upErr
+        // 复位本轮控制标记(保留 paused 以尊重暂停), 准备重连
+        control.cancelled = false
+        control.timedOut = false
+        if (control.abortFns) control.abortFns.clear()
+        lastActivityTs = Date.now()
       }
-    }, control, (s) => {
-      if (ep._uploadGen !== myGen) return
-      ep._status = s === 'retrying' ? '网络波动，自动重试中…' : s === 'paused' ? '已暂停' : s === 'resumed' ? '' : s === 'cancelling' ? '正在取消…' : ''
-    }, resumeInfo || null, fileObj)
+    }
     const fileID = upRes.fileID || (upRes.file && upRes.file.fileID)
     if (!fileID) throw new Error('上传失败')
     if (ep._uploadGen !== myGen) return // 任务已被取消/急停: 不再写回结果
@@ -3215,10 +3264,17 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
     removeResume(fileSize) // 成功清除续传点
     uni.showToast({ title: '已上传', icon: 'success' })
     removeNetListeners()
+    // 后台精准落库 (v1.11.310): 按开始时捕获的 (course_id + episode_index) 只更新该课时,
+    // 即使用户传完前已切走课程、内存表单对象失效, 视频也不会丢
+    if (myCourseId) {
+      adminCourseEpisodeUpdate({ course_id: myCourseId, episode_index: myEpIndex, video: url })
+        .then(() => console.log('[上传] 课时已落库 course=' + myCourseId + ' ep=' + myEpIndex))
+        .catch((e2) => console.warn('[上传] 课时落库失败(已写入表单, 需点保存):', (e2 && e2.message) || e2))
+    }
     // C/OSS 提示改为【不阻塞上传队列】(2026-08-30 修复: 之前 await 会先查设置再弹窗等用户,
     // 期间 finally/dequeueNext 不执行 → 排队的下一个视频永远不自动开始)
     setTimeout(() => {
-      maybeMigrateToOss({ course_id: courseForm.value.id, episode_index: i, video: ep.video, course_title: courseForm.value.title, episode_title: ep.title || ('第' + (i + 1) + '集') }).catch(() => {})
+      maybeMigrateToOss({ course_id: myCourseId, episode_index: myEpIndex, video: ep.video, course_title: myCourseTitle, episode_title: ep.title || ('第' + (myEpIndex + 1) + '集') }).catch(() => {})
     }, 1200)
   } catch (e) {
     removeNetListeners()
@@ -3242,10 +3298,7 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
       ep._progress = 0
       ep._status = ''
     }
-    if (control.timedOut) {
-      // 看门狗触发: 网络长时间无进度, 自动跳过本任务(进度已保留), 队列继续下一个
-      uni.showToast({ title: '上传超时（网络长时间无进度），已自动跳过，队列继续', icon: 'none' })
-    } else if (e && e.code === 'UPLOAD_CANCELLED') {
+    if (e && e.code === 'UPLOAD_CANCELLED') {
       // pausedYield 让位: 显示"已暂停, 队列继续"; 普通取消: 显示"已取消(进度已保留)"
       uni.showToast({ title: ep._paused ? '已暂停，队列继续下一个' : '已取消(进度已保留)', icon: 'none' })
     } else if (msg.indexOf('初始化') >= 0) {
@@ -3286,6 +3339,7 @@ function togglePauseEpisodeUpload(ep) {
       // 有排队任务: 让位给队列 — 中止当前(SDK 结束 uploadFile), 保留续传进度, finally 自动开始下一个
       ep._pausedYield = true
       ep._control.cancelled = true
+      ep._control.yieldPause = true // 标记"暂停让位" → 重试循环不再重试, 由 finally 出队下一个
       abortAllParts(ep._control)
       uni.showToast({ title: '已暂停，队列继续下一个（可点继续续传）', icon: 'none' })
     } else {
@@ -3337,6 +3391,7 @@ function cancelEpisodeUpload(ep) {
   console.log('[上传控制] 点击取消', ep.title || ep._key, 'gen=', ep._uploadGen)
   if (ep._control) {
     ep._control.cancelled = true
+    ep._control.userCancelled = true // 标记"用户主动取消" → startUpload 重试循环不再重试
     abortAllParts(ep._control) // 立即中断所有并发分片
     try {
       if (ep._control.uploadId && ep._fileSize) {
@@ -3537,22 +3592,13 @@ function openCourseForm(c) {
     showCourse.value = true
     return
   }
+  // v1.11.310: 切换课程【不再中止】在传任务 —— 用户要求"不能中断、不退随意退出"。
+  // 上传继续在后台跑, 成功后由 startUpload 按 (course_id + episode_index) 调
+  // admin.course.episode.update 精准落库, 因此切课也不会丢视频。
+  // 旧逻辑在此直接 cancel 正在传的任务 → 用户切个课程上传就没了(典型的"随意退出")。
   if (currentUploadingEp && currentUploadingCourseId !== newCid) {
-    const ctrl = currentUploadingEp._control
-    if (ctrl) {
-      ctrl.cancelled = true
-      abortAllParts(ctrl)
-      if (ctrl.uploadId) {
-        try {
-          if (currentUploadingEp._fileSize) {
-            saveResume({ size: currentUploadingEp._fileSize, cloudPath: ctrl.cloudPath || '', uploadId: ctrl.uploadId, partNumbers: ctrl.partNumbers || [], ts: Date.now() })
-          }
-        } catch (e) {}
-      }
-    }
-    currentUploadingEp._uploading = false
-    currentUploadingEp._status = ''
-    currentUploadingEp = null
+    console.log('[上传] 切换课程, 上传任务在后台继续(不中断):', currentUploadingEp.title || currentUploadingEp._key)
+    uni.showToast({ title: '上传在后台继续，完成后自动写入该课时', icon: 'none' })
   }
   if (uploadQueue.value.length) {
     uploadQueue.value.forEach((q) => { if (q && q.ep) { q.ep._queued = false; q.ep._status = '' } })

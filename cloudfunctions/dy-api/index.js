@@ -3795,6 +3795,28 @@ async function adminCourseUpdate(data) {
   return ok({ updated: true })
 }
 
+/* 课时级精准更新 (2026-09-02): 上传在后台进行、用户已切走课程时, 按 course_id + episode_index
+   只更新该课时字段。旧方案需前端传完整课程对象, 而切课后内存 episodes 已是另一门课的, 会覆盖丢数据;
+   本路由由服务端读-改-写, 保证"边传边切课"也不会丢视频 (配合前端不中断上传) */
+async function adminCourseEpisodeUpdate(data) {
+  const cid = Number(data.course_id)
+  const idx = Number(data.episode_index)
+  if (!cid || !(idx >= 0)) return fail('参数不完整(course_id/episode_index)')
+  const res = await db.collection('courses').where({ id: cid }).limit(1).get()
+  const course = res.data && res.data[0]
+  if (!course) return fail('课程不存在')
+  const episodes = Array.isArray(course.episodes) ? course.episodes.slice() : []
+  if (idx >= episodes.length) return fail('课时不存在')
+  const patch = {}
+  ;['video', 'title', 'text', 'free', 'duration'].forEach((k) => {
+    if (data[k] !== undefined) patch[k] = data[k]
+  })
+  if (!Object.keys(patch).length) return fail('无更新字段')
+  episodes[idx] = Object.assign({}, episodes[idx], patch)
+  await db.collection('courses').where({ id: cid }).update({ episodes })
+  return ok({ updated: true })
+}
+
 async function adminCourseCreate(data) {
   const max = await db.collection('courses').orderBy('id', 'desc').limit(1).get()
   const nextId = max.data.length ? (max.data[0].id || 0) + 1 : 1
@@ -5067,6 +5089,7 @@ const ROUTES = {
   'admin.products.delete': adminProductDelete,
   'admin.courses.create': adminCourseCreate,
   'admin.courses.update': adminCourseUpdate,
+  'admin.course.episode.update': adminCourseEpisodeUpdate,
   'admin.orders.ship': adminOrderShip,
   'admin.orders.refund': adminOrderRefund,
   'admin.orders.reconcile': adminOrderReconcile,

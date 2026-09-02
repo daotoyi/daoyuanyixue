@@ -211,11 +211,15 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
   let speedBps = 0
   let retrying = false
   const t0 = Date.now()
-  const emitProgress = () => {
+  // heartbeat=true 表示"仅心跳"(无分片完成, 但上传循环仍存活), 供上层看门狗区分
+  // 【在传但慢】与【真卡死】—— 避免上层为防卡死而误杀慢速上传 (用户要求: 可以慢, 但绝不中断)
+  const emitProgress = (isHeartbeat) => {
     if (!onProgress) return
     const eta = speedBps > 0 ? Math.round((size - uploaded) / speedBps) : 0
-    onProgress(uploaded / size, uploaded, size, { speedBps, etaSec: eta, concurrency, partSize: PART_SIZE })
+    onProgress(uploaded / size, uploaded, size, { speedBps, etaSec: eta, concurrency, partSize: PART_SIZE, heartbeat: !!isHeartbeat })
   }
+  // 心跳: 每 10s 上报一次, 长时间无分片完成时也能证明"上传还活着"
+  const hbTimer = setInterval(() => { try { emitProgress(true) } catch (e) {} }, 10000)
   const uploadOne = async (partNumber) => {
     const controller = new AbortController()
     const abortFn = () => controller.abort()
@@ -364,7 +368,9 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
       }
       if (failedParts.length === 0) break // 全部成功
       round++
-      if (round > 16) {
+      // 容忍上限大幅提高(16→40): 用户要求"可以慢但绝不中断", 连续网络抖动不应轻易放弃整传;
+      // 真到上限时也只是抛错, 上层 startUpload 的重试循环会用续传点自动接着传, 进度不丢
+      if (round > 40) {
         throw new Error('分片 ' + failedParts.slice(0, 8).join(',') + ' 多次失败，已保留进度，可重新选择该文件续传')
       }
       // 签名临近 30min 过期 → 刷新待传分片签名, 避免补齐轮 403
@@ -381,8 +387,9 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     // 6) 合并前校验: 以服务端 listParts 为权威, 补齐"客户端以为传完但服务端缺失"的分片
     // (PUT 偶发 200 但未真正落盘 / 上传中断留下半片 / COS 一致性窗口)。否则 complete 会报
     // "One or more of the specified parts could not be found", 或静默生成缺片损坏文件。
-    let verifyRounds = 0
-    while (verifyRounds < 4) {
+  let verifyRounds = 0
+  const VERIFY_MAX_ROUNDS = 8
+  while (verifyRounds < VERIFY_MAX_ROUNDS) {
       await waitIfPaused(control)
       const lp = await call('storage.listParts', { cloudPath, uploadId }).catch(() => null)
       const serverParts = new Set((lp && lp.parts) || [])
@@ -399,10 +406,16 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
           if (!donePartNumbers.includes(pn)) { donePartNumbers.push(pn); uploaded += sz; emitProgress() }
         } catch (e2) { allOk = false; console.error('[CloudBase] 补齐分片 ' + pn + ' 失败:', e2 && e2.message) }
       }
-      if (!allOk) throw new Error('补齐缺失分片失败，已保留进度，可重新选择该文件续传')
+      // 补齐失败【不再整体放弃】(2026-09-02 修复"随意退出"): 旧代码一次失败就 throw,
+      // 导致整段上传前功尽弃被判失败。改为退避后进入下一轮继续补齐, 仅由轮数上限兜底;
+      // 即便到上限, 上层 startUpload 也会用续传点自动重连, 已传分片不丢、进度不清零。
+      if (!allOk) {
+        console.warn('[CloudBase] 补齐轮有分片失败, 退避后继续补齐 (' + (verifyRounds + 1) + '/' + VERIFY_MAX_ROUNDS + ')')
+        await sleep(2000 * Math.min(verifyRounds + 1, 5))
+      }
       verifyRounds++
     }
-    if (verifyRounds >= 4) throw new Error('分片补齐多次仍未与服务端一致，已保留进度，可重新选择该文件续传')
+    if (verifyRounds >= VERIFY_MAX_ROUNDS) throw new Error('分片补齐多次仍未与服务端一致，已保留进度，可重新选择该文件续传')
     donePartNumbers.sort((a, b) => a - b)
     // 7) 合并分片 (云函数侧对"part not found"做重试兜底)
     status('completing')
@@ -414,6 +427,8 @@ async function uploadMultipartToCos(filePath, cloudPath, onProgress, control, on
     // 7) 失败/取消: 已传分片【保留在 COS】供下次断点续传 (COS 7 天后自动清理未完成分片)
     if (e && e.code === 'UPLOAD_CANCELLED') status('cancelling')
     throw e
+  } finally {
+    clearInterval(hbTimer) // 清理心跳, 防定时器泄漏
   }
 }
 
