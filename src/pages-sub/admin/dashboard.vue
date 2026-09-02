@@ -1125,6 +1125,23 @@
       </view>
     </view></view>
 
+    <!-- ===== 断点续传确认弹窗 (5s 未选择默认继续上传) ===== -->
+    <view class="pp-mask center" v-if="resumeConfirm">
+      <view class="pp-sheet" @tap.stop>
+        <view class="form-sheet rc-sheet">
+          <view class="sheet-title">发现未完成的上传</view>
+          <view class="rc-body">
+            <text class="rc-main">上次该文件已上传约 <text class="rc-pct">{{ resumeConfirm.percent }}%</text>，是否从断点继续上传？</text>
+            <text class="rc-tip">选「重新上传」将丢弃旧进度，从头开始</text>
+          </view>
+          <view class="sheet-actions">
+            <view class="btn-p plain sm" @click="closeResumeConfirm(false)">重新上传</view>
+            <view class="btn-p sm" @click="closeResumeConfirm(true)">继续上传（{{ resumeConfirm.left }}s）</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- ===== 商品编辑弹窗 ===== -->
     <view class="pp-mask" v-if="showProduct" @tap="showProduct = false"><view class="pp-sheet" @tap.stop>
       <view class="form-sheet">
@@ -3065,6 +3082,41 @@ function uploadEpisodeVideo(ep) {
   })
 }
 
+/* ===== 断点续传确认弹窗 (2026-09-02 用户需求) =====
+   重新上传同一文件时弹出「继续上传 / 重新上传」, 5 秒未选择 → 默认「继续上传」(自动选断点续传)。
+   uni.showModal 的 content 是静态文本且无法程序化关闭, 故用自定义弹窗实现倒计时。 */
+const resumeConfirm = ref(null) // { percent: number, left: number } | null
+let resumeConfirmResolve = null
+let resumeConfirmTimer = null
+const RESUME_AUTO_SEC = 5 // 倒计时秒数, 到 0 默认继续上传
+
+function closeResumeConfirm(choice) {
+  if (resumeConfirmTimer) { clearInterval(resumeConfirmTimer); resumeConfirmTimer = null }
+  resumeConfirm.value = null
+  const r = resumeConfirmResolve
+  resumeConfirmResolve = null
+  if (r) r(choice === true) // true=继续上传(续传), false=重新上传
+}
+
+function askResumeConfirm(percent) {
+  return new Promise((resolve) => {
+    if (resumeConfirmTimer) { clearInterval(resumeConfirmTimer); resumeConfirmTimer = null } // 兜底防重入
+    resumeConfirmResolve = resolve
+    let left = RESUME_AUTO_SEC
+    resumeConfirm.value = { percent, left }
+    resumeConfirmTimer = setInterval(() => {
+      left -= 1
+      if (left <= 0) {
+        // 超时未选择 → 默认继续上传(断点续传), 符合"不中断、不重头来"的诉求
+        closeResumeConfirm(true)
+        uni.showToast({ title: '已默认继续上传', icon: 'none' })
+        return
+      }
+      resumeConfirm.value = { percent, left }
+    }, 1000)
+  })
+}
+
 /* 真正开始上传一个课时 (含断点续传检测; 完成/失败/取消后自动出队下一个) */
 async function startUpload(ep, filePath, fileSize, fileObj) {
   const i = courseForm.value.episodes.indexOf(ep)
@@ -3072,16 +3124,8 @@ async function startUpload(ep, filePath, fileSize, fileObj) {
   let resumeInfo = null
   const resume = fileSize ? findResume(fileSize) : null
   if (resume && resume.uploadId) {
-    const confirmRes = await new Promise((r) => {
-      uni.showModal({
-        title: '发现未完成的上传',
-        content: `上次该文件已上传约 ${resumePercent(resume, fileSize)}%，是否从断点继续上传？（若选重新上传将丢弃旧进度）`,
-        confirmText: '继续上传',
-        cancelText: '重新上传',
-        success: (rr) => r(rr.confirm === true),
-        fail: () => r(false),
-      })
-    })
+    // 5s 未选择 → 默认「继续上传」(v1.11.311)
+    const confirmRes = await askResumeConfirm(resumePercent(resume, fileSize))
     if (confirmRes) {
       resumeInfo = { uploadId: resume.uploadId, skipPartNumbers: resume.partNumbers || [] }
     } else {
@@ -6051,6 +6095,12 @@ onMounted(async () => {
 }
 .btn-copy text { font-size: 24rpx; color: #fffafa; }
 .qr-sheet { text-align: center; }
+/* 断点续传确认弹窗 (5s 倒计时, 默认继续上传) */
+.rc-sheet { padding: 40rpx 34rpx 30rpx; }
+.rc-body { padding: 6rpx 0 24rpx; }
+.rc-main { display: block; font-size: 27rpx; color: #2b2b2b; line-height: 1.7; }
+.rc-pct { color: #c41e3a; font-weight: 600; }
+.rc-tip { display: block; font-size: 22rpx; color: #8a857c; margin-top: 12rpx; line-height: 1.6; }
 .wxmp-qr-img { width: 400rpx; margin: 20rpx auto; display: block; }
 .wxmp-qr-tip { font-size: 22rpx; color: #8a857c; margin: 30rpx 0; }
 .f-pills {
