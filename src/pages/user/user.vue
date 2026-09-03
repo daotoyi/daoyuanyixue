@@ -172,9 +172,20 @@
         <view class="invite-link" @tap="copyInviteLink">
           <text class="invite-link-text">{{ inviteLink }}</text>
         </view>
+        <!-- #ifdef MP-WEIXIN -->
+        <!-- 小程序: 直接调起微信分享, 好友打开即到注册页并自动填好邀请码 -->
+        <button class="btn-fill btn-invite" open-type="share">
+          <text>分享给好友</text>
+        </button>
+        <view class="btn-p btn-invite-sub" @tap="copyInviteCode">
+          <text>复制邀请码</text>
+        </view>
+        <!-- #endif -->
+        <!-- #ifndef MP-WEIXIN -->
         <view class="btn-fill btn-invite" @tap="copyInviteLink">
           <text>复制邀请链接</text>
         </view>
+        <!-- #endif -->
       </view>
     </view>
 
@@ -197,7 +208,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
 import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile, getPayConfig } from '../../api/api'
@@ -402,6 +413,26 @@ function copyInviteLink() {
     success: () => uni.showToast({ title: '邀请链接已复制', icon: 'success' }),
   })
 }
+
+/* 复制邀请码 (小程序内链接无法直接打开, 改为复制邀请码让好友在注册页填写) */
+function copyInviteCode() {
+  if (!daoCode.value) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
+  uni.setClipboardData({
+    data: daoCode.value,
+    success: () => uni.showToast({ title: '邀请码已复制', icon: 'success' }),
+  })
+}
+
+/* 小程序分享给好友 (2026-09-03): 分享卡片直达【注册页】并自动填好邀请码
+   —— 登录页 onLoad 已支持 ?invite=xxx 自动切到注册模式并回填邀请码 */
+onShareAppMessage(() => {
+  const code = daoCode.value
+  return {
+    title: code ? `邀你加入道元易学 · 注册即得 8 折优惠券（邀请码 ${code}）` : '道元易学 · 观天道，明人事，致中和',
+    path: code ? `/pages-sub/login/login?invite=${encodeURIComponent(code)}` : '/pages/index/index',
+    imageUrl: '',
+  }
+})
 
 function onMenu(m) {
   if (!isLoggedIn.value && m.key !== 'about') return goLogin()
@@ -970,6 +1001,34 @@ onShow(async () => {
   box-sizing: border-box;
   padding: 0 20rpx;
   background: linear-gradient(135deg, #9c1630, #6b1022);
+}
+/* 小程序原生分享按钮 <button open-type="share">: 需重置 button 默认边框/行高 */
+button.btn-invite {
+  margin: 24rpx 0 0;
+  border: none;
+  outline: none;
+  line-height: 1.2;
+  font-size: 26rpx;
+  color: #fffafa;
+  letter-spacing: 2rpx;
+}
+button.btn-invite::after { border: none; }
+/* 次按钮: 复制邀请码 (描边样式, 与主按钮区分) */
+.btn-invite-sub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 76rpx;
+  margin-top: 18rpx;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1rpx solid #9c1630;
+  border-radius: 999rpx;
+  background: transparent;
+  color: #9c1630;
+  font-size: 26rpx;
+  letter-spacing: 2rpx;
 }
 .f-row {
   display: flex;
