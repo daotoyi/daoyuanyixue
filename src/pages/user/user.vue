@@ -168,17 +168,18 @@
           <text class="sheet-close" @tap="showInvite = false">✕</text>
         </view>
         <view class="invite-code">{{ daoCode }}</view>
-        <text class="invite-tip">好友通过你的专属链接注册，双方得 8 折优惠券</text>
+        <text class="invite-tip">好友通过你的分享卡片或专属链接注册，自动填入邀请码，双方得 8 折优惠券</text>
         <view class="invite-link" @tap="copyInviteLink">
           <text class="invite-link-text">{{ inviteLink }}</text>
         </view>
         <!-- #ifdef MP-WEIXIN -->
-        <!-- 小程序: 直接调起微信分享, 好友打开即到注册页并自动填好邀请码 -->
+        <!-- 小程序: 调起微信分享(好友打开直达小程序注册页, 邀请码自动填好) -->
         <button class="btn-fill btn-invite" open-type="share">
           <text>分享给好友</text>
         </button>
-        <view class="btn-p btn-invite-sub" @tap="copyInviteCode">
-          <text>复制邀请码</text>
+        <!-- 复制链接: 给微信外/浏览器场景用, 打开即 H5 注册页并自动填码(无需下载 App) -->
+        <view class="btn-p btn-invite-sub" @tap="copyInviteLink">
+          <text>复制邀请链接</text>
         </view>
         <!-- #endif -->
         <!-- #ifndef MP-WEIXIN -->
@@ -220,7 +221,10 @@ const isLoggedIn = computed(() => userStore.isLoggedIn)
 const userInfo = computed(() => userStore.userInfo)
 
 const daoCode = computed(() => userInfo.value.dao_code || userInfo.value.invite_code || '')
-const inviteLink = computed(() => `https://club.zhenhesheng.cn/download/?invite=${daoCode.value}`)
+/* 邀请链接指向【H5 注册页】(不再指向下载页, 好友无需下载 App):
+   H5 为 hash 路由(manifest h5.router.mode=hash) 且部署在 /h5/ 子目录, 故格式为 /h5/#/页面路径?参数
+   登录页 onLoad 已支持 ?invite=xxx → 自动切到注册模式并回填邀请码 */
+const inviteLink = computed(() => `https://club.zhenhesheng.cn/h5/#/pages-sub/login/login?invite=${encodeURIComponent(daoCode.value)}`)
 
 // 会员等级: 按累计消费 (储值/购买) 自动划分 (8档: <1000/1000/3000/5000/10000/30000/50000/100000)
 const vipLevel = computed(() => {
@@ -407,19 +411,12 @@ function showVipTip() {
   showVipSheet.value = true
 }
 
+/* 复制邀请链接: 好友在浏览器/微信里打开即到 H5 注册页并自动填好邀请码, 无需下载 App */
 function copyInviteLink() {
+  if (!daoCode.value) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
   uni.setClipboardData({
     data: inviteLink.value,
     success: () => uni.showToast({ title: '邀请链接已复制', icon: 'success' }),
-  })
-}
-
-/* 复制邀请码 (小程序内链接无法直接打开, 改为复制邀请码让好友在注册页填写) */
-function copyInviteCode() {
-  if (!daoCode.value) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
-  uni.setClipboardData({
-    data: daoCode.value,
-    success: () => uni.showToast({ title: '邀请码已复制', icon: 'success' }),
   })
 }
 

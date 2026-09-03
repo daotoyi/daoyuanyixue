@@ -267,9 +267,20 @@ async function onGetPhoneNumber(e) {
 
 // 邀请链接自动填充: ?invite=道号
 onLoad((options) => {
-  if (options && options.invite) {
-    inviteCode.value = String(options.invite)
-    mode.value = 'register'
+  let invite = (options && options.invite) || ''
+  // #ifdef H5
+  // 兜底: H5 从外部链接直接打开时(hash 路由), 参数偶尔不会落到 options, 直接从 URL 再取一次;
+  // 兼容 /h5/#/pages-sub/login/login?invite=X 与 /h5/?invite=X#/... 两种写法
+  if (!invite && typeof window !== 'undefined') {
+    try {
+      const m = window.location.href.match(/[?&]invite=([^&#]*)/)
+      if (m) invite = decodeURIComponent(m[1] || '')
+    } catch (e) { /* 忽略 */ }
+  }
+  // #endif
+  if (invite) {
+    inviteCode.value = String(invite)
+    mode.value = 'register' // 直接落到注册界面
   }
   // 后台「登录设置」开关: 控制微信一键登录是否显示 (默认隐藏)
   getPayConfig().then((cfg) => {
