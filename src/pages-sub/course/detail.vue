@@ -3,7 +3,8 @@
   <template v-if="course">
     <!-- 封面 -->
     <view class="cover">
-      <image class="cover-img" :src="course.cover" mode="aspectFill"></image>
+      <!-- fade-show: 封面图加载完成时淡入, 像课时页 poster 一样先给到"有内容"的反馈 -->
+      <image class="cover-img" :src="course.cover" mode="aspectFill" fade-show></image>
       <view class="cover-level" :class="'lv-' + lvCls(course.level)">{{ course.level }}</view>
       <view class="cover-title">{{ course.title }}</view>
     </view>
@@ -37,29 +38,46 @@
       </view></view>
     </view>
 
-    <!-- 课程介绍 -->
+    <!-- 课程介绍 (完整数据未到时显示骨架, 避免空白) -->
     <view class="card">
       <view class="card-title">课程介绍</view>
-      <text class="desc">{{ course.description }}</text>
+      <template v-if="detailLoaded">
+        <text class="desc">{{ course.description }}</text>
+      </template>
+      <template v-else>
+        <view class="sk-line sk-w100"></view>
+        <view class="sk-line sk-w90"></view>
+        <view class="sk-line sk-w60"></view>
+      </template>
     </view>
 
     <!-- 课程大纲 (后台上传的课时; 点击进入小节页播放) -->
     <view class="card">
-      <view class="card-title">课程大纲 · 共 {{ outlineList.length }} 课时</view>
+      <!-- 大纲依赖完整数据(含 episodes), 未就绪时显示骨架, 避免占位课时闪一下再变真实的跳变 -->
+      <view class="card-title" v-if="detailLoaded">课程大纲 · 共 {{ outlineList.length }} 课时</view>
+      <view v-else class="sk-line sk-w30 sk-bold" style="margin: 0 0 8rpx"></view>
       <view class="outline">
-        <view class="lesson" v-for="(ep, i) in outlineList" :key="i" @tap="openLesson(i)">
-          <view class="lesson-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
-          <view class="lesson-main">
-            <view class="lesson-name-row">
-              <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
-              <text class="lesson-pending" v-if="!ep.video">课程待更新</text>
-              <text class="lesson-lock" v-if="!isFreeCourse && ep.free === false && !isOwned">🔒</text>
+        <template v-if="detailLoaded">
+          <view class="lesson" v-for="(ep, i) in outlineList" :key="i" @tap="openLesson(i)">
+            <view class="lesson-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
+            <view class="lesson-main">
+              <view class="lesson-name-row">
+                <text class="lesson-name">{{ ep.title || '第 ' + (i + 1) + ' 课' }}</text>
+                <text class="lesson-pending" v-if="!ep.video">课程待更新</text>
+                <text class="lesson-lock" v-if="!isFreeCourse && ep.free === false && !isOwned">🔒</text>
+              </view>
             </view>
           </view>
-        </view>
-        <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
-          … 共 {{ course.lessons_count }} 课时
-        </view>
+          <view class="lesson-more" v-if="!episodesList.length && course.lessons_count > 12">
+            … 共 {{ course.lessons_count }} 课时
+          </view>
+        </template>
+        <template v-else>
+          <view class="sk-row sk-lesson" v-for="i in 5" :key="i">
+            <view class="sk-idx sk-block"></view>
+            <view class="sk-line sk-w70"></view>
+          </view>
+        </template>
       </view>
     </view>
 
@@ -123,6 +141,10 @@ import { getCourseCache, setCourseCache } from '../../utils/courseCache'
 
 const userStore = useUserStore()
 const course = ref(null)
+/* 完整详情(含课时大纲/介绍)是否已就绪:
+   从列表页进入时先用缓存渲染封面等基础信息(秒开), 大纲/介绍此时仍显示骨架,
+   避免"先出占位课时再变成真实课时"的闪烁 (2026-09-03 渐进式加载) */
+const detailLoaded = ref(false)
 const showTeacherPanel = ref(false)
 const teacherInfoData = ref({})
 
@@ -184,6 +206,9 @@ onLoad(async (options) => {
   if (cached) {
     course.value = cached
     uni.setNavigationBarTitle({ title: cached.title })
+    // 列表页缓存已含封面/标题/价格等基础字段 → 顶部立即可见;
+    // 但 episodes(大纲) 通常要等完整请求, 故此时仍让大纲走骨架, 避免占位课时闪变
+    if (Array.isArray(cached.episodes) && cached.episodes.length) detailLoaded.value = true
   }
   /* 优化2: 课程详情 与 已购状态 并行请求 (原为串行 await, 耗时叠加) */
   const mineP = userStore.isLoggedIn
@@ -197,6 +222,7 @@ onLoad(async (options) => {
       uni.setNavigationBarTitle({ title: c.title })
     }
   } catch (e) { /* 失败时保留缓存或骨架屏, 不打断页面 */ }
+  detailLoaded.value = true // 完整数据已到(或已尽力), 大纲/介绍停止骨架
   const mine = await mineP
   if (mine && course.value) {
     owned.value = (mine || []).some((c) => c.id === course.value.id)

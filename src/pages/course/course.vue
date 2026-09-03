@@ -73,6 +73,7 @@ const lvCls = (v) => LV_CLS[v] || v
 import { ref, reactive, computed, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getCourseCategories, getCourses } from '../../api/api'
+import { setCourseCache } from '../../utils/courseCache'
 
 const cateList = ref([])
 const grouped = reactive({})
@@ -117,6 +118,9 @@ async function loadAllCourses() {
       const cid = c.category_id
       if (!grouped[cid]) grouped[cid] = []
       grouped[cid].push(c)
+      // 列表已含封面/标题/价格等基础字段 → 写入缓存,
+      // 点进详情页时先渲染这些(封面秒出), 大纲等完整请求返回后再填充 (2026-09-03 渐进式加载)
+      setCourseCache(c)
     })
   } catch (e) {
     console.error('[Course] loadAll failed', e)
