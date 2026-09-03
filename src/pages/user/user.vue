@@ -170,8 +170,9 @@
         <view class="invite-code">{{ daoCode }}</view>
         <text class="invite-tip">好友通过你的分享卡片或专属链接注册，自动填入邀请码，双方得 8 折优惠券</text>
         <view class="invite-link" @tap="copyInviteLink">
-          <text class="invite-link-text">{{ inviteLink }}</text>
+          <text class="invite-link-text" selectable user-select>{{ inviteLink }}</text>
         </view>
+        <text class="invite-copy-tip">点击复制链接，或长按上方链接手动复制</text>
         <!-- #ifdef MP-WEIXIN -->
         <!-- 小程序: 调起微信分享(好友打开直达小程序注册页, 邀请码自动填好) -->
         <button class="btn-fill btn-invite" open-type="share">
@@ -411,12 +412,23 @@ function showVipTip() {
   showVipSheet.value = true
 }
 
-/* 复制邀请链接: 好友在浏览器/微信里打开即到 H5 注册页并自动填好邀请码, 无需下载 App */
+/* 复制邀请链接: 好友在浏览器/微信里打开即到 H5 注册页并自动填好邀请码, 无需下载 App
+   注: 若 setClipboardData 失败(部分小程序环境/权限限制), 会提示用户长按链接手动复制 —— 链接文本已设为可选中 */
 function copyInviteLink() {
-  if (!daoCode.value) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
+  if (!daoCode.value) {
+    uni.showToast({ title: '暂无邀请码，无法生成邀请链接', icon: 'none', duration: 2500 })
+    return
+  }
+  const link = inviteLink.value
   uni.setClipboardData({
-    data: inviteLink.value,
-    success: () => uni.showToast({ title: '邀请链接已复制', icon: 'success' }),
+    data: link,
+    success: () => {
+      uni.showToast({ title: '邀请链接已复制', icon: 'success', duration: 2000 })
+    },
+    fail: (e) => {
+      console.error('[邀请] 复制链接失败:', e)
+      uni.showToast({ title: '复制失败，请长按链接手动复制', icon: 'none', duration: 3000 })
+    },
   })
 }
 
@@ -1097,6 +1109,16 @@ button.btn-invite::after { border: none; }
   overflow-wrap: anywhere;
   word-wrap: break-word;
   white-space: normal;
+  user-select: all;
+  -webkit-user-select: all;
+}
+/* 复制方式提示 (点击按钮 / 长按文本 两种途径, 兜底小程序剪贴板异常) */
+.invite-copy-tip {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 20rpx;
+  color: #a08c72;
+  text-align: center;
 }
 
 /* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
