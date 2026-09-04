@@ -4062,12 +4062,22 @@ const settingsTabs = [
   },
   {
     /* 快递鸟物流查询 (2026-09-04 接入 v1.12.0): 发货时自动订阅轨迹, 轨迹变化由快递鸟回调同步 */
-    group: 'logistics', label: '物流查询', desc: '快递鸟物流轨迹：后台发货时自动订阅，轨迹变化由快递鸟推送回调同步，用户可在订单详情查看物流',
+    group: 'logistics', label: '物流查询', desc: '快递鸟物流：在线下单取件（自动获取运单号）+ 轨迹回调同步，用户可在订单详情查看物流',
     fields: [
       { key: 'enabled', label: '启用快递鸟', type: 'switch', desc: '开启后发货自动订阅物流轨迹，并接收快递鸟回调' },
       { key: 'kdniao_ebusiness_id', label: '商户ID', placeholder: '快递鸟后台的 EBusinessID' },
       { key: 'kdniao_app_key', label: 'API Key', secret: true, placeholder: '快递鸟后台的 AppKey（用于签名）' },
       { key: 'kdniao_callback_url', label: '回调地址', placeholder: 'https://cloud1-xxx.ap-shanghai.app.tcloudbase.com/dy-api?action=kdniao.callback' },
+      { key: 'pay_type', label: '运费支付', placeholder: '1=现付 2=到付 3=月结（默认3，需已签月结协议）' },
+      { key: 'customer_name', label: '月结账号', placeholder: '快递公司月结客户号（顺丰/京东等必填）' },
+      { key: 'customer_pwd', label: '月结密码', secret: true, placeholder: '月结卡号校验码，非必填（部分快递需要）' },
+      { key: 'sender_name', label: '发件人姓名', placeholder: '店铺/仓库联系人' },
+      { key: 'sender_tel', label: '发件人电话', placeholder: '手机号或固话' },
+      { key: 'sender_company', label: '发件公司', placeholder: '选填，显示在面单上' },
+      { key: 'sender_province', label: '发件省份', placeholder: '如：北京市' },
+      { key: 'sender_city', label: '发件城市', placeholder: '如：北京市' },
+      { key: 'sender_area', label: '发件区县', placeholder: '如：通州区' },
+      { key: 'sender_address', label: '发件详细地址', placeholder: '街道门牌号' },
     ],
   },
 ]

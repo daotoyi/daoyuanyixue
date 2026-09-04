@@ -3516,6 +3516,7 @@ const STAFF_ROUTES = [
   'admin.recentOrders',
   'admin.logistics.list',
   'admin.logistics.subscribe',
+  'admin.logistics.createOrder',
   'admin.dashboard',
 ]
 
@@ -3864,6 +3865,8 @@ async function listLogistics() {
    请求与回调均为 application/x-www-form-urlencoded (非 JSON) */
 const KDNIAO_QUERY_URL = 'https://api.kdniao.com/Ebusiness/EbusinessOrderHandle.aspx'
 const KDNIAO_SUBSCRIBE_URL = 'https://api.kdniao.com/api/dist'
+/* 在线下单 / 预约取件 (RequestType=1001) */
+const KDNIAO_ORDER_URL = 'https://api.kdniao.com/Ebusiness/EbusinessOrderHandle.aspx'
 /* 快递鸟物流状态码 */
 const KDNIAO_STATE_TEXT = { 0: '在途', 1: '已揽收', 2: '疑难', 3: '已签收', 4: '已退签', 5: '派件中', 6: '退回中', 7: '已转投', 8: '清关中', 14: '已拒签' }
 
@@ -4050,6 +4053,126 @@ async function queryLogistics(data) {
     state_text: (rec && rec.state_text) || '',
     updated_at: (rec && rec.updated_at) || '',
     has_track: traces.length > 0,
+  })
+}
+
+/* ===== 在线下单 / 预约取件 (RequestType=1001) =====
+   后台点击「在线下单」→ 快递公司接单并【分配运单号】→ 快递员上门取件
+   前置条件: ① 快递鸟后台开通「在线下单」服务 ② 已与快递公司签订月结账号(顺丰等强制要求月结卡号)
+   注: 订单的 address 只有一个 detail 字符串(无独立省市区), 故收件省市区由后台发货时补填 */
+async function kdniaoCreateOrder(params) {
+  const cfg = await getKdniaoConfig()
+  if (!cfg.enabled) return { skipped: true, reason: '未启用快递鸟' }
+  if (!cfg.eBusinessId || !cfg.appKey) return { skipped: true, reason: '快递鸟配置不完整' }
+  const requestData = JSON.stringify(params)
+  return await kdniaoFormPost(KDNIAO_ORDER_URL, {
+    RequestData: requestData,
+    EBusinessID: cfg.eBusinessId,
+    RequestType: '1001',
+    DataSign: kdniaoSign(requestData, cfg.appKey),
+    DataType: '2',
+  })
+}
+
+async function adminLogisticsCreateOrder(data) {
+  const orderNo = String((data && data.order_no) || '').trim()
+  if (!orderNo) return fail('缺少订单号')
+  const o = (await db.collection('orders').where({ order_no: orderNo }).limit(1).get()).data[0]
+  if (!o) return fail('订单不存在')
+  const shipperCode = (LOGISTICS_COMPANIES.find((l) => l.name === data.company || l.code === data.company) || {}).code || (data.company || '')
+  if (!shipperCode) return fail('请选择快递公司')
+
+  const addr = o.address || {}
+  const recv = data.receiver || {}
+  const receiver = {
+    Name: String(recv.name || addr.name || '').trim(),
+    Tel: String(recv.tel || addr.phone || '').trim(),
+    Mobile: String(recv.tel || addr.phone || '').trim(),
+    ProvinceName: String(recv.province || '').trim(),
+    CityName: String(recv.city || '').trim(),
+    ExpAreaName: String(recv.area || '').trim(),
+    Address: String(recv.address || addr.detail || '').trim(),
+  }
+  if (!receiver.Name || !receiver.Tel) return fail('收件人姓名/电话不能为空')
+  if (!receiver.ProvinceName || !receiver.CityName || !receiver.Address) return fail('收件人省/市/详细地址不能为空')
+
+  const sender = data.sender || {}
+  if (!sender.name || !sender.tel || !sender.province || !sender.address) return fail('请先到「系统设置 → 物流查询」配置发件人信息')
+
+  const items = Array.isArray(o.items) ? o.items : []
+  const goodsName = items.map((i) => i.name).join('、').slice(0, 100) || '商品'
+  const qty = items.reduce((s, i) => s + (Number(i.qty) || 1), 0) || 1
+
+  const params = {
+    OrderCode: orderNo,
+    ShipperCode: shipperCode,
+    PayType: Number(data.pay_type || 3), // 1现付 2到付 3月结
+    ExpType: 1,
+    Cost: Number(data.cost || 0),
+    OtherCost: 0,
+    Sender: {
+      Company: String(sender.company || '').trim(),
+      Name: String(sender.name || '').trim(),
+      Tel: String(sender.tel || '').trim(),
+      Mobile: String(sender.tel || '').trim(),
+      ProvinceName: String(sender.province || '').trim(),
+      CityName: String(sender.city || '').trim(),
+      ExpAreaName: String(sender.area || '').trim(),
+      Address: String(sender.address || '').trim(),
+    },
+    Receiver: receiver,
+    Commodity: [{ GoodsName: goodsName, Goodsquantity: qty, GoodsWeight: Number(data.weight || 0) }],
+    Weight: Number(data.weight || 0),
+    Quantity: qty,
+    Volume: 0,
+    Remark: String(data.remark || '').slice(0, 60),
+    IsReturnPrintTemplate: 1, // 要电子面单模板供打印
+  }
+  // 月结账号 (顺丰/京东等快递公司强制要求)
+  if (data.customer_name) params.CustomerName = String(data.customer_name)
+  if (data.customer_pwd) params.CustomerPwd = String(data.customer_pwd)
+
+  let r = null
+  try {
+    r = await kdniaoCreateOrder(params)
+  } catch (e) {
+    return fail('下单请求失败: ' + ((e && e.message) || e))
+  }
+  if (r && r.skipped) return fail(r.reason || '未下单')
+  if (!r || !(r.Success === true || r.Success === 'true')) return fail(String((r && r.Reason) || '下单失败'))
+  const logisticCode = String((r.Order && r.Order.LogisticCode) || '')
+  if (!logisticCode) return fail('快递公司未返回运单号: ' + String((r && r.Reason) || ''))
+
+  // 运单号自动回填订单 (全程无需人工抄写单号)
+  const companyName = (LOGISTICS_COMPANIES.find((l) => l.code === shipperCode) || {}).name || shipperCode
+  await db.collection('orders').where({ order_no: orderNo }).update({
+    status: '待收货',
+    shipped_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    logistics_company: companyName,
+    tracking_no: logisticCode,
+  })
+  try {
+    if (o.uid) {
+      await db.collection('messages').add({
+        id: Date.now() % 1000000,
+        uid: o.uid,
+        type: 'order',
+        title: '订单已发货',
+        content: `订单 ${orderNo} 已由${companyName}发出，运单号：${logisticCode}`,
+        read: false,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+      try { await sendGzhMsg(o.uid, '订单已发货', '订单 ' + orderNo + ' 已发出') } catch (e2) {}
+    }
+  } catch (e) { /* 忽略 */ }
+  try { await kdniaoSubscribe(shipperCode, logisticCode, orderNo) } catch (e2) {}
+
+  return ok({
+    logistic_code: logisticCode,
+    shipper_code: shipperCode,
+    company: companyName,
+    print_template: String(r.PrintTemplate || ''),
+    result_code: String(r.ResultCode || ''),
   })
 }
 
@@ -5257,6 +5380,7 @@ const ROUTES = {
   'app.checkUpdate': checkUpdate,
   'admin.logistics.list': listLogistics,
   'admin.logistics.subscribe': adminLogisticsSubscribe,
+  'admin.logistics.createOrder': adminLogisticsCreateOrder,
   'order.logistics': queryLogistics,
   /* 快递鸟物流轨迹推送回调 (HTTP POST, 公网可达; 必须在快递鸟后台配置为回调地址) */
   'kdniao.callback': kdniaoCallback,

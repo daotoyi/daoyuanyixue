@@ -336,6 +336,8 @@ export const adminOssConfigTest = _admin('admin.oss.config.test')
 /* 物流: 公司列表 + 重新订阅轨迹 (快递鸟) */
 export const adminLogisticsList = _admin('admin.logistics.list')
 export const adminLogisticsSubscribe = _admin('admin.logistics.subscribe')
+/* 在线下单(预约取件): 快递公司分配运单号并上门取件 */
+export const adminLogisticsCreateOrder = _admin('admin.logistics.createOrder')
 export const adminCateList = _admin('admin.categories.list')
 export const adminCateCreate = _admin('admin.categories.create')
 export const adminCateUpdate = _admin('admin.categories.update')
