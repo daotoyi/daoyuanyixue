@@ -48,8 +48,47 @@
         <text class="lg-label">发货时间</text>
         <text class="lg-value">{{ order.shipped_at }}</text>
       </view>
+      <!-- 快递鸟轨迹: 点击展开查看完整物流轨迹 (2026-09-04 v1.12.0) -->
+      <view class="lg-track-entry" @tap="openLogistics">
+        <text class="lg-track-btn">查看物流轨迹</text>
+        <text class="lg-track-arrow">›</text>
+      </view>
       <view class="lg-row lg-tip-row">
-        <text class="lg-tip">可前往对应快递官网/公众号凭运单号查询最新轨迹</text>
+        <text class="lg-tip">轨迹由快递鸟自动同步，发货后如有更新会自动推送</text>
+      </view>
+    </view>
+
+    <!-- 物流轨迹弹层 -->
+    <view class="pp-mask center" v-if="showLogistics" @tap="showLogistics = false">
+      <view class="pp-sheet" @tap.stop>
+        <view class="lg-sheet">
+          <view class="sheet-head">
+            <text class="sheet-title">物流轨迹</text>
+            <text class="sheet-close" @tap="showLogistics = false">✕</text>
+          </view>
+          <view class="lg-meta" v-if="logistics.shipper_code || logistics.logistic_code">
+            <text class="lg-meta-text">{{ logistics.shipper_code }} · {{ logistics.logistic_code }}</text>
+            <text class="lg-meta-state" v-if="logistics.state_text">{{ logistics.state_text }}</text>
+          </view>
+          <view class="lg-loading" v-if="logisticsLoading">
+            <text>加载中...</text>
+          </view>
+          <view class="lg-empty" v-else-if="!logistics.traces || !logistics.traces.length">
+            <text>{{ logistics.reason || '暂无物流轨迹，发货后由快递鸟自动同步' }}</text>
+          </view>
+          <view class="lg-timeline" v-else>
+            <view class="lg-item" v-for="(t, i) in logistics.traces" :key="i" :class="{ first: i === 0 }">
+              <view class="lg-dot"></view>
+              <view class="lg-item-body">
+                <text class="lg-item-station">{{ t.AcceptStation }}</text>
+                <text class="lg-item-time">{{ t.AcceptTime }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="lg-updated" v-if="logistics.updated_at">
+            <text>更新于 {{ logistics.updated_at }}</text>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -143,7 +182,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync, getOrderLogistics } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
 import { isFreePrice, fmtPrice } from '../../utils/price'
@@ -251,6 +290,27 @@ function copyTracking() {
   const no = (order.value && order.value.tracking_no) || ''
   if (!no) return
   uni.setClipboardData({ data: no, success: () => uni.showToast({ title: '运单号已复制', icon: 'success' }) })
+}
+
+/* ===== 物流轨迹 (快递鸟, 2026-09-04 v1.12.0) ===== */
+const showLogistics = ref(false)
+const logisticsLoading = ref(false)
+const logistics = ref({ traces: [], state_text: '', shipper_code: '', logistic_code: '', updated_at: '', reason: '' })
+
+async function openLogistics() {
+  showLogistics.value = true
+  logisticsLoading.value = true
+  logistics.value = { traces: [], state_text: '', shipper_code: '', logistic_code: '', updated_at: '', reason: '' }
+  try {
+    let uid = ''
+    try { uid = (useUserStore().userInfo && useUserStore().userInfo.uid) || '' } catch (e) { uid = '' }
+    const r = await getOrderLogistics((order.value && order.value.order_no) || '', uid)
+    logistics.value = Object.assign({ traces: [] }, r || {})
+  } catch (e) {
+    logistics.value = { traces: [], reason: (e && e.message) || '获取物流信息失败' }
+  } finally {
+    logisticsLoading.value = false
+  }
 }
 
 // 充值订单: 不能用元宝支付买元宝, 只支持微信/支付宝
@@ -906,5 +966,70 @@ function goShop() {
 }
 .lg-tip-row { padding: 10rpx 0 18rpx; }
 .lg-tip { font-size: 22rpx; color: #b4a89a; }
+/* ===== 物流轨迹 (快递鸟 v1.12.0) ===== */
+.lg-track-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6rpx;
+  padding: 18rpx 22rpx;
+  background: #fdf9f2;
+  border: 1rpx solid #f0e4d2;
+  border-radius: 12rpx;
+}
+.lg-track-btn { font-size: 26rpx; color: #9c1630; font-weight: 500; }
+.lg-track-arrow { font-size: 30rpx; color: #c0b3a2; }
+.lg-sheet { padding: 8rpx 0 4rpx; }
+.lg-sheet .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.lg-sheet .sheet-title { font-size: 32rpx; font-weight: 600; color: #2a2a2a; }
+.lg-sheet .sheet-close { font-size: 30rpx; color: #b4a89a; padding: 6rpx 12rpx; }
+.lg-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10rpx 0 20rpx;
+  border-bottom: 1rpx solid #f0e4d2;
+}
+.lg-meta-text { font-size: 23rpx; color: #7a6a52; }
+.lg-meta-state {
+  font-size: 22rpx;
+  color: #fff;
+  background: #9c1630;
+  border-radius: 999rpx;
+  padding: 4rpx 18rpx;
+}
+.lg-loading, .lg-empty {
+  padding: 70rpx 20rpx;
+  text-align: center;
+  font-size: 25rpx;
+  color: #a08c72;
+}
+.lg-timeline { padding: 24rpx 6rpx 10rpx; max-height: 56vh; overflow-y: auto; }
+.lg-item { display: flex; padding-bottom: 6rpx; }
+.lg-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: #e0d6c6;
+  margin: 12rpx 20rpx 0 4rpx;
+  flex-shrink: 0;
+  position: relative;
+}
+.lg-item.first .lg-dot { background: #9c1630; box-shadow: 0 0 0 6rpx rgba(156, 22, 48, 0.12); }
+.lg-item:not(:last-child) .lg-dot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 22rpx;
+  transform: translateX(-50%);
+  width: 2rpx;
+  height: 60rpx;
+  background: #ece3d5;
+}
+.lg-item-body { flex: 1; min-width: 0; padding-bottom: 24rpx; }
+.lg-item-station { display: block; font-size: 25rpx; color: #3a2a18; line-height: 1.6; word-break: break-all; }
+.lg-item.first .lg-item-station { color: #9c1630; }
+.lg-item-time { display: block; font-size: 22rpx; color: #a89b88; margin-top: 6rpx; }
+.lg-updated { padding: 14rpx 0 4rpx; text-align: center; font-size: 21rpx; color: #b4a89a; }
 
 </style>

@@ -4060,6 +4060,16 @@ const settingsTabs = [
       { key: 'license_url', label: 'License 地址', secret: true },
     ],
   },
+  {
+    /* 快递鸟物流查询 (2026-09-04 接入 v1.12.0): 发货时自动订阅轨迹, 轨迹变化由快递鸟回调同步 */
+    group: 'logistics', label: '物流查询', desc: '快递鸟物流轨迹：后台发货时自动订阅，轨迹变化由快递鸟推送回调同步，用户可在订单详情查看物流',
+    fields: [
+      { key: 'enabled', label: '启用快递鸟', type: 'switch', desc: '开启后发货自动订阅物流轨迹，并接收快递鸟回调' },
+      { key: 'kdniao_ebusiness_id', label: '商户ID', placeholder: '快递鸟后台的 EBusinessID' },
+      { key: 'kdniao_app_key', label: 'API Key', secret: true, placeholder: '快递鸟后台的 AppKey（用于签名）' },
+      { key: 'kdniao_callback_url', label: '回调地址', placeholder: 'https://cloud1-xxx.ap-shanghai.app.tcloudbase.com/dy-api?action=kdniao.callback' },
+    ],
+  },
 ]
 
 const activeSettingsTab = ref(settingsTabs[0].group)

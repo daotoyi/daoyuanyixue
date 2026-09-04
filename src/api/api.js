@@ -204,6 +204,10 @@ export const getOrder = (orderNo) =>
 export const payOrder = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ updated: true }))() : _callFunction('order.pay', { order_no: orderNo })
 
+/* 物流轨迹查询 (快递鸟; 用户在订单详情查看物流) */
+export const getOrderLogistics = (orderNo, uid) =>
+  __USE_MOCK__ ? _fromMock(() => ({}))() : _callFunction('order.logistics', { order_no: orderNo, uid: uid || '' })
+
 /* 微信支付统一下单 (小程序云开发支付, 返回 wx.requestPayment 参数) */
 export const wxpayPrepay = (orderNo) =>
   __USE_MOCK__ ? _fromMock(() => ({ payment: null }))() : _callFunction('order.wxpay', { order_no: orderNo })
@@ -329,11 +333,13 @@ export const adminVideoMigrate = _admin('admin.oss.videos.migrate', { timeout: 6
 export const adminVideoMigrateProgress = _admin('admin.oss.videos.migrate.progress', { timeout: 15000 })
 export const adminVideoDelete = _admin('admin.oss.videos.delete')
 export const adminOssConfigTest = _admin('admin.oss.config.test')
+/* 物流: 公司列表 + 重新订阅轨迹 (快递鸟) */
+export const adminLogisticsList = _admin('admin.logistics.list')
+export const adminLogisticsSubscribe = _admin('admin.logistics.subscribe')
 export const adminCateList = _admin('admin.categories.list')
 export const adminCateCreate = _admin('admin.categories.create')
 export const adminCateUpdate = _admin('admin.categories.update')
 export const adminCateDelete = _admin('admin.categories.delete')
-export const adminLogisticsList = _admin('admin.logistics.list')
 export const updateProfile = (data) => _callFunction('user.updateProfile', data)
 export const userAssets = (data) => _callFunction('user.assets', data)
 export const wechatLogin = (data) => _callFunction('user.wechatLogin', data)

@@ -3515,6 +3515,7 @@ const STAFF_ROUTES = [
   'admin.lives.update',
   'admin.recentOrders',
   'admin.logistics.list',
+  'admin.logistics.subscribe',
   'admin.dashboard',
 ]
 
@@ -3857,6 +3858,217 @@ async function listLogistics() {
   return ok(LOGISTICS_COMPANIES)
 }
 
+/* ==================== 快递鸟物流查询 (2026-09-04 接入) ====================
+   即时查询 RequestType=1002 / 轨迹订阅(推送) RequestType=1008
+   签名: DataSign = URLencode( Base64( MD5( RequestData + AppKey ) ) )
+   请求与回调均为 application/x-www-form-urlencoded (非 JSON) */
+const KDNIAO_QUERY_URL = 'https://api.kdniao.com/Ebusiness/EbusinessOrderHandle.aspx'
+const KDNIAO_SUBSCRIBE_URL = 'https://api.kdniao.com/api/dist'
+/* 快递鸟物流状态码 */
+const KDNIAO_STATE_TEXT = { 0: '在途', 1: '已揽收', 2: '疑难', 3: '已签收', 4: '已退签', 5: '派件中', 6: '退回中', 7: '已转投', 8: '清关中', 14: '已拒签' }
+
+function kdniaoSign(requestData, appKey) {
+  const crypto = require('crypto')
+  return encodeURIComponent(crypto.createHash('md5').update(String(requestData) + String(appKey), 'utf8').digest('base64'))
+}
+
+function kdniaoFormPost(url, params) {
+  return new Promise((resolve, reject) => {
+    const https = require('https')
+    const urlObj = new URL(url)
+    const qs = Object.keys(params).map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&')
+    const req = https.request({
+      hostname: urlObj.hostname,
+      path: urlObj.pathname,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(qs) },
+      timeout: 15000,
+    }, (res) => {
+      let d = ''
+      res.on('data', (c) => (d += c))
+      res.on('end', () => {
+        try { resolve(JSON.parse(d)) } catch (e) { reject(new Error('快递鸟响应解析失败: ' + String(d).slice(0, 200))) }
+      })
+    })
+    req.on('error', (e) => reject(e))
+    req.on('timeout', () => { req.destroy(); reject(new Error('快递鸟请求超时')) })
+    req.write(qs)
+    req.end()
+  })
+}
+
+/* 读取快递鸟配置 (系统设置 group=logistics) */
+async function getKdniaoConfig() {
+  try {
+    const doc = (await db.collection('settings').where({ group: 'logistics' }).limit(1).get()).data[0] || {}
+    return {
+      enabled: doc.enabled === '1' || doc.enabled === true,
+      eBusinessId: String(doc.kdniao_ebusiness_id || '').trim(),
+      appKey: String(doc.kdniao_app_key || '').trim(),
+      callbackUrl: String(doc.kdniao_callback_url || '').trim(),
+    }
+  } catch (e) {
+    return { enabled: false, eBusinessId: '', appKey: '', callbackUrl: '' }
+  }
+}
+
+/* 解析 form-urlencoded (快递鸟回调是表单 POST, 不是 JSON) */
+function parseFormBody(str) {
+  const out = {}
+  String(str || '').split('&').forEach((kv) => {
+    if (!kv) return
+    const i = kv.indexOf('=')
+    const k = decodeURIComponent((i < 0 ? kv : kv.slice(0, i)).replace(/\+/g, ' '))
+    const v = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' '))
+    out[k] = v
+  })
+  return out
+}
+
+/* 订阅物流轨迹 (发货时调用; 快递鸟在轨迹变化时 POST 回调给我们) */
+async function kdniaoSubscribe(shipperCode, logisticCode, orderNo) {
+  const cfg = await getKdniaoConfig()
+  if (!cfg.enabled) return { skipped: true, reason: '未启用快递鸟' }
+  if (!cfg.eBusinessId || !cfg.appKey) return { skipped: true, reason: '快递鸟配置不完整' }
+  if (!shipperCode || !logisticCode) return { skipped: true, reason: '缺少快递公司或运单号' }
+  const requestData = JSON.stringify({
+    OrderCode: orderNo || '',
+    ShipperCode: shipperCode,
+    LogisticCode: logisticCode,
+    Callback: cfg.callbackUrl || '',
+  })
+  return await kdniaoFormPost(KDNIAO_SUBSCRIBE_URL, {
+    RequestData: requestData,
+    EBusinessID: cfg.eBusinessId,
+    RequestType: '1008',
+    DataSign: kdniaoSign(requestData, cfg.appKey),
+    DataType: '2',
+  })
+}
+
+/* 即时查询轨迹 (用户查看时兜底补拉, 不依赖回调) */
+async function kdniaoQuery(shipperCode, logisticCode, orderNo) {
+  const cfg = await getKdniaoConfig()
+  if (!cfg.enabled || !cfg.eBusinessId || !cfg.appKey) return null
+  const requestData = JSON.stringify({ OrderCode: orderNo || '', ShipperCode: shipperCode, LogisticCode: logisticCode })
+  return await kdniaoFormPost(KDNIAO_QUERY_URL, {
+    RequestData: requestData,
+    EBusinessID: cfg.eBusinessId,
+    RequestType: '1002',
+    DataSign: kdniaoSign(requestData, cfg.appKey),
+    DataType: '2',
+  })
+}
+
+/* 轨迹落库: 集合 logistics, 一个订单一条 */
+async function saveLogisticsTrack(orderNo, shipperCode, logisticCode, data) {
+  if (!orderNo) return
+  const traces = Array.isArray(data.Traces) ? data.Traces : []
+  const doc = {
+    order_no: String(orderNo),
+    shipper_code: String(shipperCode || ''),
+    logistic_code: String(logisticCode || ''),
+    traces,
+    state: String(data.State === undefined || data.State === null ? '' : data.State),
+    state_text: KDNIAO_STATE_TEXT[Number(data.State)] || '',
+    reason: String(data.Reason || ''),
+    updated_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+  }
+  const exist = (await db.collection('logistics').where({ order_no: String(orderNo) }).limit(1).get()).data[0]
+  if (exist) {
+    await db.collection('logistics').doc(exist._id).update(doc)
+  } else {
+    await db.collection('logistics').add(Object.assign({}, doc, { created_at: doc.updated_at }))
+  }
+}
+
+/* 快递鸟轨迹推送回调 (HTTP POST form) —— 必须返回 Success:true, 否则快递鸟会判定失败并重复推送 */
+async function kdniaoCallback(data) {
+  try {
+    const form = (data && data.form) || parseFormBody((data && data.rawBody) || '')
+    let payload = null
+    try { payload = JSON.parse(form.RequestData || '{}') } catch (e) { payload = null }
+    const items = (payload && payload.Data) || []
+    for (const it of items) {
+      const orderNo = it.OrderCode || ''
+      if (!orderNo) continue
+      await saveLogisticsTrack(orderNo, it.ShipperCode, it.LogisticCode, it)
+      // 签收(State=3) 自动完成订单, 免用户手动确认收货
+      if (String(it.State) === '3') {
+        try {
+          const o = (await db.collection('orders').where({ order_no: orderNo }).limit(1).get()).data[0]
+          if (o && o.status === '待收货') {
+            await db.collection('orders').where({ order_no: orderNo }).update({
+              status: '已完成',
+              received_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+            })
+          }
+        } catch (e) { /* 忽略 */ }
+      }
+    }
+    return { EBusinessID: (payload && payload.EBusinessID) || '', UpdateTime: new Date().toLocaleString('zh-CN', { hour12: false }), Success: true, Reason: '' }
+  } catch (e) {
+    // 异常也要回 Success, 避免快递鸟无限重推; 错误已落日志
+    console.error('[dy-api] 快递鸟回调处理失败:', e && e.message)
+    return { Success: true, Reason: String((e && e.message) || '处理异常') }
+  }
+}
+
+/* 查询物流轨迹 (用户端/后台共用): 优先返回回调同步的本地轨迹, 无则即时查询兜底 */
+async function queryLogistics(data) {
+  const orderNo = String((data && data.order_no) || '').trim()
+  if (!orderNo) return fail('缺少订单号')
+  const o = (await db.collection('orders').where({ order_no: orderNo }).limit(1).get()).data[0]
+  if (!o) return fail('订单不存在')
+  // 归属校验: 传了 uid 就必须匹配, 防止遍历订单号查他人物流
+  if (data && data.uid && Number(data.uid) !== Number(o.uid)) return fail('无权查看该订单物流', 403)
+  const shipper = o.logistics_company || ''
+  const code = o.tracking_no || ''
+  if (!code) return fail('该订单暂未填写运单号')
+  const shipperCode = (LOGISTICS_COMPANIES.find((l) => l.name === shipper || l.code === shipper) || {}).code || shipper
+  let rec = (await db.collection('logistics').where({ order_no: orderNo }).limit(1).get()).data[0]
+  if (!rec || !Array.isArray(rec.traces) || !rec.traces.length) {
+    try {
+      const r = await kdniaoQuery(shipperCode, code, orderNo)
+      if (r && (r.Success === true || r.Success === 'true')) {
+        await saveLogisticsTrack(orderNo, shipperCode, code, r)
+        rec = (await db.collection('logistics').where({ order_no: orderNo }).limit(1).get()).data[0]
+      } else if (r && r.Reason) {
+        return ok({ order_no: orderNo, shipper_code: shipperCode, logistic_code: code, traces: [], state: '', state_text: '', reason: String(r.Reason), has_track: false })
+      }
+    } catch (e) {
+      console.error('[dy-api] 快递鸟即时查询失败:', e && e.message)
+    }
+  }
+  const traces = (rec && Array.isArray(rec.traces) && rec.traces) || []
+  return ok({
+    order_no: orderNo,
+    shipper_code: shipperCode,
+    logistic_code: code,
+    traces: traces.slice().reverse(), // 最新在前
+    state: (rec && rec.state) || '',
+    state_text: (rec && rec.state_text) || '',
+    updated_at: (rec && rec.updated_at) || '',
+    has_track: traces.length > 0,
+  })
+}
+
+/* 后台: 对已发货订单重新发起轨迹订阅 (换单号/订阅失败后补救) */
+async function adminLogisticsSubscribe(data) {
+  const orderNo = String((data && data.order_no) || '').trim()
+  if (!orderNo) return fail('缺少订单号')
+  const o = (await db.collection('orders').where({ order_no: orderNo }).limit(1).get()).data[0]
+  if (!o) return fail('订单不存在')
+  const shipperCode = (LOGISTICS_COMPANIES.find((l) => l.name === (o.logistics_company || '') || l.code === (o.logistics_company || '')) || {}).code || (o.logistics_company || '')
+  try {
+    const r = await kdniaoSubscribe(shipperCode, o.tracking_no, orderNo)
+    if (r && r.skipped) return fail(r.reason || '未订阅')
+    return ok({ subscribed: r.Success === true || r.Success === 'true', reason: String(r.Reason || '') })
+  } catch (e) {
+    return fail('订阅失败: ' + ((e && e.message) || e))
+  }
+}
+
 async function adminOrderShip(data) {
   const doc = {
     status: '待收货',
@@ -3893,6 +4105,13 @@ async function adminOrderShip(data) {
             itemDesc: (o.data[0].items && o.data[0].items.map((i) => i.name).join('、')) || '道元易学-订单',
           })
         } catch (e2) {}
+        // 快递鸟: 订阅物流轨迹, 后续轨迹变化由快递鸟回调自动同步 (2026-09-04)
+        try {
+          const kdCode = (LOGISTICS_COMPANIES.find((l) => l.name === data.company || l.code === data.company) || {}).code || ''
+          await kdniaoSubscribe(kdCode, data.tracking_no || '', data.order_no)
+        } catch (e2) {
+          console.error('[dy-api] 快递鸟订阅失败:', e2 && e2.message)
+        }
       }
     }
   } catch (e) {}
@@ -4334,7 +4553,7 @@ async function adminOrderAnalysis(data) {
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
 
-const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home', 'pandao', 'recommend', 'moment', 'mypage']
+const SETTINGS_GROUPS = ['sms', 'oss', 'mp', 'miniapp', 'live', 'pay', 'home', 'pandao', 'recommend', 'moment', 'mypage', 'logistics']
 
 async function adminSettingsGet(data) {
   const group = data.group
@@ -5037,6 +5256,10 @@ const ROUTES = {
   'admin.db.createCollection': adminCreateCollection,
   'app.checkUpdate': checkUpdate,
   'admin.logistics.list': listLogistics,
+  'admin.logistics.subscribe': adminLogisticsSubscribe,
+  'order.logistics': queryLogistics,
+  /* 快递鸟物流轨迹推送回调 (HTTP POST, 公网可达; 必须在快递鸟后台配置为回调地址) */
+  'kdniao.callback': kdniaoCallback,
   'order.create': createOrder,
   'recharge.create': rechargeCreate,
   'order.list': listOrders,
