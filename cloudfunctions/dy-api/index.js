@@ -3517,6 +3517,7 @@ const STAFF_ROUTES = [
   'admin.logistics.list',
   'admin.logistics.subscribe',
   'admin.logistics.createOrder',
+  'admin.logistics.printTemplate',
   'admin.dashboard',
 ]
 
@@ -4165,6 +4166,8 @@ async function adminLogisticsCreateOrder(data) {
       try { await sendGzhMsg(o.uid, '订单已发货', '订单 ' + orderNo + ' 已发出') } catch (e2) {}
     }
   } catch (e) { /* 忽略 */ }
+  // 保存电子面单模板, 支持后续重复打印
+  try { await savePrintTemplate(orderNo, shipperCode, logisticCode, r.PrintTemplate) } catch (e) {}
   try { await kdniaoSubscribe(shipperCode, logisticCode, orderNo) } catch (e2) {}
 
   return ok({
@@ -4173,6 +4176,44 @@ async function adminLogisticsCreateOrder(data) {
     company: companyName,
     print_template: String(r.PrintTemplate || ''),
     result_code: String(r.ResultCode || ''),
+  })
+}
+
+/* 保存电子面单模板 (下单成功后入库, 支持重复打印/补打; 轨迹回调用 update 不会覆盖此字段) */
+async function savePrintTemplate(orderNo, shipperCode, logisticCode, tpl) {
+  if (!orderNo || !tpl) return
+  const tplAt = new Date().toLocaleString('zh-CN', { hour12: false })
+  try {
+    const rec = (await db.collection('logistics').where({ order_no: String(orderNo) }).limit(1).get()).data[0]
+    if (rec) {
+      await db.collection('logistics').doc(rec._id).update({ print_template: String(tpl), template_at: tplAt })
+    } else {
+      await db.collection('logistics').add({
+        order_no: String(orderNo),
+        shipper_code: String(shipperCode || ''),
+        logistic_code: String(logisticCode || ''),
+        traces: [],
+        print_template: String(tpl),
+        template_at: tplAt,
+        created_at: tplAt,
+      })
+    }
+  } catch (e) {
+    console.error('[dy-api] 电子面单保存失败:', e && e.message)
+  }
+}
+
+/* 后台: 取电子面单模板 (用于重复打印) */
+async function adminLogisticsPrintTemplate(data) {
+  const orderNo = String((data && data.order_no) || '').trim()
+  if (!orderNo) return fail('缺少订单号')
+  const rec = (await db.collection('logistics').where({ order_no: orderNo }).limit(1).get()).data[0]
+  if (!rec || !rec.print_template) return fail('暂无电子面单，请先使用「在线下单取件」')
+  return ok({
+    print_template: String(rec.print_template),
+    logistic_code: String(rec.logistic_code || ''),
+    shipper_code: String(rec.shipper_code || ''),
+    template_at: String(rec.template_at || ''),
   })
 }
 
@@ -5381,6 +5422,7 @@ const ROUTES = {
   'admin.logistics.list': listLogistics,
   'admin.logistics.subscribe': adminLogisticsSubscribe,
   'admin.logistics.createOrder': adminLogisticsCreateOrder,
+  'admin.logistics.printTemplate': adminLogisticsPrintTemplate,
   'order.logistics': queryLogistics,
   /* 快递鸟物流轨迹推送回调 (HTTP POST, 公网可达; 必须在快递鸟后台配置为回调地址) */
   'kdniao.callback': kdniaoCallback,

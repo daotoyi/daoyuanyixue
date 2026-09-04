@@ -68,6 +68,14 @@
     </view>
 
     <view class="lg-footer">
+      <view
+        v-if="hasTemplate"
+        class="btn-fill btn-print"
+        :class="{ disabled: printing }"
+        @tap="printLabel"
+      >
+        <text>{{ printing ? '获取中...' : '🖨 打印面单' }}</text>
+      </view>
       <view class="btn-fill btn-ship" @tap="mode === 'manual' ? confirmShip() : createOrder()" :class="{ disabled: submitting }">
         <text>{{ submitting ? '处理中...' : (mode === 'manual' ? '确认发货' : '提交下单取件') }}</text>
       </view>
@@ -78,7 +86,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder } from '../../api/api'
+import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder, adminLogisticsPrintTemplate } from '../../api/api'
 import { staticUrl } from '../../utils/static-url'
 
 const order = ref(null)
@@ -104,6 +112,9 @@ const detectedName = ref('')
 /* 发货模式: manual=手动填单号 / online=在线下单取件(快递公司分配运单号) */
 const mode = ref('manual')
 const submitting = ref(false)
+const printing = ref(false)
+/* 该订单是否已存在电子面单 (有则可重复打印) */
+const hasTemplate = ref(false)
 const weight = ref('')
 const remark = ref('')
 const receiver = ref({ name: '', tel: '', province: '', city: '', area: '', address: '' })
@@ -149,12 +160,18 @@ async function createOrder() {
       remark: remark.value || '',
       receiver: r,
     })
+    hasTemplate.value = true
+    const tpl = res.print_template || ''
     uni.showModal({
       title: '下单成功',
-      content: `快递公司：${res.company || company.value}\n运单号：${res.logistic_code}\n\n运单号已自动填入订单，快递员将按约定上门取件。`,
-      showCancel: false,
-      confirmText: '知道了',
-      success: () => uni.navigateBack(),
+      content: `快递公司：${res.company || company.value}\n运单号：${res.logistic_code}\n\n运单号已自动填入订单，快递员将按约定上门取件。${tpl ? '' : '\n（快递公司未返回电子面单）'}`,
+      confirmText: tpl ? '打印面单' : '知道了',
+      cancelText: tpl ? '稍后打印' : '',
+      showCancel: !!tpl,
+      success: (mr) => {
+        if (tpl && mr.confirm) doPrint(tpl)
+        else uni.navigateBack()
+      },
     })
   } catch (e) {
     uni.showModal({
@@ -164,6 +181,62 @@ async function createOrder() {
     })
   } finally {
     submitting.value = false
+  }
+}
+
+/* ===== 电子面单打印 =====
+   H5(电脑端后台): 用隐藏 iframe 渲染面单 HTML 再调 print(), 是唯一能驱动实体打印机的路径
+   小程序/App: 平台不提供打印能力, 降级为提示去电脑端打印 */
+function doPrint(html) {
+  // #ifdef H5
+  try {
+    const iframe = document.createElement('iframe')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow.document
+    doc.open()
+    doc.write(html)
+    doc.close()
+    // 等面单里的图片/条码加载完再调打印, 否则可能打出空白
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus()
+        iframe.contentWindow.print()
+      } catch (e) {
+        uni.showToast({ title: '调起打印失败', icon: 'none' })
+      }
+      setTimeout(() => {
+        try { document.body.removeChild(iframe) } catch (e) {}
+      }, 1500)
+    }, 600)
+  } catch (e) {
+    uni.showToast({ title: '打印失败: ' + ((e && e.message) || e), icon: 'none' })
+  }
+  // #endif
+  // #ifndef H5
+  uni.showModal({
+    title: '请在电脑端打印',
+    content: '小程序/App 不支持直接驱动打印机，请在电脑浏览器打开后台，进入该订单的物流页点击「打印面单」。',
+    showCancel: false,
+  })
+  // #endif
+}
+
+/* 重复打印: 从服务端取回已保存的面单模板 */
+async function printLabel() {
+  if (printing.value) return
+  printing.value = true
+  try {
+    const res = await adminLogisticsPrintTemplate({ order_no: orderNo.value })
+    if (!res || !res.print_template) {
+      uni.showToast({ title: '暂无电子面单', icon: 'none' })
+      return
+    }
+    doPrint(res.print_template)
+  } catch (e) {
+    uni.showToast({ title: String((e && e.message) || '获取面单失败'), icon: 'none' })
+  } finally {
+    printing.value = false
   }
 }
 
@@ -182,6 +255,13 @@ onLoad(async (options) => {
       order.value = orders.find((o) => o.order_no === orderNo.value) || null
       company.value = order.value && order.value.logistics_company ? order.value.logistics_company : ''
       trackingNo.value = order.value && order.value.tracking_no ? order.value.tracking_no : ''
+      // 已在线下单过的订单: 载入时探测面单, 有则显示"打印面单"按钮(支持补打)
+      try {
+        const t = await adminLogisticsPrintTemplate({ order_no: orderNo.value })
+        hasTemplate.value = !!(t && t.print_template)
+      } catch (e) {
+        hasTemplate.value = false
+      }
     }
   } catch (e) {
     uni.showToast({ title: '加载失败', icon: 'none' })
@@ -308,6 +388,13 @@ async function confirmShip() {
   margin-bottom: 16rpx;
 }
 .btn-ship.disabled { opacity: 0.6; }
+/* 打印面单: 次按钮, 与"确认发货"主按钮并列 */
+.btn-print {
+  margin-bottom: 16rpx;
+  background: #fff;
+  border: 2rpx solid #9c1630;
+}
+.btn-print text { color: #9c1630; }
 .lg-detect {
   display: block;
   margin-top: 12rpx;
