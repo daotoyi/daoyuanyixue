@@ -3517,6 +3517,7 @@ const STAFF_ROUTES = [
   'admin.logistics.list',
   'admin.logistics.subscribe',
   'admin.logistics.createOrder',
+  'admin.logistics.accounts',
   'admin.logistics.printTemplate',
   'admin.dashboard',
 ]
@@ -3901,19 +3902,98 @@ function kdniaoFormPost(url, params) {
   })
 }
 
-/* 读取快递鸟配置 (系统设置 group=logistics) */
+/* 读取快递鸟配置 (系统设置 group=logistics)
+   支持【多月结账号】(2026-09-04): accounts 数组, 每条绑定一家快递公司 + 独立发件地址(多仓库)
+   兼容: 未配置 accounts 但有旧的顶层单账号 → 自动合成为一条「默认账号」, 老配置不失效 */
 async function getKdniaoConfig() {
   try {
     const doc = (await db.collection('settings').where({ group: 'logistics' }).limit(1).get()).data[0] || {}
+    const legacySender = {
+      name: String(doc.sender_name || '').trim(),
+      tel: String(doc.sender_tel || '').trim(),
+      company: String(doc.sender_company || '').trim(),
+      province: String(doc.sender_province || '').trim(),
+      city: String(doc.sender_city || '').trim(),
+      area: String(doc.sender_area || '').trim(),
+      address: String(doc.sender_address || '').trim(),
+    }
+    let accounts = Array.isArray(doc.accounts) ? doc.accounts.slice() : []
+    if (!accounts.length && (doc.customer_name || legacySender.name)) {
+      accounts = [{
+        id: 'legacy',
+        label: '默认账号（旧配置）',
+        shipper_code: '', // 空 = 通用, 不限快递公司
+        customer_name: String(doc.customer_name || '').trim(),
+        customer_pwd: String(doc.customer_pwd || '').trim(),
+        pay_type: Number(doc.pay_type || 3) || 3,
+        enabled: 1,
+        is_default: 1,
+        sender: legacySender,
+      }]
+    }
     return {
       enabled: doc.enabled === '1' || doc.enabled === true,
       eBusinessId: String(doc.kdniao_ebusiness_id || '').trim(),
       appKey: String(doc.kdniao_app_key || '').trim(),
       callbackUrl: String(doc.kdniao_callback_url || '').trim(),
+      accounts,
+      legacySender,
+      legacyPayType: Number(doc.pay_type || 3) || 3,
     }
   } catch (e) {
-    return { enabled: false, eBusinessId: '', appKey: '', callbackUrl: '' }
+    return { enabled: false, eBusinessId: '', appKey: '', callbackUrl: '', accounts: [], legacySender: {}, legacyPayType: 3 }
   }
+}
+
+/* 账号是否启用 (表单可能存 1 / true / '1') */
+function accountEnabled(a) {
+  return a.enabled === 1 || a.enabled === true || a.enabled === '1'
+}
+
+/* 为某家快递公司挑选可用月结账号:
+   优先级 ① 精确绑定该公司的已启用账号 ② 通用账号(shipper_code 为空) ③ 旧配置默认账号 */
+function matchAccounts(accounts, shipperCode) {
+  const on = (accounts || []).filter(accountEnabled)
+  const code = String(shipperCode || '').trim().toUpperCase()
+  const exact = code ? on.filter((a) => String(a.shipper_code || '').trim().toUpperCase() === code) : []
+  if (exact.length) return exact
+  return on.filter((a) => !String(a.shipper_code || '').trim())
+}
+
+/* 取账号的发件人信息: 账号自带优先(多仓库), 否则回落全局发件人 */
+function accountSender(account, legacySender) {
+  const s = (account && account.sender) || {}
+  const pick = (v, fallback) => (String(v || '').trim() || String(fallback || '').trim())
+  return {
+    name: pick(s.name, legacySender.name),
+    tel: pick(s.tel, legacySender.tel),
+    company: pick(s.company, legacySender.company),
+    province: pick(s.province, legacySender.province),
+    city: pick(s.city, legacySender.city),
+    area: pick(s.area, legacySender.area),
+    address: pick(s.address, legacySender.address),
+  }
+}
+
+/* 后台: 列出某家快递公司可用的月结账号 (供发货页下拉选择) */
+async function adminLogisticsAccounts(data) {
+  const cfg = await getKdniaoConfig()
+  const shipperCode = String((data && data.shipper_code) || '').trim()
+  const list = matchAccounts(cfg.accounts, shipperCode)
+  const items = list.map((a) => {
+    const s = accountSender(a, cfg.legacySender)
+    return {
+      id: String(a.id || ''),
+      label: String(a.label || '未命名账号'),
+      shipper_code: String(a.shipper_code || ''),
+      customer_name: String(a.customer_name || ''),
+      pay_type: Number(a.pay_type || cfg.legacyPayType) || 3,
+      is_default: a.is_default === 1 || a.is_default === true || a.is_default === '1',
+      sender: s,
+      warehouse: [s.province, s.city].filter(Boolean).join(' ') || '默认地址',
+    }
+  })
+  return ok({ accounts: items, shipper_code: shipperCode })
 }
 
 /* 解析 form-urlencoded (快递鸟回调是表单 POST, 不是 JSON) */
@@ -4097,7 +4177,25 @@ async function adminLogisticsCreateOrder(data) {
   if (!receiver.Name || !receiver.Tel) return fail('收件人姓名/电话不能为空')
   if (!receiver.ProvinceName || !receiver.CityName || !receiver.Address) return fail('收件人省/市/详细地址不能为空')
 
-  const sender = data.sender || {}
+  /* 多月结账号: 优先用前端指定的账号, 否则按快递公司自动匹配(唯一则直接用)
+     发件地址跟随账号(多仓库), 账号没配则回落全局发件人 */
+  const cfg = await getKdniaoConfig()
+  const candidates = matchAccounts(cfg.accounts, shipperCode)
+  let account = null
+  if (data.account_id) {
+    account = candidates.find((a) => String(a.id) === String(data.account_id)) || null
+    if (!account) return fail('所选月结账号不可用，请重新选择')
+  } else if (candidates.length === 1) {
+    account = candidates[0]
+  } else if (candidates.length > 1) {
+    // 多个候选: 优先取标记为默认的那个, 否则交回前端让人工选
+    account = candidates.find((a) => a.is_default === 1 || a.is_default === true || a.is_default === '1') || null
+    if (!account) return fail('该快递公司有多个可用月结账号，请选择其中一个')
+  }
+  const sender = accountSender(account, cfg.legacySender)
+  const customerName = String((account && account.customer_name) || data.customer_name || '').trim()
+  const customerPwd = String((account && account.customer_pwd) || data.customer_pwd || '').trim()
+  const payType = Number((account && account.pay_type) || cfg.legacyPayType || 3) || 3
   if (!sender.name || !sender.tel || !sender.province || !sender.address) return fail('请先到「系统设置 → 物流查询」配置发件人信息')
 
   const items = Array.isArray(o.items) ? o.items : []
@@ -4107,7 +4205,7 @@ async function adminLogisticsCreateOrder(data) {
   const params = {
     OrderCode: orderNo,
     ShipperCode: shipperCode,
-    PayType: Number(data.pay_type || 3), // 1现付 2到付 3月结
+    PayType: payType, // 来自账号配置: 1现付 2到付 3月结
     ExpType: 1,
     Cost: Number(data.cost || 0),
     OtherCost: 0,
@@ -4130,8 +4228,8 @@ async function adminLogisticsCreateOrder(data) {
     IsReturnPrintTemplate: 1, // 要电子面单模板供打印
   }
   // 月结账号 (顺丰/京东等快递公司强制要求)
-  if (data.customer_name) params.CustomerName = String(data.customer_name)
-  if (data.customer_pwd) params.CustomerPwd = String(data.customer_pwd)
+  if (customerName) params.CustomerName = customerName
+  if (customerPwd) params.CustomerPwd = customerPwd
 
   let r = null
   try {
@@ -4174,6 +4272,8 @@ async function adminLogisticsCreateOrder(data) {
     logistic_code: logisticCode,
     shipper_code: shipperCode,
     company: companyName,
+    account_label: String((account && account.label) || ''),
+    warehouse: [sender.province, sender.city].filter(Boolean).join(' ') || '',
     print_template: String(r.PrintTemplate || ''),
     result_code: String(r.ResultCode || ''),
   })
@@ -5422,6 +5522,7 @@ const ROUTES = {
   'admin.logistics.list': listLogistics,
   'admin.logistics.subscribe': adminLogisticsSubscribe,
   'admin.logistics.createOrder': adminLogisticsCreateOrder,
+  'admin.logistics.accounts': adminLogisticsAccounts,
   'admin.logistics.printTemplate': adminLogisticsPrintTemplate,
   'order.logistics': queryLogistics,
   /* 快递鸟物流轨迹推送回调 (HTTP POST, 公网可达; 必须在快递鸟后台配置为回调地址) */

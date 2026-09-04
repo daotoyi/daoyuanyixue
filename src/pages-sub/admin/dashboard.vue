@@ -986,6 +986,37 @@
               </view>
             </view>
 
+            <!-- 月结账号管理 (仅物流分组; 数组结构, 不走上面的扁平字段循环) -->
+            <view class="acct-block" v-if="activeSettingsTab === 'logistics'">
+              <view class="acct-head">
+                <text class="acct-title">月结账号</text>
+                <text class="acct-add" v-if="canManageSettings" @tap="openAccountForm(null)">＋ 新增</text>
+              </view>
+              <text class="acct-desc">按快递公司分别配置月结账号与发件仓。发货时按所选快递自动匹配，无需手动切换。</text>
+
+              <view v-if="!logisticsAccounts.length" class="acct-empty">
+                <text>暂无账号，点「新增」添加第一个。未配置时用上方全局发件人信息下单。</text>
+              </view>
+
+              <view v-for="(a, i) in logisticsAccounts" :key="a.id || i" class="acct-item">
+                <view class="acct-item-main">
+                  <view class="acct-row1">
+                    <text class="acct-name">{{ a.label || '未命名账号' }}</text>
+                    <text class="acct-badge" :class="{ off: !isAccountOn(a) }">{{ isAccountOn(a) ? '启用' : '停用' }}</text>
+                    <text class="acct-badge def" v-if="a.is_default">默认</text>
+                  </view>
+                  <text class="acct-meta">快递：{{ shipperName(a.shipper_code) }} · 月结号：{{ a.customer_name || '未填' }}</text>
+                  <text class="acct-meta">发件仓：{{ accountWarehouse(a) }}</text>
+                </view>
+                <view class="acct-ops">
+                  <text class="acct-op" @tap="toggleAccount(a)">{{ isAccountOn(a) ? '停用' : '启用' }}</text>
+                  <text class="acct-op" @tap="setDefaultAccount(a)">默认</text>
+                  <text class="acct-op" v-if="canManageSettings" @tap="openAccountForm(i)">编辑</text>
+                  <text class="acct-op del" v-if="canManageSettings" @tap="removeAccount(i)">删除</text>
+                </view>
+              </view>
+            </view>
+
             <view class="settings-actions">
               <text class="settings-tip">敏感字段保存后不显示明文，留空保存则保持原值</text>
               <view class="btn-p sm" v-if="activeSettingsTab === 'oss' && canManageSettings" @click="testOssConfig">{{ ossTesting ? '测试中...' : '测试连接' }}</view>
@@ -1490,6 +1521,45 @@
             <view class="btn-p plain sm" @click="closeOssMigrateConfirm(false)">存储本地</view>
             <view class="btn-p sm" @click="closeOssMigrateConfirm(true)">存储到 C/OSS</view>
           </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 月结账号编辑弹窗 (多月结账号 + 多仓库) -->
+    <view class="pp-mask center" v-if="showAccountForm" @tap="showAccountForm = false">
+      <view class="pp-sheet" @tap.stop>
+        <view class="form-sheet">
+          <view class="sheet-head">
+            <text class="sheet-title">{{ accountForm._idx === null ? '新增月结账号' : '编辑月结账号' }}</text>
+            <text class="sheet-close" @tap="showAccountForm = false">✕</text>
+          </view>
+
+          <view class="f-row"><text class="f-label">备注名</text><input class="f-input" v-model="accountForm.label" placeholder="如：顺丰-北京仓" /></view>
+
+          <view class="f-row"><text class="f-label">快递公司</text>
+            <picker :range="ACCOUNT_SHIPPERS.map((s) => s.name)" :value="accountShipperIdx" @change="onAccountShipperChange">
+              <view class="f-input" :class="{ ph: !accountForm.shipper_code }">{{ accountShipperName }}</view>
+            </picker>
+          </view>
+
+          <view class="f-row"><text class="f-label">月结账号</text><input class="f-input" v-model="accountForm.customer_name" placeholder="快递公司月结客户号" /></view>
+          <view class="f-row"><text class="f-label">月结密码</text><input class="f-input" :password="!acctPwdVisible" v-model="accountForm.customer_pwd" placeholder="选填，顺丰等需要" /></view>
+          <view class="f-row"><text class="f-label">运费支付</text>
+            <picker :range="PAY_TYPES.map((p) => p.label)" :value="accountPayIdx" @change="onAccountPayChange">
+              <view class="f-input">{{ accountPayName }}</view>
+            </picker>
+          </view>
+
+          <view class="acct-section">发件仓（留空则用上方全局发件人）</view>
+          <view class="f-row"><text class="f-label">发件人</text><input class="f-input" v-model="accountForm.sender.name" placeholder="选填" /></view>
+          <view class="f-row"><text class="f-label">电话</text><input class="f-input" v-model="accountForm.sender.tel" placeholder="选填" /></view>
+          <view class="f-row"><text class="f-label">仓 省</text><input class="f-input" v-model="accountForm.sender.province" placeholder="选填，如 广东省" /></view>
+          <view class="f-row"><text class="f-label">仓 市</text><input class="f-input" v-model="accountForm.sender.city" placeholder="选填，如 广州市" /></view>
+          <view class="f-row"><text class="f-label">仓 区县</text><input class="f-input" v-model="accountForm.sender.area" placeholder="选填，如 天河区" /></view>
+          <view class="f-row"><text class="f-label">详细地址</text><input class="f-input" v-model="accountForm.sender.address" placeholder="选填，街道门牌" /></view>
+
+          <view class="btn-p" style="margin-top: 24rpx" @tap="saveAccount">保存账号</view>
+          <text class="acct-hint">保存后还需点本分组的「保存配置」才会写入服务器</text>
         </view>
       </view>
     </view>
@@ -4097,6 +4167,121 @@ const settingsSaving = ref(false)
 const settingsLoaded = ref({})
 const settingsOriginal = ref({})
 
+/* ===== 多月结账号 (2026-09-04) =====
+   accounts 是数组, 不走 settingsForm 的扁平字段循环, 单独维护并在保存时并入 configs */
+const logisticsAccounts = ref([])
+const showAccountForm = ref(false)
+const acctPwdVisible = ref(false)
+const ACCOUNT_SHIPPERS = [
+  { code: '', name: '通用（不限快递公司）' },
+  { code: 'SF', name: '顺丰速运' },
+  { code: 'ZTO', name: '中通快递' },
+  { code: 'YTO', name: '圆通速递' },
+  { code: 'STO', name: '申通快递' },
+  { code: 'YUNDA', name: '韵达快递' },
+  { code: 'JT', name: '极兔速递' },
+  { code: 'JD', name: '京东物流' },
+  { code: 'EMS', name: '中国邮政 EMS' },
+]
+const PAY_TYPES = [
+  { value: 3, label: '月结（默认）' },
+  { value: 1, label: '现付' },
+  { value: 2, label: '到付' },
+]
+const emptyAccount = () => ({
+  id: '',
+  label: '',
+  shipper_code: '',
+  customer_name: '',
+  customer_pwd: '',
+  pay_type: 3,
+  enabled: 1,
+  is_default: 0,
+  sender: { name: '', tel: '', company: '', province: '', city: '', area: '', address: '' },
+})
+const accountForm = ref(emptyAccount())
+
+const accountShipperIdx = computed(() => {
+  const i = ACCOUNT_SHIPPERS.findIndex((s) => s.code === (accountForm.value.shipper_code || ''))
+  return i < 0 ? 0 : i
+})
+const accountShipperName = computed(() => (ACCOUNT_SHIPPERS[accountShipperIdx.value] || {}).name || '请选择')
+const accountPayIdx = computed(() => {
+  const i = PAY_TYPES.findIndex((p) => p.value === Number(accountForm.value.pay_type || 3))
+  return i < 0 ? 0 : i
+})
+const accountPayName = computed(() => (PAY_TYPES[accountPayIdx.value] || {}).label || '月结')
+function onAccountShipperChange(e) {
+  accountForm.value.shipper_code = (ACCOUNT_SHIPPERS[Number(e.detail.value)] || {}).code || ''
+}
+function onAccountPayChange(e) {
+  accountForm.value.pay_type = (PAY_TYPES[Number(e.detail.value)] || {}).value || 3
+}
+
+const shipperName = (code) => (ACCOUNT_SHIPPERS.find((s) => s.code === (code || '')) || {}).name || '通用'
+const isAccountOn = (a) => a.enabled === 1 || a.enabled === true || a.enabled === '1'
+function accountWarehouse(a) {
+  const s = (a && a.sender) || {}
+  const w = [s.province, s.city, s.area].filter(Boolean).join('')
+  return w || '用全局发件人'
+}
+
+function openAccountForm(idx) {
+  if (idx === null || idx === undefined) {
+    accountForm.value = emptyAccount()
+    accountForm.value._idx = null
+    if (!logisticsAccounts.value.length) accountForm.value.is_default = 1
+  } else {
+    const src = logisticsAccounts.value[idx]
+    accountForm.value = JSON.parse(JSON.stringify(src))
+    accountForm.value.sender = Object.assign(emptyAccount().sender, src.sender || {})
+    accountForm.value._idx = idx
+  }
+  showAccountForm.value = true
+}
+function saveAccount() {
+  const f = accountForm.value
+  if (!f.label.trim()) return uni.showToast({ title: '请填写备注名', icon: 'none' })
+  if (!f.customer_name.trim()) return uni.showToast({ title: '请填写月结账号', icon: 'none' })
+  const rec = {
+    id: f.id || 'a' + Date.now().toString(36),
+    label: f.label.trim(),
+    shipper_code: f.shipper_code || '',
+    customer_name: f.customer_name.trim(),
+    customer_pwd: f.customer_pwd || '',
+    pay_type: Number(f.pay_type || 3),
+    enabled: f.enabled === undefined ? 1 : f.enabled,
+    is_default: f.is_default ? 1 : 0,
+    sender: Object.assign(emptyAccount().sender, f.sender || {}),
+  }
+  if (rec.is_default) {
+    logisticsAccounts.value.forEach((a) => { a.is_default = 0 })
+  }
+  const idx = f._idx
+  if (idx === null || idx === undefined) logisticsAccounts.value.push(rec)
+  else logisticsAccounts.value[idx] = rec
+  showAccountForm.value = false
+  uni.showToast({ title: '已保存，请点下方保存配置', icon: 'none' })
+}
+function removeAccount(idx) {
+  uni.showModal({
+    title: '删除账号',
+    content: `确定删除「${logisticsAccounts.value[idx].label}」吗？`,
+    success: (r) => {
+      if (!r.confirm) return
+      logisticsAccounts.value.splice(idx, 1)
+    },
+  })
+}
+function toggleAccount(a) {
+  const on = isAccountOn(a)
+  a.enabled = on ? 0 : 1
+}
+function setDefaultAccount(a) {
+  logisticsAccounts.value.forEach((x) => { x.is_default = 0 })
+  a.is_default = 1
+}
+
 const currentSettingsTab = computed(
   () => settingsTabs.find((t) => t.group === activeSettingsTab.value) || settingsTabs[0]
 )
@@ -4142,6 +4327,10 @@ async function loadSettings(group) {
       form[f.key] = f.secret && val ? '' : val || ''
     })
     settingsForm.value = form
+    // 月结账号是数组, 独立于扁平字段加载
+    if (group === 'logistics') {
+      logisticsAccounts.value = Array.isArray(configs.accounts) ? JSON.parse(JSON.stringify(configs.accounts)) : []
+    }
     settingsLoaded.value = { ...settingsLoaded.value, [group]: true }
   } catch (e) {
     uni.showToast({ title: e.message || '加载配置失败', icon: 'none' })
@@ -4158,6 +4347,8 @@ async function saveSettings() {
       if (f.secret && !settingsForm.value[f.key]) return
       configs[f.key] = settingsForm.value[f.key] || ''
     })
+    // 月结账号数组并入提交 (不并入则服务端会保留旧值, 导致删除不生效)
+    if (cur.group === 'logistics') configs.accounts = logisticsAccounts.value
     await adminSettingsSave({ group: cur.group, configs })
     uni.showToast({ title: '配置已保存', icon: 'success' })
     await loadSettings(cur.group)
@@ -5378,6 +5569,92 @@ onMounted(async () => {
   color: #8a857c;
   flex: 1;
   margin-right: 20rpx;
+}
+/* ===== 月结账号管理 (多月结账号 + 多仓库) ===== */
+.acct-block {
+  margin: 24rpx 0 8rpx;
+  padding: 22rpx 20rpx;
+  background: #fdfaf4;
+  border: 1rpx solid #efe4d2;
+  border-radius: 14rpx;
+}
+.acct-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.acct-title { font-size: 28rpx; font-weight: 600; color: #2a2a2a; }
+.acct-add { font-size: 24rpx; color: #9c1630; padding: 4rpx 8rpx; }
+.acct-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #8a857c;
+  line-height: 1.6;
+}
+.acct-empty {
+  margin-top: 18rpx;
+  padding: 36rpx 20rpx;
+  text-align: center;
+  font-size: 23rpx;
+  color: #a08c72;
+  background: #fff;
+  border: 1rpx dashed #ddd0bb;
+  border-radius: 10rpx;
+}
+.acct-item {
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx;
+  background: #fff;
+  border: 1rpx solid #eee3d2;
+  border-radius: 10rpx;
+}
+.acct-row1 {
+  display: flex;
+  align-items: center;
+}
+.acct-name { font-size: 26rpx; color: #2a2a2a; font-weight: 500; }
+.acct-badge {
+  margin-left: 14rpx;
+  padding: 2rpx 14rpx;
+  font-size: 19rpx;
+  color: #fff;
+  background: #4a8a5a;
+  border-radius: 999rpx;
+}
+.acct-badge.off { background: #b4a89a; }
+.acct-badge.def { background: #9c1630; }
+.acct-meta {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #8a857c;
+}
+.acct-ops {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 14rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid #f2ece2;
+}
+.acct-op {
+  margin-right: 26rpx;
+  font-size: 23rpx;
+  color: #9c1630;
+}
+.acct-op.del { color: #b04a4a; }
+.acct-section {
+  margin: 26rpx 0 6rpx;
+  font-size: 24rpx;
+  color: #7a6a52;
+  font-weight: 500;
+}
+.acct-hint {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 20rpx;
+  color: #a08c72;
+  text-align: center;
 }
 /* C/OSS 配置测试连接结果 */
 .oss-test-result {

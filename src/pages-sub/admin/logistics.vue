@@ -44,6 +44,27 @@
       <text class="lg-tip">📌 省市区已尝试从订单地址自动识别，请核对准确；下单后运单号自动回填，无需手抄。</text>
     </view>
 
+    <!-- 月结账号 (按所选快递公司自动匹配; 多个候选时可切换; 账号自带发件仓) -->
+    <view class="lg-card" v-if="mode === 'online'">
+      <text class="lg-label">月结账号</text>
+      <view v-if="accounts.length > 1" class="lg-acct-pick">
+        <view
+          v-for="a in accounts"
+          :key="a.id"
+          class="lg-acct-opt"
+          :class="{ on: accountId === a.id }"
+          @tap="accountId = a.id"
+        >
+          <text class="lg-acct-name">{{ a.label }}</text>
+          <text class="lg-acct-ware">{{ a.warehouse }}</text>
+        </view>
+      </view>
+      <text v-else-if="accounts.length === 1" class="lg-acct-auto">将使用：{{ accounts[0].label }}（{{ accounts[0].warehouse }}）</text>
+      <text v-else-if="accountsLoaded" class="lg-acct-none">未匹配到月结账号，将用全局发件人下单（可能为现付）</text>
+      <text v-else class="lg-acct-none">加载中...</text>
+      <text class="lg-tip" v-if="accounts.length">在「系统设置 → 物流查询 → 月结账号」可管理多家快递的账号与发件仓。</text>
+    </view>
+
     <!-- 物流公司选择 (参考微信小店) -->
     <view class="lg-card">
       <text class="lg-label">选择物流公司</text>
@@ -84,9 +105,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder, adminLogisticsPrintTemplate } from '../../api/api'
+import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder, adminLogisticsPrintTemplate, adminLogisticsAccounts } from '../../api/api'
 import { staticUrl } from '../../utils/static-url'
 
 const order = ref(null)
@@ -109,12 +130,40 @@ const DETECT_RULES = [
 ]
 
 const detectedName = ref('')
+/* 切换快递公司 → 重新匹配该公司的月结账号 */
+watch(company, (v) => { loadAccounts(v) })
 /* 发货模式: manual=手动填单号 / online=在线下单取件(快递公司分配运单号) */
 const mode = ref('manual')
 const submitting = ref(false)
 const printing = ref(false)
 /* 该订单是否已存在电子面单 (有则可重复打印) */
 const hasTemplate = ref(false)
+/* 月结账号: 按所选快递公司自动匹配, 多个候选时由管理员切换 */
+const accounts = ref([])
+const accountId = ref('')
+const accountsLoaded = ref(false)
+
+/* 选了快递公司 → 拉取可用月结账号; 只有一个则自动选中, 多个默认选标记默认的那个 */
+async function loadAccounts(code) {
+  if (!code) {
+    accounts.value = []
+    accountId.value = ''
+    accountsLoaded.value = false
+    return
+  }
+  accountsLoaded.value = false
+  try {
+    const res = await adminLogisticsAccounts({ shipper_code: code })
+    accounts.value = (res && res.accounts) || []
+    const def = accounts.value.find((a) => a.is_default)
+    accountId.value = accounts.value.length === 1 ? accounts.value[0].id : (def ? def.id : '')
+  } catch (e) {
+    accounts.value = []
+    accountId.value = ''
+  } finally {
+    accountsLoaded.value = true
+  }
+}
 const weight = ref('')
 const remark = ref('')
 const receiver = ref({ name: '', tel: '', province: '', city: '', area: '', address: '' })
@@ -159,12 +208,13 @@ async function createOrder() {
       weight: Number(weight.value || 0) || 0,
       remark: remark.value || '',
       receiver: r,
+      account_id: accountId.value || '',
     })
     hasTemplate.value = true
     const tpl = res.print_template || ''
     uni.showModal({
       title: '下单成功',
-      content: `快递公司：${res.company || company.value}\n运单号：${res.logistic_code}\n\n运单号已自动填入订单，快递员将按约定上门取件。${tpl ? '' : '\n（快递公司未返回电子面单）'}`,
+      content: `快递公司：${res.company || company.value}\n运单号：${res.logistic_code}${res.warehouse ? '\n发件仓：' + res.warehouse : ''}\n\n运单号已自动填入订单，快递员将按约定上门取件。${tpl ? '' : '\n（快递公司未返回电子面单）'}`,
       confirmText: tpl ? '打印面单' : '知道了',
       cancelText: tpl ? '稍后打印' : '',
       showCancel: !!tpl,
@@ -386,6 +436,52 @@ async function confirmShip() {
   line-height: 1.6;
   color: #2a2a2a;
   margin-bottom: 16rpx;
+}
+/* 月结账号选择 (多月结账号 + 多仓库) */
+.lg-acct-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+.lg-acct-opt {
+  flex: 1;
+  min-width: 200rpx;
+  padding: 16rpx 18rpx;
+  background: #f8f5f0;
+  border: 2rpx solid transparent;
+  border-radius: 12rpx;
+}
+.lg-acct-opt.on {
+  background: #fdf0f2;
+  border-color: #9c1630;
+}
+.lg-acct-name {
+  display: block;
+  font-size: 25rpx;
+  color: #2a2a2a;
+}
+.lg-acct-opt.on .lg-acct-name { color: #9c1630; font-weight: 500; }
+.lg-acct-ware {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: #8a857c;
+}
+.lg-acct-auto {
+  display: block;
+  padding: 18rpx 20rpx;
+  background: #fdf0f2;
+  border-radius: 12rpx;
+  font-size: 25rpx;
+  color: #9c1630;
+}
+.lg-acct-none {
+  display: block;
+  padding: 18rpx 20rpx;
+  background: #f8f5f0;
+  border-radius: 12rpx;
+  font-size: 23rpx;
+  color: #8a857c;
 }
 .btn-ship.disabled { opacity: 0.6; }
 /* 打印面单: 次按钮, 与"确认发货"主按钮并列 */

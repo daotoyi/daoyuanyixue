@@ -340,6 +340,8 @@ export const adminLogisticsSubscribe = _admin('admin.logistics.subscribe')
 export const adminLogisticsCreateOrder = _admin('admin.logistics.createOrder')
 /* 取电子面单模板 (重复打印) */
 export const adminLogisticsPrintTemplate = _admin('admin.logistics.printTemplate')
+/* 查某快递公司可用的月结账号 (发货页自动匹配/切换) */
+export const adminLogisticsAccounts = _admin('admin.logistics.accounts')
 export const adminCateList = _admin('admin.categories.list')
 export const adminCateCreate = _admin('admin.categories.create')
 export const adminCateUpdate = _admin('admin.categories.update')
