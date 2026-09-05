@@ -2059,7 +2059,15 @@ async function getOrder(data) {
   } else {
     return fail('缺少订单标识')
   }
-  return ok(res.data[0] || null)
+  const o = res.data[0] || null
+  // 时区转换: 云函数运行在 UTC 环境, created_at/pay_time/refund_at 存的是 UTC 字符串,
+  // 详情接口须与列表/admin 一致转东八区, 否则用户端详情页比本地慢 8 小时
+  if (o) {
+    if (o.created_at) o.created_at = utcStrToCn(o.created_at)
+    if (o.pay_time) o.pay_time = utcStrToCn(o.pay_time)
+    if (o.refund_at) o.refund_at = utcStrToCn(o.refund_at)
+  }
+  return ok(o)
 }
 
 async function payOrder(data) {
@@ -4537,15 +4545,52 @@ async function adminOrderShip(data) {
 }
 
 async function adminOrderRefund(data) {
-  // 先取订单快照用于回退销量 (退款只针对已支付订单)
-  try {
-    const o = (await db.collection('orders').where({ order_no: data.order_no }).limit(1).get()).data[0]
-    if (o && o.status !== '待付款' && o.status !== '待支付') {
-      await revertSalesAfterRefund(o)
+  const order = (await db.collection('orders').where({ order_no: data.order_no }).limit(1).get()).data[0]
+  if (!order) return fail('订单不存在')
+  // 已退款/已取消: 防重复退款
+  if (order.status === '已退款' || order.status === '已取消') {
+    return ok({ updated: true, already: true })
+  }
+  // 仅已支付订单(待发货/待收货/已完成)需要真正退款; 待付款/待支付订单未支付, 直接标记取消
+  const needRefund = order.status === '待发货' || order.status === '待收货' || order.status === '已完成'
+  let didRefund = false
+  if (needRefund) {
+    const refundAmt = Number(order.total_price) || 0
+    const isBalance = String(order.pay_method || '').includes('余额')
+    const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
+    try {
+      if (!isFreeOrder && isBalance) {
+        // 元宝支付: 原路退回元宝余额
+        const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
+        const bal = Number((u && u.balance) || 0) || 0
+        await db.collection('users').where({ uid: Number(order.uid) })
+          .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+        didRefund = true
+      } else if (!isFreeOrder) {
+        // 微信支付: 调微信退款 API v3 (真实退款, 退款成功微信侧才会退钱)
+        const wxpay = require('./wxpay-v3')
+        await wxpay.refund({
+          outTradeNo: order.order_no,
+          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+          totalFee: Math.round(refundAmt * 100),
+          refundFee: Math.round(refundAmt * 100),
+          reason: data.reason || '后台退款',
+        })
+        didRefund = true
+      }
+    } catch (e) {
+      return fail('退款发起失败: ' + (e.message || '请稍后重试'))
     }
-  } catch (e) {}
-  await db.collection('orders').where({ order_no: data.order_no }).update({ status: '已退款' })
-  return ok({ updated: true })
+    // 回退销量 (商品/课程)
+    try { await revertSalesAfterRefund(order) } catch (e) {}
+  }
+  // 写入退款状态 (退款成功后再置, 避免"显示已退款但钱没退")
+  await db.collection('orders').where({ order_no: data.order_no }).update({
+    status: '已退款',
+    refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    refund_reason: data.reason || '后台退款',
+  })
+  return ok({ updated: true, refunded: didRefund })
 }
 
 /* 销量重算 (管理员): 统计所有已支付(非待付款/已取消/已退款)订单, 重置商品 sales/stock 与课程 students_count

@@ -503,6 +503,8 @@ async function submitOrder() {
         await wxRequestPayment(prepay.payment)
         uni.showToast({ title: '支付成功', icon: 'success' })
         clearSelected()
+        // 主动查单同步: 防止微信回调丢失导致本地订单状态不更新 (回调兜底)
+        try { await wxpayQuerySync(order.order_no) } catch (e) {}
         setTimeout(() => {
           uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
         }, 800)

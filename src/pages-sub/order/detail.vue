@@ -181,7 +181,7 @@ const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unrece
 const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync, getOrderLogistics } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
@@ -202,6 +202,24 @@ onLoad(async (options) => {
   orderNo.value = options.order_no
   await Promise.all([load(), loadPayConfig(), loadAftersales()])
 })
+
+// 从收银台返回(小程序/H5/App)时页面重新显示: 若订单仍为待支付, 主动查微信侧状态兜底同步
+// (防止微信异步回调丢失导致订单永久停"待支付", 用户重付报"已支付")
+onShow(async () => {
+  await syncPendingIfNeeded()
+})
+
+/* 待支付订单: 主动查单同步 (兜底回调丢失) —— 查到微信侧已支付则 markOrderPaid 更新本地与后台 */
+async function syncPendingIfNeeded() {
+  if (!order.value) return
+  if (order.value.status !== '待付款' && order.value.status !== '待支付') return
+  try {
+    const sync = await wxpayQuerySync(orderNo.value)
+    if (sync && sync.synced && sync.status && sync.status !== '待付款' && sync.status !== '待支付') {
+      await load()
+    }
+  } catch (e) { /* 查单失败不影响展示 */ }
+}
 
 /* ===== 售后反馈 ===== */
 const aftersaleRecords = ref([])
@@ -335,6 +353,8 @@ async function load() {
   order.value = (converted && converted[0]) || o
   // 充值订单: 强制微信支付 (元宝不能买元宝), H5 端默认也切到微信
   if (isRechargeOrder.value && selectedPay.value === 'balance') selectedPay.value = 'wechat'
+  // 待支付订单: 支付后从收银台返回时, 主动查微信侧订单状态同步 (兜底回调丢失)
+  await syncPendingIfNeeded()
 }
 
 /* ===== PC 扫码支付 (Native) ===== */
