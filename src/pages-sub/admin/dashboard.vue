@@ -1831,13 +1831,13 @@ async function loadModule(key) {
 /* ===== 页面管理 ===== */
 const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, show_tools: false })
 const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
-// 玄学工具总开关: 单字段 show_tools 控制三端; 未显式设置时继承 app/h5 现状避免线上已开启的 App/H5 被回退
+// 玄学工具总开关: 单字段 show_tools 控制三端; 未显式设置时默认开启, 避免线上原 App/H5 已开启的玄学工具被回退隐藏
 function masterToolsOf(mp) {
   if (!mp) return true
   const s = mp.show_tools
   if (s === '1' || s === true) return true
   if (s === '0' || s === false) return false
-  return !!(mp.show_tools_app === '1' || mp.show_tools_app === true || mp.show_tools_h5 === '1' || mp.show_tools_h5 === true)
+  return true
 }
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */

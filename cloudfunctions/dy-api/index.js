@@ -5062,7 +5062,7 @@ async function appPayConfig() {
     let masterTools
     if (st === '1' || st === true) masterTools = true
     else if (st === '0' || st === false) masterTools = false
-    else masterTools = (mypageDoc.show_tools_app === '1' || mypageDoc.show_tools_app === true || mypageDoc.show_tools_h5 === '1' || mypageDoc.show_tools_h5 === true)
+    else masterTools = true // 未显式设置时默认开启 (避免线上原 App/H5 已开启的玄学工具被回退隐藏)
     return ok({
       show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
       show_balance: payDoc.show_balance !== '0', // 默认显示余额
