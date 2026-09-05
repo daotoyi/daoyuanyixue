@@ -3517,6 +3517,7 @@ const STAFF_ROUTES = [
   'admin.logistics.list',
   'admin.logistics.subscribe',
   'admin.logistics.createOrder',
+  'admin.logistics.wxCreateOrder',
   'admin.logistics.accounts',
   'admin.logistics.printTemplate',
   'admin.dashboard',
@@ -4276,6 +4277,142 @@ async function adminLogisticsCreateOrder(data) {
     warehouse: [sender.province, sender.city].filter(Boolean).join(' ') || '',
     print_template: String(r.PrintTemplate || ''),
     result_code: String(r.ResultCode || ''),
+  })
+}
+
+/* ===== 微信物流助手下单 (2026-09-05) =====
+   微信官方免费接口, 与快递鸟月结通道并行(双通道):
+   - 顺丰/德邦支持【现付】编码 SF_CASH / DB_CASH, 无需签月结协议, 适合发货量小或不想签约的场景
+   - 下单仅负责拿运单号; 轨迹仍复用快递鸟订阅(1008), 该接口本就不需要月结账号
+   注: 微信要求省份/城市带行政后缀(如"广东省""广州市"), 前端需提示管理员按此格式填写 */
+async function adminLogisticsWxCreateOrder(data) {
+  const orderNo = String((data && data.order_no) || '').trim()
+  if (!orderNo) return fail('缺少订单号')
+  const o = (await db.collection('orders').where({ order_no: orderNo }).limit(1).get()).data[0]
+  if (!o) return fail('订单不存在')
+
+  const token = await getWxAccessToken()
+  if (!token) return fail('小程序 access_token 获取失败，请检查 AppSecret 配置')
+
+  const deliveryId = String((data && data.delivery_id) || 'SF').trim().toUpperCase()
+  const bizId = String((data && data.biz_id) || (deliveryId === 'DB' ? 'DB_CASH' : 'SF_CASH')).trim()
+
+  const cfg = await getKdniaoConfig()
+  const addr = o.address || {}
+  const recv = (data && data.receiver) || {}
+  const receiver = {
+    name: String(recv.name || addr.name || '').trim(),
+    tel: String(recv.tel || addr.phone || '').trim(),
+    mobile: String(recv.tel || addr.phone || '').trim(),
+    province: String(recv.province || '').trim(),
+    city: String(recv.city || '').trim(),
+    area: String(recv.area || '').trim(),
+    address: String(recv.address || addr.detail || '').trim(),
+  }
+  if (!receiver.name || !receiver.tel) return fail('收件人姓名/电话不能为空')
+  if (!receiver.province || !receiver.city || !receiver.address) return fail('收件人省/市/详细地址不能为空')
+
+  const senderInfo = accountSender(null, cfg.legacySender)
+  if (!senderInfo.name || !senderInfo.tel || !senderInfo.province || !senderInfo.address) {
+    return fail('请先到「系统设置 → 物流查询」配置发件人信息')
+  }
+
+  // openid: 微信给用户推物流服务通知要用, 从下单用户取
+  const u = (await db.collection('users').where({ uid: Number(o.uid) }).limit(1).get()).data[0]
+  const openid = String((u && u.openid) || '').trim()
+
+  const items = Array.isArray(o.items) ? o.items : []
+  const goodsName = items.map((i) => i.name).join('、').slice(0, 100) || '商品'
+  const qty = items.reduce((s, i) => s + (Number(i.qty) || 1), 0) || 1
+  const firstImg = String((items[0] && items[0].image) || '').trim()
+
+  const params = {
+    add_source: 0, // 0=小程序订单(会发物流服务通知); 2=App/H5(不发通知)
+    order_id: orderNo,
+    delivery_id: deliveryId,
+    biz_id: bizId,
+    sender: {
+      name: senderInfo.name,
+      tel: senderInfo.tel,
+      mobile: senderInfo.tel,
+      company: senderInfo.company || '',
+      province: senderInfo.province,
+      city: senderInfo.city,
+      area: senderInfo.area,
+      address: senderInfo.address,
+    },
+    receiver,
+    cargo: {
+      count: 1,
+      weight: Number((data && data.weight) || 0) || 1,
+      space_x: 30, space_y: 20, space_z: 20,
+      detail_list: [{ name: goodsName.slice(0, 60), count: qty }],
+    },
+    shop: {
+      wxa_path: `pages-sub/order/detail?order_no=${orderNo}`,
+      img_url: firstImg,
+      goods_name: goodsName.slice(0, 60),
+      goods_count: qty,
+    },
+    insured: { use_insured: 0, insured_value: 0 },
+    service: { service_type: 0, service_name: '' },
+    expect_time: 0, // 顺丰必传; 0=已与快递员事先约定取件时间
+  }
+  if (openid) params.openid = openid
+
+  let r = null
+  try {
+    r = await httpGetJson(`https://api.weixin.qq.com/cgi-bin/express/business/order/add?access_token=${encodeURIComponent(token)}`, {}, params)
+  } catch (e) {
+    return fail('微信下单请求失败: ' + ((e && e.message) || e))
+  }
+  const waybillId = String((r && r.waybill_id) || '').trim()
+  if (!waybillId) {
+    return fail(String((r && r.delivery_resultmsg) || (r && r.errmsg) || '微信下单失败'))
+  }
+  if (!openid) {
+    console.error('[dy-api] 该订单用户无 openid, 微信物流服务通知不会推送')
+  }
+
+  const companyName = deliveryId === 'DB' ? '德邦快递' : (deliveryId === 'SF' ? '顺丰速运' : deliveryId)
+  await db.collection('orders').where({ order_no: orderNo }).update({
+    status: '待收货',
+    shipped_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    logistics_company: companyName,
+    tracking_no: waybillId,
+  })
+  // 面单数据(键值对)入库, 供后续查看/打印
+  try {
+    await savePrintTemplate(orderNo, deliveryId, waybillId, JSON.stringify(r.waybill_data || []))
+  } catch (e) { /* 忽略 */ }
+  try {
+    if (o.uid) {
+      await db.collection('messages').add({
+        id: Date.now() % 1000000,
+        uid: o.uid,
+        type: 'order',
+        title: '订单已发货',
+        content: `订单 ${orderNo} 已由${companyName}发出，运单号：${waybillId}`,
+        read: false,
+        created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      })
+      try { await sendGzhMsg(o.uid, '订单已发货', '订单 ' + orderNo + ' 已发出') } catch (e2) {}
+    }
+  } catch (e) { /* 忽略 */ }
+  // 轨迹仍走快递鸟订阅(1008 不需要月结账号)
+  try { await kdniaoSubscribe(deliveryId, waybillId, orderNo) } catch (e2) {}
+
+  return ok({
+    logistic_code: waybillId,
+    shipper_code: deliveryId,
+    company: companyName,
+    channel: 'wx',
+    biz_id: bizId,
+    account_label: bizId === 'SF_CASH' || bizId === 'DB_CASH' ? '微信现付（免月结）' : bizId,
+    warehouse: [senderInfo.province, senderInfo.city].filter(Boolean).join(' ') || '',
+    has_openid: !!openid,
+    print_template: '',
+    waybill_data: r.waybill_data || [],
   })
 }
 
@@ -5522,6 +5659,7 @@ const ROUTES = {
   'admin.logistics.list': listLogistics,
   'admin.logistics.subscribe': adminLogisticsSubscribe,
   'admin.logistics.createOrder': adminLogisticsCreateOrder,
+  'admin.logistics.wxCreateOrder': adminLogisticsWxCreateOrder,
   'admin.logistics.accounts': adminLogisticsAccounts,
   'admin.logistics.printTemplate': adminLogisticsPrintTemplate,
   'order.logistics': queryLogistics,

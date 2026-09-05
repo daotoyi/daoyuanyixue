@@ -26,7 +26,21 @@
       <text class="lg-detect" v-if="detected && detected !== company">已识别：{{ detectedName }}</text>
     </view>
 
-    <!-- 在线下单模式: 收件人信息 (快递鸟下单要求省/市/区拆开, 而订单地址只有一串文本, 故此处补填) -->
+    <!-- 在线下单模式: 先选通道 (微信现付免月结 / 快递鸟月结) -->
+    <view class="lg-card" v-if="mode === 'online'">
+      <text class="lg-label">下单通道</text>
+      <view class="lg-mode lg-mode-sm">
+        <view class="lg-mode-item" :class="{ on: channel === 'wx' }" @tap="channel = 'wx'">微信现付</view>
+        <view class="lg-mode-item" :class="{ on: channel === 'kdniao' }" @tap="channel = 'kdniao'">快递鸟月结</view>
+      </view>
+      <text class="lg-mode-tip">
+        {{ channel === 'wx'
+          ? '微信官方接口，顺丰/德邦现付无需签月结协议，买家还能收到微信物流通知'
+          : '走快递鸟，需先在「系统设置 → 物流查询」配好该快递的月结账号' }}
+      </text>
+    </view>
+
+    <!-- 在线下单模式: 收件人信息 (下单接口要求省/市/区拆开, 而订单地址只有一串文本, 故此处补填) -->
     <view class="lg-card" v-if="mode === 'online'">
       <text class="lg-label">收件人信息</text>
       <input class="lg-input" v-model="receiver.name" placeholder="收件人姓名" />
@@ -42,10 +56,11 @@
         <input class="lg-input lg-input-3" v-model="remark" placeholder="备注(选填)" />
       </view>
       <text class="lg-tip">📌 省市区已尝试从订单地址自动识别，请核对准确；下单后运单号自动回填，无需手抄。</text>
+      <text class="lg-tip" v-if="channel === 'wx'">⚠️ 微信要求省份城市带行政后缀，如「广东省」「广州市」「天河区」。</text>
     </view>
 
-    <!-- 月结账号 (按所选快递公司自动匹配; 多个候选时可切换; 账号自带发件仓) -->
-    <view class="lg-card" v-if="mode === 'online'">
+    <!-- 月结账号 (仅快递鸟通道需要; 按所选快递公司自动匹配, 多个候选时可切换, 账号自带发件仓) -->
+    <view class="lg-card" v-if="mode === 'online' && channel === 'kdniao'">
       <text class="lg-label">月结账号</text>
       <view v-if="accounts.length > 1" class="lg-acct-pick">
         <view
@@ -107,7 +122,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder, adminLogisticsPrintTemplate, adminLogisticsAccounts } from '../../api/api'
+import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder, adminLogisticsPrintTemplate, adminLogisticsAccounts, adminLogisticsWxCreateOrder } from '../../api/api'
 import { staticUrl } from '../../utils/static-url'
 
 const order = ref(null)
@@ -134,6 +149,8 @@ const detectedName = ref('')
 watch(company, (v) => { loadAccounts(v) })
 /* 发货模式: manual=手动填单号 / online=在线下单取件(快递公司分配运单号) */
 const mode = ref('manual')
+/* 在线下单的通道: wx=微信物流助手(现付免月结) / kdniao=快递鸟(需月结账号) */
+const channel = ref('wx')
 const submitting = ref(false)
 const printing = ref(false)
 /* 该订单是否已存在电子面单 (有则可重复打印) */
@@ -202,19 +219,26 @@ async function createOrder() {
   }
   submitting.value = true
   try {
-    const res = await adminLogisticsCreateOrder({
+    // 双通道: wx=微信物流助手(现付免月结) / kdniao=快递鸟(需月结账号)
+    const isWx = channel.value === 'wx'
+    const base = {
       order_no: orderNo.value,
-      company: company.value,
       weight: Number(weight.value || 0) || 0,
-      remark: remark.value || '',
       receiver: r,
-      account_id: accountId.value || '',
-    })
-    hasTemplate.value = true
+    }
+    const res = isWx
+      ? await adminLogisticsWxCreateOrder({ ...base, delivery_id: company.value })
+      : await adminLogisticsCreateOrder({
+          ...base,
+          company: company.value,
+          remark: remark.value || '',
+          account_id: accountId.value || '',
+        })
     const tpl = res.print_template || ''
+    const extra = isWx && res.has_openid === false ? '\n（该用户无 openid，微信物流通知不会推送）' : ''
     uni.showModal({
       title: '下单成功',
-      content: `快递公司：${res.company || company.value}\n运单号：${res.logistic_code}${res.warehouse ? '\n发件仓：' + res.warehouse : ''}\n\n运单号已自动填入订单，快递员将按约定上门取件。${tpl ? '' : '\n（快递公司未返回电子面单）'}`,
+      content: `${isWx ? '通道：微信现付' : '通道：快递鸟月结'}\n快递公司：${res.company || company.value}\n运单号：${res.logistic_code}${res.warehouse ? '\n发件仓：' + res.warehouse : ''}\n\n运单号已自动填入订单，快递员将按约定上门取件。${tpl ? '' : '\n（未返回可打印的电子面单）'}${extra}`,
       confirmText: tpl ? '打印面单' : '知道了',
       cancelText: tpl ? '稍后打印' : '',
       showCancel: !!tpl,
@@ -437,6 +461,8 @@ async function confirmShip() {
   color: #2a2a2a;
   margin-bottom: 16rpx;
 }
+.lg-mode-sm { padding: 4rpx; }
+.lg-mode-sm .lg-mode-item { padding: 14rpx 0; font-size: 25rpx; }
 /* 月结账号选择 (多月结账号 + 多仓库) */
 .lg-acct-pick {
   display: flex;

@@ -342,6 +342,8 @@ export const adminLogisticsCreateOrder = _admin('admin.logistics.createOrder')
 export const adminLogisticsPrintTemplate = _admin('admin.logistics.printTemplate')
 /* 查某快递公司可用的月结账号 (发货页自动匹配/切换) */
 export const adminLogisticsAccounts = _admin('admin.logistics.accounts')
+/* 微信物流助手下单 (现付 SF_CASH/DB_CASH, 免月结账号) */
+export const adminLogisticsWxCreateOrder = _admin('admin.logistics.wxCreateOrder')
 export const adminCateList = _admin('admin.categories.list')
 export const adminCateCreate = _admin('admin.categories.create')
 export const adminCateUpdate = _admin('admin.categories.update')
