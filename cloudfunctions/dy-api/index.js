@@ -4387,9 +4387,20 @@ async function adminLogisticsWxCreateOrder(data) {
     logistics_company: companyName,
     tracking_no: waybillId,
   })
-  // 面单数据(键值对)入库, 供后续查看/打印
+  /* 微信返回的是面单【键值对数组】(不是 HTML), 必须存到独立字段 waybill_data:
+     若存进 print_template, 前端会误判为可打印面单, 点打印会把 JSON 当 HTML 打出乱码 */
   try {
-    await savePrintTemplate(orderNo, deliveryId, waybillId, JSON.stringify(r.waybill_data || []))
+    const wd = JSON.stringify(r.waybill_data || [])
+    const tplAt = new Date().toLocaleString('zh-CN', { hour12: false })
+    const rec = (await db.collection('logistics').where({ order_no: orderNo }).limit(1).get()).data[0]
+    if (rec) {
+      await db.collection('logistics').doc(rec._id).update({ waybill_data: wd, template_at: tplAt })
+    } else {
+      await db.collection('logistics').add({
+        order_no: orderNo, shipper_code: deliveryId, logistic_code: waybillId,
+        traces: [], waybill_data: wd, template_at: tplAt, created_at: tplAt,
+      })
+    }
   } catch (e) { /* 忽略 */ }
   try {
     if (o.uid) {

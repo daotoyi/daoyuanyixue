@@ -301,6 +301,16 @@ async function createOrder() {
    H5(电脑端后台): 用隐藏 iframe 渲染面单 HTML 再调 print(), 是唯一能驱动实体打印机的路径
    小程序/App: 平台不提供打印能力, 降级为提示去电脑端打印 */
 function doPrint(html) {
+  // 防线: 微信通道的面单是键值对(waybill_data), 不是 HTML; 误当 HTML 打印会出一堆乱码
+  const t = String(html || '').trim()
+  if (t && t[0] !== '<') {
+    uni.showModal({
+      title: '该面单无法直接打印',
+      content: '微信现付通道返回的是面单数据（非网页格式），请用「微信打单 PC 软件」打印，或让快递员上门打单。',
+      showCancel: false,
+    })
+    return
+  }
   // #ifdef H5
   try {
     const iframe = document.createElement('iframe')
