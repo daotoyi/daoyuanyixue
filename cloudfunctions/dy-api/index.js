@@ -4547,6 +4547,10 @@ async function adminOrderShip(data) {
 async function adminOrderRefund(data) {
   const order = (await db.collection('orders').where({ order_no: data.order_no }).limit(1).get()).data[0]
   if (!order) return fail('订单不存在')
+  // 未支付(待付款/待支付): 没有收款, 不可退款 —— 与"代收款"互斥, 杜绝假退款脏数据
+  if (order.status === '待付款' || order.status === '待支付') {
+    return fail('订单未支付，无法退款')
+  }
   // 已退款/已取消: 防重复退款
   if (order.status === '已退款' || order.status === '已取消') {
     return ok({ updated: true, already: true })

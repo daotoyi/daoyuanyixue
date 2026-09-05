@@ -556,7 +556,7 @@
               <view class="td w-ops w-ops-4 ops" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
                 <text class="op op-col" :class="{ hide: o.status !== '待发货' }" @tap="openShip(o)">发货</text>
-                <text class="op op-col danger" :class="{ hide: o.status === '已退款' || o.status === '已完成' || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
+                <text class="op op-col danger" :class="{ hide: !canRefund(o) || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
                 <text class="op op-col danger" :class="{ hide: userRole !== 'admin' }" @tap="deleteOrder(o)">删除</text>
               </view>
             </view>
@@ -1571,6 +1571,8 @@
 <script setup>
 const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已取消':'cancelled','已退款':'refunded','全部':'all'}
 const stCls = (v) => ST_CLS[v] || v
+/* 可退款判定: 仅已支付且未退款的订单(待发货/待收货)允许退款. 待付款/待支付(未付)与已取消/已退款/已完成 均不可退 —— 与"代收款"互斥 */
+const canRefund = (o) => o.status === '待发货' || o.status === '待收货'
 
 /* 订单来源端 (2026-09-05): platform 字段 → 展示文案与配色 */
 const PF_TEXT = { 'mp-weixin': '小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
