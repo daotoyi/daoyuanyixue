@@ -176,25 +176,13 @@
               <text class="sd-text">控制「我的」页面功能板块的显示/隐藏</text>
             </view>
             <view class="f-row">
-              <text class="f-label">玄学工具 · 微信小程序</text>
+              <text class="f-label">玄学工具（总开关）</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.show_tools" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_tools = $event.detail.value" />
               </view>
             </view>
-            <view class="f-row">
-              <text class="f-label">玄学工具 · App端</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_tools_app" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_tools_app = $event.detail.value" />
-              </view>
-            </view>
-            <view class="f-row">
-              <text class="f-label">玄学工具 · H5</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_tools_h5" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_tools_h5 = $event.detail.value" />
-              </view>
-            </view>
             <view class="settings-actions">
-              <text class="settings-tip">按端独立控制「我的」页玄学工具板块显隐（微信小程序默认关，App/H5 默认开）</text>
+              <text class="settings-tip">单一总开关同时控制「我的」页玄学工具板块在 H5 / App / 微信小程序 三端的显隐</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -1843,6 +1831,14 @@ async function loadModule(key) {
 /* ===== 页面管理 ===== */
 const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, show_tools: false })
 const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
+// 玄学工具总开关: 单字段 show_tools 控制三端; 未显式设置时继承 app/h5 现状避免线上已开启的 App/H5 被回退
+function masterToolsOf(mp) {
+  if (!mp) return true
+  const s = mp.show_tools
+  if (s === '1' || s === true) return true
+  if (s === '0' || s === false) return false
+  return !!(mp.show_tools_app === '1' || mp.show_tools_app === true || mp.show_tools_h5 === '1' || mp.show_tools_h5 === true)
+}
 const homePandaoList = ref([])
 /* 固定盘道活动: 星期 + 时间 + 老师, 前台日历本月/下月统一生效 */
 const homePandaoFixed = ref([])
@@ -1962,9 +1958,7 @@ async function loadHomeConfig() {
       rec_show_product: rc.rec_show_product !== '0' && rc.rec_show_product !== false,
       rec_show_course: rc.rec_show_course !== '0' && rc.rec_show_course !== false,
       rec_show_moment: rc.rec_show_moment !== '0' && rc.rec_show_moment !== false,
-      show_tools: mp.show_tools === '1' || mp.show_tools === true,
-      show_tools_app: mp.show_tools_app === '1' || mp.show_tools_app === true,
-      show_tools_h5: mp.show_tools_h5 === '1' || mp.show_tools_h5 === true,
+      show_tools: masterToolsOf(mp),
     }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
@@ -1994,7 +1988,7 @@ async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0', show_wechat_login: homeCfg.value.show_wechat_login ? '1' : '0' } })
     await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0' } })
-    await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0', show_tools_app: homeCfg.value.show_tools_app ? '1' : '0', show_tools_h5: homeCfg.value.show_tools_h5 ? '1' : '0' } })
+    await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0', show_tools_app: homeCfg.value.show_tools ? '1' : '0', show_tools_h5: homeCfg.value.show_tools ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })

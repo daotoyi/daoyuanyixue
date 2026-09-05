@@ -5057,6 +5057,12 @@ async function appPayConfig() {
     const recDoc = recommendRes.data[0] || {}
     const momentDoc = momentRes.data[0] || {}
     const mypageDoc = mypageRes.data[0] || {}
+    // 玄学工具总开关: 单字段 show_tools 控制 H5/App/微信小程序 三端; 首次迁移若未显式设置则继承 app/h5 现状, 避免线上已开启的 App/H5 被回退
+    const st = mypageDoc.show_tools
+    let masterTools
+    if (st === '1' || st === true) masterTools = true
+    else if (st === '0' || st === false) masterTools = false
+    else masterTools = (mypageDoc.show_tools_app === '1' || mypageDoc.show_tools_app === true || mypageDoc.show_tools_h5 === '1' || mypageDoc.show_tools_h5 === true)
     return ok({
       show_alipay: payDoc.show_alipay === '1' || payDoc.show_alipay === true || false,
       show_balance: payDoc.show_balance !== '0', // 默认显示余额
@@ -5076,13 +5082,13 @@ async function appPayConfig() {
       rec_show_moment: recDoc.rec_show_moment !== '0',
       // 动态发布控制: 普通用户/员工是否允许发布动态 (默认关闭), 超管/管理员始终可发布
       allow_publish_moment: momentDoc.allow_publish_moment === '1' || momentDoc.allow_publish_moment === true || false,
-      // 我的页面: 玄学工具板块 (按端独立控制; 微信小程序默认关闭, App/H5 默认开启)
-      show_tools: mypageDoc.show_tools === '1' || mypageDoc.show_tools === true || false,
-      show_tools_app: mypageDoc.show_tools_app === '1' || mypageDoc.show_tools_app === true || true,
-      show_tools_h5: mypageDoc.show_tools_h5 === '1' || mypageDoc.show_tools_h5 === true || true,
+      // 我的页面: 玄学工具板块 — 单一总开关控制 H5 / App / 微信小程序 三端
+      show_tools: masterTools,
+      show_tools_app: masterTools,
+      show_tools_h5: masterTools,
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true })
   }
 }
 

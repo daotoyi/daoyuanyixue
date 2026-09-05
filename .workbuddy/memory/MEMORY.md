@@ -45,8 +45,10 @@
 - 443 超时常是瞬时抖动, 先重试; main 与 tag 分开推 (`git config http.postBuffer 1048576000`)
 
 ## 静态托管路径布局 (铁律)
-- 根 `/` = 官网; `/h5/` = H5 应用; `/download/` = 下载页; `/apk/` = APK 文件
-- **自定义域名 club.zhenhesheng.cn 路径映射不统一**: `/apk/*` 走 h5 前缀, `/download/` 走根目录 → 发布 APK 时 `/apk`+`/download` 与 `/h5/apk`+`/h5/download` **两处都传**; 上传 cloudPath 严格限定 `/apk/` 或 `/download/`, **绝不传根** (覆盖官网首页)
+- 根 `/` = 官网; `/h5/` = H5 应用; `/download/`(实际文件 `/download/index.html`) = 下载页; **APK 发布到 `/h5/apk/`**(旧 `/apk/` 仅历史留存, 不再使用)
+- **自定义域名 club.zhenhesheng.cn 路径映射不统一**: `/apk/*` 走 h5 前缀, `/download/` 走根目录
+- **APK 发布铁律(2026-09-06 改)**: 下载页只链 `/h5/apk/`, **APK 只传 `/h5/apk/daoyuan-vX.Y.Z.apk`, 不再传 `/apk/`**(用户要求"不要 /apk/"); 下载页源在**跨项目** `zhs-website/zhenhesheng.cn/download.html`, 部署到 `/download/index.html`
+- 上传 cloudPath 必须带**文件名**(如 `/h5/apk/daoyuan-v1.12.11.apk`); manageHosting upload 单文件 cloudPath 以 `/` 结尾会把文件存成名为该路径的脏对象 → 具体 URL 404 (2026-09-06 踩坑); **绝不传根** (覆盖官网首页)
 - **H5 应用部署 cloudPath 必须 = /h5/** (deploy-cloudbase.js 已固定为 /h5/), 与官网根 / 严格分离; 切勿改回 / (会覆盖官网首页, 且 /h5/ 路径长期不更新导致用户看到旧版本, 见 2026-09-01 v1.11.289 部署事故)
 - 测试域名访问会弹警告 → 下载页/APK 链接一律用 club.zhenhesheng.cn
 
