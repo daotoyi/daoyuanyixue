@@ -353,7 +353,7 @@ async function checkUpdate() {
       success: (res) => {
         if (res.confirm) {
           // #ifdef H5
-          window.open(info.url || 'https://club.zhenhesheng.cn/download/')
+          window.open(info.url || 'https://club.zhenhesheng.cn/h5/download/')
           // #endif
           // #ifndef H5
           uni.showToast({ title: '请到应用市场更新', icon: 'none' })

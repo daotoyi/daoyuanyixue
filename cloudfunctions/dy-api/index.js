@@ -1909,7 +1909,7 @@ async function checkUpdate() {
   return ok({
     latest: '1.0.0',
     versionCode: 100,
-    url: 'https://cloud1-d8gs2k9m311f7272f-1464523137.tcloudbaseapp.com/download/',
+    url: 'https://club.zhenhesheng.cn/h5/download/',
     changelog: '1. 新增后台系统设置\n2. 商品/课程分类管理\n3. 课程页分类导航\n4. 设置中心\n5. 配色与体验优化',
     force: false,
   })
