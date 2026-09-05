@@ -1940,6 +1940,7 @@ async function rechargeCreate(data) {
     session_id: 0,
     order_type: 'recharge',
     recharge_points: points, // 到账元宝
+    platform: String(data.platform || '').trim() || 'unknown',
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
   return ok({ order_no, points })
@@ -1959,6 +1960,9 @@ async function createOrder(data) {
     course_id: data.course_id || 0, // 课程直购标记: 非0=课程订单, 支付成功自动发课
     session_id: data.session_id || 0, // 盘道预约场次标记: 非0=预约订单
     order_type: data.order_type || (data.course_id ? 'course' : 'product'), // product/course/appointment
+    /* 来源端标记 (2026-09-05): mp-weixin / h5 / app / unknown
+       用于分析渠道构成, 以及判断该订单能否走微信物流助手(仅小程序订单可推物流服务通知) */
+    platform: String(data.platform || '').trim() || 'unknown',
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   const res = await db.collection('orders').add(order)
@@ -2006,6 +2010,7 @@ async function toolUnlock(data) {
       session_id: 0,
       order_type: 'tool_unlock',
       tool_type: String(tool),
+      platform: String(data.platform || '').trim() || 'unknown',
       pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
       created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     })
@@ -2943,6 +2948,7 @@ async function pandaoBook(data) {
     session_title: session.title,
     session_time: `${session.day} ${session.time}`,
     session_place: session.place,
+    platform: String(data.platform || '').trim() || 'unknown',
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
   return ok({ order_no, order_type: 'appointment', free: isFree })

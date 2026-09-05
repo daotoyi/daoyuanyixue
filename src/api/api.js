@@ -10,6 +10,27 @@ import mock from './mock'
 import { getCallableFunction } from './cloudbase'
 
 const __USE_MOCK__ = false
+
+/* 当前运行端标识 (2026-09-05): 写入订单 platform 字段, 用于渠道分析 + 物流通道判断
+   uni.getSystemInfoSync().uniPlatform 返回 app / web / mp-weixin 等;
+   web 统一记为 h5 便于阅读; 取不到则回退条件编译常量, 再兜底 unknown */
+function platformTag() {
+  try {
+    const info = uni.getSystemInfoSync && uni.getSystemInfoSync()
+    const p = (info && (info.uniPlatform || info.platform)) || ''
+    if (p) return String(p) === 'web' ? 'h5' : String(p)
+  } catch (e) { /* 忽略, 走兜底 */ }
+  // #ifdef MP-WEIXIN
+  return 'mp-weixin'
+  // #endif
+  // #ifdef H5
+  return 'h5'
+  // #endif
+  // #ifdef APP-PLUS
+  return 'app'
+  // #endif
+  return 'unknown'
+}
 const FN_NAME = 'dy-api'
 const API_BASE = 'https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com/dy-api'
 
@@ -187,13 +208,14 @@ export const checkUpdate = () =>
 
 /* ============ 订单 (云函数: 以 order_no 标识) ============ */
 
+/* 下单统一入口: 自动注入 platform 来源端标记, 各业务页无需各自传 */
 export const createOrder = (params) =>
   __USE_MOCK__
     ? (async () => {
         await delay(400)
         return { order_no: `DY${Date.now()}`, status: '待付款', total_price: params.total_price, items: params.items, pay_method: params.pay_method, address: params.address, created_at: '刚刚' }
       })()
-    : _callFunction('order.create', params)
+    : _callFunction('order.create', { ...params, platform: platformTag() })
 
 export const getOrders = (params = {}) =>
   __USE_MOCK__ ? _fromMock(() => [])() : _callFunction('order.list', params)
@@ -271,7 +293,7 @@ export const courseRefund = (data) =>
 export const deleteOrder = (data) =>
   __USE_MOCK__ ? _fromMock(() => ({ deleted: true }))() : _callFunction('order.delete', data)
 export const unlockTool = (data) =>
-  __USE_MOCK__ ? _fromMock(() => ({ order_no: `TL${Date.now()}` }))() : _callFunction('tool.unlock', data)
+  __USE_MOCK__ ? _fromMock(() => ({ order_no: `TL${Date.now()}` }))() : _callFunction('tool.unlock', { ...data, platform: platformTag() })
 
 /* ============ 后台管理 (需 role=admin) ============ */
 
@@ -357,7 +379,7 @@ export const getPayConfig = () => _callFunction('app.payConfig', {})
 export const fileUrl = (data) => _callFunction('app.fileUrl', data)
 export const getPandaoList = () => _callFunction('pandao.list', {})
 export const getRecommendedMoments = () => _callFunction('moments.recommended', {})
-export const pandaoBook = (data) => _callFunction('pandao.book', data)
+export const pandaoBook = (data) => _callFunction('pandao.book', { ...data, platform: platformTag() })
 export const pandaoCancel = (data) => _callFunction('pandao.cancel', data)
 export const getPandaoMine = (data) => _callFunction('pandao.mine', data)
 export const getPandaoDetail = (data) => _callFunction('pandao.detail', data)
@@ -366,7 +388,7 @@ export const getPandaoBookers = (data) => _callFunction('pandao.bookers', data)
 export const orderPayBalance = (data) => _callFunction('order.payBalance', data)
 export const orderFreeConfirm = (data) => _callFunction('order.freeConfirm', data)
 export const alipayPrepay = (data) => _callFunction('order.alipayPrepay', data)
-export const rechargeCreate = (data) => _callFunction('recharge.create', data)
+export const rechargeCreate = (data) => _callFunction('recharge.create', { ...data, platform: platformTag() })
 export const bindWechatPhone = (data) => _callFunction('user.bindWechatPhone', data)
 export const adminPandaoUpdate = _admin('admin.pandao.update')
 export const getMyCoupons = (data) => _callFunction('user.coupons', data)

@@ -550,6 +550,8 @@
               <view class="td w-status">
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
+                <!-- 来源端标记 (2026-09-05): unknown=老订单未记录 -->
+                <text class="td-platform" :class="'pf-' + pfCls(o.platform)" v-if="o.platform && o.platform !== 'unknown'">{{ pfText(o.platform) }}</text>
               </view>
               <view class="td w-ops w-ops-4 ops" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
@@ -1569,6 +1571,12 @@
 <script setup>
 const ST_CLS = {'待付款':'unpaid','待发货':'unshipped','待收货':'unreceived','已完成':'done','已取消':'cancelled','已退款':'refunded','全部':'all'}
 const stCls = (v) => ST_CLS[v] || v
+
+/* 订单来源端 (2026-09-05): platform 字段 → 展示文案与配色 */
+const PF_TEXT = { 'mp-weixin': '小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
+const PF_CLS = { 'mp-weixin': 'wx', 'h5': 'h5', 'web': 'h5', 'app': 'app' }
+const pfText = (v) => PF_TEXT[String(v || '').toLowerCase()] || String(v || '')
+const pfCls = (v) => PF_CLS[String(v || '').toLowerCase()] || 'other'
 
 import { ref, computed, onMounted, reactive } from 'vue'
 import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
@@ -5899,6 +5907,20 @@ onMounted(async () => {
   color: #8a857c;
   margin-top: 4rpx;
 }
+/* 订单来源端标记 (小程序 / H5 / App) */
+.td-platform {
+  display: inline-block;
+  margin-top: 6rpx;
+  margin-right: 8rpx;
+  padding: 2rpx 12rpx;
+  font-size: 19rpx;
+  border-radius: 6rpx;
+  color: #7a6a52;
+  background: #f2ece2;
+}
+.td-platform.pf-wx { color: #0f6e56; background: #e1f5ee; }
+.td-platform.pf-h5 { color: #185fa5; background: #e6f1fb; }
+.td-platform.pf-app { color: #854f0b; background: #faeeda; }
 /* 售后管理: 搜索框 */
 .as-search-bar {
   position: relative;
