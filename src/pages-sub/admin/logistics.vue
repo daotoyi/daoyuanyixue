@@ -129,7 +129,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { adminLogisticsList, adminOrderShip, adminList, adminLogisticsCreateOrder, adminLogisticsPrintTemplate, adminLogisticsAccounts, adminLogisticsWxCreateOrder } from '../../api/api'
 import { staticUrl } from '../../utils/static-url'
