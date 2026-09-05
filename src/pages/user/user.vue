@@ -521,17 +521,30 @@ onShow(async () => {
   } catch (e) {
     /* 忽略 */
   }
-  // 加载页面配置 (玄学工具开关等, 默认关闭)
-  // 玄学工具板块: 仅微信小程序端受后台开关控制; H5/网站/App 端始终正常显示
+  // 加载页面配置 (玄学工具开关等), 按端独立跟随后台配置
   try {
     const cfg = await getPayConfig()
     // #ifdef MP-WEIXIN
     showTools.value = cfg.show_tools === true
     // #endif
-    // #ifndef MP-WEIXIN
+    // #ifdef APP-PLUS
+    showTools.value = cfg.show_tools_app === true
+    // #endif
+    // #ifdef H5
+    showTools.value = cfg.show_tools_h5 === true
+    // #endif
+  } catch (e) {
+    // 异常时按各端默认: 微信小程序关, App/H5 开
+    // #ifdef MP-WEIXIN
+    showTools.value = false
+    // #endif
+    // #ifdef APP-PLUS
     showTools.value = true
     // #endif
-  } catch (e) { /* 默认关闭 */ }
+    // #ifdef H5
+    showTools.value = true
+    // #endif
+  }
 })
 </script>
 

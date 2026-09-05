@@ -5076,8 +5076,10 @@ async function appPayConfig() {
       rec_show_moment: recDoc.rec_show_moment !== '0',
       // 动态发布控制: 普通用户/员工是否允许发布动态 (默认关闭), 超管/管理员始终可发布
       allow_publish_moment: momentDoc.allow_publish_moment === '1' || momentDoc.allow_publish_moment === true || false,
-      // 我的页面: 玄学工具板块 (默认关闭)
+      // 我的页面: 玄学工具板块 (按端独立控制; 微信小程序默认关闭, App/H5 默认开启)
       show_tools: mypageDoc.show_tools === '1' || mypageDoc.show_tools === true || false,
+      show_tools_app: mypageDoc.show_tools_app === '1' || mypageDoc.show_tools_app === true || true,
+      show_tools_h5: mypageDoc.show_tools_h5 === '1' || mypageDoc.show_tools_h5 === true || true,
     })
   } catch (e) {
     return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: false })
