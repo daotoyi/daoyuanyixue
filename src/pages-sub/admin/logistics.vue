@@ -38,6 +38,13 @@
           ? '微信官方接口，顺丰/德邦现付无需签月结协议，买家还能收到微信物流通知'
           : '走快递鸟，需先在「系统设置 → 物流查询」配好该快递的月结账号' }}
       </text>
+      <!-- 来源端与推荐理由: 按订单 platform 自动推荐, 仍可手动切换 -->
+      <text class="lg-src-tip" v-if="mode === 'online' && orderPlatform !== 'unknown'">
+        订单来源：{{ platformText }} · {{ autoRecommended ? '已为你推荐此通道' : '已手动切换' }}
+      </text>
+      <text class="lg-src-tip" v-else-if="mode === 'online'">
+        订单来源：未知（老订单未记录）· 默认微信现付，可手动切换
+      </text>
     </view>
 
     <!-- 在线下单模式: 收件人信息 (下单接口要求省/市/区拆开, 而订单地址只有一串文本, 故此处补填) -->
@@ -88,14 +95,16 @@
           v-for="l in logistics"
           :key="l.code"
           class="lg-item"
-          :class="{ on: company === l.code }"
-          @tap="company = l.code"
+          :class="{ on: company === l.code, off: !companyUsable(l.code) }"
+          @tap="pickCompany(l)"
         >
           <image class="lg-icon" :src="l.icon" mode="aspectFit"></image>
           <text class="lg-name">{{ l.name }}</text>
           <text class="lg-check" v-if="company === l.code">✓</text>
+          <text class="lg-off-tag" v-if="!companyUsable(l.code)">通道不支持</text>
         </view>
       </view>
+      <text class="lg-tip" v-if="mode === 'online' && channel === 'wx'">微信现付通道目前支持顺丰（SF_CASH）；德邦也支持但未列入公司列表，需要可再加。</text>
     </view>
 
     <!-- 发货说明 -->
@@ -151,6 +160,36 @@ watch(company, (v) => { loadAccounts(v) })
 const mode = ref('manual')
 /* 在线下单的通道: wx=微信物流助手(现付免月结) / kdniao=快递鸟(需月结账号) */
 const channel = ref('wx')
+/* 订单来源端 (platform 字段) 与是否仍处于系统推荐值(手动切过则不再显示"已推荐") */
+const orderPlatform = ref('unknown')
+const autoRecommended = ref(true)
+
+const PF_TEXT = { 'mp-weixin': '小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
+const platformText = computed(() => PF_TEXT[String(orderPlatform.value || '').toLowerCase()] || orderPlatform.value || '未知')
+
+/* 微信现付仅支持直营快递: 顺丰 SF / 德邦 DB (德邦未列入公司列表, 预留) */
+const WX_CASH_CODES = ['SF', 'DB']
+function companyUsable(code) {
+  if (mode.value !== 'online' || channel.value !== 'wx') return true
+  return WX_CASH_CODES.includes(String(code || '').toUpperCase())
+}
+function pickCompany(l) {
+  if (!companyUsable(l.code)) {
+    uni.showToast({ title: `${l.name} 不支持微信现付，请切换通道或选顺丰`, icon: 'none' })
+    return
+  }
+  company.value = l.code
+}
+/* 切通道时: 若当前公司在新通道不可用则清空, 并标记为手动切换 */
+watch(channel, (v) => {
+  autoRecommended.value = false
+  if (company.value && !companyUsable(company.value)) company.value = ''
+})
+/* 按订单来源端推荐通道: 小程序→微信现付(免签约+可推物流通知); H5/App→快递鸟月结 */
+function recommendChannel(p) {
+  const v = String(p || '').toLowerCase()
+  return v === 'h5' || v === 'web' || v === 'app' ? 'kdniao' : 'wx'
+}
 const submitting = ref(false)
 const printing = ref(false)
 /* 该订单是否已存在电子面单 (有则可重复打印) */
@@ -329,6 +368,10 @@ onLoad(async (options) => {
       order.value = orders.find((o) => o.order_no === orderNo.value) || null
       company.value = order.value && order.value.logistics_company ? order.value.logistics_company : ''
       trackingNo.value = order.value && order.value.tracking_no ? order.value.tracking_no : ''
+      // 按订单来源端推荐下单通道 (小程序→微信现付 / H5·App→快递鸟月结)
+      orderPlatform.value = String((order.value && order.value.platform) || 'unknown')
+      channel.value = recommendChannel(orderPlatform.value)
+      autoRecommended.value = true
       // 已在线下单过的订单: 载入时探测面单, 有则显示"打印面单"按钮(支持补打)
       try {
         const t = await adminLogisticsPrintTemplate({ order_no: orderNo.value })
@@ -463,6 +506,25 @@ async function confirmShip() {
 }
 .lg-mode-sm { padding: 4rpx; }
 .lg-mode-sm .lg-mode-item { padding: 14rpx 0; font-size: 25rpx; }
+/* 当前通道不支持的快递公司: 置灰, 点选时提示 */
+.lg-item.off { opacity: 0.4; }
+.lg-off-tag {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 18rpx;
+  color: #b04a4a;
+}
+/* 订单来源端与推荐理由 */
+.lg-src-tip {
+  display: block;
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  background: #f6f1e8;
+  border-radius: 8rpx;
+  font-size: 21rpx;
+  color: #7a6a52;
+  line-height: 1.5;
+}
 /* 月结账号选择 (多月结账号 + 多仓库) */
 .lg-acct-pick {
   display: flex;
