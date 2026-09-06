@@ -192,6 +192,8 @@ async function getCourse(data) {
 
 async function listMoments() {
   const res = await db.collection('moments').orderBy('id', 'desc').limit(50).get()
+  // 云函数服务时区为 UTC, created_at 存的是 UTC 字符串, 列表返回需转东八区展示
+  ;(res.data || []).forEach((m) => { if (m && m.created_at) m.created_at = utcStrToCn(m.created_at) })
   return ok(res.data)
 }
 
@@ -278,6 +280,8 @@ async function myFollowList(data) {
 /* 首页推荐页"动态精选": 返回后台标记 is_recommended 的用户动态 */
 async function recommendedMoments(data) {
   const res = await db.collection('moments').where({ is_recommended: true }).orderBy('id', 'desc').limit(20).get()
+  // created_at 转东八区展示
+  ;(res.data || []).forEach((m) => { if (m && m.created_at) m.created_at = utcStrToCn(m.created_at) })
   return ok(res.data || [])
 }
 
@@ -329,6 +333,8 @@ async function userProfile(data) {
   if (viewer_uid) {
     is_followed = !!(await db.collection('follows').where({ uid: Number(viewer_uid), target_uid: Number(uid) }).limit(1).get()).data.length
   }
+  // 个人主页动态 created_at 同样需转东八区
+  ;(moments.data || []).forEach((m) => { if (m && m.created_at) m.created_at = utcStrToCn(m.created_at) })
   return ok({
     user: { uid: u.uid, nickname: u.nickname, avatar: u.avatar, dao_code: u.dao_code, bio: u.bio || '', balance: u.balance || '0', phone: u.phone || '' },
     moments: moments.data,
@@ -617,6 +623,8 @@ async function listComments(data) {
   if (!momentId) return fail('缺少动态 ID')
   await ensureCollection('comments')
   const res = await db.collection('comments').where({ moment_id: Number(momentId) }).orderBy('created_at', 'asc').limit(200).get()
+  // 评论时间转东八区展示
+  ;(res.data || []).forEach((c) => { if (c && c.created_at) c.created_at = utcStrToCn(c.created_at) })
   return ok(res.data)
 }
 
@@ -645,7 +653,7 @@ async function addComment(data) {
   await db.collection('comments').add(doc)
   // 动态评论数 +1
   await db.collection('moments').where({ id: Number(moment_id) }).update({ comments: db.command.inc(1) }).catch(() => {})
-  return ok({ id: commentId, created_at: doc.created_at })
+  return ok({ id: commentId, created_at: utcStrToCn(doc.created_at) })
 }
 
 async function publishMoment(data) {
@@ -698,6 +706,7 @@ async function publishMoment(data) {
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
   await db.collection('moments').add(doc)
+  if (doc.created_at) doc.created_at = utcStrToCn(doc.created_at)
   return ok({ ...doc })
 }
 
@@ -1219,6 +1228,8 @@ async function myAftersales(data) {
   const { uid } = data
   if (!uid) return ok([])
   const res = await db.collection('aftersales').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(50).get()
+  // 售后记录时间转东八区展示
+  ;(res.data || []).forEach((a) => { if (a && a.created_at) a.created_at = utcStrToCn(a.created_at) })
   return ok(res.data)
 }
 
@@ -1276,6 +1287,8 @@ async function myMessages(data) {
   const { uid } = data
   if (!uid) return ok([])
   const res = await db.collection('messages').where({ uid: Number(uid) }).orderBy('id', 'desc').limit(50).get()
+  // 消息时间转东八区展示
+  ;(res.data || []).forEach((m) => { if (m && m.created_at) m.created_at = utcStrToCn(m.created_at) })
   return ok(res.data)
 }
 
@@ -2047,6 +2060,13 @@ async function listOrders(data) {
   if (data.status && data.status !== '全部') conds.push({ status: data.status })
   let res
   res = await query.where(_.and(conds)).orderBy('created_at', 'desc').limit(50).get()
+  // 订单列表时间与详情一致: 转东八区 (created_at/pay_time/refund_at)
+  ;(res.data || []).forEach((o) => {
+    if (!o) return
+    if (o.created_at) o.created_at = utcStrToCn(o.created_at)
+    if (o.pay_time) o.pay_time = utcStrToCn(o.pay_time)
+    if (o.refund_at) o.refund_at = utcStrToCn(o.refund_at)
+  })
   return ok(res.data)
 }
 
