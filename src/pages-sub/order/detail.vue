@@ -550,8 +550,13 @@ async function doPay() {
 }
 
 async function doCancel() {
-  const isPaid = order.value.status === '待发货'
-  const isFree = isFreePrice(order.value.total_price)
+  const targetNo = (order.value && order.value.order_no) || orderNo.value
+  if (!targetNo) {
+    uni.showToast({ title: '订单号缺失，无法取消', icon: 'none' })
+    return
+  }
+  const isPaid = order.value && order.value.status === '待发货'
+  const isFree = isFreePrice((order.value && order.value.total_price) || 0)
   // 免费订单取消不提退款，直接确认
   uni.showModal({
     title: '取消订单',
@@ -560,11 +565,15 @@ async function doCancel() {
     success: async (r) => {
       if (!r.confirm) return
       try {
-        const res = await cancelOrder({ order_no: orderNo.value })
-        uni.showToast({ title: '订单已取消' + (res && res.refunded && !isFree ? '，已退款' : ''), icon: 'success' })
-        order.value.status = (res && res.refunded && !isFree) ? '已退款' : '已取消'
+        const res = await cancelOrder({ order_no: targetNo })
+        const tip = (res && res.refunded && !isFree) ? '，已退款' : (res && res.refund_failed ? '，退款将在后台处理' : '')
+        uni.showToast({ title: '订单已取消' + tip, icon: 'success' })
+        // 与订单列表一致: 取消后重新拉取详情, 保证界面与后端状态同步
+        await load()
       } catch (e) {
         uni.showToast({ title: e.message || '取消失败', icon: 'none' })
+        // 失败后也刷新一次, 显示后端真实状态(避免误以为已取消)
+        try { await load() } catch (_) {}
       }
     },
   })

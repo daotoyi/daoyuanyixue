@@ -34,7 +34,7 @@
 ## 版本管理铁律 (2026-08 确立)
 - **每改必升小版本 patch+1**: `node scripts/bump-version.js && node scripts/gen-version.js`
 - bump 读 `git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1` (只认版本 tag, 防 NaN); gen 以 version.js 为准 (曾因都用 git describe 互相覆盖出错)
-- **四端版本号一次同步**: version.js + build.gradle + 下载页; H5+小程序每次必构建部署, APK 仅提需求时构建 (用已同步版本号)
+- **四端版本号一次同步**: version.js + build.gradle + 下载页(= `/h5/download/index.html`); H5+小程序每次必构建部署, APK 仅提需求时构建 (用已同步版本号)
 - bump 末尾会 `git tag vX` (指向当时 HEAD), commit 在其上 → 提交后 `git tag -f vX` 让 tag 精确指向发布提交
 - **勿留非版本格式 tag** (git describe 会误当最新版 → NaN)
 - APK: mobile/ 是 Capacitor 工程; sync 用 `cd mobile && ./node_modules/.bin/cap sync android`; 再 `cd mobile/android && ./gradlew assembleRelease --no-daemon`; 产物 app-release.apk
@@ -45,9 +45,9 @@
 - 443 超时常是瞬时抖动, 先重试; main 与 tag 分开推 (`git config http.postBuffer 1048576000`)
 
 ## 静态托管路径布局 (铁律)
-- 根 `/` = 官网; `/h5/` = H5 应用; `/download/`(实际文件 `/download/index.html`) = 下载页; **APK 发布到 `/h5/apk/`**(旧 `/apk/` 仅历史留存, 不再使用)
+- 根 `/` = 官网; `/h5/` = H5 应用; 下载页 = `/h5/download/index.html`(访问 club.zhenhesheng.cn/h5/download, 线上 200, 唯一入口); **APK 发布到 `/h5/apk/`**(旧 `/apk/` 仅历史留存, 不再使用); 注: 根目录旧入口 `/download/index.html` 已于 2026-09-06 由用户删除(线上 404), 下载页源在跨项目 `zhs-website/zhenhesheng.cn/download.html`(完好)
 - **自定义域名 club.zhenhesheng.cn 路径映射不统一**: `/apk/*` 走 h5 前缀, `/download/` 走根目录
-- **APK 发布铁律(2026-09-06 改)**: 下载页只链 `/h5/apk/`, **APK 只传 `/h5/apk/daoyuan-vX.Y.Z.apk`, 不再传 `/apk/`**(用户要求"不要 /apk/"); 下载页源在**跨项目** `zhs-website/zhenhesheng.cn/download.html`, 部署到 `/download/index.html`
+- **APK 发布铁律(2026-09-06 改)**: 下载页只链 `/h5/apk/`, **APK 只传 `/h5/apk/daoyuan-vX.Y.Z.apk`, 不再传 `/apk/`**(用户要求"不要 /apk/"); 下载页源在**跨项目** `zhs-website/zhenhesheng.cn/download.html`; **后续部署只更新 `/h5/download/index.html`**(用户 2026-09-06 明确要求: 不再两处都传, 不再动根目录 `/download/index.html`)
 - 上传 cloudPath 必须带**文件名**(如 `/h5/apk/daoyuan-v1.12.11.apk`); manageHosting upload 单文件 cloudPath 以 `/` 结尾会把文件存成名为该路径的脏对象 → 具体 URL 404 (2026-09-06 踩坑); **绝不传根** (覆盖官网首页)
 - **H5 应用部署 cloudPath 必须 = /h5/** (deploy-cloudbase.js 已固定为 /h5/), 与官网根 / 严格分离; 切勿改回 / (会覆盖官网首页, 且 /h5/ 路径长期不更新导致用户看到旧版本, 见 2026-09-01 v1.11.289 部署事故)
 - 测试域名访问会弹警告 → 下载页/APK 链接一律用 club.zhenhesheng.cn

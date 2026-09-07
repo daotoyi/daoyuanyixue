@@ -2155,6 +2155,8 @@ async function cancelOrder(data) {
   const exist = await db.collection('orders').where(cond).limit(1).get()
   if (!exist.data.length) return fail('订单不存在')
   const order = exist.data[0]
+  let refundFailed = false
+  let refundErr = ''
   if (order.status !== '待付款' && order.status !== '待发货') return fail('只有未付款或未发货的订单可以取消')
 
   // 已支付(待发货)取消 → 自动退款 (防重复退款)
@@ -2173,26 +2175,17 @@ async function cancelOrder(data) {
     } else {
       if (isBalance) {
         // 元宝支付: 直接退回元宝余额
-        const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
-        const bal = Number((u && u.balance) || 0) || 0
-        await db.collection('users').where({ uid: Number(order.uid) })
-          .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
-      } else if (order.pay_method === '微信支付' || order.pay_method === 'wechat' || order.trade_no) {
-        // 微信支付: 调微信退款 API v3
         try {
-          const wxpay = require('./wxpay-v3')
-          await wxpay.refund({
-            outTradeNo: order.order_no,
-            outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
-            totalFee: Math.round(refundAmt * 100),
-            refundFee: Math.round(refundAmt * 100),
-            reason: '用户取消订单',
-          })
+          const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
+          const bal = Number((u && u.balance) || 0) || 0
+          await db.collection('users').where({ uid: Number(order.uid) })
+            .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
         } catch (e) {
-          return fail('微信退款发起失败: ' + (e.message || '请稍后重试'))
+          refundFailed = true
+          refundErr = e.message
         }
       } else {
-        // 其他支付方式兜底: 走微信退款接口 (微信支付订单必填 trade_no)
+        // 微信支付(含 trade_no 兜底): 调微信退款 API v3 — 失败不阻断取消, 标记退款待后台处理
         try {
           const wxpay = require('./wxpay-v3')
           await wxpay.refund({
@@ -2203,16 +2196,21 @@ async function cancelOrder(data) {
             reason: '用户取消订单',
           })
         } catch (e) {
-          return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+          refundFailed = true
+          refundErr = e.message
         }
       }
       await db.collection('orders').where(cond).update({
-        status: '已退款',
+        status: refundFailed ? '已取消' : '已退款',
         refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
         refund_reason: '用户取消订单',
+        refund_failed: refundFailed,
+        refund_error: refundFailed ? String(refundErr || '').slice(0, 200) : '',
       })
-      // 退款回退销量 (商品/课程)
-      try { await revertSalesAfterRefund(order) } catch (e) {}
+      // 退款回退销量 (商品/课程) — 仅退款成功时回退, 失败留后台处理
+      if (!refundFailed) {
+        try { await revertSalesAfterRefund(order) } catch (e) {}
+      }
     }
   } else {
     await db.collection('orders').where(cond).update({ status: '已取消' })
@@ -2232,7 +2230,7 @@ async function cancelOrder(data) {
       })
     }
   } catch (e) {}
-  return ok({ updated: true, refunded: order.status === '待发货' })
+  return ok({ updated: true, refunded: !refundFailed && order.status === '待发货', refund_failed: refundFailed })
 }
 
 /* 课程7日退款: 购买7日内且未观看(progress=0)可申请退款 */
