@@ -4325,11 +4325,8 @@ function switchSettingsTab(group) {
   activeSettingsTab.value = group
   loadSettings(group)
   if (group === 'oss') {
-    // 稍后等设置加载完成; 无论是否启用 C/OSS, 都加载视频列表(关闭时仅含云开发COS 本地视频)
-    setTimeout(() => {
-      if (!ossEnabled.value) ossStorageFilter.value = 'local'
-      loadOssVideos()
-    }, 400)
+    // 进入 C/OSS 页默认不主动加载视频列表(避免每次切换都请求); 仅设置默认筛选, 由用户点「刷新列表」手动加载
+    if (!ossEnabled.value) ossStorageFilter.value = 'local'
   }
 }
 
