@@ -539,7 +539,7 @@
               <text class="td w-price sortable" @tap="toggleOrderSort('amount')">金额 {{ orderSortArrow('amount') }}</text>
               <text class="td w-time sortable" @tap="toggleOrderSort('created_at')">下单时间 {{ orderSortArrow('created_at') }}</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops w-ops-4" v-if="canWrite">操作</text>
+              <text class="td w-ops w-ops-5" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="o in sortedOrders" :key="o._id || o.order_no">
               <text class="td w-no">{{ o.order_no }}</text>
@@ -553,10 +553,11 @@
                 <!-- 来源端标记 (2026-09-05): unknown=老订单未记录 -->
                 <text class="td-platform" :class="'pf-' + pfCls(o.platform)" v-if="o.platform && o.platform !== 'unknown'">{{ pfText(o.platform) }}</text>
               </view>
-              <view class="td w-ops w-ops-4 ops" v-if="canWrite">
+              <view class="td w-ops w-ops-5 ops" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
                 <text class="op op-col" :class="{ hide: o.status !== '待发货' }" @tap="openShip(o)">发货</text>
                 <text class="op op-col danger" :class="{ hide: !canRefund(o) || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
+                <text class="op op-col danger" :class="{ hide: !(isCourseOrder(o) && userRole === 'admin' && o.status !== '已退款' && o.status !== '待付款' && o.status !== '待支付' && o.status !== '已取消') }" @tap="forceRefundCourse(o)">强制退款</text>
                 <text class="op op-col danger" :class="{ hide: userRole !== 'admin' }" @tap="deleteOrder(o)">删除</text>
               </view>
             </view>
@@ -1601,7 +1602,7 @@ import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminOrderAnalysis,
-  adminCourseCreate, adminCourseUpdate, adminCourseEpisodeUpdate, adminOrderShip, adminOrderRefund, adminOrderDelete,
+  adminCourseCreate, adminCourseUpdate, adminCourseEpisodeUpdate, adminOrderShip, adminOrderRefund, adminOrderRefundCourse, adminOrderDelete,
   adminOrderReconcile,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
@@ -3953,6 +3954,35 @@ async function refundOrder(o) {
   })
 }
 
+/* 是否课程订单 (order_type 或 course_id 判定, 兼容历史订单) */
+function isCourseOrder(o) {
+  return (o.order_type || (o.course_id ? 'course' : 'product')) === 'course'
+}
+
+/* 超级管理员强制退款课程订单: 不论 7日/已观看/订单状态, 只要已支付未退款 (仅超管可用, 后端二次校验) */
+async function forceRefundCourse(o) {
+  if (!isCourseOrder(o)) {
+    uni.showToast({ title: '仅课程订单可强制退款', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '强制退款（课程）',
+    content: `超级管理员强制退款：订单 ${o.order_no} 将立即原路退回 ¥${o.total_price} 并收回课程访问权，不可撤销。确认吗？`,
+    confirmColor: '#9c1630',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await adminOrderRefundCourse({ order_no: o.order_no })
+          uni.showToast({ title: '已强制退款', icon: 'success' })
+          await loadOrders()
+        } catch (e) {
+          uni.showToast({ title: e.message || '退款失败', icon: 'none' })
+        }
+      }
+    },
+  })
+}
+
 /* 用户 */
 function deleteUser(form) {
   const isAdminUser = form.role === 'admin'
@@ -5288,6 +5318,11 @@ onMounted(async () => {
   overflow: visible;
   padding-right: 12rpx;
 }
+.w-ops-5 {
+  width: 586rpx;
+  overflow: visible;
+  padding-right: 12rpx;
+}
 .op-col {
   width: 108rpx;
   text-align: center;
@@ -5325,6 +5360,7 @@ onMounted(async () => {
 .orders-table .w-time { width: 280rpx; }
 .orders-table .w-status { width: 130rpx; }
 .orders-table .w-ops-4 { width: 460rpx; }
+.orders-table .w-ops-5 { width: 580rpx; }
 /* 可排序表头 */
 .orders-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .orders-table .sortable:active { color: #c4753a; }
@@ -6723,6 +6759,7 @@ onMounted(async () => {
   .orders-table .w-time { width: 160px; }
   .orders-table .w-status { width: 80px; }
   .orders-table .w-ops-4 { width: 280px; }
+  .orders-table .w-ops-5 { width: 350px; }
 }
 /* 后台: 保持 1400px 宽 (原有设计), 收拢居中 */
 @media screen and (min-width: 1025px) {

@@ -2325,6 +2325,73 @@ async function courseRefund(data) {
   return ok({ refunded: true, message: '退款成功' })
 }
 
+/* 后台: 超级管理员强制退款课程订单 (不论 7日/已观看/订单状态, 只要已支付未退款) */
+async function adminCourseForceRefund(data) {
+  // 仅超级管理员可操作 (操作者身份由前端 _adminAuth 注入 opUid, 以数据库角色为准)
+  const opRole = await dbUserRole(data)
+  if (opRole !== 'admin') return fail('该操作需要超级管理员权限', 403)
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const exist = await db.collection('orders').where({ order_no }).limit(1).get()
+  if (!exist.data.length) return fail('订单不存在')
+  const order = exist.data[0]
+  // 仅课程订单 (order_type 或 course_id 判定, 兼容历史订单)
+  const oType = order.order_type || (order.course_id ? 'course' : 'product')
+  if (oType !== 'course') return fail('仅课程订单可强制退款')
+  // 已支付且未退款 (待发货/待收货/已完成) 才可退; 待付款(未付)/已取消/已退款 不可
+  if (order.status === '已退款') return fail('该订单已退款')
+  if (['待付款', '待支付', '已取消'].includes(order.status)) return fail('该订单未支付或已关闭，无法退款')
+  const targetUid = Number(order.uid)
+  const refundAmt = Number(order.total_price) || 0
+  const isBalance = String(order.pay_method || '').includes('余额')
+  if (isBalance) {
+    const u = (await db.collection('users').where({ uid: targetUid }).limit(1).get()).data[0]
+    const bal = Number((u && u.balance) || 0) || 0
+    await db.collection('users').where({ uid: targetUid })
+      .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+  } else {
+    try {
+      const wxpay = require('./wxpay-v3')
+      await wxpay.refund({
+        outTradeNo: order.order_no,
+        outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+        totalFee: Math.round(refundAmt * 100),
+        refundFee: Math.round(refundAmt * 100),
+        reason: '超级管理员强制退款',
+      })
+    } catch (e) {
+      return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+    }
+  }
+  // 收回课程访问权 (删除 user_courses)
+  try {
+    await db.collection('user_courses')
+      .where({ uid: targetUid, course_id: Number(order.course_id) })
+      .remove()
+  } catch (e) {}
+  // 标记订单已退款
+  await db.collection('orders').where({ order_no }).update({
+    status: '已退款',
+    refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    refund_reason: '超级管理员强制退款',
+  })
+  // 退款回退销量 (课程学习人数 -1)
+  try { await revertSalesAfterRefund(order) } catch (e) {}
+  // 推送消息
+  try {
+    await db.collection('messages').add({
+      id: Date.now() % 1000000,
+      uid: targetUid,
+      type: 'order',
+      title: '课程退款成功',
+      content: `课程订单 ${order_no} 已退款，款项已原路退回`,
+      read: false,
+      created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+    })
+  } catch (e) {}
+  return ok({ refunded: true, message: '退款成功' })
+}
+
 /* 用户端: 删除自己的订单 (校验 uid 归属, 防止删他人订单) */
 async function deleteUserOrder(data) {
   const { uid, order_no } = data
@@ -5881,6 +5948,7 @@ const ROUTES = {
   'admin.course.episode.update': adminCourseEpisodeUpdate,
   'admin.orders.ship': adminOrderShip,
   'admin.orders.refund': adminOrderRefund,
+  'admin.orders.refundCourse': adminCourseForceRefund,
   'admin.orders.reconcile': adminOrderReconcile,
   'admin.recalcSales': adminRecalcSales,
   'admin.orders.delete': adminOrderDelete,
