@@ -1030,6 +1030,22 @@
             </view>
           </view>
 
+          <!-- ===== 短信配置测试发送 (sms) ===== -->
+          <view class="settings-card" v-if="activeSettingsTab === 'sms' && canManageSettings">
+            <view class="settings-desc">
+              <text class="sd-title">短信发送测试</text>
+              <text class="sd-text">向指定手机号发送一条测试短信，验证短信配置（密钥 / 签名 / 模板 / 应用ID）是否正确。测试短信为模拟验证码、不入库，不可用于注册或找回密码。</text>
+            </view>
+            <view class="sms-test-row">
+              <input class="sms-test-input" v-model="smsTestPhone" type="number" maxlength="11" placeholder="测试接收手机号，如 13800138000" />
+              <view class="btn-p sm" @click="testSmsConfig">{{ smsTesting ? '发送中...' : '发送测试' }}</view>
+            </view>
+            <view class="oss-test-result" v-if="smsTestResult">
+              <text :class="['oss-test-icon', smsTestResult.ok ? 'ok' : 'bad']">{{ smsTestResult.ok ? '✓' : '✗' }}</text>
+              <text class="oss-test-msg">{{ smsTestResult.ok ? smsTestResult.message : smsTestResult.error }}</text>
+            </view>
+          </view>
+
           <!-- ===== C/OSS 存储管理 (始终显示, 关闭 C/OSS 时仅展示云开发COS 本地视频) ===== -->
           <view class="settings-card" v-if="activeSettingsTab === 'oss'">
             <view class="settings-desc">
@@ -1590,7 +1606,7 @@ import {
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
   adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
-  adminVideosList, adminVideoMigrate, adminVideoMigrateProgress, adminVideoDelete, adminOssConfigTest,
+  adminVideosList, adminVideoMigrate, adminVideoMigrateProgress, adminVideoDelete, adminOssConfigTest, adminSmsTest,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
@@ -4388,6 +4404,9 @@ function clearSettingsSecret(f) {
 /* 测试 C/OSS 配置是否正确: 调云函数做一次极小预签名 PUT+DELETE 探测, 直出腾讯云错误码 */
 const ossTesting = ref(false)
 const ossTestResult = ref(null)
+const smsTesting = ref(false)
+const smsTestResult = ref(null)
+const smsTestPhone = ref('')
 async function testOssConfig() {
   ossTesting.value = true
   ossTestResult.value = null
@@ -4406,6 +4425,32 @@ async function testOssConfig() {
     ossTestResult.value = { ok: false, error: (e && e.message) || '测试失败' }
   } finally {
     ossTesting.value = false
+  }
+}
+
+async function testSmsConfig() {
+  const phone = String(smsTestPhone.value || '').trim()
+  if (!/^1\d{10}$/.test(phone)) {
+    uni.showToast({ title: '请输入正确的手机号', icon: 'none' })
+    return
+  }
+  smsTesting.value = true
+  smsTestResult.value = null
+  try {
+    const res = await adminSmsTest({ phone })
+    // 云函数一律返回 ok({ ok, ... }); 用内部 ok 字段判断
+    const d = (res && res.data) || res || {}
+    if (d.ok === true) {
+      smsTestResult.value = { ok: true, message: d.message || '测试短信已发送' }
+      uni.showToast({ title: '已发送，请查收', icon: 'success' })
+    } else {
+      smsTestResult.value = { ok: false, error: d.error || '发送失败' }
+      uni.showToast({ title: '发送失败，见下方说明', icon: 'none' })
+    }
+  } catch (e) {
+    smsTestResult.value = { ok: false, error: (e && e.message) || '测试失败' }
+  } finally {
+    smsTesting.value = false
   }
 }
 
@@ -5695,6 +5740,23 @@ onMounted(async () => {
   color: #4a443d;
   flex: 1;
   white-space: pre-wrap;
+}
+/* 短信配置测试发送 */
+.sms-test-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.sms-test-input {
+  flex: 1;
+  height: 68rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid #e8e2da;
+  border-radius: 12rpx;
+  background: #fff;
+  font-size: 24rpx;
+  color: #2a2a2a;
 }
 /* 动态管理: 发布权限开关 一行显示 */
 .moment-cfg-row {

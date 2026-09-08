@@ -5638,6 +5638,72 @@ async function adminOssConfigTest() {
   }
 }
 
+/* 后台「短信配置-测试发送」(admin.sms.test): 向指定手机号发送一条测试短信, 验证短信配置(密钥/签名/模板/应用ID)是否正确
+   注意: 仅发送, 不写入 verify_codes, 不产生真实验证码; 测试短信内容固定为模拟验证码, 不可用于注册/找回密码 */
+async function adminSmsTest(data) {
+  const phone = String(data.phone || '').trim()
+  if (!/^1\d{10}$/.test(phone)) return fail('请输入正确的测试手机号')
+  let cfgRes
+  try {
+    cfgRes = await db.collection('settings').where({ group: 'sms' }).limit(1).get()
+  } catch (e) { return fail('读取短信配置失败: ' + (e.message || e)) }
+  const cfg = cfgRes.data[0] || {}
+  const provider = String(cfg.provider || '').toLowerCase()
+  if (!provider || (provider !== 'tencent' && provider !== '腾讯云') || !String(cfg.secret_id)) {
+    return fail('短信服务未配置：请先在【系统设置-短信配置】选择方案(tencent)并填写 SecretId / SecretKey')
+  }
+  if (!String(cfg.sign)) return fail('短信签名未配置：请在【系统设置-短信配置】填写已审核的签名')
+  if (!String(cfg.template_id)) return fail('验证码模板ID未配置：请在【系统设置-短信配置】填写模板ID')
+  if (!String(cfg.sms_sdk_app_id)) return fail('短信应用ID(sms_sdk_app_id)未配置：请在【系统设置-短信配置】填写 140 开头的短信应用ID')
+  // 密钥格式启发式校验(腾讯云 SecretId 以 AKID 开头): 提前指出"填反/复制不全", 避免笼统的鉴权错
+  const ak = String(cfg.secret_id || '')
+  if (!/^AKID/.test(ak)) {
+    return fail('SecretId 格式异常：腾讯云 SecretId 应以 AKID 开头。请确认没有把 SecretKey 填到 SecretId 栏，且是整段复制')
+  }
+  try {
+    const res = await tencentSmsSend({
+      secretId: cfg.secret_id,
+      secretKey: cfg.secret_key,
+      region: cfg.region || 'ap-guangzhou',
+      sign: cfg.sign,
+      templateId: cfg.template_id,
+      smsSdkAppId: cfg.sms_sdk_app_id,
+      phones: ['+86' + phone],
+      // 标准验证码模板 2 参数: {1}验证码 {2}有效期(分钟); 测试用固定值, 不入库
+      templateParams: ['888888', '5'],
+    })
+    const sendStatusSet = (res && res.SendStatusSet) || []
+    const st = sendStatusSet[0] || {}
+    if (st.Code === 'Ok' || !st.Code) {
+      return ok({ ok: true, message: `测试短信已发送至 ${phone}，请查收（如未收到，请确认签名/模板已审核通过、手机号未进免打扰名单）` })
+    }
+    // 腾讯云返回业务错误码(非网络/鉴权层) —— 翻译成中文并给出排查方向
+    let reason = st.Message || '发送失败'
+    if (st.Code === 'FailedOperation.TemplateParameterFormatError' || st.Code === 'InvalidParameter') {
+      reason = '模板参数不匹配：本测试按标准验证码模板发送 2 个参数（验证码、有效期分钟）。请确认后台【短信配置】的模板ID是「验证码」模板（含 2 个参数），而非通知/营销模板'
+    } else if (st.Code === 'AuthFailure.SignatureFailure' || st.Code === 'AuthFailure.SecretIdNotFound') {
+      reason = '密钥有误：请核对 SecretId / SecretKey 是否填反或复制不全'
+    } else if (st.Code === 'FailedOperation.SignatureNotExist' || st.Code === 'InvalidParameter.SignName') {
+      reason = `短信签名未审核或不存在：请确认签名「${cfg.sign}」已在腾讯云短信控制台审核通过`
+    } else if (st.Code === 'FailedOperation.TemplateNotExist' || st.Code === 'InvalidParameter.TemplateId') {
+      reason = '模板ID不存在：请确认验证码模板ID填写正确'
+    } else if (st.Code === 'FailedOperation.SmsSdkAppIdNotExist' || st.Code === 'InvalidParameter.SmsSdkAppId') {
+      reason = '短信应用ID错误：请确认 sms_sdk_app_id（140 开头）填写正确'
+    } else if (st.Code === 'LimitExceeded.PhoneNumberDailyLimit') {
+      reason = '该手机号今日发送次数超限（腾讯云默认同号码日上限），请明日再试或更换手机号'
+    }
+    return ok({ ok: false, error: reason, code: st.Code })
+  } catch (e) {
+    const raw = String(e && e.message ? e.message : e)
+    let reason = '发送失败'
+    if (raw.indexOf('SecretId') !== -1 || raw.indexOf('SignatureFailure') !== -1) reason = '密钥有误：请核对 SecretId / SecretKey'
+    else if (raw.indexOf('签名') !== -1 || raw.indexOf('SignName') !== -1) reason = '短信签名未审核或不存在'
+    else if (raw.indexOf('模板') !== -1 || raw.indexOf('Template') !== -1) reason = '模板ID有误'
+    else reason = raw.slice(0, 160)
+    return ok({ ok: false, error: reason, raw: raw.slice(0, 300) })
+  }
+}
+
 /* 腾讯云 COS: 生成预签名 PUT URL */
 function cosPutUrl(cfg, key) {
   return new Promise((resolve, reject) => {
@@ -5839,6 +5905,7 @@ const ROUTES = {
   'admin.oss.videos.migrate.progress': adminOssVideoMigrateProgress,
   'admin.oss.videos.delete': adminOssVideoDelete,
   'admin.oss.config.test': adminOssConfigTest,
+  'admin.sms.test': adminSmsTest,
   'admin.categories.list': adminCateList,
   'admin.categories.create': adminCateCreate,
   'admin.categories.update': adminCateUpdate,

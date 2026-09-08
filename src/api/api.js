@@ -365,6 +365,7 @@ export const adminVideoMigrate = _admin('admin.oss.videos.migrate', { timeout: 6
 export const adminVideoMigrateProgress = _admin('admin.oss.videos.migrate.progress', { timeout: 15000 })
 export const adminVideoDelete = _admin('admin.oss.videos.delete')
 export const adminOssConfigTest = _admin('admin.oss.config.test')
+export const adminSmsTest = _admin('admin.sms.test')
 /* 物流: 公司列表 + 重新订阅轨迹 (快递鸟) */
 export const adminLogisticsList = _admin('admin.logistics.list')
 export const adminLogisticsSubscribe = _admin('admin.logistics.subscribe')
