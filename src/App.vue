@@ -4,6 +4,7 @@ import { initCloudBase } from './api/cloudbase'
 import { initSettings, applyTheme, updateTabBar } from './utils/settings'
 import { useUserStore } from './store/index'
 import { heartbeat } from './api/api'
+import { ensurePurchased } from './store/purchased'
 
 /* ===== 单点在线心跳 (每 60s 一次) =====
  * 账号在其他设备登录 → 服务端令牌刷新 → 本机心跳返回 kicked → 强制下线 */
@@ -46,6 +47,12 @@ onLaunch(async () => {
   }
   // 启动单点在线心跳
   startHeartbeat()
+  // 已登录则后台预热"已购课程"缓存: 进入课程详情页时立即显示"已购买", 避免闪"立即购买"
+  // (getMyCourses 请求约 3-4s, 预热后详情页同步命中, 不阻塞启动)
+  const userStore = useUserStore()
+  if (userStore.isLoggedIn && userStore.userInfo && userStore.userInfo.uid) {
+    ensurePurchased(userStore.userInfo.uid).catch(() => {})
+  }
   // Capacitor App: 返回手势/返回键 → 有历史则返回上一页, 否则最小化 (不退出)
   // #ifdef H5
   if (

@@ -134,8 +134,9 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getCourse, teacherInfo, getMyCourses, updateCourseProgress } from '../../api/api'
+import { getCourse, teacherInfo, updateCourseProgress } from '../../api/api'
 import { useUserStore } from '../../store/index'
+import { ensurePurchased, isPurchasedSync } from '../../store/purchased'
 import { isFreePrice, fmtPrice } from '../../utils/price'
 import { getCourseCache, setCourseCache } from '../../utils/courseCache'
 
@@ -215,9 +216,15 @@ onLoad(async (options) => {
     if (Array.isArray(cached.episodes) && cached.episodes.length) detailLoaded.value = true
   }
   /* 优化2: 课程详情 与 已购状态 并行请求 (原为串行 await, 耗时叠加) */
-  const mineP = userStore.isLoggedIn
-    ? getMyCourses({ uid: userStore.userInfo.uid }).catch(() => null)
-    : Promise.resolve(null)
+  /* 已购缓存: 先用预热缓存同步定初值(命中则立即可见"已购买", 不闪"立即购买"),
+     再 ensurePurchased 校正(命中缓存秒回, 未命中则拉一次并回填缓存) */
+  let mineP = Promise.resolve(null)
+  if (userStore.isLoggedIn && userStore.userInfo && userStore.userInfo.uid) {
+    const uid = userStore.userInfo.uid
+    // 列表缓存已含 course 时, 立即同步判定已购初值
+    if (course.value) owned.value = isPurchasedSync(course.value.id)
+    mineP = ensurePurchased(uid)
+  }
   try {
     const c = await getCourse(cid)
     if (c) {
@@ -227,9 +234,13 @@ onLoad(async (options) => {
     }
   } catch (e) { /* 失败时保留缓存或骨架屏, 不打断页面 */ }
   detailLoaded.value = true // 完整数据已到(或已尽力), 大纲/介绍停止骨架
+  // 网络课程数据到手后再补一次同步初值(列表缓存未命中时此处才有 course)
+  if (userStore.isLoggedIn && userStore.userInfo && userStore.userInfo.uid && !cached) {
+    if (course.value) owned.value = isPurchasedSync(course.value.id)
+  }
   const mine = await mineP
   if (mine && course.value) {
-    owned.value = (mine || []).some((c) => c.id === course.value.id)
+    owned.value = mine.has(course.value.id)
   }
 })
 
