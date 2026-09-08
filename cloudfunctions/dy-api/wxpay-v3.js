@@ -55,6 +55,7 @@ function request(method, path, body, query) {
     const bodyStr = body ? JSON.stringify(body) : ''
     const req = https.request(url, {
       method,
+      timeout: 8000,
       headers: {
         Authorization: authHeader(method, signPath, body),
         'Content-Type': 'application/json',
@@ -70,6 +71,8 @@ function request(method, path, body, query) {
         resolve({ status: res.statusCode, json, raw: data })
       })
     })
+    // 超时防护: 微信接口无响应时主动中断, 避免云函数被请求挂死
+    req.on('timeout', () => { req.destroy(new Error('微信接口请求超时')) })
     req.on('error', reject)
     if (bodyStr) req.write(bodyStr)
     req.end()

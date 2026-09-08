@@ -5731,6 +5731,7 @@ onMounted(async () => {
   overflow: hidden;
   flex-shrink: 0;
   transition: width 0.2s;
+  cursor: pointer;
 }
 .cate-panel.collapsed {
   width: 56rpx;
@@ -5773,6 +5774,7 @@ onMounted(async () => {
   padding: 18rpx 20rpx;
   border-bottom: 1rpx solid #e8e2da;
   gap: 8rpx;
+  cursor: pointer;
 }
 .cate-row.active {
   background: #f8f5f0;

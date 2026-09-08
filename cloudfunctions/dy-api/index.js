@@ -2173,20 +2173,17 @@ async function cancelOrder(data) {
       })
       try { await revertSalesAfterRefund(order) } catch (e) {}
     } else {
-      if (isBalance) {
-        // 元宝支付: 直接退回元宝余额
-        try {
+      // 退款整体加 5s 超时防护: 即使微信/余额接口挂起, 也不会卡死取消流程
+      // (wxpay-v3.request 已加 8s 超时, 这里再兜底一层, 保证订单一定取消)
+      const refundP = (async () => {
+        if (isBalance) {
+          // 元宝支付: 直接退回元宝余额
           const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
           const bal = Number((u && u.balance) || 0) || 0
           await db.collection('users').where({ uid: Number(order.uid) })
             .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
-        } catch (e) {
-          refundFailed = true
-          refundErr = e.message
-        }
-      } else {
-        // 微信支付(含 trade_no 兜底): 调微信退款 API v3 — 失败不阻断取消, 标记退款待后台处理
-        try {
+        } else {
+          // 微信支付(含 trade_no 兜底): 调微信退款 API v3 — 失败不阻断取消
           const wxpay = require('./wxpay-v3')
           await wxpay.refund({
             outTradeNo: order.order_no,
@@ -2195,10 +2192,16 @@ async function cancelOrder(data) {
             refundFee: Math.round(refundAmt * 100),
             reason: '用户取消订单',
           })
-        } catch (e) {
-          refundFailed = true
-          refundErr = e.message
         }
+      })()
+      try {
+        await Promise.race([
+          refundP,
+          new Promise((_, rej) => setTimeout(() => rej(new Error('退款处理超时(5s)')), 5000)),
+        ])
+      } catch (e) {
+        refundFailed = true
+        refundErr = e.message
       }
       await db.collection('orders').where(cond).update({
         status: refundFailed ? '已取消' : '已退款',
