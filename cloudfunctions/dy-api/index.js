@@ -5478,7 +5478,7 @@ function cosDeleteUrl(cfg, key) {
       const host = `${cleanKey(cfg.bucket)}.cos.${cleanKey(cfg.region)}.myqcloud.com`
       const httpString = `delete\n/${key}\n\nhost=${host}\n`
       const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
-      const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
+      const stringToSign = `sha1\n${keyTime}\n${sha1Http}\n`
       const signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
       const auth = `q-sign-algorithm=sha1&q-ak=${ak}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
       resolve(`https://${host}/${key}?${auth}`)
@@ -5651,7 +5651,7 @@ function cosPutUrl(cfg, key) {
       const host = `${cleanKey(cfg.bucket)}.cos.${cleanKey(cfg.region)}.myqcloud.com`
       const httpString = `put\n/${key}\n\nhost=${host}\n`
       const sha1Http = crypto.createHash('sha1').update(httpString).digest('hex')
-      const stringToSign = `sha1\n${keyTime}\n${sha1Http}`
+      const stringToSign = `sha1\n${keyTime}\n${sha1Http}\n`
       const signature = crypto.createHmac('sha1', signKey).update(stringToSign).digest('hex')
       const auth = `q-sign-algorithm=sha1&q-ak=${ak}&q-sign-time=${keyTime}&q-key-time=${keyTime}&q-header-list=host&q-url-param-list=&q-signature=${signature}`
       resolve(`https://${host}/${key}?${auth}`)
