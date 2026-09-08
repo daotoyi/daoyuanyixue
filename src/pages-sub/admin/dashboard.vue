@@ -4342,7 +4342,9 @@ async function loadSettings(group) {
     const form = {}
     currentSettingsTab.value.fields.forEach((f) => {
       const val = configs[f.key]
-      form[f.key] = f.secret && val ? '' : val || ''
+      // 敏感字段回填明文: 后端 adminSettingsGet 已返回明文(未脱敏), 管理员可在后台用眼睛图标核对密钥是否填全
+      // 安全约束仍在: 默认以密码圆点显示, 仅点击眼睛才明文; 且留空保存保持原值(不覆盖)
+      form[f.key] = val || ''
     })
     settingsForm.value = form
     // 月结账号是数组, 独立于扁平字段加载
