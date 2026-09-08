@@ -72,7 +72,7 @@
     <view class="submit-bar">
       <view class="submit-total">
         <text class="st-label">合计</text>
-        <text class="st-price" :class="{ 'st-free': subTotal <= 0 }">{{ subTotal <= 0 ? '免费' : '¥' + finalPrice }}</text>        <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
+        <text class="st-price" :class="{ 'st-free': priceReady && subTotal <= 0 }">{{ !priceReady ? '' : (subTotal <= 0 ? '免费' : '¥' + finalPrice) }}</text>        <text class="st-origin" v-if="discount">(已省 ¥{{ discount }})</text>
       </view>
       <view class="btn-fill btn-submit" @tap="submitOrder">
         <text>{{ submitting ? '提交中...' : '提交订单' }}</text>
@@ -169,6 +169,7 @@ import { priceNum, fmtPrice } from '../../utils/price'
 const userStore = useUserStore()
 
 const items = ref([])
+const priceReady = ref(false) // 价格是否加载就绪: 避免初始 subTotal=0 闪现"免费"
 const courseId = ref(0) // 课程直购: 非0表示本次结算为课程
 const address = ref(null)
 const addrList = ref([])
@@ -287,6 +288,7 @@ onLoad(async (options) => {
   }
   // 结算清单图片 cloud:// → 签名URL (私有桶铁律, 否则 H5 支付页显示不出)
   items.value = await resolveCloudList(items.value, 'image')
+  priceReady.value = true // 商品/课程清单就绪后再显示合计, 避免先闪"免费"
   loadCoupons()
   loadPayConfig()
   loadAddresses()
@@ -514,7 +516,11 @@ async function submitOrder() {
       throw new Error(prepay && prepay.msg ? prepay.msg : '支付未配置')
     } catch (payErr) {
       submitting.value = false
-      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      if (payErr && payErr.isCancel) {
+        uni.showToast({ title: '支付取消', icon: 'none' })
+      } else {
+        uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      }
       // 支付失败仍留在订单页可重新支付
       setTimeout(() => {
         uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
@@ -549,7 +555,11 @@ async function submitOrder() {
       throw new Error((sc && sc.msg) || '微信小程序跳转链接生成失败')
     } catch (payErr) {
       submitting.value = false
-      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      if (payErr && payErr.isCancel) {
+        uni.showToast({ title: '支付取消', icon: 'none' })
+      } else {
+        uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      }
       return
     }
     // #endif
@@ -569,7 +579,11 @@ async function submitOrder() {
         throw new Error((native && native.msg) || '微信支付未配置')
       } catch (payErr) {
         submitting.value = false
+        if (payErr && payErr.isCancel) {
+        uni.showToast({ title: '支付取消', icon: 'none' })
+      } else {
         uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      }
         return
       }
     }
@@ -582,7 +596,11 @@ async function submitOrder() {
       throw new Error((h5 && h5.msg) || '微信支付未配置')
     } catch (payErr) {
       submitting.value = false
-      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      if (payErr && payErr.isCancel) {
+        uni.showToast({ title: '支付取消', icon: 'none' })
+      } else {
+        uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      }
       return
     }
     // #endif

@@ -35,6 +35,8 @@
 - **每改必升小版本 patch+1**: `node scripts/bump-version.js && node scripts/gen-version.js`
 - bump 读 `git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1` (只认版本 tag, 防 NaN); gen 以 version.js 为准 (曾因都用 git describe 互相覆盖出错)
 - **四端版本号一次同步**: version.js + build.gradle + 下载页(= `/h5/download/index.html`); H5+小程序每次必构建部署, APK 仅提需求时构建 (用已同步版本号)
+- **生效范围铁律(2026-09-08 明确)**: **H5 部署 + 云函数部署 = 即时线上生效**; 但 **小程序与 App(APK) 构建后不会自动上线** —— 小程序必须用户在微信开发者工具「上传」并填版本号(微信后台/体验版才更新), App 需 `cap sync`+本地 `gradlew assembleRelease` 重打。排查"修了却没生效/不生效"时**先问用户测试端**, 大概率是在小程序/App 跑旧包。
+- **gen-version 纠偏后必须重建小程序**: 提交+纠偏 version.js 后只重 build H5 会漏掉 mp-weixin(其 dist 仍含旧 commit 哈希); 若需小程序上线, 务必再 `node node_modules/.bin/uni build -p mp-weixin` 一次
 - bump 末尾会 `git tag vX` (指向当时 HEAD), commit 在其上 → 提交后 `git tag -f vX` 让 tag 精确指向发布提交
 - **勿留非版本格式 tag** (git describe 会误当最新版 → NaN)
 - APK: mobile/ 是 Capacitor 工程; sync 用 `cd mobile && ./node_modules/.bin/cap sync android`; 再 `cd mobile/android && ./gradlew assembleRelease --no-daemon`; 产物 app-release.apk

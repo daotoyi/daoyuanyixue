@@ -488,7 +488,11 @@ async function doPay() {
       uni.showToast({ title: (prepay && prepay.msg) || '支付未配置', icon: 'none' })
     }
   } catch (e) {
-    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    if (e && e.isCancel) {
+      uni.showToast({ title: '支付取消', icon: 'none' })
+    } else {
+      uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    }
   }
   await load()
   return
@@ -504,7 +508,11 @@ async function doPay() {
       uni.showToast({ title: (sc && sc.msg) || '微信小程序跳转链接生成失败', icon: 'none' })
     }
   } catch (e) {
-    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    if (e && e.isCancel) {
+      uni.showToast({ title: '支付取消', icon: 'none' })
+    } else {
+      uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    }
   }
   return
   // #endif
@@ -526,7 +534,11 @@ async function doPay() {
       }
       uni.showToast({ title: (native && native.msg) || '微信支付未配置', icon: 'none' })
     } catch (e) {
+      if (e && e.isCancel) {
+      uni.showToast({ title: '支付取消', icon: 'none' })
+    } else {
       uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    }
     }
     return
   }
@@ -543,7 +555,11 @@ async function doPay() {
     }
     uni.showToast({ title: (h5 && h5.msg) || '微信支付未配置', icon: 'none' })
   } catch (e) {
-    uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    if (e && e.isCancel) {
+      uni.showToast({ title: '支付取消', icon: 'none' })
+    } else {
+      uni.showToast({ title: '支付失败：' + (e.message || ''), icon: 'none' })
+    }
   }
   return
   // #endif

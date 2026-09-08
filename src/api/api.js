@@ -271,7 +271,17 @@ export function wxRequestPayment(payment) {
       signType: payment.signType,
       paySign: payment.paySign,
       success: (res) => resolve(res),
-      fail: (err) => reject(new Error((err && err.errMsg) || '支付取消')),
+      fail: (err) => {
+        const msg = (err && err.errMsg) || ''
+        // 用户取消支付(小程序/App 点"取消"): errMsg 含 "cancel" → 提示"支付取消"而非"支付失败"
+        if (/cancel/i.test(msg)) {
+          const e = new Error('支付取消')
+          e.isCancel = true
+          reject(e)
+        } else {
+          reject(new Error(msg || '支付失败'))
+        }
+      },
     })
   })
 }
