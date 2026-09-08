@@ -195,7 +195,11 @@ async function showTeacher() {
 const owned = ref(false)
 const buying = ref(false)
 
-const isOwned = computed(() => owned.value)
+/* 内部角色(超管/管理员/运营等)所有课程免费看, 视同已购, 不弹付款/不加锁 */
+const isAdmin = computed(() =>
+  ['admin', 'manager', 'operator', 'viewer'].includes((userStore.userInfo && userStore.userInfo.role) || ''),
+)
+const isOwned = computed(() => owned.value || isAdmin.value)
 /* 课程免费 (价格 0 或 "免费") → 所有课时不上锁 */
 const isFreeCourse = computed(() => isFreePrice(course.value && course.value.price))
 

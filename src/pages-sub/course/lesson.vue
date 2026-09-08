@@ -81,7 +81,11 @@ const isFreeCourse = computed(() => {
 const needOwned = computed(() => !!lesson.value && !isFreeCourse.value && lesson.value.free === false)
 /* 付费课时在已购状态确定前, 先显示加载态(不能提前露出付费视频) */
 const waitingOwned = computed(() => needOwned.value && !ownedReady.value)
-const locked = computed(() => loaded.value && needOwned.value && ownedReady.value && !owned.value)
+/* 内部角色(超管/管理员/运营等)所有课程免费看, 付费课时不锁定 */
+const isAdmin = computed(() =>
+  ['admin', 'manager', 'operator', 'viewer'].includes((userStore.userInfo && userStore.userInfo.role) || ''),
+)
+const locked = computed(() => loaded.value && needOwned.value && ownedReady.value && !owned.value && !isAdmin.value)
 
 onLoad(async (options) => {
   index.value = Number(options.index) || 0
