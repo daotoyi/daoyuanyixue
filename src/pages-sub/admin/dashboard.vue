@@ -1267,7 +1267,7 @@
           ></video>
         </view>
         <view class="f-row"><text class="f-label">分类ID</text><input class="f-input" type="number" v-model="courseForm.category_id" /></view>
-        <view class="f-row"><text class="f-label">课时</text><input class="f-input" type="number" v-model="courseForm.lessons_count" /></view>
+        <view class="f-row"><text class="f-label">课时</text><input class="f-input" type="number" :value="courseForm.episodes.length" disabled placeholder="按实际上传课时自动统计" /></view>
         <view class="f-row">
           <text class="f-label">等级</text>
           <view class="f-pills">

@@ -155,7 +155,10 @@ async function listCourses(data) {
     res = await db.collection('courses').limit(200).get()
   }
   // 过滤隐藏课程 (status 布尔 false 或字符串 'off')
-  return ok(res.data.filter((c) => c.status !== false && c.status !== 'off'))
+  const list = res.data.filter((c) => c.status !== false && c.status !== 'off')
+  // 课时数始终以实际 episodes 条数为准, 避免手工 lessons_count 过期导致显示不符 (2026-09-09)
+  list.forEach((c) => { c.lessons_count = Array.isArray(c.episodes) ? c.episodes.length : 0 })
+  return ok(list)
 }
 
 /* 云存储私有读: 将课时视频 CDN URL 转成管理端签名的临时下载 URL (前端直接可播, 不依赖前端登录态) */
@@ -185,6 +188,10 @@ async function getCourse(data) {
     for (const ep of course.episodes) {
       if (ep && ep.video) ep.video = await signVideoUrl(ep.video)
     }
+    // 课时数始终以实际 episodes 条数为准 (2026-09-09)
+    course.lessons_count = course.episodes.length
+  } else if (course) {
+    course.lessons_count = 0
   }
   return ok(course)
 }
@@ -2912,15 +2919,19 @@ async function myCourses(data) {
   const role = u && u.role
   if (role === 'admin' || role === 'manager' || role === 'operator' || role === 'viewer' || role === 'staff') {
     const all = await db.collection('courses').limit(200).get()
-    return ok(all.data.map((c) => ({ ...c, progress: 100, _status: '学习中', _favorited: false, _owned: true })))
+    // 课时数以实际 episodes 条数为准 (2026-09-09)
+    return ok(all.data.map((c) => ({ ...c, lessons_count: Array.isArray(c.episodes) ? c.episodes.length : 0, progress: 100, _status: '学习中', _favorited: false, _owned: true })))
   }
   const rels = await db.collection('user_courses').where({ uid }).limit(200).get()
   const list = []
   for (const rel of rels.data) {
     const c = await db.collection('courses').where({ id: rel.course_id }).limit(1).get()
     if (c.data[0]) {
+      const cc = c.data[0]
+      // 课时数以实际 episodes 条数为准 (2026-09-09)
       list.push({
-        ...c.data[0],
+        ...cc,
+        lessons_count: Array.isArray(cc.episodes) ? cc.episodes.length : 0,
         progress: rel.progress,
         _status: rel.status,
         _favorited: rel.favorited,
@@ -3898,6 +3909,8 @@ async function adminCourseUpdate(data) {
   ;['title', 'price', 'ot_price', 'cover', 'video', 'episodes', 'teacher', 'category_id', 'lessons_count', 'students_count', 'level', 'description', 'status', 'home_recommend'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
+  // 课时数以实际 episodes 条数为准: 保存课时时同步 lessons_count, 不采用手工输入 (2026-09-09)
+  if (Array.isArray(data.episodes)) doc.lessons_count = data.episodes.length
   await db.collection('courses').where({ id: Number(data.id) }).update(doc)
   return ok({ updated: true })
 }
@@ -3927,6 +3940,7 @@ async function adminCourseEpisodeUpdate(data) {
 async function adminCourseCreate(data) {
   const max = await db.collection('courses').orderBy('id', 'desc').limit(1).get()
   const nextId = max.data.length ? (max.data[0].id || 0) + 1 : 1
+  const episodes = Array.isArray(data.episodes) ? data.episodes : []
   const doc = {
     id: nextId,
     title: data.title,
@@ -3936,8 +3950,9 @@ async function adminCourseCreate(data) {
     ot_price: data.ot_price || '',
     cover: data.cover || '/static/placeholder/course-01.png',
     video: data.video || '',
-    episodes: Array.isArray(data.episodes) ? data.episodes : [],
-    lessons_count: data.lessons_count || 0,
+    episodes,
+    // 课时数以实际 episodes 条数为准, 不采用手工输入 (2026-09-09)
+    lessons_count: episodes.length,
     students_count: data.students_count || 0,
     level: data.level || '入门',
     description: data.description || '',
