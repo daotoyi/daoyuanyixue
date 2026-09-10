@@ -3052,12 +3052,24 @@ function pandaoNextOccurrenceDate(day, time) {
   }
   return null
 }
-/* 盘道场次顺延: 若当前 occurrence 已结束, 推进 start_date 到下一周(同周几同时间), 并归档上周已预约订单 */
+/* 盘道场次顺延: 若当前 occurrence 已结束, 推进 start_date 到下一周(同周几同时间), 并归档上周已预约订单
+   关键: 若后台手动设置的 start_date 仍在未来(场次未结束), 则尊重手动设置, 不强行按周几规律回拉;
+   否则手动改的日期会被覆盖, 导致前端显示与后台设置不同步 (2026-09-08 修复) */
 async function rollForwardPandaoSession(session) {
   if (!session || session.id == null) return false
+  const stored = String(session.start_date || '').slice(0, 10)
+  if (stored) {
+    const parts = stored.split('-').map(Number)
+    if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
+      const end = pandaoEndTime(session.time)
+      const occEnd = new Date(parts[0], parts[1] - 1, parts[2], end.h, end.m, 0)
+      // 当前场次(手动或规律)尚未结束 → 保留原 start_date, 不顺延, 不回拉
+      if (occEnd.getTime() > Date.now()) return false
+    }
+  }
   const next = pandaoNextOccurrenceDate(session.day, session.time)
   if (!next) return false
-  if (next === String(session.start_date || '').slice(0, 10)) return false
+  if (next === stored) return false
   // 推进日期(持久化)
   await db.collection('pandao_sessions').where({ id: Number(session.id) }).update({ start_date: next }).catch(() => {})
   session.start_date = next
