@@ -41,41 +41,22 @@
       </view>
     </view>
 
-    <!-- 盘道固定成员 (后台为每场次独立配置, 点击头像进个人主页) -->
-    <view class="pd-bookers" v-if="fixedMembers.length">
+    <!-- 盘道预约: 固定成员在前, 自行预约的在后 (点击头像进个人主页) -->
+    <view class="pd-bookers" v-if="combinedBookers.length">
       <view class="pd-bookers-head">
-        <text class="pd-bookers-title">盘道固定成员 {{ fixedMembers.length }} 人</text>
+        <text class="pd-bookers-title">盘道预约</text>
         <text class="pd-bookers-tip">点击头像查看主页</text>
       </view>
       <view class="pd-bookers-list">
-        <view class="pd-booker" v-for="m in visibleFixedMembers" :key="m.uid" @tap="openUserProfile(m)">
-          <image class="pd-booker-avatar" v-if="m._avatarUrl" :src="m._avatarUrl" mode="aspectFill"></image>
-          <view class="pd-booker-fb" v-else><text>{{ m.name ? m.name[0] : '?' }}</text></view>
+        <view class="pd-booker" v-for="p in visibleCombined" :key="'u' + p.uid" @tap="openUserProfile(p)">
+          <image class="pd-booker-avatar" v-if="p._avatarUrl" :src="p._avatarUrl" mode="aspectFill"></image>
+          <view class="pd-booker-fb" v-else><text>{{ p._name ? p._name[0] : '?' }}</text></view>
         </view>
         <view
           class="pd-booker-more"
-          v-if="fixedMembers.length > MAX_BOOKER_AVATARS"
-          @tap="showAllFixedMembers = !showAllFixedMembers"
-        ><text>{{ showAllFixedMembers ? '收起' : '+' + (fixedMembers.length - MAX_BOOKER_AVATARS) }}</text></view>
-      </view>
-    </view>
-
-    <!-- 已预约用户 (不论是否支付成功都展示; 点击头像进个人主页) -->
-    <view class="pd-bookers" v-if="bookers.length">
-      <view class="pd-bookers-head">
-        <text class="pd-bookers-title">已预约 {{ bookers.length }} 人</text>
-        <text class="pd-bookers-tip">点击头像查看主页</text>
-      </view>
-      <view class="pd-bookers-list">
-        <view class="pd-booker" v-for="b in visibleBookers" :key="b.uid" @tap="openUserProfile(b)">
-          <image class="pd-booker-avatar" v-if="b._avatarUrl" :src="b._avatarUrl" mode="aspectFill"></image>
-          <view class="pd-booker-fb" v-else><text>{{ b.nickname ? b.nickname[0] : '?' }}</text></view>
-        </view>
-        <view
-          class="pd-booker-more"
-          v-if="bookers.length > MAX_BOOKER_AVATARS"
-          @tap="showAllBookers = !showAllBookers"
-        ><text>{{ showAllBookers ? '收起' : '+' + (bookers.length - MAX_BOOKER_AVATARS) }}</text></view>
+          v-if="combinedBookers.length > MAX_BOOKER_AVATARS"
+          @tap="showAllCombined = !showAllCombined"
+        ><text>{{ showAllCombined ? '收起' : '+' + (combinedBookers.length - MAX_BOOKER_AVATARS) }}</text></view>
       </view>
     </view>
 
@@ -129,19 +110,24 @@ function statusKey(st) {
 }
 const sessionId = ref(0)
 
-/* 已预约用户头像墙: 不论是否支付成功都展示, 点击头像进个人主页 (2026-08-31) */
-const MAX_BOOKER_AVATARS = 10 // 最多显示个数, 超出折叠为 +N
+/* 已预约用户(自行报名): 不论是否支付成功都展示, 点击头像进个人主页 (2026-08-31) */
+const MAX_BOOKER_AVATARS = 10 // 头像墙最多显示个数, 超出折叠为 +N
 const bookers = ref([])
-const showAllBookers = ref(false)
-const visibleBookers = computed(() =>
-  showAllBookers.value ? bookers.value : bookers.value.slice(0, MAX_BOOKER_AVATARS)
-)
 
-/* 盘道固定成员头像墙: 后台为每场次独立配置, 与已预约墙共用样式 (2026-09-10) */
+/* 盘道预约头像墙: 固定成员(后台每场次独立配置)在前, 自行预约的在后, 点击头像进个人主页 (2026-09-10)
+   合并为一个墙: 固定成员用快照 {uid,name}, 自行预约用 {uid,nickname}; 已在固定成员里的预约不再重复排列 */
 const fixedMembers = ref([])
-const showAllFixedMembers = ref(false)
-const visibleFixedMembers = computed(() =>
-  showAllFixedMembers.value ? fixedMembers.value : fixedMembers.value.slice(0, MAX_BOOKER_AVATARS)
+const showAllCombined = ref(false)
+const combinedBookers = computed(() => {
+  const fixed = (fixedMembers.value || []).map((m) => ({ uid: Number(m.uid) || 0, _avatarUrl: m._avatarUrl, _name: m.name }))
+  const fixedUids = new Set(fixed.map((m) => m.uid))
+  const booked = (bookers.value || [])
+    .filter((b) => !fixedUids.has(Number(b.uid)))
+    .map((b) => ({ uid: Number(b.uid) || 0, _avatarUrl: b._avatarUrl, _name: b.nickname }))
+  return fixed.concat(booked)
+})
+const visibleCombined = computed(() =>
+  showAllCombined.value ? combinedBookers.value : combinedBookers.value.slice(0, MAX_BOOKER_AVATARS)
 )
 
 async function loadBookers() {

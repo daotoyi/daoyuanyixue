@@ -284,9 +284,10 @@
                 <text v-for="st in pdStatusOptions" :key="st" class="pill" :class="{ on: pdForm.status === st }" @tap="pdForm.status = st">{{ st }}</text>
               </view>
             </view>
-            <view class="f-row f-row-col">
-              <text class="f-label">固定成员（盘道班底）</text>
-              <view class="f-input-wrap">
+            <view class="pd-member-row">
+              <view class="pd-member-left">
+                <text class="f-label">固定成员</text>
+                <text class="f-label-sm">每场次独立配置，详情页显示其头像墙（最多 30 人）</text>
                 <view class="pd-member-chips" v-if="(pdForm.fixed_members || []).length">
                   <view class="pd-member-chip" v-for="(m, i) in pdForm.fixed_members" :key="m.uid">
                     <image class="pd-member-ava" :src="m._avatar || m.avatar" mode="aspectFill" v-if="m._avatar || m.avatar"></image>
@@ -294,6 +295,8 @@
                     <text class="pd-member-x" @tap.stop="removeFixedMember(i)">×</text>
                   </view>
                 </view>
+              </view>
+              <view class="pd-member-right">
                 <view class="pd-member-search">
                   <input class="f-input" v-model="pdMemberKw" placeholder="搜昵称/手机/道号添加固定成员" @input="onPdMemberSearch" />
                   <view class="pd-member-results" v-if="pdMemberResults.length">
@@ -307,7 +310,6 @@
                     </view>
                   </view>
                 </view>
-                <text class="f-label-sm">每场次独立配置，详情页显示其头像墙（最多 30 人）</text>
               </view>
             </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
@@ -5552,6 +5554,11 @@ onMounted(async () => {
 .pd-member-add { font-size: 24rpx; color: #c41e3a; flex-shrink: 0; }
 .f-row-col { flex-direction: column; align-items: stretch; }
 .f-row-col .f-label { margin-bottom: 8rpx; }
+/* 盘道固定成员: 左=标题+已选成员, 右=搜索选择框 (状态栏下方; 2026-09-10 调整) */
+.pd-member-row { display: flex; align-items: flex-start; gap: 24rpx; margin-bottom: 20rpx; flex-wrap: wrap; }
+.pd-member-left { flex: 1 1 300rpx; min-width: 260rpx; display: flex; flex-direction: column; gap: 10rpx; }
+.pd-member-left .f-label { margin-bottom: 0; }
+.pd-member-right { flex: 1 1 360rpx; min-width: 300rpx; }
 
 /* 盘道场次列表封面缩略图 */
 .home-pd-cover {
