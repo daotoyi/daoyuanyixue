@@ -284,6 +284,32 @@
                 <text v-for="st in pdStatusOptions" :key="st" class="pill" :class="{ on: pdForm.status === st }" @tap="pdForm.status = st">{{ st }}</text>
               </view>
             </view>
+            <view class="f-row f-row-col">
+              <text class="f-label">固定成员（盘道班底）</text>
+              <view class="f-input-wrap">
+                <view class="pd-member-chips" v-if="(pdForm.fixed_members || []).length">
+                  <view class="pd-member-chip" v-for="(m, i) in pdForm.fixed_members" :key="m.uid">
+                    <image class="pd-member-ava" :src="m._avatar || m.avatar" mode="aspectFill" v-if="m._avatar || m.avatar"></image>
+                    <text class="pd-member-name">{{ m.name || ('用户' + m.uid) }}</text>
+                    <text class="pd-member-x" @tap.stop="removeFixedMember(i)">×</text>
+                  </view>
+                </view>
+                <view class="pd-member-search">
+                  <input class="f-input" v-model="pdMemberKw" placeholder="搜昵称/手机/道号添加固定成员" @input="onPdMemberSearch" />
+                  <view class="pd-member-results" v-if="pdMemberResults.length">
+                    <view class="pd-member-res" v-for="u in pdMemberResults" :key="u.uid" @tap="addFixedMember(u)">
+                      <image class="pd-member-ava" :src="u._avatar" mode="aspectFill" v-if="u._avatar"></image>
+                      <view class="pd-member-res-info">
+                        <text class="pd-member-name">{{ u.nickname }}</text>
+                        <text class="pd-member-phone" v-if="u.phone">{{ u.phone }}</text>
+                      </view>
+                      <text class="pd-member-add">+ 添加</text>
+                    </view>
+                  </view>
+                </view>
+                <text class="f-label-sm">每场次独立配置，详情页显示其头像墙（最多 30 人）</text>
+              </view>
+            </view>
             <view class="f-row"><text class="f-label">说明</text><input class="f-input" v-model="pdForm.desc" placeholder="活动简介" /></view>
             <view class="f-row"><text class="f-label">详情内容</text><textarea class="f-textarea pd-content-ta" v-model="pdForm.content" :maxlength="-1" placeholder="详情页活动介绍（可换行，不限字数）" /></view>
             <view class="settings-actions" v-if="canManageHome">
@@ -1606,7 +1632,7 @@ import {
   adminOrderReconcile,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
-  adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate,
+  adminSettingsGet, adminSettingsSave, adminPandaoCreate, adminPandaoDelete, adminPandaoUpdate, adminUserSearch,
   adminVideosList, adminVideoMigrate, adminVideoMigrateProgress, adminVideoDelete, adminOssConfigTest, adminSmsTest,
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
@@ -1949,9 +1975,45 @@ const pdTimeValue = computed(() => {
 const MAX_PD_COVERS = 9 // 盘道封面最多张数 (详情页左右滑动轮播)
 function emptyPdForm() {
   // covers: 多张封面 (cloud:// fileID 数组); cover 保留为首图以兼容列表页/订单
-  return { id: 0, title: '', day: '', start_date: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '', covers: [], _coverUrls: [] }
+  return { id: 0, title: '', day: '', start_date: '', time: '', place: '', price: '', desc: '', content: '', status: '即将开始', cover: '', covers: [], _coverUrls: [], fixed_members: [] }
 }
 const pdForm = ref(emptyPdForm())
+
+/* 盘道固定成员: 后台编辑场次时从 App 用户搜索添加 (2026-09-10) */
+const pdMemberKw = ref('')
+const pdMemberResults = ref([])
+let pdMemberTimer = null
+async function onPdMemberSearch() {
+  const kw = pdMemberKw.value.trim()
+  if (pdMemberTimer) clearTimeout(pdMemberTimer)
+  if (!kw) { pdMemberResults.value = []; return }
+  pdMemberTimer = setTimeout(async () => {
+    try {
+      const res = await adminUserSearch({ keyword: kw })
+      const list = (res && res.users) || []
+      await Promise.all(list.map(async (u) => {
+        if (u.avatar) u._avatar = await resolveCloudUrl(u.avatar).catch(() => '')
+      }))
+      const sel = new Set((pdForm.value.fixed_members || []).map((m) => Number(m.uid)))
+      pdMemberResults.value = list.filter((u) => !sel.has(Number(u.uid)))
+    } catch (e) { pdMemberResults.value = [] }
+  }, 300)
+}
+async function addFixedMember(u) {
+  const list = (pdForm.value.fixed_members || []).slice()
+  if (list.some((m) => Number(m.uid) === Number(u.uid))) return
+  const item = { uid: u.uid, name: u.nickname, avatar: u.avatar }
+  if (u.avatar) item._avatar = await resolveCloudUrl(u.avatar).catch(() => '')
+  list.push(item)
+  pdForm.value.fixed_members = list
+  pdMemberKw.value = ''
+  pdMemberResults.value = []
+}
+function removeFixedMember(i) {
+  const list = (pdForm.value.fixed_members || []).slice()
+  list.splice(i, 1)
+  pdForm.value.fixed_members = list
+}
 
 async function loadHomeConfig() {
   try {
@@ -2036,10 +2098,10 @@ async function addPandaoSession() {
   try {
     const covers = (f.covers || []).slice(0, MAX_PD_COVERS)
     if (f.id) {
-      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: covers[0] || '', covers })
+      await adminPandaoUpdate({ id: f.id, title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: covers[0] || '', covers, fixed_members: (f.fixed_members || []).map((m) => ({ uid: m.uid, name: m.name, avatar: m.avatar })) })
       uni.showToast({ title: '已保存', icon: 'success' })
     } else {
-      await adminPandaoCreate({ title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: covers[0] || '', covers })
+      await adminPandaoCreate({ title: f.title.trim(), day: f.day, start_date: f.start_date, time: f.time.trim(), place: f.place.trim(), price: f.price.trim(), desc: f.desc.trim(), content: f.content.trim(), status: f.status, cover: covers[0] || '', covers, fixed_members: (f.fixed_members || []).map((m) => ({ uid: m.uid, name: m.name, avatar: m.avatar })) })
       uni.showToast({ title: '已添加', icon: 'success' })
     }
     pdForm.value = emptyPdForm()
@@ -2050,7 +2112,7 @@ async function addPandaoSession() {
 }
 
 /* 编辑场次 */
-function editPandaoSession(pd) {
+async function editPandaoSession(pd) {
   pdForm.value = {
     id: pd.id,
     title: pd.title || '',
@@ -2066,7 +2128,10 @@ function editPandaoSession(pd) {
     // 兼容旧数据: 没有 covers 字段的场次用单图 cover 构造数组
     covers: Array.isArray(pd.covers) && pd.covers.length ? pd.covers.slice() : (pd.cover ? [pd.cover] : []),
     _coverUrls: [],
+    fixed_members: Array.isArray(pd.fixed_members) ? pd.fixed_members.slice() : [],
   }
+  const fms = (pdForm.value.fixed_members || [])
+  await Promise.all(fms.map(async (m) => { if (m.avatar) m._avatar = await resolveCloudUrl(m.avatar).catch(() => '') }))
   refreshPdCoverUrls()
 }
 
@@ -5470,6 +5535,24 @@ onMounted(async () => {
   color: #9c1630;
   white-space: nowrap;
 }
+/* 盘道固定成员选择 (编辑场次) */
+.pd-member-chips { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 14rpx; }
+.pd-member-chip { display: flex; align-items: center; gap: 8rpx; background: #f7f1ec; border: 1px solid #e7ddd4; border-radius: 999rpx; padding: 6rpx 14rpx 6rpx 6rpx; }
+.pd-member-chip .pd-member-ava { width: 48rpx; height: 48rpx; border-radius: 50%; background: #eee; }
+.pd-member-chip .pd-member-name { font-size: 24rpx; color: #4a3a32; max-width: 180rpx; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pd-member-x { font-size: 30rpx; color: #c41e3a; line-height: 1; padding: 0 4rpx; }
+.pd-member-search { position: relative; }
+.pd-member-results { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; background: #fff; border: 1px solid #e7ddd4; border-radius: 12rpx; max-height: 380rpx; overflow-y: auto; box-shadow: 0 8rpx 24rpx rgba(120,80,60,.16); margin-top: 6rpx; }
+.pd-member-res { display: flex; align-items: center; gap: 14rpx; padding: 14rpx 18rpx; border-bottom: 1px solid #f3eee9; }
+.pd-member-res:active { background: #faf6f3; }
+.pd-member-res .pd-member-ava { width: 60rpx; height: 60rpx; border-radius: 50%; background: #eee; flex-shrink: 0; }
+.pd-member-res-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.pd-member-res-info .pd-member-name { font-size: 26rpx; color: #3a2c25; }
+.pd-member-phone { font-size: 22rpx; color: #999; }
+.pd-member-add { font-size: 24rpx; color: #c41e3a; flex-shrink: 0; }
+.f-row-col { flex-direction: column; align-items: stretch; }
+.f-row-col .f-label { margin-bottom: 8rpx; }
+
 /* 盘道场次列表封面缩略图 */
 .home-pd-cover {
   width: 96rpx;

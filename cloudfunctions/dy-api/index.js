@@ -3612,12 +3612,41 @@ async function adminPandaoCreate(data) {
     cover: covers.length ? covers[0] : String(data.cover || '').slice(0, 500),
     covers,
     status: String(data.status || '即将开始'),
+    // 固定成员: 每场次独立配置, 从 App 用户选 (存 uid/name/avatar 快照), 详情页显示头像墙
+    fixed_members: Array.isArray(data.fixed_members)
+      ? data.fixed_members.slice(0, 30).map((m) => ({
+          uid: Number(m && m.uid) || 0,
+          name: String((m && m.name) || '').slice(0, 30),
+          avatar: String((m && m.avatar) || '').slice(0, 500),
+        })).filter((m) => m.uid)
+      : [],
   }
   if (!doc.title) return fail('请输入活动标题')
   await db.collection('pandao_sessions').add(doc)
   // 服务号群发: 新盘道活动 (仅推给已绑定用户, 未绑定/未订阅自动跳过)
   try { await sendGzhMsgAll('盘道活动', `${String(doc.title).slice(0, 16)} 即将开启，速来报名`, 'pages/index/index') } catch (e2) {}
   return ok({ created: doc })
+}
+
+/* 后台: 搜索用户 (盘道固定成员选择用) — 按昵称/手机/道号模糊匹配, 只读 */
+async function adminUserSearch(data) {
+  const kw = String(data.keyword || '').trim()
+  if (kw.length < 1) return ok({ users: [] })
+  const q = _.or([
+    { nickname: db.RegExp({ regexp: kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), options: 'i' }) },
+    { phone: db.RegExp({ regexp: kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }) },
+    { dao_code: db.RegExp({ regexp: kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), options: 'i' }) },
+  ])
+  const res = await db.collection('users').where(q).limit(20).get().catch(() => ({ data: [] }))
+  const users = (res.data || [])
+    .filter((u) => u.status !== 'deleted')
+    .map((u) => ({
+      uid: u.uid,
+      nickname: u.nickname || ('用户' + u.uid),
+      avatar: u.avatar || '',
+      phone: u.phone ? String(u.phone).replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '',
+    }))
+  return ok({ users })
 }
 
 /* 后台: 删除盘道场次 */
@@ -3649,6 +3678,16 @@ async function adminPandaoUpdate(data) {
     doc.cover = covers.length ? covers[0] : ''
   }
   if (data.status !== undefined) doc.status = String(data.status) // 即将开始/已结束/已发布
+  // 固定成员: 每场次独立配置 (从 App 用户选), 存快照
+  if (data.fixed_members !== undefined) {
+    doc.fixed_members = Array.isArray(data.fixed_members)
+      ? data.fixed_members.slice(0, 30).map((m) => ({
+          uid: Number(m && m.uid) || 0,
+          name: String((m && m.name) || '').slice(0, 30),
+          avatar: String((m && m.avatar) || '').slice(0, 500),
+        })).filter((m) => m.uid)
+      : []
+  }
   const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).update(doc)
   return ok({ updated: res.updated })
 }
@@ -3757,6 +3796,7 @@ const VIEWER_ROUTES = [
   'admin.logistics.list',
   'admin.feedbacks.list',
   'admin.aftersales.list',
+  'admin.users.search',
 ]
 
 // 操作管理员(operator)禁止的操作: 用户创建/编辑 + 系统设置 + 数据库运维 (2026-08-26 用户确认: 用户管理/页面管理/系统设置仅超管可设置)
@@ -6046,6 +6086,7 @@ const ROUTES = {
   'admin.lives.update': adminLiveUpdate,
   'admin.moments.audit': adminMomentAudit,
   'admin.users.delete': adminUserDelete,
+  'admin.users.search': adminUserSearch,
   'admin.renumberUids': adminRenumberUids,
   'admin.assignDaoCodes': adminAssignDaoCodes,
   'admin.moments.delete': adminMomentDelete,

@@ -41,6 +41,25 @@
       </view>
     </view>
 
+    <!-- 盘道固定成员 (后台为每场次独立配置, 点击头像进个人主页) -->
+    <view class="pd-bookers" v-if="fixedMembers.length">
+      <view class="pd-bookers-head">
+        <text class="pd-bookers-title">盘道固定成员 {{ fixedMembers.length }} 人</text>
+        <text class="pd-bookers-tip">点击头像查看主页</text>
+      </view>
+      <view class="pd-bookers-list">
+        <view class="pd-booker" v-for="m in visibleFixedMembers" :key="m.uid" @tap="openUserProfile(m)">
+          <image class="pd-booker-avatar" v-if="m._avatarUrl" :src="m._avatarUrl" mode="aspectFill"></image>
+          <view class="pd-booker-fb" v-else><text>{{ m.name ? m.name[0] : '?' }}</text></view>
+        </view>
+        <view
+          class="pd-booker-more"
+          v-if="fixedMembers.length > MAX_BOOKER_AVATARS"
+          @tap="showAllFixedMembers = !showAllFixedMembers"
+        ><text>{{ showAllFixedMembers ? '收起' : '+' + (fixedMembers.length - MAX_BOOKER_AVATARS) }}</text></view>
+      </view>
+    </view>
+
     <!-- 已预约用户 (不论是否支付成功都展示; 点击头像进个人主页) -->
     <view class="pd-bookers" v-if="bookers.length">
       <view class="pd-bookers-head">
@@ -118,6 +137,13 @@ const visibleBookers = computed(() =>
   showAllBookers.value ? bookers.value : bookers.value.slice(0, MAX_BOOKER_AVATARS)
 )
 
+/* 盘道固定成员头像墙: 后台为每场次独立配置, 与已预约墙共用样式 (2026-09-10) */
+const fixedMembers = ref([])
+const showAllFixedMembers = ref(false)
+const visibleFixedMembers = computed(() =>
+  showAllFixedMembers.value ? fixedMembers.value : fixedMembers.value.slice(0, MAX_BOOKER_AVATARS)
+)
+
 async function loadBookers() {
   try {
     const res = await getPandaoBookers({ session_id: sessionId.value })
@@ -184,6 +210,12 @@ async function loadDetail() {
         session.value._booked = mine.some((o) => Number(o.session_id) === sessionId.value)
       } catch (e) {}
     }
+    // 盘道固定成员: 后台为每场次配置, 头像转签名 URL 后显示
+    const fms = Array.isArray(session.value.fixed_members) ? session.value.fixed_members : []
+    await Promise.all(fms.map(async (m) => {
+      if (m.avatar) m._avatarUrl = await resolveCloudUrl(m.avatar).catch(() => '')
+    }))
+    fixedMembers.value = fms
     loadBookers() // 不 await: 头像墙加载慢/失败都不阻塞详情主内容
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
