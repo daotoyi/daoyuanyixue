@@ -3012,14 +3012,82 @@ const PANDAO_DEFAULTS = [
   { id: 2, title: '周六盘道 · 通州总部', day: '周六', time: '14:00-17:00', place: '北京市通州区 · 真和盛总部', price: '129.00', desc: '周末盘道雅集，深度排盘交流，名额有限' },
 ]
 
+/* ============ 盘道场次自动顺延 (2026-09-10 新增) ============
+   —— 盘道活动为每周固定场次(同周几同时间)。若本场已结束(本周时间已过),
+      读取时自动把 start_date 推进到下一周同一 occurrence, 并归档上周已预约订单(标记'已结束'),
+      新一周从零开始报名。周几与时间保持不变。 */
+/* 中文周几(含'周三晚上'之类) → getDay() 数字 (0=周日..6=周六) */
+function pandaoWeekdayNum(day) {
+  const m = String(day || '').match(/周[日一二三四五六]/)
+  if (!m) return null
+  const map = { 周日: 0, 周一: 1, 周二: 2, 周三: 3, 周四: 4, 周五: 5, 周六: 6 }
+  return map[m[0]] !== undefined ? map[m[0]] : null
+}
+/* 从 time(如 '19:00-21:00' / '14:00') 解析结束时刻 {h,m} */
+function pandaoEndTime(time) {
+  const range = String(time || '').match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/)
+  if (range) return { h: Number(range[3]), m: Number(range[4]) }
+  const single = String(time || '').match(/(\d{1,2}):(\d{2})/)
+  if (single) return { h: Number(single[1]), m: Number(single[2]) }
+  return { h: 23, m: 59 }
+}
+function fmtDateYMD(d) {
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const da = String(d.getDate()).padStart(2, '0')
+  return `${y}-${mo}-${da}`
+}
+/* 计算下一个尚未结束的 occurrence 日期 (YYYY-MM-DD): 同周几, 结束时刻严格 > 现在 */
+function pandaoNextOccurrenceDate(day, time) {
+  const wd = pandaoWeekdayNum(day)
+  if (wd == null) return null
+  const end = pandaoEndTime(time)
+  const now = new Date()
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)
+    if (d.getDay() !== wd) continue
+    const occEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), end.h, end.m, 0)
+    if (occEnd.getTime() > now.getTime()) return fmtDateYMD(d)
+  }
+  return null
+}
+/* 盘道场次顺延: 若当前 occurrence 已结束, 推进 start_date 到下一周(同周几同时间), 并归档上周已预约订单 */
+async function rollForwardPandaoSession(session) {
+  if (!session || session.id == null) return false
+  const next = pandaoNextOccurrenceDate(session.day, session.time)
+  if (!next) return false
+  if (next === String(session.start_date || '').slice(0, 10)) return false
+  // 推进日期(持久化)
+  await db.collection('pandao_sessions').where({ id: Number(session.id) }).update({ start_date: next }).catch(() => {})
+  session.start_date = next
+  // 归档上周有效预约(待付款/已完成 → 已结束); 新周从零开始报名
+  try {
+    const orders = (await db.collection('orders').where({ session_id: Number(session.id), order_type: 'appointment' }).limit(200).get()).data || []
+    for (const o of orders) {
+      if (['待付款', '已完成', '待发货', '待收货'].includes(o.status)) {
+        await db.collection('orders').where({ order_no: o.order_no }).update({
+          status: '已结束',
+          archived_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+          refund_reason: '盘道场次顺延，上周预约已归档',
+        }).catch(() => {})
+      }
+    }
+  } catch (e) { /* 归档失败不影响顺延 */ }
+  return true
+}
+
 /* 盘道活动列表 (后台可覆盖) */
 async function pandaoList(data) {
   await ensureCollection('pandao_sessions')
   try {
     const res = await db.collection('pandao_sessions').limit(100).get()
     if (res.data && res.data.length) {
-      // 排序: 优先 sort 字段, 无 sort 用 id (后台可调整场次顺序)
-      return ok(res.data.sort((a, b) => (Number(a.sort) || a.id) - (Number(b.sort) || b.id)))
+      const list = res.data.sort((a, b) => (Number(a.sort) || a.id) - (Number(b.sort) || b.id))
+      // 自动顺延: 已结束的本场推进到下一周, 并归档上周预约
+      for (const s of list) {
+        try { await rollForwardPandaoSession(s) } catch (e) {}
+      }
+      return ok(list)
     }
   } catch (e) { /* 集合不存在用默认 */ }
   return ok(PANDAO_DEFAULTS)
@@ -3129,9 +3197,9 @@ async function pandaoBookers(data) {
   const orders = (await db.collection('orders')
     .where({ session_id, order_type: 'appointment' })
     .limit(200).get()).data || []
-  // 已取消/已退款 = 未预约; 同用户按创建时间倒序只保留最新一条
+  // 已取消/已退款/已结束(顺延归档) = 未预约; 同用户按创建时间倒序只保留最新一条
   const sorted = orders
-    .filter((o) => o.status !== '已取消' && o.status !== '已退款')
+    .filter((o) => !['已取消', '已退款', '已结束'].includes(o.status))
     .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
   const seen = new Set()
   const uids = []
@@ -3588,7 +3656,11 @@ async function adminPandaoUpdate(data) {
 async function pandaoDetail(data) {
   await ensureCollection('pandao_sessions')
   const res = await db.collection('pandao_sessions').where({ id: Number(data.id) }).limit(1).get()
-  if (res.data && res.data.length) return ok(res.data[0])
+  if (res.data && res.data.length) {
+    const s = res.data[0]
+    try { await rollForwardPandaoSession(s) } catch (e) {} // 顺延(若已过期)
+    return ok(s)
+  }
   // 默认场次
   const d = PANDAO_DEFAULTS.find((p) => p.id === Number(data.id))
   if (d) return ok({ ...d, content: d.desc, status: '即将开始' })
