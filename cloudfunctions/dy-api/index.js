@@ -3018,9 +3018,10 @@ const PANDAO_DEFAULTS = [
       新一周从零开始报名。周几与时间保持不变。 */
 /* 中文周几(含'周三晚上'之类) → getDay() 数字 (0=周日..6=周六) */
 function pandaoWeekdayNum(day) {
-  const m = String(day || '').match(/周[日一二三四五六]/)
+  // 兼容 "周六" / "星期六" 两种写法, 取最后一个中文字(日一二三四五六)
+  const m = String(day || '').match(/[日一二三四五六]/)
   if (!m) return null
-  const map = { 周日: 0, 周一: 1, 周二: 2, 周三: 3, 周四: 4, 周五: 5, 周六: 6 }
+  const map = { 日: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 }
   return map[m[0]] !== undefined ? map[m[0]] : null
 }
 /* 从 time(如 '19:00-21:00' / '14:00') 解析结束时刻 {h,m} */
