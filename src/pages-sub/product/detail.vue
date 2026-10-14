@@ -396,7 +396,8 @@ function buyNow() {
 .btn-buy {
   background: linear-gradient(135deg, #9c1630, #6b1022);
 }
-/* PC 宽屏: 页面收拢居中, 与主页同宽 (手机窄屏不触发) */
+/* PC 宽屏: 页面收拢居中 + 关键尺寸 px 覆写, 解决轮播/卡片/操作栏过宽过高 (手机窄屏不触发) */
+/* 用绝对 px 覆写, 避免 rpx(rem) 基准(默认 960) 在宽屏把元素撑得过大 */
 @media screen and (min-width: 1025px) {
   .detail-page {
     max-width: 1200px;
@@ -404,9 +405,131 @@ function buyNow() {
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
   }
+  .swiper {
+    height: 480px;
+  }
+  .img-count {
+    right: 18px;
+    bottom: 16px;
+    font-size: 14px;
+    padding: 4px 12px;
+  }
+  .info-card {
+    margin: -20px 24px 0;
+    padding: 28px;
+  }
+  .price {
+    font-size: 36px;
+  }
+  .otprice {
+    font-size: 16px;
+    margin-left: 10px;
+  }
+  .sales {
+    font-size: 14px;
+  }
+  .p-name {
+    font-size: 26px;
+    margin-top: 12px;
+  }
+  .p-desc {
+    font-size: 15px;
+    margin-top: 8px;
+    line-height: 1.7;
+  }
+  .attrs {
+    margin-top: 18px;
+    padding: 16px 20px;
+  }
+  .attr-key {
+    width: 110px;
+    font-size: 15px;
+  }
+  .attr-val {
+    font-size: 15px;
+  }
+  .qty-row {
+    margin-top: 18px;
+    padding: 18px 20px;
+  }
+  .qty-label {
+    font-size: 16px;
+  }
+  .qty-ctrl {
+    margin-left: 20px;
+  }
+  .qty-btn {
+    width: 46px;
+    height: 40px;
+  }
+  .qty-btn text {
+    font-size: 20px;
+  }
+  .qty-num {
+    width: 56px;
+    font-size: 18px;
+  }
+  .qty-stock {
+    font-size: 14px;
+    margin-left: 16px;
+  }
+  .heart-wrap {
+    width: 32px;
+    height: 28px;
+  }
+  .heart {
+    width: 24px;
+    height: 24px;
+  }
+  .heart::before {
+    width: 24px;
+    height: 24px;
+    left: -12px;
+    top: 0;
+  }
+  .heart::after {
+    width: 24px;
+    height: 24px;
+    top: -12px;
+    left: 0;
+  }
+  /* 底部操作栏: 约束在居中容器内, 不横跨整个视口 */
+  .action-bar {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 1200px;
+    max-width: 1200px;
+    padding: 14px 24px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+  .act-collect {
+    width: 72px;
+  }
+  .collect-icon {
+    font-size: 28px;
+  }
+  .collect-label {
+    font-size: 13px;
+  }
+  .act-btns {
+    gap: 16px;
+    margin-left: 16px;
+  }
+  .btn-fill {
+    height: 52px;
+  }
+  .btn-fill text {
+    font-size: 17px;
+    letter-spacing: 1px;
+  }
 }
 @media screen and (min-width: 1440px) {
   .detail-page {
+    max-width: 1320px;
+  }
+  .action-bar {
+    width: 1320px;
     max-width: 1320px;
   }
 }

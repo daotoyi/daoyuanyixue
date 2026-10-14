@@ -321,7 +321,8 @@ onShow(async () => {
 .goods-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 20rpx;
 }
 .goods-card {
   width: calc(50% - 10rpx);
@@ -405,6 +406,10 @@ onShow(async () => {
   /* 右侧商品区: 紧凑内边距 */
   .goods-section {
     padding: 16px 20px;
+  }
+  /* 商品网格: 固定 px 间距(覆盖 rpx 基准过大), 配合 flex-start 使商品少时左对齐不分散两端 */
+  .goods-grid {
+    gap: 20px;
   }
   .section-head {
     margin-bottom: 14px;
