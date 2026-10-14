@@ -383,7 +383,8 @@ onShow(async () => {
   letter-spacing: 2rpx;
 }
 
-/* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
+/* PC 宽屏: 商品展示收拢居中 + 多列网格 + 合理尺寸, 完整可见 (H5 桌面浏览器生效) */
+/* 用绝对 px 覆写, 避免 rpx(rem) 基准(默认 960) 与 1200 容器不匹配导致卡片过宽过高 */
 @media screen and (min-width: 1025px) {
   .shop-page {
     max-width: 1200px;
@@ -391,10 +392,55 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
+  /* 左侧分类栏: 固定合理宽度, 不随视口被 rpx 撑宽 */
+  .cate-side {
+    width: 160px;
+  }
+  .cate-item {
+    padding: 18px 12px;
+  }
+  .cate-name {
+    font-size: 15px;
+  }
+  /* 右侧商品区: 紧凑内边距 */
+  .goods-section {
+    padding: 16px 20px;
+  }
+  .section-head {
+    margin-bottom: 14px;
+  }
+  /* 四列网格(居中容器 1200 内): 3 个 20px 间距 → 每列扣 15px */
+  .goods-card {
+    width: calc(25% - 15px);
+    margin-bottom: 18px;
+  }
+  /* 商品图高度收紧, 避免每张卡片过高导致垂直滚动过长 */
+  .goods-img {
+    height: 200px;
+  }
+  .goods-info {
+    padding: 12px 14px;
+  }
+  .goods-name {
+    font-size: 15px;
+    height: 44px;
+    line-height: 1.45;
+  }
+  .goods-price {
+    font-size: 17px;
+  }
+  .goods-otprice,
+  .goods-sales {
+    font-size: 13px;
+  }
 }
 @media screen and (min-width: 1440px) {
   .shop-page {
     max-width: 1320px;
+  }
+  /* 更宽屏: 五列网格(4 个 20px 间距 → 每列扣 16px), 与底部 tabbar 同宽 */
+  .goods-card {
+    width: calc(20% - 16px);
   }
 }
 
