@@ -85,3 +85,11 @@
 - **依赖版本必须对齐**: `@dcloudio/uni-mp-*` 与现有 `3.0.0-4060620250520001` 同版本。
 - **构建假失败**: 并发写同一 dist 目录时 H5 构建可能报 "Build failed with errors", 重跑即成功; 排查前先确认是否真错。
 - **bump-version.js 已支持指定版本号**: `node scripts/bump-version.js 2.0.1`(里程碑版本跨大版本时用, 三段纯数字校验)。
+
+## 小程序端项目配置目录铁律 (2026-10-15 抖音端确立)
+- **`dist/` 整体被 gitignore** → 构建产物每次重建清空。开发者助手(抖音/微信)需要的 AppID、调试设置、自定义编译模式**绝不能只放在 dist 里**, 必须另建持久化目录(进 git), 用 `miniprogramRoot` 指向产物关联。
+  - 抖音端: `douyin-project/` (commit 9c0fd50); 微信端沿用根目录 `project.config.json`
+- **AppID 等端特有配置必须单一数据源**: 以 `src/manifest.json` 对应段为准, 用脚本单向同步到各端 project.config.json, 禁止两处手改(必然漂移)。抖音端同步脚本 `scripts/sync-douyin-config.js`, 挂 `build:mp-toutiao` 后置执行, 幂等。
+- **项目 JSON 文件含"多行注释键"惯例** (`"/* 说明 */": ""` 形式) → **不是合法 JSON**, `JSON.parse` 会报 "Bad control character"。任何脚本读写这些文件都要宽松解析: 正则把注释键压成单行再 parse, 写回时用 withComments 保留原键。
+- **写 JS 块注释时禁止嵌套 `*/`** (哪怕放在字符串或正则描述里), 会提前闭合注释导致 SyntaxError。
+- 各端本地私有配置(project.private.config.json)加 gitignore, 但必须留 `.example` 模板, 且脚本在缺失时自动复制生成。
