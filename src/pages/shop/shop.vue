@@ -401,7 +401,7 @@ onShow(async () => {
     padding: 18px 12px;
   }
   .cate-name {
-    font-size: 15px;
+    font-size: 24rpx;
   }
   /* 右侧商品区: 紧凑内边距 */
   .goods-section {
@@ -427,16 +427,16 @@ onShow(async () => {
     padding: 12px 14px;
   }
   .goods-name {
-    font-size: 15px;
-    height: 44px;
-    line-height: 1.45;
+    font-size: 28rpx; /* 与课程标题 28rpx 一致 (PC 根字号14px → 约12.25px) */
+    height: 80rpx;
+    line-height: 1.5;
   }
   .goods-price {
-    font-size: 17px;
+    font-size: 32rpx; /* 与课程价格 32rpx 一致 (约14px) */
   }
   .goods-otprice,
   .goods-sales {
-    font-size: 13px;
+    font-size: 20rpx; /* 与课程划线价/统计 20rpx 一致 (约8.75px) */
   }
 }
 @media screen and (min-width: 1440px) {
