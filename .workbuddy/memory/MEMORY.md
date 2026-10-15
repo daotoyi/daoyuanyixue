@@ -17,7 +17,8 @@
 ## MCP 工具铁律
 - 云函数部署: manageFunctions action=updateFunctionCode functionRootPath=cloudfunctions/dy-api **绝对路径**
 - H5 部署: manageHosting action=upload localPath=dist/build/h5 cloudPath=/h5/ (**务必 /h5/ 子路径; 曾误写 / 把 H5 传到根目录覆盖官网首页, deploy-cloudbase.js 已修正)
-- 认证: 设备码 auth 浏览器授权 (会话过期重授权)
+- 认证: 设备码 auth 浏览器授权 (会话过期重授权); 重授权流程 `npx -y mcporter call cloudbase.auth action=start_auth authMode=device` → 给用户 verification_uri + user_code (10min 有效) → 用户浏览器授权 → `cloudbase.auth action=status` 确认 READY 后再部署
+- **部署脚本"假成功"坑(2026-09-09 踩)**: `deploy-cloudbase.js functions` 用 `execSync(...,{stdio:'inherit'})`, mcporter 返回 `AUTH_REQUIRED`(退出码 0)也会被当成成功打印"✅ 更新成功"。**会话过期时 dy-api 实际没更新**。铁律: 部署后必须**单独验证**——`curl -s -X POST https://club.zhenhesheng.cn/dy-api -d '{"action":"courses.list"}'` 看返回是否符合预期; 或重跑 `mcporter call cloudbase.manageFunctions action=updateFunctionCode ...` 确认无 AUTH_REQUIRED。
 - 云函数新增路由 **必须重部署**; write update 是**整体替换语义**(改字段带全字段)
 - 私有读桶直连 CDN 一律 403 → 走 app.fileUrl getTempFileURL 签名 URL (数据库存 cloud:// fileID)
 - **functions 部署脚本铁律**: `scripts/deploy-cloudbase.js functions` 必须用 `updateFunctionCode` + `functionName=dy-api` + `functionRootPath=<绝对路径>/cloudfunctions/dy-api`(函数目录本身, 非父目录); mcporter 不接受 `localPath`(updateFunctionCode 报 paths[0] undefined, createFunction 报 func.name 必需) → 旧脚本用 localPath 会**静默不更新**, 2026-09-02 已修
@@ -54,7 +55,33 @@
 - **H5 应用部署 cloudPath 必须 = /h5/** (deploy-cloudbase.js 已固定为 /h5/), 与官网根 / 严格分离; 切勿改回 / (会覆盖官网首页, 且 /h5/ 路径长期不更新导致用户看到旧版本, 见 2026-09-01 v1.11.289 部署事故)
 - 测试域名访问会弹警告 → 下载页/APK 链接一律用 club.zhenhesheng.cn
 
+## CloudBase MCP 本地代理/daemon 恢复铁律 (2026-10-14 实测)
+- **症状**: `mcporter call cloudbase.*` 无论什么 action 都报 `connect ECONNREFUSED 127.0.0.1:60204`(或 auth status 也报同错)——不是认证过期, 是 cloudbase-mcp 的**本地代理进程挂了**。
+- **根因**: cloudbase-mcp 配置写死 node 路径 `.../node/versions/22.22.2/bin/node`, 但托管目录已重命名为 `22.22.2-6`; 旧 daemon 进程曾占着已删二进制故此前可用, 一旦 `mcporter daemon restart` 新进程即 ENOENT。
+- **恢复三步**:
+  1. `cd ~/.workbuddy/binaries/node/versions && ln -sfn 22.22.2-6 22.22.2`(让旧路径重新可用, 不删任何东西)
+  2. `npx -y mcporter daemon restart`(清掉 cloudbase offline 缓存)
+  3. 此时 auth 多半已 REQUIRED → 走设备码重授权: `npx -y mcporter call cloudbase.auth action=start_auth authMode=device` 拿 `user_code`+`verification_uri`, 浏览器授权后再 `auth action=status` 确认 READY
+- 注: 托管 node 真实目录是 `22.22.2-6`(非 `22.22.2`), 部署/构建用 `22.12.0` 或 `22.22.2-6` 均可; 该符号链接是给 cloudbase-mcp 旧配置兜底。
+
 ## CSS / 展示铁律
 - PC `@media(min-width:1025px)` 块必须置于 base 规则**之后**才生效 (否则被 base 覆盖)
 - `<script setup>` 顶层立即执行代码勿引用后面才声明的 const (TDZ → 白屏); 用固定值或事件回调里惰性读
 - 轮播图: 固定比例(如 16:9)用 `mode="aspectFill"`; 容器宽用 `uni.createSelectorQuery().select(sel).boundingClientRect()` **包 nextTick** 测量; `display-multiple-items` 并排 N 张 (16:9+并排2张会偏矮)
+
+## 多平台适配层铁律 (2026-10-15 确立, 抖音端 v2.0.1)
+- **平台差异代码一律放 `src/platform/<平台名>/`**, 不在主链路文件里堆条件编译分支。
+  目录内只依赖 `uni.*` 标准 API; **严禁 fetch / FormData / Blob / document / canvas / Image / btoa** —— 非浏览器小程序环境这些全局对象不存在, 用了必崩。
+  新增平台: 建同级目录 → `src/platform/index.js` 注册 → `src/api/cloudbase.js` 加一处 `#ifdef` 分支。
+- **getStorage() 的平台分支必须放在 `const app = await getCloudBaseInstance(); if (!app) return null` 之前**。
+  原因: 抖音等端initCloudBase 返回 null, 若先判空会直接 return null, 上层 22 处 `storage.uploadFile` 全部拿不到 storage。
+- **Vite ESM 下不能用 `require()`**, 平台适配层必须用条件编译包的静态 import: `// #ifdef MP-TOUTIAO` + `import douyinAdapter from '../platform/douyin/index.js'`。
+- **小程序上传双通道**(微信外的所有小程序通用): 图片 = `uni.compressImage` → `getFileSystemManager().readFile({encoding:'base64'})` → 网关 `storage.uploadBase64`; 非图片 = 网关 `storage.getUploadUrl` 取凭证 → **`uni.uploadFile` multipart 直传 COS**(小程序原生 multipart 正好对上 COS POST Object 表单, 无需 fetch/FormData)。
+- **`uni.compressImage` / `fs.readFile(base64)` 在 mp-weixin 与 mp-toutiao 均可用** → 后续支付宝/百度等端可直接复用该模式。
+- **base64 网关中转上限 90000** (见BASE64_GATEWAY_LIMIT); 超限先降质重试, 仍超则降级 COS 直传, 勿直接报错。
+- **平台分支为空 = 静默失败**: checkout/order-detail 的支付块原本只有 `#ifdef H5` 和 `#ifdef APP-PLUS`, 抖音端会编译成空函数(点支付无反应)。**新增端时必须检查所有 `#ifdef` 是否覆盖, 空分支要显式降级提示**。
+- **支付**: 后端只有微信(v3)。非微信小程序端统一降级为"H5 收银台链接 → setClipboardData 复制 → 提示用户到浏览器支付"(小程序无 window.location 无法直接跳)。
+- **构建产物验证**: `node node_modules/.bin/uni build -p <平台>`, 然后 grep 产物确认 `new FormData`/`document.createElement`/`wx.cloud.uploadFile` 残留为 0, 并反查其他端产物**不含**新平台代码(隔离性验证)。
+- **依赖版本必须对齐**: `@dcloudio/uni-mp-*` 与现有 `3.0.0-4060620250520001` 同版本。
+- **构建假失败**: 并发写同一 dist 目录时 H5 构建可能报 "Build failed with errors", 重跑即成功; 排查前先确认是否真错。
+- **bump-version.js 已支持指定版本号**: `node scripts/bump-version.js 2.0.1`(里程碑版本跨大版本时用, 三段纯数字校验)。
