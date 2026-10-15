@@ -25,3 +25,9 @@ mobile/android/app/keystore.properties
 # 临时
 /tmp/
 cloudfunctions/*/config.local.js
+
+# 抖音开发助手本地私有配置 (各人 AppID/调试设置不同, 不入git)
+# 注: 根目录 project.private.config.json 是域名注入产物, 已跟踪, 勿忽略
+douyin-project/project.private.config.json
+douyin-project/.idea/
+douyin-project/node_modules/

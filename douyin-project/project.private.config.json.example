@@ -1,0 +1,11 @@
+{
+  "/* 抖音小程序本地私有配置模板: cp project.private.config.json.example project.private.config.json 后填入自己的 AppID */": "",
+  "projectname": "道元易学",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "autoAudits": false
+  }
+}
