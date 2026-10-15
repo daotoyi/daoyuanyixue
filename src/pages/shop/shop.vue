@@ -324,9 +324,9 @@ onShow(async () => {
   justify-content: flex-start;
   gap: 20rpx;
 }
-.goods-card {
-  width: calc(50% - 10rpx);
-  background: #fffafa;
+  .goods-card {
+    width: calc(50% - 12rpx); /* 留余量避免与 gap 相加恰好100%导致换行(手机端每行2个) */
+    background: #fffafa;
   border-radius: 16rpx;
   border: 1rpx solid #e8e2da;
   margin-bottom: 20rpx;
@@ -393,9 +393,9 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
-  /* 左侧分类栏: 固定合理宽度, 不随视口被 rpx 撑宽 */
+  /* 左侧分类栏: 与课程页一致 (168rpx → PC 约215px, 不随视口被 rpx 撑宽) */
   .cate-side {
-    width: 160px;
+    width: 168rpx;
   }
   .cate-item {
     padding: 18px 12px;
@@ -416,7 +416,7 @@ onShow(async () => {
   }
   /* 四列网格(居中容器 1200 内): 3 个 20px 间距 → 每列扣 15px */
   .goods-card {
-    width: calc(25% - 15px);
+    width: calc(25% - 16px); /* 与 gap:20px 配合留余量, 防止 4 列换行 */
     margin-bottom: 18px;
   }
   /* 商品图高度收紧, 避免每张卡片过高导致垂直滚动过长 */
@@ -445,7 +445,7 @@ onShow(async () => {
   }
   /* 更宽屏: 五列网格(4 个 20px 间距 → 每列扣 16px), 与底部 tabbar 同宽 */
   .goods-card {
-    width: calc(20% - 16px);
+    width: calc(20% - 17px); /* 与 gap:20px 配合留余量, 防止 5 列换行 */
   }
 }
 
