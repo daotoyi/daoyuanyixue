@@ -21,6 +21,11 @@ import * as cloudbaseSdkModule from '@cloudbase/js-sdk'
 const cloudbaseSdk = cloudbaseSdkModule.default || cloudbaseSdkModule
 // #endif
 
+// #ifdef MP-TOUTIAO
+    // 抖音小程序: 引入平台适配层 (仅本端进入产物, 微信/H5/App 端完全剔除)
+import douyinAdapter from '../platform/douyin/index.js'
+// #endif
+
 let cloudApp = null
 let _initPromise = null
 
@@ -518,6 +523,14 @@ export async function initCloudBase() {
   }
   // #endif
 
+  // #ifdef MP-TOUTIAO
+  // 抖音小程序: 业务请求走 uni.request 直连网关, 不依赖任何 SDK
+  // (抖音环境无 window/@cloudbase/js-sdk, 静态引入也会失败)
+  cloudApp = null
+  console.log('[CloudBase] 抖音小程序: 使用平台适配层, 不初始化 SDK', ENV_ID)
+  return null
+  // #endif
+
   // #ifdef H5 || APP-PLUS
   // H5 / App: 使用 @cloudbase/js-sdk (静态引入)
   try {
@@ -608,6 +621,15 @@ export async function getCallableFunction() {
  * 获取云存储实例
  */
 export async function getStorage() {
+  // #ifdef MP-TOUTIAO
+  // 抖音小程序: 无 CloudBase SDK, 走平台适配层 (src/platform/douyin)
+  // 注意: 必须放在下面的 app 判空之前 —— 抖音端 initCloudBase 返回 null,
+  //若先判空会直接 return null, 上层 22 处 uploadFile 调用全部拿不到 storage
+  {
+    return douyinAdapter.createStorage()
+  }
+  // #endif
+
   const app = await getCloudBaseInstance()
   if (!app) return null
 
@@ -787,6 +809,11 @@ export async function getStorage() {
  * 获取认证实例
  */
 export async function getAuth() {
+  // #ifdef MP-TOUTIAO
+  // 抖音小程序: 无平台绑定态, 登录降级为手机号+密码/验证码 (后端零改动)
+  return douyinAdapter.createAuth()
+  // #endif
+
   const app = await getCloudBaseInstance()
   if (!app) return null
 

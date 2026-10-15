@@ -516,6 +516,32 @@ async function doPay() {
   }
   return
   // #endif
+  // #ifdef MP-TOUTIAO
+  // 抖音小程序: 无原生支付且无法 window.location 跳转 → 复制收银台链接到剪贴板
+  try {
+    const h5 = await wxpayH5(orderNo.value)
+    const url = h5 && (h5.h5_url || h5.url)
+    if (url) {
+      uni.setClipboardData({
+        data: url,
+        success: () => {
+          uni.showModal({
+            title: '请在浏览器中完成支付',
+            content: '收银台链接已复制, 请在手机浏览器中打开并完成微信支付, 支付后返回本页刷新订单状态。',
+            confirmText: '知道了',
+            showCancel: false,
+          })
+        },
+        fail: () => uni.showModal({ title: '支付', content: '收银台地址: ' + url, showCancel: false }),
+      })
+    } else {
+      uni.showToast({ title: (h5 && h5.msg) || '微信支付未配置', icon: 'none' })
+    }
+  } catch (e) {
+    uni.showToast({ title: '支付失败：' + ((e && e.message) || ''), icon: 'none' })
+  }
+  return
+  // #endif
   // #ifdef H5
   // H5 端微信支付: PC(宽屏) → Native 扫码; 手机 → 微信收银台跳转
   if (isPC()) {

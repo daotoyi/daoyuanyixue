@@ -724,12 +724,19 @@ function copyGzhWxid() {
       // #ifndef MP-WEIXIN
       uni.showModal({
         title: '关注「真和盛」公众号',
+        // #ifdef MP-TOUTIAO
+        content: '微信号已复制：zhenhesheng_com\n请打开微信搜索「真和盛」公众号关注。',
+        showCancel: false,
+        confirmText: '知道了（已复制）',
+        // #endif
+        // #ifndef MP-TOUTIAO
         content: '微信号已复制：zhenhesheng_com\n点击「打开微信」唤起微信 App，在微信中搜索「真和盛」公众号即可关注。',
         confirmText: '打开微信',
         cancelText: '取消',
         success: (r) => {
           if (r.confirm) openWeixinApp()
         },
+        // #endif
       })
       // #endif
       // #ifdef MP-WEIXIN

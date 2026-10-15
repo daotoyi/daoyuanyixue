@@ -129,6 +129,40 @@
       "subPackages": true
     }
   },
+  "/* ==================== 抖音小程序 ==================== */": "",
+  "mp-toutiao": {
+    "appid": "__UNI__TOUTIAO",
+    "setting": {
+      "urlCheck": true,
+      "es6": true,
+      "minified": true,
+      "postcss": true,
+      "minifyWXSS": true,
+      "urlCheckParam": "tcb-https"
+    },
+    "usingComponents": true,
+    "optimization": {
+      "subPackages": true
+    },
+    "permission": {},
+    "requiredPrivateInfos": [],
+    "/* 合法域名须在抖音开放平台后台手动配置, manifest 无法自动注入 */": "",
+    "_legal_domains": {
+      "_note": "抖音后台-开发设置-服务器域名 需逐条添加以下域名; app.tcloudbase.com 与 tcloudbaseapp.com 是两个不同子域, 勿混",
+      "request": [
+        "https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com",
+        "https://club.zhenhesheng.cn"
+      ],
+      "uploadFile": [
+        "https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com",
+        "https://club.zhenhesheng.cn"
+      ],
+      "downloadFile": [
+        "https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com",
+        "https://club.zhenhesheng.cn"
+      ]
+    }
+  },
   "/* ==================== macOS 路径适配 ==================== */": "",
   "_macos_compat": {
     "_description": "macOS APFS 默认大小写不敏感，但 CI/部分 Linux 环境大小写敏感。以下规则确保跨平台一致性。",

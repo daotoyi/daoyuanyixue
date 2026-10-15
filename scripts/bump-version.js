@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
  * 自动迭代版本号 (patch +1): v1.10.2 → v1.10.3
+ * 也可显式指定版本: node scripts/bump-version.js 2.0.1
  * 同步更新: src/version.js / mobile/android/app/build.gradle / git tag
  * 可选: --apk 额外更新 scripts/download-page/index.html (仅在构建 APK 时用)
- * 用法: node scripts/bump-version.js [patch|minor|major] [--apk]
+ * 用法: node scripts/bump-version.js [patch|minor|major|指定版本号] [--apk]
  * 说明: 版本迭代后需重新构建 (uni build) 产物才会带上新版本号;
  *       APK 不随每次迭代构建 (2026-08-26 用户约定), 下载页保持指向最近已构建的 APK,
  *       构建 APK 时用 `node scripts/bump-version.js --apk` 同步下载页
@@ -33,13 +34,19 @@ if (!cur) { console.error('无法识别当前版本'); process.exit(1) }
 if (!/^\d+\.\d+\.\d+$/.test(cur)) { console.error(`识别到的版本号不合法: "${cur}"，请检查 git tag`); process.exit(1) }
 
 const [major, minor, patch] = cur.split('.').map(Number)
-const type = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'patch'
+const arg = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'patch'
 let next
-if (type === 'major') next = `${major + 1}.0.0`
-else if (type === 'minor') next = `${major}.${minor + 1}.0`
-else next = `${major}.${minor}.${patch + 1}`
+/* 显式指定版本号 (如 2.0.1): 允许跨大版本跳跃, 校验必须是三段纯数字,
+   防止手滑传入 '2.0.1-beta' / 'v2.0.1' 之类把版本号写坏。
+   用于里程碑版本 (如 2.0.0 抖音小程序上线) 而非日常 patch 迭代。 */
+if (/^\d+\.\d+\.\d+$/.test(arg)) {
+  next = arg
+} else if (arg === 'major') next = `${major + 1}.0.0`
+else if (arg === 'minor') next = `${major}.${minor + 1}.0`
+else if (arg === 'patch') next = `${major}.${minor}.${patch + 1}`
+else { console.error(`无法识别的版本参数: "${arg}"。用法: patch|minor|major|指定版本号(如 2.0.1)`); process.exit(1) }
 
-console.log(`版本迭代: v${cur} → v${next} (${type})`)
+console.log(`版本迭代: v${cur} → v${next} (${arg})`)
 
 // 1. version.js (仅主版本号, 完整版由 gen-version.js 构建时再生成)
 let v = read('src/version.js').replace(/APP_VERSION = 'v[\d.]+'/, `APP_VERSION = 'v${next}'`)

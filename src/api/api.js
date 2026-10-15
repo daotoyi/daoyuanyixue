@@ -23,6 +23,9 @@ function platformTag() {
   // #ifdef MP-WEIXIN
   return 'mp-weixin'
   // #endif
+  // #ifdef MP-TOUTIAO
+  return 'mp-toutiao'
+  // #endif
   // #ifdef H5
   return 'h5'
   // #endif

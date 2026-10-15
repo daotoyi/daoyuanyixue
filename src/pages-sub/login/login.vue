@@ -285,6 +285,10 @@ onLoad((options) => {
   // 后台「登录设置」开关: 控制微信一键登录是否显示 (默认隐藏)
   getPayConfig().then((cfg) => {
     if (cfg) showWechatLogin.value = !!cfg.show_wechat_login
+    // #ifdef MP-TOUTIAO
+    // 抖音端无微信一键登录能力, 后台开关对本端无效, 强制隐藏
+    showWechatLogin.value = false
+    // #endif
   }).catch(() => {})
 })
 
@@ -403,7 +407,12 @@ async function wxLogin() {
   // #ifndef MP-WEIXIN
   uni.showModal({
     title: '提示',
+    // #ifdef MP-TOUTIAO
+    content: '抖音端暂不支持一键登录，请使用上方手机号 + 密码登录，或注册新账号。',
+    // #endif
+    // #ifndef MP-TOUTIAO
     content: '微信一键登录需配置微信开放平台/公众号（App 与 H5 端）。当前请使用手机号登录，或前往小程序体验微信登录。',
+    // #endif
     showCancel: false,
   })
   // #endif
