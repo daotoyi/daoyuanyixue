@@ -38,6 +38,30 @@
     "navigationBarBackgroundColor": "#FFFCF5",
     "navigationBarTextStyle": "black"
    }
+  },
+  {
+   "path": "pages-sub/product/detail",
+   "style": {
+    "navigationBarTitleText": "商品详情",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/course/detail",
+   "style": {
+    "navigationBarTitleText": "课程详情",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/pandao/detail",
+   "style": {
+    "navigationBarTitleText": "盘道详情",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
   }
  ],
  "globalStyle": {
@@ -97,14 +121,6 @@
    "root": "pages-sub",
    "pages": [
     {
-     "path": "pandao/detail",
-     "style": {
-      "navigationBarTitleText": "盘道详情",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
      "path": "cart/cart",
      "style": {
       "navigationBarTitleText": "购物车",
@@ -132,14 +148,6 @@
      "path": "login/login",
      "style": {
       "navigationBarTitleText": "登录",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "course/detail",
-     "style": {
-      "navigationBarTitleText": "课程详情",
       "navigationBarBackgroundColor": "#FFFCF5",
       "navigationBarTextStyle": "black"
      }
@@ -229,14 +237,6 @@
      "path": "user/paipan",
      "style": {
       "navigationBarTitleText": "排盘结果",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "product/detail",
-     "style": {
-      "navigationBarTitleText": "商品详情",
       "navigationBarBackgroundColor": "#FFFCF5",
       "navigationBarTextStyle": "black"
      }

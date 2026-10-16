@@ -69,8 +69,13 @@
       <!-- #ifdef MP-WEIXIN -->
       <button class="pd-share-btn" open-type="share"><text>分享</text></button>
       <!-- #endif -->
+      <!-- #ifdef MP-TOUTIAO -->
+      <button class="pd-share-btn" open-type="share"><text>分享</text></button>
+      <!-- #endif -->
       <!-- #ifndef MP-WEIXIN -->
+      <!-- #ifndef MP-TOUTIAO -->
       <view class="pd-share-btn" @tap="shareH5"><text>分享</text></view>
+      <!-- #endif -->
       <!-- #endif -->
       <view class="pd-book-btn" :class="{ ok: session._booked }" @tap="bookNow">
         <text>{{ session._booked ? '已预约' : (isFreePrice(session.price) ? '免费报名' : '报名预约 ¥' + session.price) }}</text>
@@ -453,14 +458,14 @@ async function bookNow() {
   justify-content: center;
 }
 .pd-share-btn {
-  width: 220rpx;
+  flex: 1;
   height: 76rpx;
   line-height: 76rpx;
   text-align: center;
   padding: 0;
   border-radius: 999rpx;
-  background: #dff0d8;
-  color: #4a7a3a;
+  background: #a8d5a0;
+  color: #2d5224;
   font-size: 26rpx;
   border: none;
 }
@@ -477,10 +482,9 @@ async function bookNow() {
   display: flex;
   gap: 20rpx;
   align-items: center;
-  justify-content: center;
 }
 .pd-book-btn {
-  width: 260rpx;
+  flex: 1;
   background: #c41e3a;
   color: #fff;
   font-size: 26rpx;
