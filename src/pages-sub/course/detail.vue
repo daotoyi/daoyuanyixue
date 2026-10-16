@@ -565,11 +565,10 @@ function startLearn() {
   text-decoration: line-through;
   margin-left: 12rpx;
 }
-/* 分享按钮: 放在 buy-bar 最左侧, 与价格/按钮同排; 微信端是 button 需去默认边框
-   注: buy-bar 是 space-between, 加第三个子元素会变三等分; 用 margin-right:auto
-   把剩余空间吃回来, 保持"分享贴左 + 价格/按钮贴右"的原布局 */
+/* 分享按钮: 与商品详情页的收藏/分享按钮保持同一规格(100rpx 宽, 44rpx×40rpx 图标位,
+   20rpx 文字), 保证两个页面观感一致 */
 .buy-share {
-  width: 88rpx;
+  width: 100rpx;
   padding: 0;
   margin: 0 auto 0 0;
   background: transparent;
@@ -586,7 +585,7 @@ function startLearn() {
 }
 .share-wrap {
   width: 44rpx;
-  height: 38rpx;
+  height: 40rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -595,22 +594,23 @@ function startLearn() {
   font-size: 20rpx;
   color: #55524c;
 }
-/* 分享图标: 纯 CSS 画的"方框+上箭头" */
+/* 分享图标: 纯 CSS "方框+上箭头", 与商品页同一套尺寸, 不溢出 40rpx 容器 */
 .share-icon {
   position: relative;
-  width: 26rpx;
-  height: 26rpx;
+  width: 24rpx;
+  height: 24rpx;
   border: 3rpx solid #55524c;
-  border-radius: 6rpx;
+  border-radius: 5rpx;
   box-sizing: border-box;
+  margin-top: 8rpx;
 }
 .share-icon::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -16rpx;
+  top: -9rpx;
   width: 3rpx;
-  height: 14rpx;
+  height: 8rpx;
   background: #55524c;
   transform: translateX(-50%);
 }
@@ -618,9 +618,9 @@ function startLearn() {
   content: '';
   position: absolute;
   left: 50%;
-  top: -22rpx;
-  width: 12rpx;
-  height: 12rpx;
+  top: -15rpx;
+  width: 10rpx;
+  height: 10rpx;
   border-left: 3rpx solid #55524c;
   border-top: 3rpx solid #55524c;
   transform: translateX(-50%) rotate(45deg);
@@ -655,6 +655,29 @@ function startLearn() {
     margin: 0 auto;
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
+  }
+  /* 分享图标 PC 端用绝对 px 覆写, 与商品页同一套尺寸, 避免 rpx 在宽屏被撑大 */
+  .share-wrap {
+    width: 32px;
+    height: 28px;
+  }
+  .share-icon {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+    border-radius: 3px;
+    margin-top: 6px;
+  }
+  .share-icon::before {
+    width: 2px;
+    height: 6px;
+    top: -6px;
+  }
+  .share-icon::after {
+    width: 7px;
+    height: 7px;
+    border-width: 2px;
+    top: -10px;
   }
 }
 @media screen and (min-width: 1440px) {

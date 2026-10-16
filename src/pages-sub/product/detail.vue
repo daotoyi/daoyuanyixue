@@ -419,17 +419,16 @@ function buyNow() {
   font-size: 20rpx;
   color: #55524c;
 }
-/* 分享按钮: 与收藏同宽同高, 视觉对齐; 微信端是 button 需去掉默认边框 */
+/* 分享按钮: 与收藏按钮(.act-collect)宽度/结构/字号完全一致, 保证视觉统一 */
 .act-share {
-  width: 88rpx;
-  padding: 0;
-  margin: 0 0 0 8rpx;
-  background: transparent;
-  border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  width: 100rpx;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
   line-height: 1.2;
 }
 .act-share::after {
@@ -442,22 +441,24 @@ function buyNow() {
   align-items: center;
   justify-content: center;
 }
-/* 分享图标: 纯 CSS 画的"方框+上箭头" */
+/* 分享图标: 纯 CSS 画的"方框+上箭头", 尺寸与心形(.heart 34rpx)视觉重量相当,
+   且整体(含箭头)控制在 38rpx 内, 不溢出 40rpx 的 share-wrap */
 .share-icon {
   position: relative;
-  width: 26rpx;
-  height: 26rpx;
+  width: 24rpx;
+  height: 24rpx;
   border: 3rpx solid #55524c;
-  border-radius: 6rpx;
+  border-radius: 5rpx;
   box-sizing: border-box;
+  margin-top: 8rpx;
 }
 .share-icon::before {
   content: '';
   position: absolute;
   left: 50%;
-  top: -16rpx;
+  top: -9rpx;
   width: 3rpx;
-  height: 14rpx;
+  height: 8rpx;
   background: #55524c;
   transform: translateX(-50%);
 }
@@ -465,9 +466,9 @@ function buyNow() {
   content: '';
   position: absolute;
   left: 50%;
-  top: -22rpx;
-  width: 12rpx;
-  height: 12rpx;
+  top: -15rpx;
+  width: 10rpx;
+  height: 10rpx;
   border-left: 3rpx solid #55524c;
   border-top: 3rpx solid #55524c;
   transform: translateX(-50%) rotate(45deg);
@@ -609,11 +610,38 @@ function buyNow() {
   .act-collect {
     width: 72px;
   }
+  /* 分享按钮与收藏按钮 PC 端同样保持等宽 */
+  .act-share {
+    width: 72px;
+  }
   .collect-icon {
     font-size: 28px;
   }
   .collect-label {
     font-size: 13px;
+  }
+  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 24px)视觉重量一致, 避免 rpx 在宽屏被撑大 */
+  .share-wrap {
+    width: 32px;
+    height: 28px;
+  }
+  .share-icon {
+    width: 18px;
+    height: 18px;
+    border-width: 2px;
+    border-radius: 3px;
+    margin-top: 6px;
+  }
+  .share-icon::before {
+    width: 2px;
+    height: 6px;
+    top: -6px;
+  }
+  .share-icon::after {
+    width: 7px;
+    height: 7px;
+    border-width: 2px;
+    top: -10px;
   }
   .act-btns {
     gap: 16px;
