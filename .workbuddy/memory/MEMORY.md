@@ -98,3 +98,17 @@
 - **项目 JSON 文件含"多行注释键"惯例** (`"/* 说明 */": ""` 形式) → **不是合法 JSON**, `JSON.parse` 会报 "Bad control character"。任何脚本读写这些文件都要宽松解析: 正则把注释键压成单行再 parse, 写回时用 withComments 保留原键。
 - **写 JS 块注释时禁止嵌套 `*/`** (哪怕放在字符串或正则描述里), 会提前闭合注释导致 SyntaxError。
 
+
+## 版本号提示铁律 (2026-10-16 用户明确要求)
+- **每次代码变更后, 回复里必须显式带上版本号** (变更前 → 变更后), 便于用户随时确认当前版本。
+- 涉及源码/配置/构建脚本的改动, 一律先 `node scripts/bump-version.js [patch|minor|major|指定版本号]` 再提交;
+  只改文档/记忆可不升版本, 但回复中仍需说明"本次未升版本"。
+- 提交流程固定顺序: bump(打 tag 在旧 HEAD) → 改代码 → commit → `git tag -f vX` 修正 tag 指向发布提交 →
+  `node scripts/gen-version.js` → **重建受影响端**(纠偏后 dist 仍含旧 commit 哈希)。
+
+## manifest.json 校验铁律 (2026-10-16 踩坑确立)
+- **改完 manifest.json 必须用严格 `JSON.parse` 校验**, 不可用宽松解析蒙混过关。
+- **uni 解析 manifest 失败时不报错, 静默用兜底默认值**: appid 变 `testAppId`、setting 只剩 5 个,
+  构建仍打印 `DONE Build complete` —— 极易漏检。
+- **注释键必须单行** (`"/* 说明 */": ""`), 跨行会导致 JSON.parse 抛 `Bad control character`。
+- **改 manifest 后必查产物**: `dist/build/<平台>/project.config.json` 的 appid 与 setting 字段数须与 manifest 一致。
