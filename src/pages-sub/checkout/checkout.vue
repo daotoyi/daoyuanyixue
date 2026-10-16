@@ -160,7 +160,7 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getCart, getSelectedItems, clearSelected } from '../utils/cart'
-import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, orderFreeConfirm, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder, wxpayQuerySync } from '../../api/api'
+import { getMyCoupons, createOrder, wxpayPrepay, wxpayH5, wxpayNative, wxmpScheme, wxRequestPayment, orderPayBalance, orderFreeConfirm, getCourse, getProduct, getPayConfig, getAddresses, addAddress, deleteAddress, getOrder, wxpayQuerySync, douyinPrepay, douyinPayQuery } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveCloudList } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
@@ -180,6 +180,18 @@ const savingAddr = ref(false)
 const coupons = ref([])
 const selectedCoupon = ref(null)
 const payMethod = ref('wechat')
+// #ifdef MP-TOUTIAO
+// 抖音端默认选中担保支付(收银台), 无 wechat 这个 key
+payMethod.value = 'douyin'
+// #endif
+// 最近一次下单号: 抖音支付成功回调后跳订单详情用(各端通用, 微信分支也复用)
+const lastOrderNo = ref('')
+// 商品摘要: 抖音预下单的 subject/body(受字节 42 字符限制, 取前几件商品名拼接)
+const orderItemsDesc = computed(() => {
+  const names = items.value.map((i) => i.name).filter(Boolean)
+  if (!names.length) return ''
+  return names.slice(0, 3).join('、') + (names.length > 3 ? ' 等' : '')
+})
 const showCoupon = ref(false)
 const submitting = ref(false)
 
@@ -195,8 +207,13 @@ const balance = computed(() => userStore.userInfo.balance || '0.00')
 // 选择"元宝支付"时自动启用元宝抵扣
 const balanceUsed = computed(() => payMethod.value === 'balance')
 
-// 支付方式名: 小程序=微信支付(JSAPI); H5/APP=微信支付(H5收银台)
+// 支付方式名: 小程序=微信支付(JSAPI); H5/APP=微信支付(H5收银台); 抖音=担保支付收银台
 const wechatPayName = '微信支付'
+// #ifdef MP-TOUTIAO
+// 抖音端: 走平台担保支付, 由抖音收银台呈现 微信/支付宝/抖音 三种渠道,
+// 故对外显示名统一为"抖音支付", 不再单列微信支付
+const wechatPayNameDy = '抖音支付'
+// #endif
 
 const payMethods = ref([
   { key: 'wechat', name: wechatPayName, icon: '', img: staticUrl('/static/pay-wechat.png') },
@@ -207,22 +224,46 @@ const payMethods = ref([
 async function loadPayConfig() {
   try {
     const cfg = await getPayConfig()
+    // #ifdef MP-TOUTIAO
+    // 抖音端: 用 douyin(担保支付收银台) 取代 wechat; 元宝支付保留
+    const list = [
+      { key: 'douyin', name: wechatPayNameDy, icon: '🎵', tip: '抖音收银台 · 支持微信/支付宝/抖音支付' },
+      { key: 'balance', name: '元宝支付', icon: '💰' },
+    ]
+    if (payMethod.value === 'wechat') payMethod.value = 'douyin'
+    // #endif
+    // #ifndef MP-TOUTIAO
     const list = [
       { key: 'wechat', name: wechatPayName, icon: '', img: staticUrl('/static/pay-wechat.png') },
       { key: 'balance', name: '元宝支付', icon: '💰' },
     ]
+    // #endif
     if (cfg.show_alipay) list.push({ key: 'alipay', name: '支付宝', icon: '🔵' })
     if (cfg.show_balance === false) {
       payMethods.value = list.filter((m) => m.key !== 'balance')
     } else {
       payMethods.value = list
     }
+    // #ifndef MP-TOUTIAO
     if (!payMethods.value.some((m) => m.key === payMethod.value)) payMethod.value = 'wechat'
+    // #endif
+    // #ifdef MP-TOUTIAO
+    if (!payMethods.value.some((m) => m.key === payMethod.value)) payMethod.value = 'douyin'
+    // #endif
   } catch (e) {
+    // #ifdef MP-TOUTIAO
+    payMethods.value = [
+      { key: 'douyin', name: wechatPayNameDy, icon: '🎵', tip: '抖音收银台 · 支持微信/支付宝/抖音支付' },
+      { key: 'balance', name: '元宝支付', icon: '💰' },
+    ]
+    payMethod.value = 'douyin'
+    // #endif
+    // #ifndef MP-TOUTIAO
     payMethods.value = [
       { key: 'wechat', name: wechatPayName, icon: '', img: staticUrl('/static/pay-wechat.png') },
       { key: 'balance', name: '元宝支付', icon: '💰' },
     ]
+    // #endif
   }
 }
 
@@ -484,6 +525,7 @@ async function submitOrder() {
       uid: userStore.userInfo.uid || 0,
       course_id: courseId.value || 0,
     })
+    lastOrderNo.value = order.order_no
     // 免费订单 (后台价格=0): 直接完成, 不拉起支付; 仅按原始商品价判断, 避免元宝抵扣到0被误判
     if (subTotal.value <= 0) {
       try {
@@ -605,32 +647,27 @@ async function submitOrder() {
     }
     // #endif
     // #ifdef MP-TOUTIAO
-    // 抖音小程序: 无原生支付能力, 且无法用 window.location 跳 H5 收银台
-    // → 复制收银台链接到剪贴板, 由用户在浏览器中完成微信支付
-    submitting.value = false
+    // 抖音小程序: 平台担保支付 —— 后端预下单拿 orderInfo, 前端 tt.pay 拉起抖音收银台,
+    // 由收银台呈现 微信/支付宝/抖音 三种渠道给用户选(即"前置组件")
     try {
-      const h5 = await wxpayH5(order.order_no)
-      const url = h5 && (h5.h5_url || h5.url)
-      if (url) {
-        uni.setClipboardData({
-          data: url,
-          success: () => {
-            uni.showModal({
-              title: '请在浏览器中完成支付',
-              content: '收银台链接已复制, 请在手机浏览器中打开并完成微信支付, 支付后回到本页刷新订单状态。',
-              confirmText: '知道了',
-              showCancel: false,
-            })
-          },
-          fail: () => {
-            uni.showModal({ title: '支付', content: '收银台地址: ' + url, showCancel: false })
-          },
-        })
-        return
+      const prepay = await douyinPrepay({
+        order_no: order.order_no,
+        amount: finalPrice.value,
+        subject: '道元易学-订单',
+        body: orderItemsDesc.value || '道元易学-订单',
+      })
+      if (!prepay || !prepay.order_id || !prepay.order_token) {
+        throw new Error((prepay && prepay.msg) || '抖音支付下单失败')
       }
-      throw new Error((h5 && h5.msg) || '微信支付未配置')
+      await ttRequestPay(prepay)
     } catch (payErr) {
-      uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none' })
+      submitting.value = false
+      if (payErr && payErr.isCancel) {
+        uni.showToast({ title: '支付取消', icon: 'none' })
+      } else {
+        uni.showToast({ title: '支付失败：' + (payErr.message || ''), icon: 'none', duration: 3000 })
+      }
+      return
     }
     // #endif
     // #endif
@@ -640,6 +677,73 @@ async function submitOrder() {
     submitting.value = false
   }
 }
+
+/* ==================== 抖音: 拉起担保支付收银台 ==================== */
+// tt.pay 的 success 回调 code 语义(与微信完全不同, 不是布尔):
+//   0=支付成功 1=超时 2=失败 3=关闭 4=取消 9=需商户自行查单
+// fail 的 errMsg 为字符串错误码: 10000=支付失败 10001=调起微信失败 10002=微信未安装
+function ttRequestPay(prepay) {
+  return new Promise((resolve, reject) => {
+    if (typeof tt === 'undefined' || !tt.pay) {
+      reject(new Error('当前抖音版本不支持收银台支付，请更新抖音 App'))
+      return
+    }
+    tt.pay({
+      orderInfo: { order_id: prepay.order_id, order_token: prepay.order_token },
+      service: 5, // 固定值: 拉起小程序收银台
+      success: (res) => {
+        const code = res && res.code
+        if (code === 0) {
+          // 收银台返回成功; 最终状态以服务端回调为准, 这里做一次主动查单兜底
+          douyinPayQuery({ order_no: prepay.order_no || '' })
+            .then(() => { onDouyinPaid() })
+            .catch(() => { onDouyinPaid() })
+          resolve()
+          return
+        }
+        if (code === 4) {
+          reject(Object.assign(new Error('支付取消'), { isCancel: true }))
+          return
+        }
+        if (code === 1) {
+          reject(new Error('支付超时，请重新支付'))
+          return
+        }
+        if (code === 9) {
+          // 状态未知: 不报错, 按成功走查单流程(查单接口会补状态)
+          douyinPayQuery({ order_no: prepay.order_no || '' })
+            .then(() => { onDouyinPaid() })
+            .catch(() => { onDouyinPaid() })
+          resolve()
+          return
+        }
+        reject(new Error('支付未完成，请重试'))
+      },
+      fail: (res) => {
+        const msg = (res && res.errMsg) || ''
+        if (/10002|未安装/.test(msg)) {
+          reject(new Error('未安装微信，请在收银台选择支付宝或抖音支付'))
+          return
+        }
+        if (/10001|调起失败/.test(msg)) {
+          reject(new Error('调起支付失败，请重试或换一种支付方式'))
+          return
+        }
+        reject(new Error('支付失败：' + (msg || '未知错误')))
+      },
+    })
+  })
+}
+
+/* 抖音支付成功后的统一收尾(与微信分支保持一致) */
+function onDouyinPaid() {
+  uni.showToast({ title: '支付成功', icon: 'success' })
+  clearSelected()
+  setTimeout(() => {
+    uni.redirectTo({ url: '/pages-sub/order/detail?order_no=' + lastOrderNo.value })
+  }, 800)
+}
+
 </script>
 
 <style lang="scss" scoped>

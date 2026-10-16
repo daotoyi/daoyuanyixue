@@ -109,11 +109,24 @@
     <!-- 支付方式选择 (待付款订单; 微信/元宝/支付宝三选一, 支付宝默认隐藏且受后台开关控制) -->
     <view class="pay-methods" v-if="order.status === '待付款'">
       <view class="pm-title">选择支付方式</view>
+      <!-- #ifdef MP-TOUTIAO -->
+      <!-- 抖音端: 担保支付收银台(内含微信/支付宝/抖音渠道), 不再单列"微信支付" -->
+      <view class="pm-item" :class="{ on: selectedPay === 'douyin' }" @tap="selectedPay = 'douyin'">
+        <view class="pm-icon pm-dy"><text>抖</text></view>
+        <view class="pm-col">
+          <text class="pm-name">抖音支付</text>
+          <text class="pm-sub">收银台 · 支持微信/支付宝/抖音</text>
+        </view>
+        <text class="pm-check" :class="{ on: selectedPay === 'douyin' }">{{ selectedPay === 'douyin' ? '✓' : '' }}</text>
+      </view>
+      <!-- #endif -->
+      <!-- #ifndef MP-TOUTIAO -->
       <view class="pm-item" :class="{ on: selectedPay === 'wechat' }" @tap="selectedPay = 'wechat'">
         <view class="pm-icon pm-wx"><text>微</text></view>
         <text class="pm-name">微信支付</text>
         <text class="pm-check" :class="{ on: selectedPay === 'wechat' }">{{ selectedPay === 'wechat' ? '✓' : '' }}</text>
       </view>
+      <!-- #endif -->
       <view class="pm-item" :class="{ on: selectedPay === 'balance' }" v-if="!isRechargeOrder" @tap="selectedPay = 'balance'">
         <view class="pm-icon pm-balance"><text>宝</text></view>
         <text class="pm-name">元宝支付</text>
@@ -182,7 +195,7 @@ const stCls = (v) => ST_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync, getOrderLogistics } from '../../api/api'
+import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync, getOrderLogistics, douyinPrepay, douyinPayQuery } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
 import { isFreePrice, fmtPrice } from '../../utils/price'
@@ -194,6 +207,10 @@ const orderNo = ref(null)
 const selectedPay = ref('balance')
 // #ifdef MP-WEIXIN
 selectedPay.value = 'wechat'
+// #endif
+// #ifdef MP-TOUTIAO
+// 抖音端默认担保支付收银台
+selectedPay.value = 'douyin'
 // #endif
 const showAlipay = ref(false)
 const alipayEnabled = ref(false)
@@ -334,10 +351,11 @@ async function openLogistics() {
 // 充值订单: 不能用元宝支付买元宝, 只支持微信/支付宝
 const isRechargeOrder = computed(() => order.value?.order_type === 'recharge')
 
-// 支付方式名: 微信支付 / 元宝支付 / 支付宝
+// 支付方式名: 微信支付 / 抖音支付 / 元宝支付 / 支付宝
 const payName = computed(() => {
   const m = {
     wechat: '微信支付',
+    douyin: '抖音支付',
     alipay: '支付宝',
     balance: '元宝支付',
     余额: '元宝支付',
@@ -351,8 +369,15 @@ async function load() {
   // 订单 items 图片 cloud:// → 签名URL (私有桶铁律, 否则 H5 显示不出)
   const converted = await resolveOrderImages([o])
   order.value = (converted && converted[0]) || o
-  // 充值订单: 强制微信支付 (元宝不能买元宝), H5 端默认也切到微信
-  if (isRechargeOrder.value && selectedPay.value === 'balance') selectedPay.value = 'wechat'
+  // 充值订单: 强制非元宝支付 (元宝不能买元宝), H5 端默认也切到微信; 抖音端切到担保支付
+  if (isRechargeOrder.value && selectedPay.value === 'balance') {
+    // #ifdef MP-TOUTIAO
+    selectedPay.value = 'douyin'
+    // #endif
+    // #ifndef MP-TOUTIAO
+    selectedPay.value = 'wechat'
+    // #endif
+  }
   // 待支付订单: 支付后从收银台返回时, 主动查微信侧订单状态同步 (兜底回调丢失)
   await syncPendingIfNeeded()
 }
@@ -456,7 +481,12 @@ async function doPay() {
   // 元宝支付 (元宝真实扣款, 支持所有订单类型; 充值订单不允许元宝支付)
   if (selectedPay.value === 'balance') {
     if (isRechargeOrder.value) {
+      // #ifdef MP-TOUTIAO
+      uni.showToast({ title: '充值订单请使用抖音支付', icon: 'none' })
+      // #endif
+      // #ifndef MP-TOUTIAO
       uni.showToast({ title: '充值订单请使用微信支付', icon: 'none' })
+      // #endif
       return
     }
     try {
@@ -517,28 +547,26 @@ async function doPay() {
   return
   // #endif
   // #ifdef MP-TOUTIAO
-  // 抖音小程序: 无原生支付且无法 window.location 跳转 → 复制收银台链接到剪贴板
+  // 抖音小程序: 平台担保支付 —— 后端预下单拿 orderInfo, 前端 tt.pay 拉起抖音收银台
   try {
-    const h5 = await wxpayH5(orderNo.value)
-    const url = h5 && (h5.h5_url || h5.url)
-    if (url) {
-      uni.setClipboardData({
-        data: url,
-        success: () => {
-          uni.showModal({
-            title: '请在浏览器中完成支付',
-            content: '收银台链接已复制, 请在手机浏览器中打开并完成微信支付, 支付后返回本页刷新订单状态。',
-            confirmText: '知道了',
-            showCancel: false,
-          })
-        },
-        fail: () => uni.showModal({ title: '支付', content: '收银台地址: ' + url, showCancel: false }),
-      })
-    } else {
-      uni.showToast({ title: (h5 && h5.msg) || '微信支付未配置', icon: 'none' })
+    const prepay = await douyinPrepay({
+      order_no: orderNo.value,
+      amount: Number(order.value && order.value.total_price) || 0,
+      subject: '道元易学-订单',
+      body: '订单 ' + orderNo.value,
+    })
+    if (!prepay || !prepay.order_id || !prepay.order_token) {
+      uni.showToast({ title: (prepay && prepay.msg) || '抖音支付下单失败', icon: 'none', duration: 3000 })
+      return
     }
+    await douyinRequestPay(orderNo.value, prepay)
+    await load()
   } catch (e) {
-    uni.showToast({ title: '支付失败：' + ((e && e.message) || ''), icon: 'none' })
+    if (e && e.isCancel) {
+      uni.showToast({ title: '支付取消', icon: 'none' })
+    } else {
+      uni.showToast({ title: '支付失败：' + ((e && e.message) || ''), icon: 'none', duration: 3000 })
+    }
   }
   return
   // #endif
@@ -628,6 +656,51 @@ async function doConfirm() {
 
 function goShop() {
   uni.switchTab({ url: '/pages/shop/shop' })
+}
+
+/* ==================== 抖音: 拉起担保支付收银台 ====================
+   tt.pay 的 success.code 语义: 0=成功 1=超时 2=失败 3=关闭 4=取消 9=需自行查单 */
+async function douyinRequestPay(orderNo, prepay) {
+  return new Promise((resolve, reject) => {
+    if (typeof tt === 'undefined' || !tt.pay) {
+      reject(new Error('当前抖音版本不支持收银台支付，请更新抖音 App'))
+      return
+    }
+    tt.pay({
+      orderInfo: { order_id: prepay.order_id, order_token: prepay.order_token },
+      service: 5,
+      success: async (res) => {
+        const code = res && res.code
+        if (code === 0 || code === 9) {
+          // 0=收银台返回成功; 9=状态未知。两者都主动查单兜底(回调丢失也能补状态)
+          try { await douyinPayQuery({ order_no: orderNo }) } catch (e) { /* 查单失败由 load() 刷新展示 */ }
+          resolve()
+          return
+        }
+        if (code === 4) {
+          reject(Object.assign(new Error('支付取消'), { isCancel: true }))
+          return
+        }
+        if (code === 1) {
+          reject(new Error('支付超时，请重新支付'))
+          return
+        }
+        reject(new Error('支付未完成，请重试'))
+      },
+      fail: (res) => {
+        const msg = (res && res.errMsg) || ''
+        if (/10002|未安装/.test(msg)) {
+          reject(new Error('未安装微信，请在收银台选择支付宝或抖音支付'))
+          return
+        }
+        if (/10001|调起失败/.test(msg)) {
+          reject(new Error('调起支付失败，请重试或换一种支付方式'))
+          return
+        }
+        reject(new Error('支付失败：' + (msg || '未知错误')))
+      },
+    })
+  })
 }
 </script>
 
@@ -805,6 +878,20 @@ function goShop() {
 /* 元宝支付: 金色 + "积"字 */
 .pm-balance {
   background: linear-gradient(135deg, #d4a24c, #b8860b);
+}
+/* 抖音: 品牌黑红渐变 + "抖"字 (抖音端专用, 其他端不编译) */
+.pm-dy {
+  background: linear-gradient(135deg, #161823, #fe2c55);
+}
+.pm-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.pm-sub {
+  font-size: 20rpx;
+  color: #8a857c;
+  margin-top: 4rpx;
 }
 .pm-name {
   flex: 1;

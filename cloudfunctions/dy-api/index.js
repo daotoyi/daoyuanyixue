@@ -2040,6 +2040,202 @@ async function douyinPhoneLogin(data) {
   return ok(safe)
 }
 
+/* ==================== 抖音小程序: 担保支付(收银台) ====================
+   与微信支付的差异:
+   - 微信: 后端用商户密钥直接下单, 返回 payment 参数, 前端 wx.requestPayment
+   - 抖音: 后端先调字节「预下单」拿 order_id + order_token, 前端 tt.pay 拉起收银台,
+     由收银台呈现 微信/支付宝/抖音 三种渠道给用户选(即"前置组件")
+
+   接口: POST https://developer.toutiao.com/api/apps/ecpay/v1/create_order
+   签名: 除 sign/app_id/thirdparty_id/prod_id 外, 取参数**值**(不含key) trim 后
+         与「支付 SALT」一起按字典序排序, & 连接, MD5 取 hex
+   金额: total_amount 单位为**分**
+
+   依赖配置(config.local.js):
+     DY_PAY_SALT       担保支付 SALT (签名用, 非 AppSecret)
+     DY_PAY_NOTIFY_URL 支付回调公网地址(必填, 否则 create_order 报 2003)
+   平台侧前置条件(代码无法代做):
+     1. 企业主体小程序
+     2. 「小程序担保支付」能力申请通过, 拿到 SALT
+     3. 勾选支付方式(微信H5/支付宝APP/抖音支付), 微信渠道还需微信商户管理员扫码签约 */
+const DY_ECPAY_BASE = 'https://developer.toutiao.com/api/apps/ecpay/v1'
+
+/** ecpay 签名: 值(不含key) + SALT → 字典序 → & 连接 → MD5 */
+function ecpaySign(params, salt) {
+  // 身份标识类字段不参与签名
+  const EXCLUDE = ['sign', 'app_id', 'thirdparty_id', 'prod_id', 'other_settle_params']
+  const values = []
+  Object.keys(params).forEach((k) => {
+    if (EXCLUDE.indexOf(k) !== -1) return
+    const v = params[k]
+    // 空值不参与加签(官方规则: 值为空的非必填字段不参与)
+    if (v === '' || v === null || v === undefined) return
+    values.push(String(v).trim())
+  })
+  values.push(String(salt || '').trim())
+  // JS 默认 sort 按 UTF-16 码元序, 与 PHP SORT_STRING 对 ASCII 一致
+  values.sort()
+  return require('crypto').createHash('md5').update(values.join('&')).digest('hex')
+}
+
+/** 调 ecpay 接口(自动加签) */
+async function douyinEcpay(path, params) {
+  const c = require('./config.local')
+  const salt = c.DY_PAY_SALT || ''
+  if (!salt) {
+    return { err_no: -1, err_tips: '抖音支付未配置：请在云函数 config.local.js 填入 DY_PAY_SALT（担保支付 SALT）' }
+  }
+  const body = Object.assign({}, params)
+  body.sign = ecpaySign(body, salt)
+  const https = require('https')
+  const payload = JSON.stringify(body)
+  return new Promise((resolve) => {
+    const req = https.request(DY_ECPAY_BASE + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+    }, (res) => {
+      let d = ''
+      res.on('data', (chunk) => (d += chunk))
+      res.on('end', () => {
+        try { resolve(JSON.parse(d)) } catch (e) { resolve({ err_no: -1, err_tips: '抖音返回解析失败' }) }
+      })
+    })
+    req.on('error', (e) => {
+      console.log('[dy-api] ecpay 网络错误:', e.message)
+      resolve({ err_no: -1, err_tips: '抖音支付服务网络异常: ' + e.message })
+    })
+    req.write(payload)
+    req.end()
+  })
+}
+
+/**
+ * 抖音担保支付预下单 → 返回 tt.pay 所需的 orderInfo
+ * 前端拿 orderInfo 后调 tt.pay({ orderInfo, service: 5 })
+ */
+async function douyinPrepay(data) {
+  const { order_no, amount, subject, body } = data
+  if (!order_no) return fail('缺少订单号')
+  // 金额转分(前端传元), 下限 1 分
+  const fen = Math.round((Number(amount) || 0) * 100)
+  if (fen < 1) return fail('订单金额必须大于 0')
+
+  const c = require('./config.local')
+  const appId = c.DY_CLIENT_KEY || 'tted9b9b2673e23d3f01'
+  if (!c.DY_PAY_NOTIFY_URL) {
+    return fail('抖音支付未配置回调地址：请在 config.local.js 填入 DY_PAY_NOTIFY_URL（否则抖音拒绝预下单）')
+  }
+
+  // 商品描述: 受字节长度限制(≤42 字符), 订单号+商品名拼接后截断
+  const desc = String(subject || '道元易学-订单').slice(0, 40)
+  const detail = String(body || desc).slice(0, 40)
+
+  const res = await douyinEcpay('/create_order', {
+    app_id: appId,
+    out_order_no: String(order_no),
+    total_amount: fen,
+    subject: desc,
+    body: detail,
+    valid_time: 900, // 15 分钟
+    notify_url: c.DY_PAY_NOTIFY_URL,
+    cp_extra: String(order_no),
+  })
+
+  if (!res || res.err_no !== 0 || !res.data || !res.data.order_id) {
+    const tips = (res && (res.err_tips || res.errMsg)) || '抖音预下单失败'
+    console.log('[dy-api] 抖音预下单失败:', JSON.stringify(res).slice(0, 300))
+    return fail('抖音支付下单失败：' + tips)
+  }
+  return ok({ order_id: res.data.order_id, order_token: res.data.order_token })
+}
+
+/** 抖音担保支付回调: 验签 → 更新订单 → 返回 err_no:0 */
+async function douyinPayNotify(event) {
+  const c = require('./config.local')
+  const token = c.DY_PAY_CALLBACK_TOKEN || ''
+  const { timestamp, nonce, msg, msg_signature, type } = event || {}
+
+  // 验签: [token, timestamp, nonce, msg] 字典序拼接 → SHA1 → 与 msg_signature 比对
+  if (token) {
+    const crypto = require('crypto')
+    const raw = [token, String(timestamp || ''), String(nonce || ''), String(msg || '')].sort().join('')
+    const mine = crypto.createHash('sha1').update(raw).digest('hex')
+    if (mine !== msg_signature) {
+      console.log('[dy-api] 抖音回调验签失败')
+      return { err_no: 2008, err_tips: '验签失败' }
+    }
+  }
+
+  let payload = {}
+  try { payload = JSON.parse(msg) } catch (e) { return { err_no: -1, err_tips: 'msg 解析失败' } }
+
+  // 支付成功回调字段: { appid, cp_orderno, out_order_no, way, total_amount, ... }
+  const orderNo = payload.cp_orderno || payload.out_order_no || ''
+  if (!orderNo) return { err_no: 2021, err_tips: '缺少订单号' }
+
+  const isPaid = type === 'payment' && (payload.status === 'SUCCESS' || payload.payment_status === 'SUCCESS')
+  console.log('[dy-api] 抖音回调:', type, orderNo, JSON.stringify(payload).slice(0, 200))
+
+  if (isPaid) {
+    // 幂等: 已是待发货/已完成则跳过(抖音会重试通知)
+    const exist = (await db.collection('orders').where({ order_no: orderNo }).limit(1).get()).data[0]
+    if (exist && exist.status !== '待付款') {
+      return { err_no: 0, err_tips: 'success' }
+    }
+    await db.collection('orders').where({ order_no: orderNo }).update({
+      status: '待发货',
+      pay_method: '抖音支付',
+      pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+      trade_no: String(payload.order_id || payload.payment_order_no || ''),
+      platform: 'mp-toutiao',
+    })
+    try {
+      if (exist && exist.uid) {
+        await db.collection('messages').add({
+          id: Date.now() % 1000000,
+          uid: exist.uid,
+          type: 'order',
+          title: '订单支付成功',
+          content: `订单 ${orderNo} 已支付成功，商家正在加紧备货`,
+          read: false,
+          created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+        })
+      }
+    } catch (e) { /* 消息推送失败不影响主流程 */ }
+  }
+  // 抖音要求成功必须回 err_no:0, 否则会重试
+  return { err_no: 0, err_tips: 'success' }
+}
+
+/** 抖音订单支付状态查询(前端轮询兜底, 防回调丢失) */
+async function douyinPayQuery(data) {
+  const { order_no } = data
+  if (!order_no) return fail('缺少订单号')
+  const c = require('./config.local')
+  const appId = c.DY_CLIENT_KEY || 'tted9b9b2673e23d3f01'
+  const res = await douyinEcpay('/query_order', {
+    app_id: appId,
+    out_order_no: String(order_no),
+  })
+  if (!res || res.err_no !== 0) return fail((res && res.err_tips) || '查询失败')
+  const info = res.data || {}
+  const paid = info.pay_status === 'SUCCESS' || info.status === 'SUCCESS'
+  if (paid) {
+    // 查单发现已支付但订单未更新 → 补更新(回调丢失兜底)
+    const exist = (await db.collection('orders').where({ order_no: String(order_no) }).limit(1).get()).data[0]
+    if (exist && exist.status === '待付款') {
+      await db.collection('orders').where({ order_no: String(order_no) }).update({
+        status: '待发货',
+        pay_method: '抖音支付',
+        pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
+        trade_no: String(info.order_id || ''),
+        platform: 'mp-toutiao',
+      })
+    }
+  }
+  return ok({ paid, status: info.pay_status || info.status || '' })
+}
+
 async function updatePhone(data) {
   const { uid, phone, password } = data
   if (!uid) return fail('请先登录')
@@ -6169,6 +6365,8 @@ const ROUTES = {
   'auth.resetPassword': resetPassword,
   'user.phoneLogin': phoneLogin,
   'user.douyinPhoneLogin': douyinPhoneLogin,
+  'douyin.prepay': douyinPrepay,
+  'douyin.payQuery': douyinPayQuery,
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,
   'user.bindWechatPhone': bindWechatPhone,
@@ -6330,6 +6528,11 @@ exports.main = async (event = {}) => {
       const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body
       try {
         const body = JSON.parse(raw)
+        // 抖音担保支付回调: { type, timestamp, nonce, msg, msg_signature }, 无 action 字段
+        // 必须在取 body.action 之前拦截, 否则会被当成普通业务请求
+        if (body && body.msg_signature && body.timestamp && body.nonce && body.msg) {
+          return await douyinPayNotify(body)
+        }
         action = body.action
         data = body.data || {}
       } catch (e) {

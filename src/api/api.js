@@ -394,6 +394,10 @@ export const phoneLogin = (data) => _callFunction('user.phoneLogin', data)
 /* 抖音小程序手机号一键登录: 与微信 phoneLogin 同链路(按手机号查账号/自动注册/发令牌),
    区别仅在"授权码 → 手机号"的换取方式(抖音用 client_token 消费动态 code) */
 export const douyinPhoneLogin = (data) => _callFunction('user.douyinPhoneLogin', data)
+/* 抖音担保支付: 预下单拿 orderInfo(order_id+order_token) 供前端 tt.pay 拉起收银台 */
+export const douyinPrepay = (data) => _callFunction('douyin.prepay', data)
+/* 抖音支付状态查询: 前端轮询兜底, 防平台回调丢失 */
+export const douyinPayQuery = (data) => _callFunction('douyin.payQuery', data)
 export const getPayConfig = () => _callFunction('app.payConfig', {})
 export const fileUrl = (data) => _callFunction('app.fileUrl', data)
 export const getPandaoList = () => _callFunction('pandao.list', {})
