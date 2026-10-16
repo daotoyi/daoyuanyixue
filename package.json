@@ -10,11 +10,10 @@
     "dev:app": "uni -p app",
     "build:h5": "uni build",
     "build:mp-weixin": "uni build -p mp-weixin",
-    "build:mp-toutiao": "uni build -p mp-toutiao && node scripts/sync-douyin-config.js",
+    "build:mp-toutiao": "uni build -p mp-toutiao",
     "build:app": "uni build -p app",
     "deploy:h5": "uni build && node scripts/deploy-cloudbase.js h5",
     "deploy:mp-weixin": "uni build -p mp-weixin && node scripts/inject-tcb-domains.js",
-    "sync:douyin": "node scripts/sync-douyin-config.js",
     "check:paths": "node scripts/check-macos-paths.js",
     "gen:icons": "python3 scripts/generate-icons.py",
     "gen:domains": "node scripts/inject-tcb-domains.js"

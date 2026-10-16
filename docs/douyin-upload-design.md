@@ -213,32 +213,47 @@ async function uploadImageBase64Mini(cloudPath, base64) {
 
 ## 6. `manifest.json` 配置
 
-### 6.1 新增 `mp-toutiao` 段（复制 `mp-weixin` 的 setting，替换 appid）
+### 6.1 新增 `mp-toutiao` 段（与 `mp-weixin` 同构，仅 AppID 与两个特有字段不同）
+
+`src/manifest.json` 的 `mp-toutiao` 段已按微信端同构配好（26 个 setting 字段，
+与 `mp-weixin` 顶层结构零差异）。关键点：
 
 ```json
 "mp-toutiao": {
+  "/* AppID: 抖音开放平台 → 小程序 → 开发设置 获取 */": "",
   "appid": "替换为你的抖音小程序AppID",
-  "setting": {
-    "urlCheck": false,
-    "es6": true,
-    "minified": true,
-    "postcss": true,
-    "lazyloadPlaceholderEnable": false
-  },
-  "optimization": { "subPackages": true },
-  "permission": {},
-  "requiredPrivateInfos": []
+  "projectname": "道元易学",
+  "compileType": "miniprogram",
+  "setting": { "/* 与 mp-weixin 同构, 另加 minifyWXSS / urlCheckParam */": "" },
+  "packOptions": { "ignore": [], "include": [] },
+  "_legal_domains": { "/* 域名清单, 供人工核对 */": "" }
 }
 ```
 
-### 6.2 合法域名（关键坑）
+### 6.2 构建产物即导入目录（与微信端完全一致）
 
-抖音小程序的 request / uploadFile / downloadFile 合法域名**需在抖音开放平台后台手动配置**（manifest 的 `_tcb_domains` 仅自动注入微信端，对抖音无效）。必须包含：
+抖音小程序开发助手的导入目录 = **`dist/build/mp-toutiao/`**，与微信端导入
+`dist/build/mp-weixin/` 的模式完全相同：
+
+- `uni build -p mp-toutiao` 会把 manifest 的 `mp-toutiao` 段**完整编译**进
+  `dist/build/mp-toutiao/project.config.json`（AppID / 全部 setting / condition）
+- 该文件与 `app.json` 同批生成，开发者工具不会改写它
+- AppID 填在 manifest（唯一数据源），每次构建自动带上，不存在两处手改漂移
+
+> ⚠️ **不需要**额外的持久化配置目录。曾尝试建 `douyin-project/` + `miniprogramRoot`
+> 指向产物，理由是「dist 被 gitignore 会丢配置」——但这个担心不成立：
+> 配置由 manifest 每次构建重新生成，且开发者工具不写产物内的配置文件。
+> 微信端一直是这么跑的，抖音端照搬即可。多一个目录只会让「导入哪个目录」变困惑。
+
+### 6.3 合法域名（关键坑）
+
+抖音小程序的 request / uploadFile / downloadFile 合法域名**需在抖音开放平台后台手动配置**（manifest 无法自动注入抖音后台）。清单已写在 `manifest.mp-toutiao._legal_domains`，必须包含：
 
 - `https://cloud1-d8gs2k9m311f7272f-1464523137.ap-shanghai.app.tcloudbase.com` ← **注意此子域**，与 `_tcb_domains` 里列的 `.tcloudbaseapp.com` 不是同一个，必须精确加。
-- `https://club.zhenhesheng.cn`（若上传/请求走自定义域名）
-- `https://tcb-api.tencentcloudapi.com`（若涉及）
-- COS 上传直传域名（视频后续方案涉及，首版若降级可暂不配）
+- `https://club.zhenhesheng.cn`（上传/请求走自定义域名时）
+- COS 上传直传域名（非图片走 `uni.uploadFile` 直传 COS 时需要）
+
+配置入口：抖音开放平台 → 小程序 → 开发设置 → 服务器域名
 
 ---
 

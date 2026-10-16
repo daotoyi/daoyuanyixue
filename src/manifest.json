@@ -131,14 +131,47 @@
   },
   "/* ==================== 抖音小程序 ==================== */": "",
   "mp-toutiao": {
+    "/* AppID: 抖音开放平台 → 小程序 → 开发设置 获取; 填这里后 uni build 会写进dist/build/mp-toutiao/project.config.json, 抖音开发助手直接导入该产物目录即可 */": "",
     "appid": "__UNI__TOUTIAO",
+    "projectname": "道元易学",
+    "compileType": "miniprogram",
+    "libVersion": "",
+    "description": "道元易学 - 抖音小程序",
     "setting": {
       "urlCheck": true,
       "es6": true,
-      "minified": true,
       "postcss": true,
+      "minified": true,
+      "newFeature": true,
       "minifyWXSS": true,
-      "urlCheckParam": "tcb-https"
+      "urlCheckParam": "tcb-https",
+      "bigPackageSizeSupport": true,
+      "enhance": true,
+      "preloadBackgroundData": false,
+      "coverView": true,
+      "nodeModules": false,
+      "autoAudits": false,
+      "showShadowRootInWxmlPanel": true,
+      "scopeDataCheck": false,
+      "uglifyFileName": false,
+      "checkInvalidKey": true,
+      "checkSiteMap": true,
+      "uploadWithSourceMap": true,
+      "compileHotReLoad": false,
+      "lazyloadPlaceholderEnable": false,
+      "useMultiFrameRuntime": true,
+      "useApiHook": true,
+      "useApiHostProcess": true,
+      "babelSetting": {
+        "ignore": [],
+        "disablePlugins": [],
+        "outputPath": ""
+      },
+      "condition": false
+    },
+    "packOptions": {
+      "ignore": [],
+      "include": []
     },
     "usingComponents": true,
     "optimization": {
@@ -146,7 +179,7 @@
     },
     "permission": {},
     "requiredPrivateInfos": [],
-    "/* 合法域名须在抖音开放平台后台手动配置, manifest 无法自动注入 */": "",
+    "/* 合法域名须在抖音开放平台后台手动配置: 开发者设置 → 服务器域名; app.tcloudbase.com(网关) 与 tcloudbaseapp.com(静态托管) 是两个不同子域, 勿只配后者 */": "",
     "_legal_domains": {
       "_note": "抖音后台-开发设置-服务器域名 需逐条添加以下域名; app.tcloudbase.com 与 tcloudbaseapp.com 是两个不同子域, 勿混",
       "request": [

@@ -86,10 +86,15 @@
 - **构建假失败**: 并发写同一 dist 目录时 H5 构建可能报 "Build failed with errors", 重跑即成功; 排查前先确认是否真错。
 - **bump-version.js 已支持指定版本号**: `node scripts/bump-version.js 2.0.1`(里程碑版本跨大版本时用, 三段纯数字校验)。
 
-## 小程序端项目配置目录铁律 (2026-10-15 抖音端确立)
-- **`dist/` 整体被 gitignore** → 构建产物每次重建清空。开发者助手(抖音/微信)需要的 AppID、调试设置、自定义编译模式**绝不能只放在 dist 里**, 必须另建持久化目录(进 git), 用 `miniprogramRoot` 指向产物关联。
-  - 抖音端: `douyin-project/` (commit 9c0fd50); 微信端沿用根目录 `project.config.json`
-- **AppID 等端特有配置必须单一数据源**: 以 `src/manifest.json` 对应段为准, 用脚本单向同步到各端 project.config.json, 禁止两处手改(必然漂移)。抖音端同步脚本 `scripts/sync-douyin-config.js`, 挂 `build:mp-toutiao` 后置执行, 幂等。
+## 小程序端配置铁律 (2026-10-16 修正, 曾走弯路)
+- **开发者工具导入的目录 = 构建产物目录本身**, 两端一致:
+  微信工具导入 `dist/build/mp-weixin/`, 抖音助手导入 `dist/build/mp-toutiao/`。
+  `uni build` 会把 manifest 对应段**完整编译**进产物内的 `project.config.json`(AppID/全部 setting/condition),
+  与 `app.json` 同批生成, **开发者工具不会改写它**。
+- **⚠️ 曾走过的弯路(已回退)**: 建了 `douyin-project/` 持久化配置目录 + `miniprogramRoot` 指向产物 + `scripts/sync-douyin-config.js` 同步脚本(commit 9c0fd50), 理由是「dist 被 gitignore 会丢配置」。**这个担心不成立** —— 配置由 manifest 每次构建重新生成, 且工具不写产物内配置。微信端一直是这么跑的。多一个目录只让「导入哪个目录」变困惑。已在 commit 中回退删除。
+- **根目录 `project.config.json` 不是给开发者工具用的**: 它含 `cloudfunctionRoot: cloudfunctions/` + `qcloudRoot` + `beforeUpload` 钩子, 是 **CloudBase 云函数联调**用的; 微信工具读的是产物内那份。
+- **端特有配置唯一数据源 = `src/manifest.json`**: 各端配置段结构保持同构(微信/抖音顶层字段应零差异), 填manifest 后构建自动带到产物。禁止为某端另建配置目录。
+- **manifest 的 mp-toutiao 段已与 mp-weixin 同构**: 26 个 setting 字段, 顶层零差异, 仅多 `minifyWXSS` / `urlCheckParam`(抖音特有)。
 - **项目 JSON 文件含"多行注释键"惯例** (`"/* 说明 */": ""` 形式) → **不是合法 JSON**, `JSON.parse` 会报 "Bad control character"。任何脚本读写这些文件都要宽松解析: 正则把注释键压成单行再 parse, 写回时用 withComments 保留原键。
 - **写 JS 块注释时禁止嵌套 `*/`** (哪怕放在字符串或正则描述里), 会提前闭合注释导致 SyntaxError。
-- 各端本地私有配置(project.private.config.json)加 gitignore, 但必须留 `.example` 模板, 且脚本在缺失时自动复制生成。
+
