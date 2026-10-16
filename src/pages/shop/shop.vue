@@ -318,14 +318,17 @@ onShow(async () => {
   color: #8a857c;
 }
 
+/* 商品网格: 两列布局 (手机 + 小程序, 已验证跨端)
+   注意: 不要用 gap 做间距 —— 小程序端(微信/抖音)的 scroll-view 内 flex + gap
+   会导致卡片宽度计算异常、每行只剩1个。space-between + 各卡留余量即可实现
+   "两个一各行各占一半、中间自动留空", 且两端对齐视觉更整齐。 */
 .goods-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 20rpx;
+  justify-content: space-between;
 }
   .goods-card {
-    width: calc(50% - 12rpx); /* 留余量避免与 gap 相加恰好100%导致换行(手机端每行2个) */
+    width: calc(50% - 10rpx);
     background: #fffafa;
   border-radius: 16rpx;
   border: 1rpx solid #e8e2da;
@@ -407,8 +410,9 @@ onShow(async () => {
   .goods-section {
     padding: 16px 20px;
   }
-  /* 商品网格: 固定 px 间距(覆盖 rpx 基准过大), 配合 flex-start 使商品少时左对齐不分散两端 */
+  /* 商品网格: 固定 px 间距 + 左对齐(商品少时也不分散两端), 覆盖基础规则的 space-between */
   .goods-grid {
+    justify-content: flex-start;
     gap: 20px;
   }
   .section-head {
