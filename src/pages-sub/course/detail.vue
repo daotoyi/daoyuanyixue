@@ -83,6 +83,29 @@
 
     <!-- 底部购买 -->
     <view class="buy-bar">
+      <!-- 分享: 仿盘道详情页模式 —— 微信/抖音用原生 share 按钮, H5/App 复制链接 -->
+      <!-- #ifdef MP-WEIXIN -->
+      <button class="buy-share" open-type="share">
+        <view class="share-wrap"><view class="share-icon"></view></view>
+        <text class="share-label">分享</text>
+      </button>
+      <!-- #endif -->
+      <!-- #ifdef MP-TOUTIAO -->
+      <!-- 抖音 button 同样支持 open-type=share; 但抖音默认分享小程序首页,
+           页面级 path 必须在 onShareAppMessage 里返回才生效 -->
+      <button class="buy-share" open-type="share">
+        <view class="share-wrap"><view class="share-icon"></view></view>
+        <text class="share-label">分享</text>
+      </button>
+      <!-- #endif -->
+      <!-- #ifndef MP-WEIXIN -->
+      <!-- #ifndef MP-TOUTIAO -->
+      <view class="buy-share" @tap="sharePage">
+        <view class="share-wrap"><view class="share-icon"></view></view>
+        <text class="share-label">分享</text>
+      </view>
+      <!-- #endif -->
+      <!-- #endif -->
       <template v-if="isOwned">
         <text class="buy-price owned">已购买</text>
         <view class="btn-fill btn-learn" @tap="startLearn">
@@ -133,7 +156,7 @@ const LV_CLS = {'入门':'basic','进阶':'inter','高级':'senior','庙':'miao'
 const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getCourse, teacherInfo, updateCourseProgress } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { ensurePurchased, isPurchasedSync } from '../../store/purchased'
@@ -243,6 +266,27 @@ onLoad(async (options) => {
     owned.value = mine.has(course.value.id)
   }
 })
+
+/* ==================== 分享 (仿盘道详情页) ==================== */
+// 微信/抖音小程序: onShareAppMessage 让右上角胶囊出现"转发"入口
+onShareAppMessage(() => {
+  const c = course.value
+  return {
+    title: c ? c.title + ' · 真和盛' : '真和盛 · 课程',
+    path: '/pages-sub/course/detail?id=' + (c ? c.id : ''),
+    imageUrl: c && c.cover ? c.cover : '',
+  }
+})
+
+// H5 / App: 无原生分享面板, 复制链接到剪贴板
+function sharePage() {
+  const c = course.value
+  const link = 'https://club.zhenhesheng.cn/h5/#/pages-sub/course/detail?id=' + (c ? c.id : '')
+  uni.setClipboardData({
+    data: link,
+    success: () => uni.showToast({ title: '链接已复制，可发给好友', icon: 'none' }),
+  })
+}
 
 async function buyCourse() {
   if (buying.value) return
@@ -520,6 +564,67 @@ function startLearn() {
   color: #8a857c;
   text-decoration: line-through;
   margin-left: 12rpx;
+}
+/* 分享按钮: 放在 buy-bar 最左侧, 与价格/按钮同排; 微信端是 button 需去默认边框
+   注: buy-bar 是 space-between, 加第三个子元素会变三等分; 用 margin-right:auto
+   把剩余空间吃回来, 保持"分享贴左 + 价格/按钮贴右"的原布局 */
+.buy-share {
+  width: 88rpx;
+  padding: 0;
+  margin: 0 auto 0 0;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+.buy-share::after {
+  border: none;
+}
+.share-wrap {
+  width: 44rpx;
+  height: 38rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.share-label {
+  font-size: 20rpx;
+  color: #55524c;
+}
+/* 分享图标: 纯 CSS 画的"方框+上箭头" */
+.share-icon {
+  position: relative;
+  width: 26rpx;
+  height: 26rpx;
+  border: 3rpx solid #55524c;
+  border-radius: 6rpx;
+  box-sizing: border-box;
+}
+.share-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -16rpx;
+  width: 3rpx;
+  height: 14rpx;
+  background: #55524c;
+  transform: translateX(-50%);
+}
+.share-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -22rpx;
+  width: 12rpx;
+  height: 12rpx;
+  border-left: 3rpx solid #55524c;
+  border-top: 3rpx solid #55524c;
+  transform: translateX(-50%) rotate(45deg);
+  box-sizing: border-box;
 }
 /* 立即购买: 实心按钮 + 与文字留出间距 */
 .btn-fill {

@@ -47,6 +47,35 @@
         </view>
         <text class="collect-label" :class="{ on: collected }">收藏</text>
       </view>
+      <!-- 分享: 仿盘道详情页模式 —— 微信/抖音用原生 share 按钮, H5/App 复制链接 -->
+      <!-- #ifdef MP-WEIXIN -->
+      <button class="act-share" open-type="share">
+        <view class="share-wrap">
+          <view class="share-icon"></view>
+        </view>
+        <text class="collect-label">分享</text>
+      </button>
+      <!-- #endif -->
+      <!-- #ifdef MP-TOUTIAO -->
+      <!-- 抖音的 button 同样支持 open-type=share, 且 onShareAppMessage 有效;
+           但抖音默认"分享小程序首页", 页面级 path 需在 onShareAppMessage 里返回 -->
+      <button class="act-share" open-type="share">
+        <view class="share-wrap">
+          <view class="share-icon"></view>
+        </view>
+        <text class="collect-label">分享</text>
+      </button>
+      <!-- #endif -->
+      <!-- #ifndef MP-WEIXIN -->
+      <!-- #ifndef MP-TOUTIAO -->
+      <view class="act-collect" @tap="sharePage">
+        <view class="share-wrap">
+          <view class="share-icon"></view>
+        </view>
+        <text class="collect-label">分享</text>
+      </view>
+      <!-- #endif -->
+      <!-- #endif -->
       <view class="act-btns">
         <view class="btn-fill btn-cart" @tap="addCart">
           <text>加入购物车</text>
@@ -61,7 +90,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
 import { getProduct, toggleFavoriteProduct, addFootprint } from '../../api/api'
 import { addToCart } from '../utils/cart'
 import { useUserStore } from '../../store/index'
@@ -96,6 +125,27 @@ onLoad(async (options) => {
     uni.showToast({ title: '商品加载失败', icon: 'none' })
   }
 })
+
+/* ==================== 分享 (仿盘道详情页) ==================== */
+// 微信/抖音小程序: onShareAppMessage 让右上角胶囊出现"转发"入口
+onShareAppMessage(() => {
+  const p = product.value
+  return {
+    title: p ? p.name + ' · 真和盛' : '真和盛 · 好物',
+    path: '/pages-sub/product/detail?id=' + (p ? p.id : ''),
+    imageUrl: p && p.images && p.images[0] ? p.images[0] : '',
+  }
+})
+
+// H5 / App: 无原生分享面板, 复制链接到剪贴板
+function sharePage() {
+  const p = product.value
+  const link = 'https://club.zhenhesheng.cn/h5/#/pages-sub/product/detail?id=' + (p ? p.id : '')
+  uni.setClipboardData({
+    data: link,
+    success: () => uni.showToast({ title: '链接已复制，可发给好友', icon: 'none' }),
+  })
+}
 
 function preview(i) {
   uni.previewImage({ urls: product.value.images, current: i })
@@ -292,8 +342,7 @@ function buyNow() {
   width: 44rpx;
   height: 40rpx;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: center;  justify-content: center;
 }
 .heart {
   width: 34rpx;
@@ -369,6 +418,60 @@ function buyNow() {
 .collect-label {
   font-size: 20rpx;
   color: #55524c;
+}
+/* 分享按钮: 与收藏同宽同高, 视觉对齐; 微信端是 button 需去掉默认边框 */
+.act-share {
+  width: 88rpx;
+  padding: 0;
+  margin: 0 0 0 8rpx;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
+.act-share::after {
+  border: none;
+}
+.share-wrap {
+  width: 44rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 分享图标: 纯 CSS 画的"方框+上箭头" */
+.share-icon {
+  position: relative;
+  width: 26rpx;
+  height: 26rpx;
+  border: 3rpx solid #55524c;
+  border-radius: 6rpx;
+  box-sizing: border-box;
+}
+.share-icon::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -16rpx;
+  width: 3rpx;
+  height: 14rpx;
+  background: #55524c;
+  transform: translateX(-50%);
+}
+.share-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -22rpx;
+  width: 12rpx;
+  height: 12rpx;
+  border-left: 3rpx solid #55524c;
+  border-top: 3rpx solid #55524c;
+  transform: translateX(-50%) rotate(45deg);
+  box-sizing: border-box;
 }
 .act-btns {
   flex: 1;
