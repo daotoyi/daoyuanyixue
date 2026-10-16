@@ -112,3 +112,13 @@
   构建仍打印 `DONE Build complete` —— 极易漏检。
 - **注释键必须单行** (`"/* 说明 */": ""`), 跨行会导致 JSON.parse 抛 `Bad control character`。
 - **改 manifest 后必查产物**: `dist/build/<平台>/project.config.json` 的 appid 与 setting 字段数须与 manifest 一致。
+
+## 跨端 CSS 铁律 (2026-10-16 商城商品踩坑确立)
+- **小程序 scroll-view 内的 flex 网格不要用 `gap` 做间距** —— 微信/抖音端会算错卡片宽度,
+  导致"每行2个"塌成"每行1个"(PC 桌面 H5 却完全正常, 极难察觉)。
+  两列布局用 `justify-content: space-between` + `width: calc(50% - 10rpx)` 即可, 无需 gap。
+- **改基础布局规则时, 必须检查 media query 是否原本依赖"继承"base 的属性**。
+  如商城网格的 `justify-content` 原先靠继承, base 从 flex-start 改回 space-between 后,
+  PC 会意外两端分散 —— media query 内要显式覆写。
+- **新增/改动 CSS 后, 除构建通过外还要 grep 产物**(wxss/ttss)确认关键规则落地、无残留。
+- **H5 构建报 "Build failed with errors" 常为并发写 dist 的假失败**, 重跑即成功; 排查前先重跑一次。
