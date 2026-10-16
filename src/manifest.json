@@ -129,10 +129,10 @@
       "subPackages": true
     }
   },
-  "/* ==================== 抖音小程序 ==================== */": "",
+  "/* 抖音小程序: 平台标识固定 mp-toutiao (uni-app 官方约定, 取字节头条系旧称); 不可改 mp-douyin (该包 npm 404); 本段编译进 dist/build/mp-toutiao/project.config.json */": "",
   "mp-toutiao": {
-    "/* AppID: 抖音开放平台 → 小程序 → 开发设置 获取; 填这里后 uni build 会写进dist/build/mp-toutiao/project.config.json, 抖音开发助手直接导入该产物目录即可 */": "",
-    "appid": "__UNI__TOUTIAO",
+    "/* AppID: 抖音开放平台 developer.open-douyin.com → 小程序 → 开发设置 获取 */": "",
+    "appid": "tted9b9b2673e23d3f01",
     "projectname": "道元易学",
     "compileType": "miniprogram",
     "libVersion": "",
