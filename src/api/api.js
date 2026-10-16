@@ -391,6 +391,9 @@ export const userAssets = (data) => _callFunction('user.assets', data)
 export const wechatLogin = (data) => _callFunction('user.wechatLogin', data)
 export const wechatCheck = () => _callFunction('user.wechatCheck', {})
 export const phoneLogin = (data) => _callFunction('user.phoneLogin', data)
+/* 抖音小程序手机号一键登录: 与微信 phoneLogin 同链路(按手机号查账号/自动注册/发令牌),
+   区别仅在"授权码 → 手机号"的换取方式(抖音用 client_token 消费动态 code) */
+export const douyinPhoneLogin = (data) => _callFunction('user.douyinPhoneLogin', data)
 export const getPayConfig = () => _callFunction('app.payConfig', {})
 export const fileUrl = (data) => _callFunction('app.fileUrl', data)
 export const getPandaoList = () => _callFunction('pandao.list', {})

@@ -1855,6 +1855,191 @@ async function phoneLogin(data) {
   return ok(safe)
 }
 
+/* ==================== 抖音小程序: 手机号一键登录 ====================
+   与微信 phoneLogin 的差别只在"授权码 → 手机号"这一步, 后续账号逻辑完全复用。
+
+   抖音的换取链路(基础库 ≥3.51.0 的新版):
+     前端 button open-type=getPhoneNumber 回调拿到动态令牌 code(5分钟有效, 一次性)
+     → 服务端持 client_token 调
+       POST https://developer.douyin.com/api/apps/v1/get_phonenumber_info/
+       header: access-token: <client_token>
+       body:   { code }
+     → 返回 { data: "<RSA密文>" }, 用「应用私钥」RSA 解密得到
+       { phoneNumber, purePhoneNumber, countryCode, watermark }
+
+   依赖的配置项(cloudfunctions/dy-api/config.local.js, 均未配置时给出明确报错):
+     DY_CLIENT_KEY      抖音小程序 AppID (tted9b9b2673e23d3f01)
+     DY_CLIENT_SECRET   抖音小程序 AppSecret
+     DY_APP_PRIVATE_KEY 应用私钥 (PEM, 与后台配置的应用公钥成对)
+
+   平台侧前置条件(代码无法代做, 缺一则授权拿不到数据):
+     1. 抖音开放平台 → 小程序 → 开发配置 → 配置「应用公私钥」,
+        未配置时前端回调的 code 会是空字符串
+     2. 小程序需为企业主体, 且「获取手机号」能力已申请并通过审核 */
+const _dyToken = { value: '', expires: 0 }
+
+/** 获取抖音 client_token (grant_type=client_credential), 缓存 100 分钟 */
+async function getDouyinClientToken() {
+  if (_dyToken.value && Date.now() < _dyToken.expires) return _dyToken.value
+  const c = require('./config.local')
+  const clientKey = c.DY_CLIENT_KEY || 'tted9b9b2673e23d3f01'
+  const clientSecret = c.DY_CLIENT_SECRET || ''
+  if (!clientSecret) {
+    console.log('[dy-api] 抖音 client_token 失败: 未配置 DY_CLIENT_SECRET')
+    return ''
+  }
+  const https = require('https')
+  const body = JSON.stringify({
+    appid: clientKey,
+    secret: clientSecret,
+    grant_type: 'client_credential',
+  })
+  const token = await new Promise((resolve) => {
+    const req = https.request('https://open.douyin.com/oauth/client_token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let d = ''
+      res.on('data', (chunk) => (d += chunk))
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d)
+          // 抖音成功时返回 access_token(client_token), 失败返回 err_code/err_msg
+          const t = j.data && j.data.access_token ? j.data.access_token : (j.access_token || '')
+          if (!t) console.log('[dy-api] 抖音 client_token 失败:', d.slice(0, 200))
+          resolve(t)
+        } catch (e) { resolve('') }
+      })
+    })
+    req.on('error', (e) => { console.log('[dy-api] 抖音 token 网络错误:', e.message); resolve('') })
+    req.write(body)
+    req.end()
+  })
+  if (token) { _dyToken.value = token; _dyToken.expires = Date.now() + 100 * 60 * 1000 }
+  return token
+}
+
+/** RSA 私钥解密 (PKCS8 / PKCS1 PEM) → JSON 字符串 */
+function rsaDecryptBase64(b64, privateKeyPem) {
+  const crypto = require('crypto')
+  const buf = Buffer.from(b64, 'base64')
+  // 抖音用 RSA/ECB/PKCS1Padding 加密, 对应 node 的 'RSA-PKCS1-PADDING'
+  const out = crypto.privateDecrypt(
+    { key: privateKeyPem, padding: crypto.constants.RSA_PKCS1_PADDING },
+    buf
+  )
+  return out.toString('utf8')
+}
+
+/**
+ * 抖音手机号一键登录
+ * 入参(二选一):
+ *   { code }                          新版动态令牌 (推荐)
+ *   { encryptedData, iv }             旧版加密数据
+ */
+async function douyinPhoneLogin(data) {
+  const { code, encryptedData, iv } = data
+  if (!code && !(encryptedData && iv)) return fail('缺少授权数据')
+
+  const c = require('./config.local')
+  if (!c.DY_CLIENT_SECRET) {
+    return fail('抖音登录未配置：请在云函数 config.local.js 填入 DY_CLIENT_SECRET')
+  }
+
+  /* ---- 1. 换取手机号 ---- */
+  let phone = ''
+  if (code) {
+    const token = await getDouyinClientToken()
+    if (!token) return fail('获取抖音凭证失败，请检查 DY_CLIENT_SECRET')
+    const https = require('https')
+    const body = JSON.stringify({ code })
+    const res = await new Promise((resolve) => {
+      const req = https.request('https://developer.douyin.com/api/apps/v1/get_phonenumber_info/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access-token': token,
+          'Content-Length': Buffer.byteLength(body),
+        },
+      }, (r) => {
+        let d = ''
+        r.on('data', (chunk) => (d += chunk))
+        r.on('end', () => { try { resolve(JSON.parse(d)) } catch (e) { resolve({}) } })
+      })
+      req.on('error', (e) => { console.log('[dy-api] 换手机号网络错误:', e.message); resolve({}) })
+      req.write(body)
+      req.end()
+    })
+    const cipher = res && (res.data || (res.extra && res.extra.data))
+    if (!cipher) {
+      const msg = (res && (res.message || res.err_tips || res.err_msg)) || '换取手机号失败'
+      console.log('[dy-api] 抖音换手机号失败:', JSON.stringify(res).slice(0, 300))
+      // 平台常见错误: 未配应用公私钥 / 能力未获批 / code 过期或被消费过
+      return fail('获取手机号失败：' + msg + '（请确认已配置应用公私钥且能力已审核通过）')
+    }
+    if (!c.DY_APP_PRIVATE_KEY) {
+      return fail('抖音登录未配置：请填入 DY_APP_PRIVATE_KEY（应用私钥）以解密手机号')
+    }
+    try {
+      const plain = rsaDecryptBase64(cipher, c.DY_APP_PRIVATE_KEY)
+      const info = JSON.parse(plain)
+      phone = info.purePhoneNumber || info.phoneNumber || ''
+      // 国外手机号带区号, 统一去掉 +86 前缀便于与现有账号体系匹配
+      phone = String(phone).replace(/^\+?86/, '')
+    } catch (e) {
+      console.log('[dy-api] 抖音手机号解密失败:', e.message)
+      return fail('手机号解密失败，请检查 DY_APP_PRIVATE_KEY 是否与后台应用公钥匹配')
+    }
+  } else {
+    // 旧版 encryptedData+iv: 需 session_key(AES) 解密, 依赖 tt.login 的 code2session,
+    // 该链路需要额外传入登录 code, 暂不实现 —— 前端已优先走新版 code 分支
+    return fail('请使用新版手机号授权（需小程序基础库 3.51.0 以上）')
+  }
+
+  if (!phone || !/^1\d{10}$/.test(phone)) {
+    return fail('获取到的手机号格式不正确')
+  }
+
+  /* ---- 2. 按手机号查账号 / 自动注册 / 发令牌 (与微信 phoneLogin 同一套逻辑) ---- */
+  let user = (await db.collection('users').where({ phone }).limit(1).get()).data[0]
+  if (user && user.status === 'deleted') return fail('该账号已被注销，无法登录')
+  if (!user) {
+    const maxUid = await db.collection('users').orderBy('uid', 'desc').limit(1).get()
+    const uid = maxUid.data.length ? (maxUid.data[0].uid || 0) + 1 : 1
+    const daoCode = await nextDaoCode('user')
+    const nowIso = new Date().toISOString().slice(0, 10)
+    user = {
+      uid,
+      dao_code: daoCode,
+      nickname: `道友${phone.slice(-4)}`,
+      avatar: '',
+      phone,
+      email: '',
+      password: '',
+      vip_level: 0,
+      balance: '0.00',
+      role: 'user',
+      invite_code: daoCode,
+      inviter_uid: null,
+      created_at: nowIso,
+      last_login_at: new Date().toLocaleString('zh-CN', { hour12: false }),
+      last_active_at: Date.now(),
+      // 记录注册来源端, 便于渠道分析
+      platform: 'mp-toutiao',
+    }
+    await db.collection('users').add(user)
+  }
+  const token = genSessionToken()
+  const nowMs = Date.now()
+  const loginTime = new Date(nowMs).toLocaleString('zh-CN', { hour12: false })
+  const upd = { session_token: token, last_login_at: loginTime, last_active_at: nowMs, platform: 'mp-toutiao' }
+  await db.collection('users').where({ uid: user.uid }).update(upd).catch(() => {})
+  const { password: _pw, ...safe } = user
+  safe.session_token = token
+  safe.last_login_at = loginTime
+  return ok(safe)
+}
+
 async function updatePhone(data) {
   const { uid, phone, password } = data
   if (!uid) return fail('请先登录')
@@ -5983,6 +6168,7 @@ const ROUTES = {
   'auth.sendCode': sendVerifyCode,
   'auth.resetPassword': resetPassword,
   'user.phoneLogin': phoneLogin,
+  'user.douyinPhoneLogin': douyinPhoneLogin,
   'user.setPassword': setPassword,
   'user.updatePhone': updatePhone,
   'user.bindWechatPhone': bindWechatPhone,

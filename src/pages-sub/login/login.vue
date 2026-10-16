@@ -56,18 +56,28 @@
         <text class="wx-text">其他登录方式</text>
         <view class="wx-line"></view>
       </view>
-      <!-- 手机号快捷登录: 小程序端微信 getPhoneNumber 授权, H5/APP 弹窗输入手机号+密码 -->
+      <!-- 手机号快捷登录: 小程序端走 getPhoneNumber 授权, H5/APP 弹窗输入手机号+密码 -->
       <!-- #ifdef MP-WEIXIN -->
       <button class="wx-login wx-login-btn" open-type="getPhoneNumber" @getphonenumber="onPhoneQuickLogin">
         <text class="wx-icon">📱</text>
         <text class="wx-name">手机号快捷登录</text>
       </button>
       <!-- #endif -->
+      <!-- #ifdef MP-TOUTIAO -->
+      <!-- 抖音端: 同为 open-type=getPhoneNumber, 但回调返回的是动态令牌 code(新版, 基础库≥3.51.0)
+           或 encryptedData+iv(旧版), 且按钮文案受平台规范约束, 不能写"快捷登录"以外的诱导文案 -->
+      <button class="wx-login wx-login-btn" open-type="getPhoneNumber" @getphonenumber="onDouyinPhoneLogin">
+        <text class="wx-icon">📱</text>
+        <text class="wx-name">手机号一键登录</text>
+      </button>
+      <!-- #endif -->
       <!-- #ifndef MP-WEIXIN -->
+      <!-- #ifndef MP-TOUTIAO -->
       <view class="wx-login" @tap="showPhoneQuick = true">
         <text class="wx-icon">📱</text>
         <text class="wx-name">手机号快捷登录</text>
       </view>
+      <!-- #endif -->
       <!-- #endif -->
       <!-- 微信一键登录: 后台「页面管理-登录设置」开关打开时显示 (与手机号快捷登录上下排列) -->
       <view class="wx-login" v-if="showWechatLogin" @tap="wxLogin">
@@ -145,7 +155,7 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
-import { login, register, sendVerifyCode, resetPassword, wechatLogin, wechatCheck, bindWechatPhone, phoneLogin, getPayConfig } from '../../api/api'
+import { login, register, sendVerifyCode, resetPassword, wechatLogin, wechatCheck, bindWechatPhone, phoneLogin, douyinPhoneLogin, getPayConfig } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { useUserStore } from '../../store/index'
 
@@ -267,6 +277,10 @@ async function onGetPhoneNumber(e) {
 
 // 邀请链接自动填充: ?invite=道号
 onLoad((options) => {
+  // 抖音端: 必须先建立 tt.login 登录态, 否则 getPhoneNumber 授权回调会报
+  // invalid session / not login。放在最前面, 且不能放在授权按钮的回调里
+  // (回调中调用 tt.login 会刷新登录态, 导致 session_key 与加密时不匹配)
+  ensureDouyinLogin()
   let invite = (options && options.invite) || ''
   // #ifdef H5
   // 兜底: H5 从外部链接直接打开时(hash 路由), 参数偶尔不会落到 options, 直接从 URL 再取一次;
@@ -338,6 +352,95 @@ async function onPhoneQuickLogin(e) {
   } finally {
     loading.value = false
   }
+}
+
+/* ==================== 抖音小程序: 手机号一键登录 ====================
+   与微信的差异(抖音开放平台规范, 不可混用):
+   1. 按钮 open-type 同为 getPhoneNumber, 但**必须先调用 tt.login 建立登录态**,
+      否则回调报 invalid session / not login。故 onLoad 时先静默 tt.login。
+   2. 回调参数分两代:
+      - 新版(基础库≥3.51.0): 返回动态令牌 code(5分钟有效, 一次性), 服务端调
+        phonenumber.getPhoneNumber 消费 code 换手机号
+      - 旧版: 返回 encryptedData + iv, 服务端用 session_key 解密
+   3. **必须先在小程序后台配置「应用公私钥」, 否则 code 返回空字符串** ——
+      这是最常见的"点击授权但拿不到手机号"原因。
+   4. 该能力仅企业主体小程序可申请, 未获批时回调 errno 为 no permission。 */
+function ensureDouyinLogin() {
+  // #ifdef MP-TOUTIAO
+  try {
+    if (typeof tt !== 'undefined' && tt.login) {
+      tt.login({
+        force: true,
+        success: () => {},
+        fail: () => {}, // 登录态失败不阻塞, 授权回调会把具体错误带回来
+      })
+    }
+  } catch (e) { /* 环境异常时静默, 不阻塞页面 */ }
+  // #endif
+}
+
+async function onDouyinPhoneLogin(e) {
+  const d = (e && e.detail) || {}
+  const errno = d.errno
+  const errMsg = d.errMsg || ''
+
+  // 授权失败: 按平台错误码给出可操作提示, 并回退到手机号+密码登录
+  if (errno || /fail|deny|cancel/i.test(errMsg)) {
+    let tip = '授权未完成，请改用手机号 + 密码登录'
+    if (errno === 'no permission' || /no permission|platform auth deny/i.test(errMsg)) {
+      tip = '当前小程序未开通手机号授权能力，请改用手机号 + 密码登录'
+    } else if (/no phone number/i.test(errMsg)) {
+      tip = '您的抖音账号未绑定手机号，请改用手机号 + 密码登录'
+    } else if (/invalid session|not login/i.test(errMsg)) {
+      tip = '登录态已失效，请重新进入页面再试'
+    } else if (/auth deny|cancel/i.test(errMsg)) {
+      tip = '已取消授权，可改用手机号 + 密码登录'
+    }
+    uni.showToast({ title: tip, icon: 'none', duration: 3000 })
+    return
+  }
+
+  // 新版: 动态令牌 code(优先)
+  if (d.code) {
+    loading.value = true
+    try {
+      const user = await douyinPhoneLogin({ code: d.code })
+      saveUser(user)
+      uni.showToast({ title: '登录成功', icon: 'success' })
+      setTimeout(goAfterLogin, 500)
+    } catch (e2) {
+      errorMsg.value = e2.message || '登录失败'
+      uni.showToast({ title: errorMsg.value, icon: 'none', duration: 3000 })
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
+  // 旧版: encryptedData + iv
+  if (d.encryptedData && d.iv) {
+    loading.value = true
+    try {
+      const user = await douyinPhoneLogin({ encryptedData: d.encryptedData, iv: d.iv })
+      saveUser(user)
+      uni.showToast({ title: '登录成功', icon: 'success' })
+      setTimeout(goAfterLogin, 500)
+    } catch (e2) {
+      errorMsg.value = e2.message || '登录失败'
+      uni.showToast({ title: errorMsg.value, icon: 'none', duration: 3000 })
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
+  // 走到这里说明授权"成功"但既无 code 也无 encryptedData —— 按抖音文档,
+  // 未配置应用公私钥时 code 就是空字符串。这是后台配置问题, 不是代码问题。
+  uni.showToast({
+    title: '授权未返回手机号数据，请检查小程序「应用公私钥」配置，或改用手机号登录',
+    icon: 'none',
+    duration: 4000,
+  })
 }
 
 
