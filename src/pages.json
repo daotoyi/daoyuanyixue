@@ -62,6 +62,191 @@
     "navigationBarBackgroundColor": "#FFFCF5",
     "navigationBarTextStyle": "black"
    }
+  },
+  {
+   "path": "pages-sub/cart/cart",
+   "style": {
+    "navigationBarTitleText": "购物车",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/checkout/checkout",
+   "style": {
+    "navigationBarTitleText": "确认订单",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/order/list",
+   "style": {
+    "navigationBarTitleText": "我的订单",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/login/login",
+   "style": {
+    "navigationBarTitleText": "登录",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/course/lesson",
+   "style": {
+    "navigationBarTitleText": "课时学习",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/course/my",
+   "style": {
+    "navigationBarTitleText": "我的课程",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/moment/publish",
+   "style": {
+    "navigationBarTitleText": "发布动态",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/admin/login",
+   "style": {
+    "navigationBarTitleText": "管理端登录",
+    "navigationBarBackgroundColor": "#451A03",
+    "navigationBarTextStyle": "white"
+   }
+  },
+  {
+   "path": "pages-sub/admin/dashboard",
+   "style": {
+    "navigationBarTitleText": "道元易学 · 管理后台",
+    "navigationBarBackgroundColor": "#451A03",
+    "navigationBarTextStyle": "white",
+    "pageOrientation": "auto"
+   }
+  },
+  {
+   "path": "pages-sub/setting/setting",
+   "style": {
+    "navigationBarTitleText": "设置",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/setting/address",
+   "style": {
+    "navigationBarTitleText": "收货地址",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/user/profile",
+   "style": {
+    "navigationBarTitleText": "个人主页",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/user/assets",
+   "style": {
+    "navigationBarTitleText": "我的资产",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/user/messages",
+   "style": {
+    "navigationBarTitleText": "消息中心",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/user/paipan",
+   "style": {
+    "navigationBarTitleText": "排盘结果",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/order/detail",
+   "style": {
+    "navigationBarTitleText": "订单详情",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/setting/agreement",
+   "style": {
+    "navigationBarTitleText": "用户协议",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/setting/privacy",
+   "style": {
+    "navigationBarTitleText": "隐私协议",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/setting/about",
+   "style": {
+    "navigationBarTitleText": "关于我们",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/user/feedback",
+   "style": {
+    "navigationBarTitleText": "意见反馈",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/admin/logistics",
+   "style": {
+    "navigationBarTitleText": "选择物流发货",
+    "navigationBarBackgroundColor": "#451A03",
+    "navigationBarTextStyle": "white"
+   }
+  },
+  {
+   "path": "pages-sub/user/tools",
+   "style": {
+    "navigationBarTitleText": "玄学工具",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/user/paipan-records",
+   "style": {
+    "navigationBarTitleText": "排盘记录",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
   }
  ],
  "globalStyle": {
@@ -115,197 +300,5 @@
     "path": "pages/index/index"
    }
   ]
- },
- "subPackages": [
-  {
-   "root": "pages-sub",
-   "pages": [
-    {
-     "path": "cart/cart",
-     "style": {
-      "navigationBarTitleText": "购物车",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "checkout/checkout",
-     "style": {
-      "navigationBarTitleText": "确认订单",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "order/list",
-     "style": {
-      "navigationBarTitleText": "我的订单",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "login/login",
-     "style": {
-      "navigationBarTitleText": "登录",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "course/lesson",
-     "style": {
-      "navigationBarTitleText": "课时学习",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "course/my",
-     "style": {
-      "navigationBarTitleText": "我的课程",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "moment/publish",
-     "style": {
-      "navigationBarTitleText": "发布动态",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "admin/login",
-     "style": {
-      "navigationBarTitleText": "管理端登录",
-      "navigationBarBackgroundColor": "#451A03",
-      "navigationBarTextStyle": "white"
-     }
-    },
-    {
-     "path": "admin/dashboard",
-     "style": {
-      "navigationBarTitleText": "道元易学 · 管理后台",
-      "navigationBarBackgroundColor": "#451A03",
-      "navigationBarTextStyle": "white",
-      "pageOrientation": "auto"
-     }
-    },
-    {
-     "path": "setting/setting",
-     "style": {
-      "navigationBarTitleText": "设置",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "setting/address",
-     "style": {
-      "navigationBarTitleText": "收货地址",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "user/profile",
-     "style": {
-      "navigationBarTitleText": "个人主页",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "user/assets",
-     "style": {
-      "navigationBarTitleText": "我的资产",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "user/messages",
-     "style": {
-      "navigationBarTitleText": "消息中心",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "user/paipan",
-     "style": {
-      "navigationBarTitleText": "排盘结果",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "order/detail",
-     "style": {
-      "navigationBarTitleText": "订单详情",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "setting/agreement",
-     "style": {
-      "navigationBarTitleText": "用户协议",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "setting/privacy",
-     "style": {
-      "navigationBarTitleText": "隐私协议",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "setting/about",
-     "style": {
-      "navigationBarTitleText": "关于我们",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "user/feedback",
-     "style": {
-      "navigationBarTitleText": "意见反馈",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "admin/logistics",
-     "style": {
-      "navigationBarTitleText": "选择物流发货",
-      "navigationBarBackgroundColor": "#451A03",
-      "navigationBarTextStyle": "white"
-     }
-    },
-    {
-     "path": "user/tools",
-     "style": {
-      "navigationBarTitleText": "玄学工具",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    },
-    {
-     "path": "user/paipan-records",
-     "style": {
-      "navigationBarTitleText": "排盘记录",
-      "navigationBarBackgroundColor": "#FFFCF5",
-      "navigationBarTextStyle": "black"
-     }
-    }
-   ]
-  }
- ]
+ }
 }
