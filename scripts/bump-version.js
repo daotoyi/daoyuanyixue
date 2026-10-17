@@ -59,12 +59,31 @@ if (vc) g = g.replace(/versionCode \d+/, `versionCode ${Number(vc) + 1}`)
 g = g.replace(/versionName "[\d.]+"/, `versionName "${next}"`)
 write('mobile/android/app/build.gradle', g)
 
-// 3. download-page APK 文件名 + 页面版本显示 (仅 --apk 时更新, 避免指向未构建的 APK)
+// 3. 下载页版本同步 (仅 --apk 时更新, 避免指向未构建的 APK)
 if (WITH_APK) {
+  // 3a. club 下载页 (现已改为跳转官网, 无版本字符串, 替换为空操作; 保留以防回退到内容页)
   let d = read('scripts/download-page/index.html')
   d = d.replace(/daoyuan-v[\d.]+\.apk/g, `daoyuan-v${next}.apk`)
   d = d.replace(/Android v[\d.]+/, `Android v${next}`)
   write('scripts/download-page/index.html', d)
+
+  // 3b. 官网下载页 (跨项目联动): club 的 /h5/download 已 301/meta 跳转官网,
+  //     官网 download.html 是下载内容唯一数据源, 版本必须与 app 同步
+  const sitePage = path.resolve(ROOT, '../zhs-website/zhenhesheng.cn/download.html')
+  if (fs.existsSync(sitePage)) {
+    let s = fs.readFileSync(sitePage, 'utf8')
+    const before = s
+    s = s.replace(/daoyuan-v[\d.]+\.apk/g, `daoyuan-v${next}.apk`)
+    s = s.replace(/当前版本 v[\d.]+/, `当前版本 v${next}`)
+    if (s !== before) {
+      fs.writeFileSync(sitePage, s)
+      console.log(`已同步官网下载页: ${sitePage} (记得在官网项目跑 ./scripts/deploy.sh 部署)`)
+    } else {
+      console.log('官网下载页版本已是最新, 无需改动')
+    }
+  } else {
+    console.log(`提示: 未找到官网下载页 (${sitePage}), 跳过官网同步`)
+  }
 }
 
 // 4. git tag
