@@ -65,7 +65,7 @@
 
 ## 抖音分享铁律 (v2.0.8 踩坑)
 - **10003026 = 子包加载失败**: 抖音分享卡片冷启动打开**子包页面**时, 需下载子包, 下载失败即报 "小程序加载失败(10003026)" (10003 是分包错误码前缀)。路径格式 `/pages-sub/xxx/detail?id=xxx` 带斜杠绝对路径本身正确, onShareAppMessage 也无误 —— 根因是子包冷启动下载, 非代码错。
-- **铁律: 分享落地的详情页必须放主包**(pages.json 主 `pages` 数组, 不用 subPackages)。product/detail、course/detail、pandao/detail 已移主包, 路由 `pages-sub/xxx/detail` 保持不变(所有跳转无需改); 主包当前仅 ~216K, 远低于 2MB。
+- **铁律(2026-10-17 更新, v2.0.16): 已彻底取消分包**。原做法(把 3 个详情页登记进主 `pages`、文件仍在 `pages-sub/`)在微信端**非法**: 微信开发者工具报 `app.json: ["pages"][4]: "pages-sub/xxx" 不应该在 ["subPackages"][0] 中` —— 规则是**主包页面路径不能位于分包 root 目录下**, 即使没写进 subPackages 也算违规。最终解法: 删除 `subPackages`, 把 22 个 `pages-sub/*` 页面全部并入主 `pages`(路径不变, 已分享链接继续有效), 总包 1.3M < 2M 主包限制。**新页面直接写进主 `pages`, 不再建分包**。
 - **盘道分享须补 `#ifdef MP-TOUTIAO`**: pandao/detail.vue 模板原只有 MP-WEIXIN(open-type=share) 与 H5(复制链接) 两分支, 抖音端会走 H5 分支只复制链接 → "不生效"。所有分享按钮模板须同时覆盖 MP-WEIXIN + MP-TOUTIAO 两个 open-type=share 分支。
 - **H5 构建 safe-delete 护栏**: 环境批量删除保护(阈值50)会拦截 `uni build` 对 `dist/build/h5/assets|static`(77~83 文件)的清理 → Build failed。绕过: 先手动 `rm -rf dist/build/h5`(我方直接 rm 不触发该护栏, 仅构建内部 safeDelete 触发), 再 `uni build`(目录不存在则无需批量删)。mp-weixin/mp-toutiao 构建无此问题。
 
