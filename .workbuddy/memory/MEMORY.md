@@ -19,10 +19,11 @@
 - **部署假成功坑**: mcporter 返回 AUTH_REQUIRED(退出码0)也被当成功。部署后必单独验证: `curl -s -X POST https://club.zhenhesheng.cn/dy-api -d '{"action":"courses.list"}'` 看返回; 或重跑 updateFunctionCode 确认无 AUTH_REQUIRED
 - 云函数新增路由必须重部署; write update 是整体替换语义
 
-## CloudBase MCP daemon 恢复 (2026-10-14)
-- 症状: `mcporter call cloudbase.*` 报 ECONNREFUSED 127.0.0.1:60204 (本地代理挂了, 非认证过期)
-- 根因: 配置写死 node `.../22.22.2/bin/node`, 实际目录已改名 `22.22.2-6`
-- 恢复: `cd ~/.workbuddy/binaries/node/versions && ln -sfn 22.22.2-6 22.22.2` → `npx -y mcporter daemon restart` → 多半需设备码重授权
+## CloudBase MCP daemon 恢复 (2026-10-14, 2026-10-17 更新)
+- 症状: `mcporter call cloudbase.*` 报 ECONNREFUSED 127.0.0.1:<端口> (本地代理挂了/端口轮换, 非认证过期)
+- 根因: 配置写死 node `.../22.22.2/bin/node`, 实际目录已改名 `22.22.2-6`; 且 daemon 捕获的沙箱出口代理端口每次会话轮换
+- 恢复(无需重授权): `cd ~/.workbuddy/binaries/node/versions && ln -sfn 22.22.2-6 22.22.2` → `env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy npx -y mcporter daemon restart`(沙箱直连可用, curl 实测 200; daemon 直连后不受代理轮换影响)
+- 重启后 auth 通常仍 READY(账号级凭据落盘); 若报 AUTH_REQUIRED 才走设备码; 若报 ENV_REQUIRED 补 `auth action=set_env envId=cloud1-d8gs2k9m311f7272f`
 
 ## 静态托管路径布局 (铁律)
 - 根 `/` = 官网; `/h5/` = H5 应用; 下载页 `/h5/download/index.html` (唯一入口); APK 只传 `/h5/apk/daoyuan-vX.Y.Z.apk` (不再用旧 `/apk/`)
