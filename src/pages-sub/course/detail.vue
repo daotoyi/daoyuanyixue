@@ -594,37 +594,29 @@ function startLearn() {
   font-size: 20rpx;
   color: #55524c;
 }
-/* 分享图标: 纯 CSS "方框+上箭头", 与商品页同一套尺寸, 不溢出 40rpx 容器 */
+/* 分享图标: 纯 CSS "循环箭头"(类似刷新/转发图标), 与商品页同一套尺寸, 不溢出 40rpx 容器 */
 .share-icon {
   position: relative;
   width: 24rpx;
   height: 24rpx;
   border: 3rpx solid #55524c;
-  border-radius: 5rpx;
+  border-radius: 50%;
+  border-top-color: transparent;
+  transform: rotate(45deg);
   box-sizing: border-box;
-  margin-top: 8rpx;
-}
-.share-icon::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -9rpx;
-  width: 3rpx;
-  height: 8rpx;
-  background: #55524c;
-  transform: translateX(-50%);
+  margin-top: 4rpx;
 }
 .share-icon::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: -15rpx;
-  width: 10rpx;
-  height: 10rpx;
-  border-left: 3rpx solid #55524c;
-  border-top: 3rpx solid #55524c;
-  transform: translateX(-50%) rotate(45deg);
-  box-sizing: border-box;
+  top: -5rpx;
+  right: -2rpx;
+  width: 0;
+  height: 0;
+  border-left: 4rpx solid transparent;
+  border-right: 4rpx solid transparent;
+  border-bottom: 7rpx solid #55524c;
+  transform: rotate(135deg);
 }
 /* 立即购买: 实心按钮 + 与文字留出间距 */
 .btn-fill {
@@ -662,22 +654,18 @@ function startLearn() {
     height: 28px;
   }
   .share-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-width: 2px;
-    border-radius: 3px;
-    margin-top: 6px;
-  }
-  .share-icon::before {
-    width: 2px;
-    height: 6px;
-    top: -6px;
+    margin-top: 4px;
   }
   .share-icon::after {
-    width: 7px;
-    height: 7px;
-    border-width: 2px;
-    top: -10px;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-bottom: 5px solid #55524c;
+    top: -4px;
+    right: -1px;
+    transform: rotate(135deg);
   }
 }
 @media screen and (min-width: 1440px) {

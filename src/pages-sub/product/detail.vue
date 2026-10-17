@@ -345,28 +345,28 @@ function buyNow() {
   align-items: center;  justify-content: center;
 }
 .heart {
-  width: 34rpx;
-  height: 34rpx;
+  width: 24rpx;
+  height: 24rpx;
   background: #55524c;
   transform: rotate(45deg);
   position: relative;
-  border-radius: 5rpx;
+  border-radius: 4rpx;
 }
 .heart::before,
 .heart::after {
   content: '';
   position: absolute;
-  width: 34rpx;
-  height: 34rpx;
+  width: 24rpx;
+  height: 24rpx;
   background: inherit;
   border-radius: 50%;
 }
 .heart::before {
-  left: -17rpx;
+  left: -12rpx;
   top: 0;
 }
 .heart::after {
-  top: -17rpx;
+  top: -12rpx;
   left: 0;
 }
 .heart.on {
@@ -441,38 +441,29 @@ function buyNow() {
   align-items: center;
   justify-content: center;
 }
-/* 分享图标: 纯 CSS 画的"方框+上箭头", 尺寸与心形(.heart 34rpx)视觉重量相当,
-   且整体(含箭头)控制在 38rpx 内, 不溢出 40rpx 的 share-wrap */
+/* 分享图标: 纯 CSS 画的"循环箭头"(类似刷新/转发图标), 与收藏心形(.heart 24rpx)等大小 */
 .share-icon {
   position: relative;
   width: 24rpx;
   height: 24rpx;
   border: 3rpx solid #55524c;
-  border-radius: 5rpx;
+  border-radius: 50%;
+  border-top-color: transparent;
+  transform: rotate(45deg);
   box-sizing: border-box;
-  margin-top: 8rpx;
-}
-.share-icon::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -9rpx;
-  width: 3rpx;
-  height: 8rpx;
-  background: #55524c;
-  transform: translateX(-50%);
+  margin-top: 4rpx;
 }
 .share-icon::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: -15rpx;
-  width: 10rpx;
-  height: 10rpx;
-  border-left: 3rpx solid #55524c;
-  border-top: 3rpx solid #55524c;
-  transform: translateX(-50%) rotate(45deg);
-  box-sizing: border-box;
+  top: -5rpx;
+  right: -2rpx;
+  width: 0;
+  height: 0;
+  border-left: 4rpx solid transparent;
+  border-right: 4rpx solid transparent;
+  border-bottom: 7rpx solid #55524c;
+  transform: rotate(135deg);
 }
 .act-btns {
   flex: 1;
@@ -582,19 +573,20 @@ function buyNow() {
     height: 28px;
   }
   .heart {
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
   }
   .heart::before {
-    width: 24px;
-    height: 24px;
-    left: -12px;
+    width: 16px;
+    height: 16px;
+    left: -8px;
     top: 0;
   }
   .heart::after {
-    width: 24px;
-    height: 24px;
-    top: -12px;
+    width: 16px;
+    height: 16px;
+    top: -8px;
     left: 0;
   }
   /* 底部操作栏: 约束在居中容器内, 不横跨整个视口 */
@@ -620,28 +612,24 @@ function buyNow() {
   .collect-label {
     font-size: 13px;
   }
-  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 24px)视觉重量一致, 避免 rpx 在宽屏被撑大 */
+  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 16px)大小一致, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
     width: 32px;
     height: 28px;
   }
   .share-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-width: 2px;
-    border-radius: 3px;
-    margin-top: 6px;
-  }
-  .share-icon::before {
-    width: 2px;
-    height: 6px;
-    top: -6px;
+    margin-top: 4px;
   }
   .share-icon::after {
-    width: 7px;
-    height: 7px;
-    border-width: 2px;
-    top: -10px;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-bottom: 5px solid #55524c;
+    top: -4px;
+    right: -1px;
+    transform: rotate(135deg);
   }
   .act-btns {
     gap: 16px;
