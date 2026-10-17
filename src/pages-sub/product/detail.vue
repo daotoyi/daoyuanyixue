@@ -349,15 +349,15 @@ function buyNow() {
 
 /* 收藏图标: SVG 红色心形 (data-uri), 未选中用灰度滤镜变灰 */
 .heart-wrap {
-  width: 44rpx;
-  height: 40rpx;
+  width: 88rpx;
+  height: 80rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .heart {
-  width: 16rpx;
-  height: 16rpx;
+  width: 32rpx;
+  height: 32rpx;
   filter: grayscale(1);
   opacity: 0.5;
   transition: filter 0.2s, opacity 0.2s;
@@ -424,16 +424,16 @@ function buyNow() {
   border: none;
 }
 .share-wrap {
-  width: 44rpx;
-  height: 40rpx;
+  width: 88rpx;
+  height: 80rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-/* 分享图标: SVG 转发箭头 (data-uri), 与收藏心形(.heart 16rpx)等大小 */
+/* 分享图标: SVG 转发箭头 (data-uri), 与收藏心形(.heart 32rpx)等大小 */
 .share-icon {
-  width: 16rpx;
-  height: 16rpx;
+  width: 32rpx;
+  height: 32rpx;
 }
 .act-btns {
   flex: 1;
@@ -539,12 +539,12 @@ function buyNow() {
     margin-left: 16px;
   }
   .heart-wrap {
-    width: 32px;
-    height: 28px;
+    width: 64px;
+    height: 56px;
   }
   .heart {
-    width: 12px;
-    height: 12px;
+    width: 24px;
+    height: 24px;
   }
   /* 底部操作栏: 约束在居中容器内, 不横跨整个视口 */
   .action-bar {
@@ -569,14 +569,14 @@ function buyNow() {
   .collect-label {
     font-size: 13px;
   }
-  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 12px)大小一致, 避免 rpx 在宽屏被撑大 */
+  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 24px)大小一致, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
-    width: 32px;
-    height: 28px;
+    width: 64px;
+    height: 56px;
   }
   .share-icon {
-    width: 12px;
-    height: 12px;
+    width: 24px;
+    height: 24px;
   }
   .act-btns {
     gap: 16px;

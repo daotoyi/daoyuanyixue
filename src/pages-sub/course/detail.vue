@@ -589,8 +589,8 @@ function startLearn() {
   border: none;
 }
 .share-wrap {
-  width: 44rpx;
-  height: 40rpx;
+  width: 88rpx;
+  height: 80rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -601,8 +601,8 @@ function startLearn() {
 }
 /* 分享图标: SVG 转发箭头 (data-uri), 与商品页同一尺寸 */
 .share-icon {
-  width: 16rpx;
-  height: 16rpx;
+  width: 32rpx;
+  height: 32rpx;
 }
 /* 立即购买: 实心按钮 + 与文字留出间距 */
 .btn-fill {
@@ -636,12 +636,12 @@ function startLearn() {
   }
   /* 分享图标 PC 端用绝对 px 覆写, 与商品页同一尺寸, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
-    width: 32px;
-    height: 28px;
+    width: 64px;
+    height: 56px;
   }
   .share-icon {
-    width: 12px;
-    height: 12px;
+    width: 24px;
+    height: 24px;
   }
 }
 @media screen and (min-width: 1440px) {
