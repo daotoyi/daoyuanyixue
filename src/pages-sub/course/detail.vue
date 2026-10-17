@@ -610,19 +610,19 @@ function startLearn() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 150rpx;
+  width: 112rpx;
   flex-shrink: 0;
 }
 .heart-wrap {
-  width: 132rpx;
-  height: 120rpx;
+  width: 99rpx;
+  height: 90rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .heart {
-  width: 48rpx;
-  height: 48rpx;
+  width: 36rpx;
+  height: 36rpx;
   filter: grayscale(1);
   opacity: 0.5;
   transition: filter 0.2s, opacity 0.2s;
@@ -638,7 +638,7 @@ function startLearn() {
   100% { transform: scale(1); }
 }
 .collect-label {
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #55524c;
 }
 .collect-label.on {
@@ -646,7 +646,7 @@ function startLearn() {
 }
 /* 分享按钮: 与收藏按钮同规格(150rpx 宽, 132rpx×120rpx 图标位, 30rpx 文字) */
 .buy-share {
-  width: 150rpx;
+  width: 112rpx;
   padding: 0;
   margin: 0 auto 0 0;
   background: transparent;
@@ -662,20 +662,20 @@ function startLearn() {
   border: none;
 }
 .share-wrap {
-  width: 132rpx;
-  height: 120rpx;
+  width: 99rpx;
+  height: 90rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .share-label {
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #55524c;
 }
 /* 分享图标: SVG 转发箭头 (data-uri), 与收藏心形(.heart 48rpx)等大小 */
 .share-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 36rpx;
+  height: 36rpx;
 }
 /* 立即购买: 实心按钮 + 与文字留出间距 */
 .btn-fill {
@@ -709,30 +709,30 @@ function startLearn() {
   }
   /* 分享图标 PC 端用绝对 px 覆写, 与商品页同一尺寸, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
-    width: 96px;
-    height: 84px;
+    width: 72px;
+    height: 63px;
   }
   .share-icon {
-    width: 36px;
-    height: 36px;
+    width: 27px;
+    height: 27px;
   }
   /* 收藏/分享按钮 PC 端用绝对 px 覆写, 两者等宽, 保证视觉对称 */
   .act-collect {
-    width: 108px;
+    width: 81px;
   }
   .buy-share {
-    width: 108px;
+    width: 81px;
   }
   .heart-wrap {
-    width: 96px;
-    height: 84px;
+    width: 72px;
+    height: 63px;
   }
   .heart {
-    width: 36px;
-    height: 36px;
+    width: 27px;
+    height: 27px;
   }
   .collect-label {
-    font-size: 20px;
+    font-size: 15px;
   }
 }
 @media screen and (min-width: 1440px) {

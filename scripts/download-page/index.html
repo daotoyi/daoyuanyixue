@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>道元易学 · Android 下载</title>
+  <title>道元易学 · 下载</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -110,6 +110,30 @@
       color: #b22222;
       line-height: 1.8;
     }
+    /* iOS 提示区块 */
+    .ios-box {
+      margin-top: 20px;
+      padding: 16px 20px;
+      background: #f7f7fa;
+      border: 1px solid #e3e3e8;
+      border-radius: 14px;
+      text-align: left;
+    }
+    .ios-box .ios-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+    }
+    .ios-box .ios-text {
+      font-size: 13px;
+      color: #6b6b6b;
+      line-height: 1.7;
+    }
+    .ios-box .ios-text a {
+      color: #dc143c;
+      text-decoration: none;
+    }
     /* 微信内提示遮罩 */
     .wechat-tip {
       position: fixed;
@@ -146,7 +170,7 @@
     <div class="brand">真和盛</div>
     <div class="name">道元易学</div>
     <div class="sub">观天道 · 明人事 · 致中和</div>
-    <div class="version">Android v1.12.29</div>
+    <div class="version">Android v2.0.18</div>
 
     <div class="features">
       <div><span>◆</span>商城：开运饰品 · 香薰禅修 · 文房茶道</div>
@@ -154,10 +178,15 @@
       <div><span>◆</span>社区：易友动态 · 直播讲堂</div>
     </div>
 
-    <a class="btn" id="downloadBtn" href="https://club.zhenhesheng.cn/h5/apk/daoyuan-v1.12.29.apk">下载安卓 APP</a>
+    <a class="btn" id="downloadBtn" href="https://club.zhenhesheng.cn/h5/apk/daoyuan-v2.0.18.apk">下载安卓 APP</a>
     <div class="tip">
       若按钮无法点击，请直接点击下方备用链接<br />
-      <a href="https://club.zhenhesheng.cn/h5/apk/daoyuan-v1.12.29.apk" style="color:#dc143c">直接下载 APK</a>
+      <a href="https://club.zhenhesheng.cn/h5/apk/daoyuan-v2.0.18.apk" style="color:#dc143c">直接下载 APK</a>
+    </div>
+
+    <div class="ios-box">
+      <div class="ios-title">🍎 iOS 版本</div>
+      <div class="ios-text">iOS 版本即将上线，敬请期待。<br />您也可以直接使用 <a href="https://club.zhenhesheng.cn/h5/">道元易学 H5</a> 或微信小程序，体验全部功能。</div>
     </div>
   </div>
 
@@ -172,7 +201,6 @@
 
   <script>
     // 检测微信环境：扫码进入则显示提示
-    var ua = navigator.userAgent.toLowerCase();
     var isInWechat = /micromessenger/i.test(navigator.userAgent);
     if (isInWechat) {
       document.getElementById('wechatTip').classList.add('show');

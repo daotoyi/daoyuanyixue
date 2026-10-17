@@ -414,15 +414,15 @@ function buyNow() {
 
 /* 收藏图标: SVG 红色心形 (data-uri), 未选中用灰度滤镜变灰 */
 .heart-wrap {
-  width: 132rpx;
-  height: 120rpx;
+  width: 99rpx;
+  height: 90rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .heart {
-  width: 48rpx;
-  height: 48rpx;
+  width: 36rpx;
+  height: 36rpx;
   filter: grayscale(1);
   opacity: 0.5;
   transition: filter 0.2s, opacity 0.2s;
@@ -460,7 +460,7 @@ function buyNow() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 150rpx;
+  width: 112rpx;
 }
 .collect-icon {
   font-size: 40rpx;
@@ -470,7 +470,7 @@ function buyNow() {
   color: #9c1630;
 }
 .collect-label {
-  font-size: 30rpx;
+  font-size: 22rpx;
   color: #55524c;
 }
 /* 分享按钮: 与收藏按钮(.act-collect)宽度/结构/字号完全一致, 保证视觉统一 */
@@ -478,7 +478,7 @@ function buyNow() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 150rpx;
+  width: 112rpx;
   padding: 0;
   margin: 0;
   background: transparent;
@@ -489,16 +489,16 @@ function buyNow() {
   border: none;
 }
 .share-wrap {
-  width: 132rpx;
-  height: 120rpx;
+  width: 99rpx;
+  height: 90rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 /* 分享图标: SVG 转发箭头 (data-uri), 与收藏心形(.heart 48rpx)等大小 */
 .share-icon {
-  width: 48rpx;
-  height: 48rpx;
+  width: 36rpx;
+  height: 36rpx;
 }
 .act-btns {
   flex: 1;
@@ -637,12 +637,12 @@ function buyNow() {
     margin-left: 16px;
   }
   .heart-wrap {
-    width: 96px;
-    height: 84px;
+    width: 72px;
+    height: 63px;
   }
   .heart {
-    width: 36px;
-    height: 36px;
+    width: 27px;
+    height: 27px;
   }
   /* 底部操作栏: 约束在居中容器内, 不横跨整个视口 */
   .action-bar {
@@ -655,26 +655,26 @@ function buyNow() {
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
   }
   .act-collect {
-    width: 108px;
+    width: 81px;
   }
   /* 分享按钮与收藏按钮 PC 端同样保持等宽 */
   .act-share {
-    width: 108px;
+    width: 81px;
   }
   .collect-icon {
     font-size: 28px;
   }
   .collect-label {
-    font-size: 20px;
+    font-size: 15px;
   }
   /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 36px)大小一致, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
-    width: 96px;
-    height: 84px;
+    width: 72px;
+    height: 63px;
   }
   .share-icon {
-    width: 36px;
-    height: 36px;
+    width: 27px;
+    height: 27px;
   }
   .act-btns {
     gap: 16px;
