@@ -43,7 +43,7 @@
     <view class="action-bar">
       <view class="act-collect" @tap="toggleCollect">
         <view class="heart-wrap" :class="{ on: collected }">
-          <view class="heart" :class="{ on: collected }"></view>
+          <image class="heart" :class="{ on: collected }" :src="LIKE_SVG" mode="aspectFit"></image>
         </view>
         <text class="collect-label" :class="{ on: collected }">收藏</text>
       </view>
@@ -96,10 +96,15 @@ import { addToCart } from '../utils/cart'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
 
-// 分享图标 (SVG 转发箭头) —— 微信/抖音小程序 CSS 不支持 SVG 背景图, 故用 data-uri 内联到 <image>
+// 分享图标 (SVG 紫色转发箭头) —— 微信/抖音小程序 CSS 不支持 SVG 背景图, 故用 data-uri 内联到 <image>
 const SHARE_SVG =
   'data:image/svg+xml;base64,' +
-  'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yNiA0TDQ0IDIyTDI2IDM5VjI4QzEyIDI4IDYgNDMgNiA0M0M2IDI2IDExIDE1IDI2IDE1VjRaIiBmaWxsPSJub25lIiBzdHJva2U9IiM1NTUyNGMiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+'
+  'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yNiA0TDQ0IDIyTDI2IDM5VjI4QzEyIDI4IDYgNDMgNiA0M0M2IDI2IDExIDE1IDI2IDE1VjRaIiBmaWxsPSIjOTAxYmIxIiBzdHJva2U9IiM5MDFiYjEiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+'
+
+// 收藏图标 (SVG 红色心形)
+const LIKE_SVG =
+  'data:image/svg+xml;base64,' +
+  'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0xNSA4QzguOTI0ODcgOCA0IDEyLjkyNDkgNCAxOUM0IDMwIDE3IDQwIDI0IDQyLjMyNjJDMzEgNDAgNDQgMzAgNDQgMTlDNDQgMTIuOTI0OSAzOS4wNzUxIDggMzMgOEMyOS4yNzk3IDggMjUuOTkwNyA5Ljg0NjkgMjQgMTIuNjczOEMyMi4wMDkzIDkuODQ2OSAxOC43MjAzIDggMTUgOFoiIGZpbGw9IiNkMDAyMWIiIHN0cm9rZT0iI2QwMDIxYiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4='
 
 const userStore = useUserStore()
 const product = ref(null)
@@ -342,51 +347,30 @@ function buyNow() {
   color: #8a857c;
 }
 
-/* 饱满红心 (CSS 绘制) */
+/* 收藏图标: SVG 红色心形 (data-uri), 未选中用灰度滤镜变灰 */
 .heart-wrap {
   width: 44rpx;
   height: 40rpx;
   display: flex;
-  align-items: center;  justify-content: center;
+  align-items: center;
+  justify-content: center;
 }
 .heart {
   width: 16rpx;
   height: 16rpx;
-  background: #55524c;
-  transform: rotate(45deg);
-  position: relative;
-  border-radius: 3rpx;
-}
-.heart::before,
-.heart::after {
-  content: '';
-  position: absolute;
-  width: 16rpx;
-  height: 16rpx;
-  background: inherit;
-  border-radius: 50%;
-}
-.heart::before {
-  left: -8rpx;
-  top: 0;
-}
-.heart::after {
-  top: -8rpx;
-  left: 0;
+  filter: grayscale(1);
+  opacity: 0.5;
+  transition: filter 0.2s, opacity 0.2s;
 }
 .heart.on {
-  background: linear-gradient(135deg, #e84545, #b02a2a);
+  filter: none;
+  opacity: 1;
   animation: heartbeat 0.4s ease;
 }
-.heart.on::before,
-.heart.on::after {
-  background: inherit;
-  background: linear-gradient(135deg, #e84545, #b02a2a);
-}
 @keyframes heartbeat {
-  0% { transform: rotate(45deg) scale(0.8); }
-  60% { transform: rotate(45deg) scale(1.15); }
-  100% { transform: rotate(45deg) scale(1); }
+  0% { transform: scale(0.8); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 .collect-label.on {
   color: #9c1630;
@@ -561,19 +545,6 @@ function buyNow() {
   .heart {
     width: 12px;
     height: 12px;
-    border-radius: 2px;
-  }
-  .heart::before {
-    width: 12px;
-    height: 12px;
-    left: -6px;
-    top: 0;
-  }
-  .heart::after {
-    width: 12px;
-    height: 12px;
-    top: -6px;
-    left: 0;
   }
   /* 底部操作栏: 约束在居中容器内, 不横跨整个视口 */
   .action-bar {
