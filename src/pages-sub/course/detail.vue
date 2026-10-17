@@ -605,24 +605,24 @@ function startLearn() {
   text-decoration: line-through;
   margin-left: 12rpx;
 }
-/* 收藏按钮: 与分享按钮同规格(100rpx 宽, 88rpx×80rpx 图标位, 20rpx 文字) */
+/* 收藏按钮: 与分享按钮同规格(150rpx 宽, 132rpx×120rpx 图标位, 30rpx 文字) */
 .act-collect {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100rpx;
+  width: 150rpx;
   flex-shrink: 0;
 }
 .heart-wrap {
-  width: 88rpx;
-  height: 80rpx;
+  width: 132rpx;
+  height: 120rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .heart {
-  width: 32rpx;
-  height: 32rpx;
+  width: 48rpx;
+  height: 48rpx;
   filter: grayscale(1);
   opacity: 0.5;
   transition: filter 0.2s, opacity 0.2s;
@@ -638,16 +638,15 @@ function startLearn() {
   100% { transform: scale(1); }
 }
 .collect-label {
-  font-size: 20rpx;
+  font-size: 30rpx;
   color: #55524c;
 }
 .collect-label.on {
   color: #9c1630;
 }
-/* 分享按钮: 与商品详情页的收藏/分享按钮保持同一规格(100rpx 宽, 44rpx×40rpx 图标位,
-   20rpx 文字), 保证两个页面观感一致 */
+/* 分享按钮: 与收藏按钮同规格(150rpx 宽, 132rpx×120rpx 图标位, 30rpx 文字) */
 .buy-share {
-  width: 100rpx;
+  width: 150rpx;
   padding: 0;
   margin: 0 auto 0 0;
   background: transparent;
@@ -663,20 +662,20 @@ function startLearn() {
   border: none;
 }
 .share-wrap {
-  width: 88rpx;
-  height: 80rpx;
+  width: 132rpx;
+  height: 120rpx;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .share-label {
-  font-size: 20rpx;
+  font-size: 30rpx;
   color: #55524c;
 }
-/* 分享图标: SVG 转发箭头 (data-uri), 与商品页同一尺寸 */
+/* 分享图标: SVG 转发箭头 (data-uri), 与收藏心形(.heart 48rpx)等大小 */
 .share-icon {
-  width: 32rpx;
-  height: 32rpx;
+  width: 48rpx;
+  height: 48rpx;
 }
 /* 立即购买: 实心按钮 + 与文字留出间距 */
 .btn-fill {
@@ -710,27 +709,30 @@ function startLearn() {
   }
   /* 分享图标 PC 端用绝对 px 覆写, 与商品页同一尺寸, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
-    width: 64px;
-    height: 56px;
+    width: 96px;
+    height: 84px;
   }
   .share-icon {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
   }
-  /* 收藏按钮 PC 端用绝对 px 覆写, 与分享按钮等宽等高 */
+  /* 收藏/分享按钮 PC 端用绝对 px 覆写, 两者等宽, 保证视觉对称 */
   .act-collect {
-    width: 72px;
+    width: 108px;
+  }
+  .buy-share {
+    width: 108px;
   }
   .heart-wrap {
-    width: 64px;
-    height: 56px;
+    width: 96px;
+    height: 84px;
   }
   .heart {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
   }
   .collect-label {
-    font-size: 13px;
+    font-size: 20px;
   }
 }
 @media screen and (min-width: 1440px) {
