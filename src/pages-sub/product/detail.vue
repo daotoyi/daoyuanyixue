@@ -51,7 +51,7 @@
       <!-- #ifdef MP-WEIXIN -->
       <button class="act-share" open-type="share">
         <view class="share-wrap">
-          <view class="share-icon"></view>
+          <image class="share-icon" :src="SHARE_SVG" mode="aspectFit"></image>
         </view>
         <text class="collect-label">分享</text>
       </button>
@@ -61,7 +61,7 @@
            但抖音默认"分享小程序首页", 页面级 path 需在 onShareAppMessage 里返回 -->
       <button class="act-share" open-type="share">
         <view class="share-wrap">
-          <view class="share-icon"></view>
+          <image class="share-icon" :src="SHARE_SVG" mode="aspectFit"></image>
         </view>
         <text class="collect-label">分享</text>
       </button>
@@ -70,7 +70,7 @@
       <!-- #ifndef MP-TOUTIAO -->
       <view class="act-collect" @tap="sharePage">
         <view class="share-wrap">
-          <view class="share-icon"></view>
+          <image class="share-icon" :src="SHARE_SVG" mode="aspectFit"></image>
         </view>
         <text class="collect-label">分享</text>
       </view>
@@ -95,6 +95,11 @@ import { getProduct, toggleFavoriteProduct, addFootprint } from '../../api/api'
 import { addToCart } from '../utils/cart'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
+
+// 分享图标 (SVG 转发箭头) —— 微信/抖音小程序 CSS 不支持 SVG 背景图, 故用 data-uri 内联到 <image>
+const SHARE_SVG =
+  'data:image/svg+xml;base64,' +
+  'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yNiA0TDQ0IDIyTDI2IDM5VjI4QzEyIDI4IDYgNDMgNiA0M0M2IDI2IDExIDE1IDI2IDE1VjRaIiBmaWxsPSJub25lIiBzdHJva2U9IiM1NTUyNGMiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+'
 
 const userStore = useUserStore()
 const product = ref(null)
@@ -345,28 +350,28 @@ function buyNow() {
   align-items: center;  justify-content: center;
 }
 .heart {
-  width: 24rpx;
-  height: 24rpx;
+  width: 16rpx;
+  height: 16rpx;
   background: #55524c;
   transform: rotate(45deg);
   position: relative;
-  border-radius: 4rpx;
+  border-radius: 3rpx;
 }
 .heart::before,
 .heart::after {
   content: '';
   position: absolute;
-  width: 24rpx;
-  height: 24rpx;
+  width: 16rpx;
+  height: 16rpx;
   background: inherit;
   border-radius: 50%;
 }
 .heart::before {
-  left: -12rpx;
+  left: -8rpx;
   top: 0;
 }
 .heart::after {
-  top: -12rpx;
+  top: -8rpx;
   left: 0;
 }
 .heart.on {
@@ -441,29 +446,10 @@ function buyNow() {
   align-items: center;
   justify-content: center;
 }
-/* 分享图标: 纯 CSS 画的"循环箭头"(类似刷新/转发图标), 与收藏心形(.heart 24rpx)等大小 */
+/* 分享图标: SVG 转发箭头 (data-uri), 与收藏心形(.heart 16rpx)等大小 */
 .share-icon {
-  position: relative;
-  width: 24rpx;
-  height: 24rpx;
-  border: 3rpx solid #55524c;
-  border-radius: 50%;
-  border-top-color: transparent;
-  transform: rotate(45deg);
-  box-sizing: border-box;
-  margin-top: 4rpx;
-}
-.share-icon::after {
-  content: '';
-  position: absolute;
-  top: -5rpx;
-  right: -2rpx;
-  width: 0;
-  height: 0;
-  border-left: 4rpx solid transparent;
-  border-right: 4rpx solid transparent;
-  border-bottom: 7rpx solid #55524c;
-  transform: rotate(135deg);
+  width: 16rpx;
+  height: 16rpx;
 }
 .act-btns {
   flex: 1;
@@ -573,20 +559,20 @@ function buyNow() {
     height: 28px;
   }
   .heart {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
   }
   .heart::before {
-    width: 16px;
-    height: 16px;
-    left: -8px;
+    width: 12px;
+    height: 12px;
+    left: -6px;
     top: 0;
   }
   .heart::after {
-    width: 16px;
-    height: 16px;
-    top: -8px;
+    width: 12px;
+    height: 12px;
+    top: -6px;
     left: 0;
   }
   /* 底部操作栏: 约束在居中容器内, 不横跨整个视口 */
@@ -612,24 +598,14 @@ function buyNow() {
   .collect-label {
     font-size: 13px;
   }
-  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 16px)大小一致, 避免 rpx 在宽屏被撑大 */
+  /* 分享图标 PC 端用绝对 px 覆写, 与收藏心形(.heart 12px)大小一致, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
     width: 32px;
     height: 28px;
   }
   .share-icon {
-    width: 16px;
-    height: 16px;
-    border-width: 2px;
-    margin-top: 4px;
-  }
-  .share-icon::after {
-    border-left: 3px solid transparent;
-    border-right: 3px solid transparent;
-    border-bottom: 5px solid #55524c;
-    top: -4px;
-    right: -1px;
-    transform: rotate(135deg);
+    width: 12px;
+    height: 12px;
   }
   .act-btns {
     gap: 16px;

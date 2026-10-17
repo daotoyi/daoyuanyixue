@@ -86,7 +86,7 @@
       <!-- 分享: 仿盘道详情页模式 —— 微信/抖音用原生 share 按钮, H5/App 复制链接 -->
       <!-- #ifdef MP-WEIXIN -->
       <button class="buy-share" open-type="share">
-        <view class="share-wrap"><view class="share-icon"></view></view>
+        <view class="share-wrap"><image class="share-icon" :src="SHARE_SVG" mode="aspectFit"></image></view>
         <text class="share-label">分享</text>
       </button>
       <!-- #endif -->
@@ -94,14 +94,14 @@
       <!-- 抖音 button 同样支持 open-type=share; 但抖音默认分享小程序首页,
            页面级 path 必须在 onShareAppMessage 里返回才生效 -->
       <button class="buy-share" open-type="share">
-        <view class="share-wrap"><view class="share-icon"></view></view>
+        <view class="share-wrap"><image class="share-icon" :src="SHARE_SVG" mode="aspectFit"></image></view>
         <text class="share-label">分享</text>
       </button>
       <!-- #endif -->
       <!-- #ifndef MP-WEIXIN -->
       <!-- #ifndef MP-TOUTIAO -->
       <view class="buy-share" @tap="sharePage">
-        <view class="share-wrap"><view class="share-icon"></view></view>
+        <view class="share-wrap"><image class="share-icon" :src="SHARE_SVG" mode="aspectFit"></image></view>
         <text class="share-label">分享</text>
       </view>
       <!-- #endif -->
@@ -162,6 +162,11 @@ import { useUserStore } from '../../store/index'
 import { ensurePurchased, isPurchasedSync } from '../../store/purchased'
 import { isFreePrice, fmtPrice } from '../../utils/price'
 import { getCourseCache, setCourseCache } from '../../utils/courseCache'
+
+// 分享图标 (SVG 转发箭头) —— 微信/抖音小程序 CSS 不支持 SVG 背景图, 故用 data-uri 内联到 <image>
+const SHARE_SVG =
+  'data:image/svg+xml;base64,' +
+  'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yNiA0TDQ0IDIyTDI2IDM5VjI4QzEyIDI4IDYgNDMgNiA0M0M2IDI2IDExIDE1IDI2IDE1VjRaIiBmaWxsPSJub25lIiBzdHJva2U9IiM1NTUyNGMiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+'
 
 const userStore = useUserStore()
 const course = ref(null)
@@ -594,29 +599,10 @@ function startLearn() {
   font-size: 20rpx;
   color: #55524c;
 }
-/* 分享图标: 纯 CSS "循环箭头"(类似刷新/转发图标), 与商品页同一套尺寸, 不溢出 40rpx 容器 */
+/* 分享图标: SVG 转发箭头 (data-uri), 与商品页同一尺寸 */
 .share-icon {
-  position: relative;
-  width: 24rpx;
-  height: 24rpx;
-  border: 3rpx solid #55524c;
-  border-radius: 50%;
-  border-top-color: transparent;
-  transform: rotate(45deg);
-  box-sizing: border-box;
-  margin-top: 4rpx;
-}
-.share-icon::after {
-  content: '';
-  position: absolute;
-  top: -5rpx;
-  right: -2rpx;
-  width: 0;
-  height: 0;
-  border-left: 4rpx solid transparent;
-  border-right: 4rpx solid transparent;
-  border-bottom: 7rpx solid #55524c;
-  transform: rotate(135deg);
+  width: 16rpx;
+  height: 16rpx;
 }
 /* 立即购买: 实心按钮 + 与文字留出间距 */
 .btn-fill {
@@ -648,24 +634,14 @@ function startLearn() {
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
   }
-  /* 分享图标 PC 端用绝对 px 覆写, 与商品页同一套尺寸, 避免 rpx 在宽屏被撑大 */
+  /* 分享图标 PC 端用绝对 px 覆写, 与商品页同一尺寸, 避免 rpx 在宽屏被撑大 */
   .share-wrap {
     width: 32px;
     height: 28px;
   }
   .share-icon {
-    width: 16px;
-    height: 16px;
-    border-width: 2px;
-    margin-top: 4px;
-  }
-  .share-icon::after {
-    border-left: 3px solid transparent;
-    border-right: 3px solid transparent;
-    border-bottom: 5px solid #55524c;
-    top: -4px;
-    right: -1px;
-    transform: rotate(135deg);
+    width: 12px;
+    height: 12px;
   }
 }
 @media screen and (min-width: 1440px) {
