@@ -1,13 +1,36 @@
 <template>
   <view class="detail-page">
-    <!-- 图片轮播 -->
+    <!-- 图片轮播: 移动端 aspectFit 完整显示(不裁切上下) + 按首图比例自适应高度; PC 端左大图 + 右侧竖排缩略图 -->
     <view class="swiper-wrap" v-if="product">
-      <swiper class="swiper" indicator-dots :indicator-active-color="'#c41e3a'" indicator-color="rgba(255,255,255,0.5)" circular>
-        <swiper-item v-for="(img, i) in product.images" :key="i">
-          <image class="swiper-img" :src="img" mode="aspectFill" @tap="preview(i)"></image>
-        </swiper-item>
-      </swiper>
-      <view class="img-count">{{ current }} / {{ product.images.length }}</view>
+      <view class="swiper-box">
+        <swiper
+          class="swiper"
+          :style="swiperStyle"
+          indicator-dots
+          :current="current"
+          :indicator-active-color="'#c41e3a'"
+          indicator-color="rgba(255,255,255,0.5)"
+          circular
+          @change="onSwiperChange"
+        >
+          <swiper-item v-for="(img, i) in product.images" :key="i">
+            <image class="swiper-img" :src="img" mode="aspectFit" @load="onImgLoad" @tap="preview(i)"></image>
+          </swiper-item>
+        </swiper>
+        <view class="img-count">{{ current + 1 }} / {{ product.images.length }}</view>
+      </view>
+      <!-- PC 端竖排缩略图 (移动端由 CSS 隐藏), 点击切换大图 -->
+      <view class="thumbs" v-if="product.images && product.images.length > 1">
+        <view
+          class="thumb"
+          v-for="(img, i) in product.images"
+          :key="'t' + i"
+          :class="{ on: current === i }"
+          @tap="goImage(i)"
+        >
+          <image class="thumb-img" :src="img" mode="aspectFill"></image>
+        </view>
+      </view>
     </view>
 
     <view class="info-card" v-if="product">
@@ -108,7 +131,9 @@ const LIKE_SVG =
 
 const userStore = useUserStore()
 const product = ref(null)
-const current = ref(1)
+const current = ref(0)
+const swiperStyle = ref('')
+let ratioMeasured = false
 const collected = ref(false)
 const qty = ref(1)
 
@@ -161,6 +186,34 @@ function preview(i) {
   uni.previewImage({ urls: product.value.images, current: i })
 }
 
+/* ==================== 轮播图: 计数 / 缩略图切换 / 移动端自适应高度 ==================== */
+function onSwiperChange(e) {
+  current.value = (e && e.detail && e.detail.current) || 0
+}
+
+function goImage(i) {
+  current.value = i
+}
+
+// 移动端按首图宽高比算轮播高度, 配合 aspectFit 让图片完整显示(不裁切上下);
+// PC 端不写内联高度, 由 media query 固定 480px, 避免内联样式压过 media query
+function onImgLoad(e) {
+  if (ratioMeasured) return
+  const d = (e && e.detail) || {}
+  const w = Number(d.width) || 0
+  const h = Number(d.height) || 0
+  if (!w || !h) return
+  ratioMeasured = true
+  const sys = uni.getSystemInfoSync()
+  const winW = sys.windowWidth || 375
+  if (winW >= 1025) return
+  const boxH = Math.min(
+    Math.max(winW * (h / w), winW * 0.72),
+    (sys.windowHeight || 667) * 0.62
+  )
+  swiperStyle.value = 'height:' + Math.round(boxH) + 'px'
+}
+
 async function toggleCollect() {
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' })
@@ -211,14 +264,26 @@ function buyNow() {
 
 .swiper-wrap {
   position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+.swiper-box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
 .swiper {
   width: 100%;
   height: 600rpx;
+  background: #f3efe8;
 }
 .swiper-img {
   width: 100%;
   height: 100%;
+}
+/* PC 竖排缩略图: 默认隐藏, 仅在宽屏 media query 内显示 */
+.thumbs {
+  display: none;
 }
 .img-count {
   position: absolute;
@@ -232,7 +297,7 @@ function buyNow() {
 }
 
 .info-card {
-  margin: -24rpx 24rpx 0;
+  margin: 16rpx 24rpx 0;
   background: #fffafa;
   border-radius: 20rpx;
   border: 1rpx solid #e8e2da;
@@ -470,8 +535,41 @@ function buyNow() {
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
   }
+  .swiper-wrap {
+    gap: 14px;
+  }
   .swiper {
     height: 480px;
+  }
+  /* PC 端竖排缩略图: 宽屏页面较宽, 大图左 + 缩略图右, 点击切换 */
+  .thumbs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 92px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding: 0 4px 0 0;
+  }
+  .thumb {
+    flex: 0 0 auto;
+    width: 88px;
+    height: 88px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+    cursor: pointer;
+    background: #f3efe8;
+    transition: border-color 0.2s;
+  }
+  .thumb.on {
+    border-color: #c41e3a;
+  }
+  .thumb-img {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
   .img-count {
     right: 18px;
@@ -480,7 +578,7 @@ function buyNow() {
     padding: 4px 12px;
   }
   .info-card {
-    margin: -20px 24px 0;
+    margin: 18px 24px 0;
     padding: 28px;
   }
   .price {
