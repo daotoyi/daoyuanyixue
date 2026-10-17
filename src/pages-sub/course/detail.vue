@@ -83,6 +83,13 @@
 
     <!-- 底部购买 -->
     <view class="buy-bar">
+      <!-- 收藏: 复用商品详情页模式 (红色心形 SVG, 未选中灰度) -->
+      <view class="act-collect" @tap="toggleCollect">
+        <view class="heart-wrap" :class="{ on: collected }">
+          <image class="heart" :class="{ on: collected }" :src="LIKE_SVG" mode="aspectFit"></image>
+        </view>
+        <text class="collect-label" :class="{ on: collected }">收藏</text>
+      </view>
       <!-- 分享: 仿盘道详情页模式 —— 微信/抖音用原生 share 按钮, H5/App 复制链接 -->
       <!-- #ifdef MP-WEIXIN -->
       <button class="buy-share" open-type="share">
@@ -157,7 +164,7 @@ const lvCls = (v) => LV_CLS[v] || v
 
 import { ref, computed } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
-import { getCourse, teacherInfo, updateCourseProgress } from '../../api/api'
+import { getCourse, teacherInfo, updateCourseProgress, favoriteCourse } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { ensurePurchased, isPurchasedSync } from '../../store/purchased'
 import { isFreePrice, fmtPrice } from '../../utils/price'
@@ -168,8 +175,14 @@ const SHARE_SVG =
   'data:image/svg+xml;base64,' +
   'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0yNiA0TDQ0IDIyTDI2IDM5VjI4QzEyIDI4IDYgNDMgNiA0M0M2IDI2IDExIDE1IDI2IDE1VjRaIiBmaWxsPSIjOTAxYmIxIiBzdHJva2U9IiM5MDFiYjEiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+'
 
+// 收藏图标 (SVG 红色心形) —— 与商品详情页同一图标
+const LIKE_SVG =
+  'data:image/svg+xml;base64,' +
+  'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48c3ZnIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDQ4IDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0xNSA4QzguOTI0ODcgOCA0IDEyLjkyNDkgNCAxOUM0IDMwIDE3IDQwIDI0IDQyLjMyNjJDMzEgNDAgNDQgMzAgNDQgMTlDNDQgMTIuOTI0OSAzOS4wNzUxIDggMzMgOEMyOS4yNzk3IDggMjUuOTkwNyA5Ljg0NjkgMjQgMTIuNjczOEMyMi4wMDkzIDkuODQ2OSAxOC43MjAzIDggMTUgOFoiIGZpbGw9IiNkMDAyMWIiIHN0cm9rZT0iI2QwMDIxYiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4='
+
 const userStore = useUserStore()
 const course = ref(null)
+const collected = ref(false)
 /* 完整详情(含课时大纲/介绍)是否已就绪:
    从列表页进入时先用缓存渲染封面等基础信息(秒开), 大纲/介绍此时仍显示骨架,
    避免"先出占位课时再变成真实课时"的闪烁 (2026-09-03 渐进式加载) */
@@ -291,6 +304,28 @@ function sharePage() {
     data: link,
     success: () => uni.showToast({ title: '链接已复制，可发给好友', icon: 'none' }),
   })
+}
+
+/* ==================== 收藏课程 ==================== */
+async function toggleCollect() {
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    setTimeout(() => uni.navigateTo({ url: '/pages-sub/login/login' }), 600)
+    return
+  }
+  if (!course.value) return
+  try {
+    const next = !collected.value
+    await favoriteCourse({
+      uid: userStore.userInfo.uid,
+      course_id: course.value.id,
+      favorited: next,
+    })
+    collected.value = next
+    uni.showToast({ title: next ? '已收藏' : '已取消收藏', icon: 'none' })
+  } catch (e) {
+    uni.showToast({ title: e.message || '操作失败', icon: 'none' })
+  }
 }
 
 async function buyCourse() {
@@ -570,6 +605,45 @@ function startLearn() {
   text-decoration: line-through;
   margin-left: 12rpx;
 }
+/* 收藏按钮: 与分享按钮同规格(100rpx 宽, 88rpx×80rpx 图标位, 20rpx 文字) */
+.act-collect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100rpx;
+  flex-shrink: 0;
+}
+.heart-wrap {
+  width: 88rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.heart {
+  width: 32rpx;
+  height: 32rpx;
+  filter: grayscale(1);
+  opacity: 0.5;
+  transition: filter 0.2s, opacity 0.2s;
+}
+.heart.on {
+  filter: none;
+  opacity: 1;
+  animation: heartbeat 0.4s ease;
+}
+@keyframes heartbeat {
+  0% { transform: scale(0.8); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.collect-label {
+  font-size: 20rpx;
+  color: #55524c;
+}
+.collect-label.on {
+  color: #9c1630;
+}
 /* 分享按钮: 与商品详情页的收藏/分享按钮保持同一规格(100rpx 宽, 44rpx×40rpx 图标位,
    20rpx 文字), 保证两个页面观感一致 */
 .buy-share {
@@ -642,6 +716,21 @@ function startLearn() {
   .share-icon {
     width: 24px;
     height: 24px;
+  }
+  /* 收藏按钮 PC 端用绝对 px 覆写, 与分享按钮等宽等高 */
+  .act-collect {
+    width: 72px;
+  }
+  .heart-wrap {
+    width: 64px;
+    height: 56px;
+  }
+  .heart {
+    width: 24px;
+    height: 24px;
+  }
+  .collect-label {
+    font-size: 13px;
   }
 }
 @media screen and (min-width: 1440px) {
