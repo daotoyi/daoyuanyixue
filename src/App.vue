@@ -74,6 +74,18 @@ onLaunch(async () => {
       console.warn('[Capacitor] backButton listener failed', e)
     }
   }
+  // H5 文档标题强制与官网一致 (覆盖 uni 按页面 navigationBarTitleText 注入的标题)
+  try {
+    const _DY_TITLE = '真和盛 | 道家文化传承'
+    document.title = _DY_TITLE
+    const _titleEl = document.querySelector('title')
+    if (_titleEl && typeof MutationObserver !== 'undefined') {
+      const _mo = new MutationObserver(() => {
+        if (document.title !== _DY_TITLE) document.title = _DY_TITLE
+      })
+      _mo.observe(_titleEl, { childList: true, characterData: true, subtree: true })
+    }
+  } catch (e) { /* 忽略 */ }
   // #endif
 })
 
