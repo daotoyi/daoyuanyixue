@@ -29,7 +29,7 @@
     <scroll-view scroll-y class="mc-scroll">
       <view class="course-list" v-if="myCourses.length">
         <view class="mc-card" v-for="c in myCourses" :key="c.id" @tap="goDetail(c.id)">
-          <image class="mc-cover" :src="c.cover" mode="aspectFill"></image>
+          <image lazy-load class="mc-cover" :src="c.cover" mode="aspectFill"></image>
           <view class="mc-body">
             <view class="mc-title-row">
               <text class="mc-title ellipsis-2">{{ c.title }}</text>

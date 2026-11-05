@@ -49,7 +49,7 @@
       </view>
       <view class="pd-bookers-list">
         <view class="pd-booker" v-for="p in visibleCombined" :key="'u' + p.uid" @tap="openUserProfile(p)">
-          <image class="pd-booker-avatar" v-if="p._avatarUrl" :src="p._avatarUrl" mode="aspectFill"></image>
+          <image lazy-load class="pd-booker-avatar" v-if="p._avatarUrl" :src="p._avatarUrl" mode="aspectFill"></image>
           <view class="pd-booker-fb" v-else><text>{{ p._name ? p._name[0] : '?' }}</text></view>
         </view>
         <view

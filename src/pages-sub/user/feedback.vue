@@ -9,7 +9,7 @@
       <text class="fb-label">图片（选填，最多 3 张）</text>
       <view class="fb-imgs">
         <view class="fb-img-item" v-for="(img, i) in images" :key="i">
-          <image class="fb-img" :src="img.url" mode="aspectFill" @tap="previewImage(i)"></image>
+          <image lazy-load class="fb-img" :src="img.url" mode="aspectFill" @tap="previewImage(i)"></image>
           <view class="fb-img-del" @tap="removeImage(i)"><text>✕</text></view>
         </view>
         <view class="fb-img-add" v-if="images.length < 3" @tap="chooseImage">

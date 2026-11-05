@@ -53,7 +53,7 @@
             :key="i"
             @tap="previewMomentImages(m, i)"
           >
-            <image class="plm-img" :src="img" mode="aspectFill"></image>
+            <image lazy-load class="plm-img" :src="img" mode="aspectFill"></image>
           </view>
         </view>
         <view class="plm-actions">
@@ -97,7 +97,7 @@
     <view class="profile-list" v-if="listMode === 'follow' || listMode === 'fans'">
       <view class="pl-user" v-for="u in userList" :key="u.uid" @tap="goProfile(u)">
         <view class="plu-avatar">
-          <image v-if="u.avatar" class="plu-avatar-img" :src="u.avatar" mode="aspectFill"></image>
+          <image lazy-load v-if="u.avatar" class="plu-avatar-img" :src="u.avatar" mode="aspectFill"></image>
           <view v-else class="plu-avatar-fallback"><text>{{ u.nickname ? u.nickname[0] : '?' }}</text></view>
         </view>
         <view class="plu-info">

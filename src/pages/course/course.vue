@@ -31,7 +31,7 @@
           <view class="course-list" v-if="grouped[c.id] && grouped[c.id].length">
             <view class="course-card" v-for="cc in grouped[c.id]" :key="cc.id" @tap="goDetail(cc.id)">
               <view class="course-cover">
-                <image class="course-img" :src="cc.cover" mode="aspectFill"></image>
+                <image lazy-load class="course-img" :src="cc.cover" mode="aspectFill"></image>
                 <view class="course-level" :class="'lv-' + lvCls(cc.level)">{{ cc.level }}</view>
                 <view class="course-pending" v-if="!hasCourseVideo(cc)">课程待更新</view>
               </view>

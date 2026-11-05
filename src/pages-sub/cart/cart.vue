@@ -10,7 +10,7 @@
             </view>
           </view>
 
-          <image class="cart-img" :src="item.image" mode="aspectFill" @tap="goDetail(item.id)"></image>
+          <image lazy-load class="cart-img" :src="item.image" mode="aspectFill" @tap="goDetail(item.id)"></image>
 
           <view class="cart-info">
             <text class="cart-name ellipsis-2">{{ item.name }}</text>

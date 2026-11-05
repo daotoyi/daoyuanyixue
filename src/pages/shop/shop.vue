@@ -48,7 +48,7 @@
 
             <view class="goods-grid" v-if="grouped[c.id] && grouped[c.id].length">
               <view class="goods-card" v-for="p in grouped[c.id]" :key="p.id" @tap="goDetail(p.id)">
-                <image class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
+                <image lazy-load class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
                 <view class="goods-info">
                   <text class="goods-name ellipsis-2">{{ p.name }}</text>
                   <view class="goods-price-row">
@@ -81,7 +81,7 @@
 
             <view class="goods-grid" v-if="grouped[c.id] && grouped[c.id].length">
               <view class="goods-card" v-for="p in grouped[c.id]" :key="p.id" @tap="goDetail(p.id)">
-                <image class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
+                <image lazy-load class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
                 <view class="goods-info">
                   <text class="goods-name ellipsis-2">{{ p.name }}</text>
                   <view class="goods-price-row">

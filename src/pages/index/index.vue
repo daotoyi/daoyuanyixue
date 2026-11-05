@@ -35,7 +35,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-live-card" v-for="l in liveList.slice(0, 6)" :key="l.id" @tap="enterLive(l)">
-              <image class="rec-live-img" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
+              <image lazy-load class="rec-live-img" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
               <text class="rec-live-title ellipsis-1">{{ l.title }}</text>
               <text class="rec-live-time ellipsis-1">🕐 {{ l.start_time || '时间待定' }}</text>
               <text class="rec-live-status" :class="'st-' + l.status">{{ statusText(l.status) }}</text>
@@ -51,7 +51,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-pd-card" v-for="pd in pandaoList.slice(0, 6)" :key="pd.id" @tap="goPandaoDetail(pd)">
-              <image class="rec-pd-img" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
+              <image lazy-load class="rec-pd-img" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
               <text class="rec-pd-badge">{{ pd.day }}</text>
               <text class="rec-pd-title ellipsis-1">{{ pd.title }}</text>
               <text class="rec-pd-desc ellipsis-1" v-if="pd.desc">{{ pd.desc }}</text>
@@ -70,7 +70,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-prod-card" v-for="p in recProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
-              <image class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
+              <image lazy-load class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
               <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
               <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
             </view>
@@ -85,7 +85,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-course-card" v-for="c in recCourses.slice(0, 6)" :key="c.id" @tap="goCourseDetail(c)">
-              <image class="rec-course-img" :src="c.cover" mode="aspectFill"></image>
+              <image lazy-load class="rec-course-img" :src="c.cover" mode="aspectFill"></image>
               <text class="rec-course-title ellipsis-1">{{ c.title }}</text>
               <text class="rec-course-price">{{ fmtPrice(c.price) }}</text>
             </view>
@@ -99,7 +99,7 @@
           </view>
           <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
             <view class="rec-moment-card" v-for="m in recMoments" :key="m.id" @tap="goProfile(m)">
-              <image v-if="m.images && m.images.length" class="rec-moment-img" :src="m.images[0]" mode="aspectFill"></image>
+              <image lazy-load v-if="m.images && m.images.length" class="rec-moment-img" :src="m.images[0]" mode="aspectFill"></image>
               <view v-else class="rec-moment-img rec-moment-fallback"><text>{{ (m.content || '道')[0] }}</text></view>
               <text class="rec-moment-content ellipsis-2">{{ m.content }}</text>
               <view class="rec-moment-foot">
@@ -136,7 +136,7 @@
               :key="i"
               @tap="previewImages(m, i)"
             >
-              <image class="moment-img" :src="img" mode="aspectFill"></image>
+              <image lazy-load class="moment-img" :src="img" mode="aspectFill"></image>
             </view>
           </view>
 
@@ -239,7 +239,7 @@
 
       <view class="pandao-list">
         <view class="pandao-card" v-for="pd in pandaoList" :key="pd.id" @tap="goPandaoDetail(pd)">
-          <image class="pandao-cover" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
+          <image lazy-load class="pandao-cover" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
           <view class="pandao-head">
             <text class="pandao-badge">{{ pd.day }}</text>
             <view class="pandao-info">
@@ -322,7 +322,7 @@
       <view class="live-list">
         <view class="live-card" v-for="l in liveList" :key="l.id">
           <view class="live-cover">
-            <image class="live-img" :src="l.cover" mode="aspectFill"></image>
+            <image lazy-load class="live-img" :src="l.cover" mode="aspectFill"></image>
             <view class="live-status" :class="'st-' + l.status">
               {{ statusText(l.status) }}
             </view>

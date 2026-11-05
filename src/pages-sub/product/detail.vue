@@ -28,7 +28,7 @@
           :class="{ on: current === i }"
           @tap="goImage(i)"
         >
-          <image class="thumb-img" :src="img" mode="aspectFill"></image>
+          <image lazy-load class="thumb-img" :src="img" mode="aspectFill"></image>
         </view>
       </view>
     </view>

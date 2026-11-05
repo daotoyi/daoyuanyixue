@@ -36,6 +36,9 @@ function startHeartbeat() {
   doHeartbeat()
   _hbTimer = setInterval(doHeartbeat, 60 * 1000)
 }
+function stopHeartbeat() {
+  if (_hbTimer) { clearInterval(_hbTimer); _hbTimer = null }
+}
 
 onLaunch(async () => {
   console.log('App Launch')
@@ -93,12 +96,15 @@ onShow(() => {
   // 每次回前台重新应用主题 (跟随系统可能变化) + 刷新 tabbar 文案 (语言)
   applyTheme()
   updateTabBar()
-  // 回前台立即心跳一次 (检测是否被其他设备踢下线)
-  doHeartbeat()
+  // 回前台恢复心跳: 若定时器已被后台暂停则重建(内部会立即心跳一次), 否则仅立即检测一次是否被踢下线
+  if (_hbTimer) doHeartbeat()
+  else startHeartbeat()
 })
 
 onHide(() => {
   console.log('App Hide')
+  // 切后台暂停心跳轮询, 避免后台无意义请求; 回前台 onShow 会恢复
+  stopHeartbeat()
 })
 </script>
 

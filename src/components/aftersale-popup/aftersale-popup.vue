@@ -13,7 +13,7 @@
           </view>
           <text class="as-his-content">{{ h.content }}</text>
           <view class="as-his-imgs" v-if="h._imgs && h._imgs.length">
-            <image class="as-his-img" v-for="(src, si) in h._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewUrls(h._imgs, si)"></image>
+            <image lazy-load class="as-his-img" v-for="(src, si) in h._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewUrls(h._imgs, si)"></image>
           </view>
           <view class="as-his-reply" v-if="h.reply">
             <text class="as-his-reply-label">商家回复：</text>
@@ -28,7 +28,7 @@
         <textarea class="as-textarea" v-model="content" maxlength="500" placeholder="请描述商品或课程遇到的问题（最多 500 字）"></textarea>
         <view class="as-imgs">
           <view class="as-img-item" v-for="(img, i) in images" :key="i">
-            <image class="as-img" :src="img.url" mode="aspectFill" @tap="previewUrls(images.map((x) => x.url), i)"></image>
+            <image lazy-load class="as-img" :src="img.url" mode="aspectFill" @tap="previewUrls(images.map((x) => x.url), i)"></image>
             <view class="as-img-del" @tap="removeImage(i)"><text>✕</text></view>
           </view>
           <view class="as-img-add" v-if="images.length < 3" @tap="chooseImage">

@@ -17,7 +17,7 @@
     <view class="card">
       <view class="card-title">商品清单</view>
       <view class="oi" v-for="(i, idx) in order.items" :key="idx">
-        <image v-if="i.image" class="oi-img" :src="i.image" mode="aspectFill"></image>
+        <image lazy-load v-if="i.image" class="oi-img" :src="i.image" mode="aspectFill"></image>
         <view v-else class="oi-img oi-img-fallback"><text>☯</text></view>
         <view class="oi-info">
           <text class="oi-name ellipsis-2">{{ i.name }}</text>

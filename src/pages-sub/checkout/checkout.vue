@@ -23,7 +23,7 @@
         <text class="card-count">{{ items.length }} 件</text>
       </view>
       <view class="co-item" v-for="i in items" :key="i.id">
-        <image v-if="i.image" class="co-img" :src="i.image" mode="aspectFill"></image>
+        <image lazy-load v-if="i.image" class="co-img" :src="i.image" mode="aspectFill"></image>
         <view v-else class="co-img co-img-fallback"><text>☯</text></view>
         <view class="co-info">
           <text class="co-name ellipsis-2">{{ i.name }}</text>

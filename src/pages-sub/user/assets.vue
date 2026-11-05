@@ -53,7 +53,7 @@
     <!-- 收藏 / 足迹 -->
     <view class="fav-list" v-else>
       <view class="fav-card" v-for="p in list" :key="p.product_id" @tap="goProduct(p.product_id)">
-        <image class="fav-img" :src="p.image" mode="aspectFill"></image>
+        <image lazy-load class="fav-img" :src="p.image" mode="aspectFill"></image>
         <view class="fav-info">
           <text class="fav-name ellipsis-2">{{ p.name }}</text>
           <text class="fav-price">¥{{ p.price }}</text>

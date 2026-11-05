@@ -217,7 +217,7 @@
             </view>
             <view class="home-pandao-list">
               <view class="home-pd-row" v-for="pd in homePandaoList" :key="pd.id">
-                <image class="home-pd-cover" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
+                <image lazy-load class="home-pd-cover" v-if="pd.cover" :src="pd._coverUrl || pd.cover" mode="aspectFill"></image>
                 <view class="home-pd-info">
                   <text class="home-pd-title">{{ pd.title }}
                     <text class="home-pd-status" :class="'st-' + pdStatusKey(pd.status)">{{ pd.status || '即将开始' }}</text>
@@ -290,7 +290,7 @@
                 <text class="f-label-sm">每场次独立配置，详情页显示其头像墙（最多 30 人）</text>
                 <view class="pd-member-chips" v-if="(pdForm.fixed_members || []).length">
                   <view class="pd-member-chip" v-for="(m, i) in pdForm.fixed_members" :key="m.uid">
-                    <image class="pd-member-ava" :src="m._avatar || m.avatar" mode="aspectFill" v-if="m._avatar || m.avatar"></image>
+                    <image lazy-load class="pd-member-ava" :src="m._avatar || m.avatar" mode="aspectFill" v-if="m._avatar || m.avatar"></image>
                     <text class="pd-member-name">{{ m.name || ('用户' + m.uid) }}</text>
                     <text class="pd-member-x" @tap.stop="removeFixedMember(i)">×</text>
                   </view>
@@ -301,7 +301,7 @@
                   <input class="f-input" v-model="pdMemberKw" placeholder="搜昵称/手机/道号添加固定成员" @input="onPdMemberSearch" />
                   <view class="pd-member-results" v-if="pdMemberResults.length">
                     <view class="pd-member-res" v-for="u in pdMemberResults" :key="u.uid" @tap="addFixedMember(u)">
-                      <image class="pd-member-ava" :src="u._avatar" mode="aspectFill" v-if="u._avatar"></image>
+                      <image lazy-load class="pd-member-ava" :src="u._avatar" mode="aspectFill" v-if="u._avatar"></image>
                       <view class="pd-member-res-info">
                         <text class="pd-member-name">{{ u.nickname }}</text>
                         <text class="pd-member-phone" v-if="u.phone">{{ u.phone }}</text>
@@ -442,7 +442,7 @@
                 <text class="td w-ops" v-if="canWrite">操作</text>
               </view>
               <view class="tr" v-for="p in productGrouped[productActiveCate] || []" :key="p.id">
-                <image class="td w-img thumb" :src="p.images && p.images[0]" mode="aspectFill"></image>
+                <image lazy-load class="td w-img thumb" :src="p.images && p.images[0]" mode="aspectFill"></image>
                 <text class="td w-name ellipsis">{{ p.name }}</text>
                 <text class="td w-price">¥{{ p.price }}</text>
                 <text class="td w-stock">{{ p.stock }}</text>
@@ -751,7 +751,7 @@
               <view class="td w-name">
                 <text class="ellipsis">{{ a.content }}</text>
                 <view class="fb-imgs" v-if="a._imgs && a._imgs.length">
-                  <image class="fb-thumb" v-for="(src, si) in a._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewAsImg(a, si)"></image>
+                  <image lazy-load class="fb-thumb" v-for="(src, si) in a._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewAsImg(a, si)"></image>
                 </view>
                 <text class="td-sub as-reply-echo" v-if="a.reply">已回复：{{ a.reply }}</text>
               </view>
@@ -808,7 +808,7 @@
             </view>
             <view class="tr users-row" v-for="u in usersFiltered" :key="u._id || u.uid">
               <view class="td w-avatar-cell">
-                <image v-if="u.avatar" class="user-td-avatar" :src="u.avatar" mode="aspectFill"></image>
+                <image lazy-load v-if="u.avatar" class="user-td-avatar" :src="u.avatar" mode="aspectFill"></image>
                 <view v-else class="user-td-avatar user-td-avatar-fallback"><text>{{ u.nickname ? u.nickname[0] : '?' }}</text></view>
               </view>
               <view class="td w-name users-nick">
@@ -853,7 +853,7 @@
               <text class="td w-ops" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="l in lives" :key="l.id">
-              <image class="td w-img thumb" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
+              <image lazy-load class="td w-img thumb" :src="l._coverUrl || l.cover" mode="aspectFill"></image>
               <text class="td w-name ellipsis">{{ l.title }}</text>
               <text class="td w-name">{{ l.anchor }}</text>
               <text class="td w-time">{{ l.start_time || '-' }}</text>
@@ -945,7 +945,7 @@
               <view class="td w-name">
                 <text class="ellipsis">{{ f.content }}</text>
                 <view class="fb-imgs" v-if="f._imgs && f._imgs.length">
-                  <image class="fb-thumb" v-for="(src, si) in f._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewFbImg(f, si)"></image>
+                  <image lazy-load class="fb-thumb" v-for="(src, si) in f._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewFbImg(f, si)"></image>
                 </view>
               </view>
               <text class="td w-time">{{ f.created_at }}</text>
@@ -1225,7 +1225,7 @@
             <textarea class="f-textarea" v-model="productForm.imagesText" :maxlength="-1" placeholder="多个图片用逗号分隔，或点下方上传"></textarea>
             <view class="f-img-row">
               <view class="f-img-item" v-for="(u, ui) in productImages" :key="ui">
-                <image class="f-img-thumb" :src="u" mode="aspectFill"></image>
+                <image lazy-load class="f-img-thumb" :src="u" mode="aspectFill"></image>
                 <text class="f-img-del" @tap="removeProductImg(ui)">✕</text>
               </view>
               <view class="f-img-add" @tap="uploadProductImg">＋ 上传图片</view>
@@ -1493,7 +1493,7 @@
           <view class="f-row" v-if="asHandleForm.rec._imgs && asHandleForm.rec._imgs.length">
             <text class="f-label">图片</text>
             <view class="fb-imgs">
-              <image class="fb-thumb" v-for="(src, si) in asHandleForm.rec._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewAsImg(asHandleForm.rec, si)"></image>
+              <image lazy-load class="fb-thumb" v-for="(src, si) in asHandleForm.rec._imgs" :key="si" :src="src" mode="aspectFill" @tap="previewAsImg(asHandleForm.rec, si)"></image>
             </view>
           </view>
         </template>
@@ -4826,6 +4826,9 @@ onMounted(async () => {
   border-bottom: 1rpx solid rgba(201, 169, 106, 0.2);
 }
 .sidebar.collapsed .logo-area { padding: 32rpx 12rpx 24rpx; }
+/* 收起态: 菜单图标居中, 给右侧细滚动条让位, 避免遮挡 */
+.sidebar.collapsed .menu-item { justify-content: center; padding-left: 0; padding-right: 0; }
+.sidebar.collapsed .menu-icon { margin-right: 0; }
 .logo-seal {
   width: 72rpx;
   height: 72rpx;
@@ -4876,6 +4879,30 @@ onMounted(async () => {
 .menu-scroll {
   flex: 1;
   min-height: 0;
+}
+/* 侧边栏菜单滚动条: 收起态侧栏很窄, 原生滚动条过粗会压到图标 → 改细 + 半透明 + 轨道透明
+   (webkit ::-webkit-scrollbar 与标准 scrollbar-width/scrollbar-color 在非 webkit 端均被忽略, 跨端安全, 故不加 #ifdef) */
+.menu-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 169, 106, 0.35) transparent;
+}
+.menu-scroll :deep(.uni-scroll-view) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 169, 106, 0.35) transparent;
+}
+.menu-scroll::-webkit-scrollbar,
+.menu-scroll :deep(.uni-scroll-view)::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.menu-scroll::-webkit-scrollbar-track,
+.menu-scroll :deep(.uni-scroll-view)::-webkit-scrollbar-track {
+  background: transparent;
+}
+.menu-scroll::-webkit-scrollbar-thumb,
+.menu-scroll :deep(.uni-scroll-view)::-webkit-scrollbar-thumb {
+  background: rgba(201, 169, 106, 0.35);
+  border-radius: 4px;
 }
 .menu-item {
   display: flex;
