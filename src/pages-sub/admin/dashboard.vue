@@ -1631,7 +1631,7 @@ const PF_CLS = { 'mp-weixin': 'wx', 'mp-toutiao': 'tt', 'h5': 'h5', 'web': 'h5',
 const pfText = (v) => PF_TEXT[String(v || '').toLowerCase()] || String(v || '')
 const pfCls = (v) => PF_CLS[String(v || '').toLowerCase()] || 'other'
 
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
@@ -4802,6 +4802,10 @@ function deleteOssVideo(v) {
 }
 
 onMounted(async () => {
+  // H5: 给顶部导航栏加标记类 → 套用「渐变中国红」(样式在 App.vue 全局, 仅此类生效)
+  // #ifdef H5
+  try { document.querySelector('uni-page-head')?.classList.add('dy-nav-red') } catch (e) { /* 忽略 */ }
+  // #endif
   // 仅 admin(超管)/manager(管理员,只读)/operator(操作管理员) 可访问后台; 员工(staff)/普通用户(user)拒绝
   if (!userStore.isLoggedIn || !['admin', 'manager', 'operator'].includes(userStore.userInfo.role)) {
     uni.redirectTo({ url: '/pages-sub/admin/login' })
@@ -4809,6 +4813,13 @@ onMounted(async () => {
   }
   await loadModule('overview')
 })
+
+// H5: 离开后台时移除标记, 避免其他页面导航栏被染成渐变红
+// #ifdef H5
+onUnmounted(() => {
+  try { document.querySelector('uni-page-head')?.classList.remove('dy-nav-red') } catch (e) { /* 忽略 */ }
+})
+// #endif
 </script>
 
 <style lang="scss" scoped>
@@ -6961,22 +6972,4 @@ onMounted(async () => {
   }
 }
 
-</style>
-
-<style>
-/* #ifdef H5 */
-/* 顶部「道元易学 · 管理后台」导航栏: 棕色 #451A03 → 渐变中国红 (2026-11-06)
-   小程序/App 原生导航栏只支持纯色(已在 pages.json 配 #C41E3A), H5 这里额外叠真渐变 */
-uni-page-head .uni-page-head,
-uni-page-head .uni-page-head-hd,
-uni-page-head .uni-page-head-bd,
-uni-page-head .uni-page-head-ft {
-  background-image: linear-gradient(90deg, #e8112d 0%, #c41e3a 52%, #8c0f1f 100%) !important;
-  background-color: #c41e3a !important;
-}
-uni-page-head .uni-page-head-bd {
-  border-bottom: none !important;
-  box-shadow: 0 2rpx 10rpx rgba(140, 15, 31, 0.28) !important;
-}
-/* #endif */
 </style>

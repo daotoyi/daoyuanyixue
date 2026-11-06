@@ -110,6 +110,23 @@ onHide(() => {
 
 <style lang="scss">
 /* ==================== 道元易学 · 全局样式 ==================== */
+/* #ifdef H5 */
+/* 管理后台顶部导航栏: 棕色 #451A03 → 渐变中国红 (2026-11-06)
+   H5 的 uni-page-head 是全站复用节点, 无法按页面选择器区分,
+   故由 dashboard 页动态挂 .dy-nav-red 类, 离开时移除, 不污染其他页面。
+   小程序/App 原生导航栏只支持纯色, 已在 pages.json 配 #C41E3A。 */
+uni-page-head.dy-nav-red .uni-page-head,
+uni-page-head.dy-nav-red .uni-page-head-hd,
+uni-page-head.dy-nav-red .uni-page-head-bd,
+uni-page-head.dy-nav-red .uni-page-head-ft {
+  background-image: linear-gradient(90deg, #e8112d 0%, #c41e3a 52%, #8c0f1f 100%) !important;
+  background-color: #c41e3a !important;
+}
+uni-page-head.dy-nav-red .uni-page-head-bd {
+  border-bottom: none !important;
+  box-shadow: 0 3px 12px rgba(140, 15, 31, 0.28) !important;
+}
+/* #endif */
 /* ---- 主题 CSS 变量 (浅色默认 / 深色覆盖) ----
    同时挂 :root 与 page: App 端 WebView 无 page 元素, 必须 :root 兜底 */
 :root {
