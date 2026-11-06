@@ -92,7 +92,7 @@
           </scroll-view>
         </view>
         <!-- 动态精选 (推荐页最底部内容模块: 后台精选的全部用户动态, 横向滑动显示) -->
-        <view class="rec-sec" v-if="recShowMoments && recMoments.length">
+        <view class="rec-sec" v-if="recShowMoment && recMoments.length">
           <view class="rec-head">
             <text class="rec-title">🧙 动态精选</text>
             <text class="rec-more" @tap="switchTab('follow')">更多 ›</text>
@@ -405,7 +405,6 @@ const recShowPandao = ref(true)
 const recShowProduct = ref(true)
 const recShowCourse = ref(true)
 const recShowMoment = ref(true)
-const recShowMoments = ref(true)
 const recMoments = ref([])
 /* 推荐页商品/课程列表 (仅显示后台标记"首页推荐"的) */
 const productList = ref([])
@@ -1007,10 +1006,15 @@ onShow(async () => {
   }
 
   // ①.6 推荐页动态精选 (后台标记 is_recommended 的用户动态, 独立加载)
-  try {
-    const list = await getRecommendedMoments()
-    recMoments.value = await convertMomentImages(list || [])
-  } catch (e) { recMoments.value = [] }
+  // 后台「推荐页·动态」关闭时直接跳过请求, 与上面商品/课程开关保持一致, 省一次云函数调用
+  if (recShowMoment.value) {
+    try {
+      const list = await getRecommendedMoments()
+      recMoments.value = await convertMomentImages(list || [])
+    } catch (e) { recMoments.value = [] }
+  } else {
+    recMoments.value = []
+  }
 
   // ② 盘道活动: 独立加载 (任一接口失败不影响盘道展示)
   try {
