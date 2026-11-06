@@ -25,3 +25,9 @@ mobile/android/app/keystore.properties
 # 临时
 /tmp/
 cloudfunctions/*/config.local.js
+
+# 备份工具：密钥与备份产物绝不能进仓库
+backup-tool/.env
+backup-tool/backups
+backup-tool/logs
+backup-tool/.backup.lock

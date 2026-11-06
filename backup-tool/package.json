@@ -1,0 +1,19 @@
+{
+  "name": "zhs-backup-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "真和盛 / 道元易学 CloudBase 数据与文件同步备份工具（本地自建服务器定时执行）",
+  "main": "backup.js",
+  "scripts": {
+    "backup": "node backup.js",
+    "backup:dry": "node backup.js --dry-run",
+    "backup:nofiles": "node backup.js --no-files",
+    "selftest": "node backup.js --self-test",
+    "verify": "node verify.js",
+    "verify:all": "node verify.js --all"
+  },
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.0",
+    "cos-nodejs-sdk-v5": "^2.14.6"
+  }
+}
