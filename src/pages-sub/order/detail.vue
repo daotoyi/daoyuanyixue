@@ -199,6 +199,8 @@ import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxReque
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
 import { isFreePrice, fmtPrice } from '../../utils/price'
+// H5 支付兜底 (2026-11-06): 商户号 H5支付权限未开通时, 降级跳小程序完成支付
+import { isH5PayUnavailable, payByWxmpScheme, wxmpFallbackTip } from '../../utils/h5pay'
 
 const order = ref(null)
 const orderNo = ref(null)
@@ -609,6 +611,26 @@ async function doPay() {
     }
     uni.showToast({ title: (h5 && h5.msg) || '微信支付未配置', icon: 'none' })
   } catch (e) {
+    // 兜底 (2026-11-06): 商户号「H5支付」权限预开通中 → 降级跳小程序完成支付
+    if (isH5PayUnavailable(e && e.message)) {
+      const fb = await payByWxmpScheme(wxmpScheme, orderNo.value)
+      if (fb.ok) {
+        if (fb.free) {
+          uni.showToast({ title: '订单已支付完成', icon: 'success' })
+          await load()
+        } else {
+          uni.showToast({ title: '已唤起微信小程序，请在小程序中完成支付', icon: 'none', duration: 2500 })
+        }
+        return
+      }
+      uni.showModal({
+        title: '支付通道维护中',
+        content: wxmpFallbackTip(fb),
+        showCancel: false,
+        confirmText: '知道了',
+      })
+      return
+    }
     if (e && e.isCancel) {
       uni.showToast({ title: '支付取消', icon: 'none' })
     } else {
