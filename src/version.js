@@ -3,7 +3,7 @@
  * 请勿手动修改
  */
 export const APP_VERSION = 'v2.0.20'
-export const APP_COMMIT = '422a95a'
+export const APP_COMMIT = '6cbc57d'
 export const APP_BRANCH = 'main'
-export const APP_BUILD_DATE = '2026-11-05'
-export const APP_FULL_VERSION = 'v2.0.19 (422a95a)'
+export const APP_BUILD_DATE = '2026-11-06'
+export const APP_FULL_VERSION = 'v2.0.20 (6cbc57d)'
