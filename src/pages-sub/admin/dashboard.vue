@@ -6962,3 +6962,21 @@ onMounted(async () => {
 }
 
 </style>
+
+<style>
+/* #ifdef H5 */
+/* 顶部「道元易学 · 管理后台」导航栏: 棕色 #451A03 → 渐变中国红 (2026-11-06)
+   小程序/App 原生导航栏只支持纯色(已在 pages.json 配 #C41E3A), H5 这里额外叠真渐变 */
+uni-page-head .uni-page-head,
+uni-page-head .uni-page-head-hd,
+uni-page-head .uni-page-head-bd,
+uni-page-head .uni-page-head-ft {
+  background-image: linear-gradient(90deg, #e8112d 0%, #c41e3a 52%, #8c0f1f 100%) !important;
+  background-color: #c41e3a !important;
+}
+uni-page-head .uni-page-head-bd {
+  border-bottom: none !important;
+  box-shadow: 0 2rpx 10rpx rgba(140, 15, 31, 0.28) !important;
+}
+/* #endif */
+</style>

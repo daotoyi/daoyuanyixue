@@ -131,7 +131,7 @@
    "path": "pages-sub/admin/dashboard",
    "style": {
     "navigationBarTitleText": "道元易学 · 管理后台",
-    "navigationBarBackgroundColor": "#451A03",
+    "navigationBarBackgroundColor": "#C41E3A",
     "navigationBarTextStyle": "white",
     "pageOrientation": "auto"
    }
