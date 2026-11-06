@@ -164,7 +164,7 @@ const channel = ref('wx')
 const orderPlatform = ref('unknown')
 const autoRecommended = ref(true)
 
-const PF_TEXT = { 'mp-weixin': '小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
+const PF_TEXT = { 'mp-weixin': '微信小程序', 'mp-toutiao': '抖音小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
 const platformText = computed(() => PF_TEXT[String(orderPlatform.value || '').toLowerCase()] || orderPlatform.value || '未知')
 
 /* 微信现付仅支持直营快递: 顺丰 SF / 德邦 DB (德邦未列入公司列表, 预留) */

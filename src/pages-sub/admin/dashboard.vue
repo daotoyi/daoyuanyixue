@@ -531,7 +531,7 @@
         <!-- ===== 订单管理 ===== -->
         <view v-else-if="activeModule === 'orders'" class="module">
           <view class="module-head">
-            <text class="module-title">订单管理（{{ orders.length }}）</text>
+            <text class="module-title">订单管理（{{ sortedOrders.length }}）</text>
             <view class="btn-p plain sm" v-if="canWrite" style="margin-right: 16rpx;" @click="reconcileOrders">对账修复</view>
             <view class="filter-pills">
               <text
@@ -567,6 +567,9 @@
               <text class="td w-price sortable" @tap="toggleOrderSort('amount')">金额 {{ orderSortArrow('amount') }}</text>
               <text class="td w-time sortable" @tap="toggleOrderSort('created_at')">下单时间 {{ orderSortArrow('created_at') }}</text>
               <text class="td w-status">状态</text>
+              <view class="td w-channel" @tap="channelFilterMenu">
+                <text class="ch-filter" :class="{ on: channelFilter !== '全部' }">{{ channelFilterLabel }} ▾</text>
+              </view>
               <text class="td w-ops w-ops-5" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="o in sortedOrders" :key="o._id || o.order_no">
@@ -578,8 +581,11 @@
               <view class="td w-status">
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
-                <!-- 来源端标记 (2026-09-05): unknown=老订单未记录 -->
+              </view>
+              <!-- 渠道列 (2026-11-06): 收款渠道, 表头可下拉筛选; unknown=老订单未记录 -->
+              <view class="td w-channel">
                 <text class="td-platform" :class="'pf-' + pfCls(o.platform)" v-if="o.platform && o.platform !== 'unknown'">{{ pfText(o.platform) }}</text>
+                <text class="ch-none" v-else>—</text>
               </view>
               <view class="td w-ops w-ops-5 ops" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
@@ -1620,8 +1626,8 @@ const stCls = (v) => ST_CLS[v] || v
 const canRefund = (o) => o.status === '待发货' || o.status === '待收货'
 
 /* 订单来源端 (2026-09-05): platform 字段 → 展示文案与配色 */
-const PF_TEXT = { 'mp-weixin': '小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
-const PF_CLS = { 'mp-weixin': 'wx', 'h5': 'h5', 'web': 'h5', 'app': 'app' }
+const PF_TEXT = { 'mp-weixin': '微信小程序', 'mp-toutiao': '抖音小程序', 'h5': 'H5', 'web': 'H5', 'app': 'App' }
+const PF_CLS = { 'mp-weixin': 'wx', 'mp-toutiao': 'tt', 'h5': 'h5', 'web': 'h5', 'app': 'app' }
 const pfText = (v) => PF_TEXT[String(v || '').toLowerCase()] || String(v || '')
 const pfCls = (v) => PF_CLS[String(v || '').toLowerCase()] || 'other'
 
@@ -1778,6 +1784,30 @@ const orderTypeFilterOptions = [
 ]
 const orderTypeFilter = ref('全部')
 const orderFilter = ref('全部')
+
+/* 收款渠道筛选 (2026-11-06): 表头下拉, 前端按 platform 字段过滤 (h5/web 统一归为 H5) */
+const CHANNEL_OPTIONS = [
+  { value: '全部', label: '全部渠道' },
+  { value: 'mp-weixin', label: '微信小程序' },
+  { value: 'mp-toutiao', label: '抖音小程序' },
+  { value: 'h5', label: 'H5' },
+  { value: 'app', label: 'App' },
+]
+const channelFilter = ref('全部')
+const channelFilterLabel = computed(() => {
+  if (channelFilter.value === '全部') return '渠道'
+  const c = CHANNEL_OPTIONS.find((x) => x.value === channelFilter.value)
+  return c ? c.label : '渠道'
+})
+function channelFilterMenu() {
+  uni.showActionSheet({
+    itemList: CHANNEL_OPTIONS.map((x) => x.label),
+    success: (r) => {
+      const opt = CHANNEL_OPTIONS[r.tapIndex]
+      if (opt) channelFilter.value = opt.value
+    },
+  })
+}
 
 /* ---- 分类布局 (商品/课程) ---- */
 const productCates = ref([])
@@ -2334,7 +2364,15 @@ const orderSort = ref({ key: 'created_at', dir: 'desc' })
 const sortedOrders = computed(() => {
   const { key, dir } = orderSort.value
   const mul = dir === 'asc' ? 1 : -1
-  return [...orders.value].sort((a, b) => {
+  const ch = channelFilter.value
+  return [...orders.value]
+    .filter((o) => {
+      if (ch === '全部') return true
+      const p = String(o.platform || '').toLowerCase()
+      if (ch === 'h5') return p === 'h5' || p === 'web'
+      return p === ch
+    })
+    .sort((a, b) => {
     let va, vb
     if (key === 'amount') {
       va = Number(a.total_price) || 0
@@ -5446,13 +5484,14 @@ onMounted(async () => {
 .order-type-stats .ots-val .price { color: #c4753a; }
 
 /* 订单表格: 列宽紧凑; 列数多时横向滑动, 表头随内容同滚 (.table overflow-x:auto 已保证) */
-.orders-table .tr { min-width: 1560rpx; }
+.orders-table .tr { min-width: 1800rpx; }
 .orders-table .w-no { width: 240rpx; }
 .orders-table .w-user { width: 120rpx; }
 .orders-table .w-name { flex: 1 1 180rpx; min-width: 160rpx; max-width: 320rpx; }
 .orders-table .w-price { width: 120rpx; }
 .orders-table .w-time { width: 280rpx; }
 .orders-table .w-status { width: 130rpx; }
+.orders-table .w-channel { width: 150rpx; }
 .orders-table .w-ops-4 { width: 460rpx; }
 .orders-table .w-ops-5 { width: 580rpx; }
 /* 可排序表头 */
@@ -6145,8 +6184,25 @@ onMounted(async () => {
   background: #f2ece2;
 }
 .td-platform.pf-wx { color: #0f6e56; background: #e1f5ee; }
+.td-platform.pf-tt { color: #1f1f1f; background: #ededed; }
 .td-platform.pf-h5 { color: #185fa5; background: #e6f1fb; }
 .td-platform.pf-app { color: #854f0b; background: #faeeda; }
+/* 渠道列 (2026-11-06): 表头可下拉筛选, 单元格展示渠道标记 */
+.w-channel {
+  width: 150rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.w-channel .td-platform { margin-top: 0; margin-right: 0; }
+.ch-filter {
+  font-size: 22rpx;
+  color: #9c1630;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ch-filter.on { color: #c41e3a; font-weight: 600; }
+.ch-none { font-size: 22rpx; color: #b3a48c; }
 /* 售后管理: 搜索框 */
 .as-search-bar {
   position: relative;
@@ -6875,6 +6931,9 @@ onMounted(async () => {
   .orders-table .w-price { width: 70px; }
   .orders-table .w-time { width: 160px; }
   .orders-table .w-status { width: 80px; }
+  .orders-table .w-channel { width: 92px; }
+  .orders-table .w-channel .ch-filter { font-size: 13px; }
+  .orders-table .w-channel .td-platform { font-size: 12px; padding: 1px 6px; }
   .orders-table .w-ops-4 { width: 280px; }
   .orders-table .w-ops-5 { width: 350px; }
 }
