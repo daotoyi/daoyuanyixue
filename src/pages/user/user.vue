@@ -67,6 +67,19 @@
       </view>
     </view>
 
+    <!-- 研究院 / 养生 图标板块 (位于我的课程上方, 后台开关控制, 默认隐藏) -->
+    <view class="panel" v-if="phase2Menus.length">
+      <view class="panel-head">
+        <text class="panel-title">道学养生</text>
+      </view>
+      <view class="order-entry phase2-entry">
+        <view class="entry-item" v-for="m in phase2Menus" :key="m.key" @tap="onMenu(m)">
+          <text class="entry-icon">{{ m.icon }}</text>
+          <text class="entry-label">{{ m.label }}</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 我的课程 (位于我的订单上方) -->
     <view class="panel">
       <view class="panel-head" @tap="goMyCourse">
@@ -296,17 +309,17 @@ const menuItems = [
   { key: 'admin', label: '管理后台', icon: '⚙' },
 ]
 
-/* 第二阶段入口（研究院 / 养生）：骨架阶段由前端常量控制，合并 main 前关闭 */
-const phase2Menus = [
-  { key: 'academy', label: '道学易学研究院', icon: '☯' },
-  { key: 'health', label: '养生 · 次卡打卡', icon: '🌿' },
-]
-
-const visibleMenus = computed(() => {
-  let list = menuItems.filter((m) => m.key !== 'admin' || isAdmin.value)
-  if (PHASE2_ENABLED) list = [...phase2Menus, ...list]
+/* 第二阶段入口（研究院 / 养生）：独立图标板块, 由后台 mypage 开关控制 */
+const showAcademy = ref(false)
+const showHealth = ref(false)
+const phase2Menus = computed(() => {
+  const list = []
+  if (PHASE2_ENABLED && showAcademy.value) list.push({ key: 'academy', label: '研究院', icon: '☯' })
+  if (PHASE2_ENABLED && showHealth.value) list.push({ key: 'health', label: '养生', icon: '🌿' })
   return list
 })
+
+const visibleMenus = computed(() => menuItems.filter((m) => m.key !== 'admin' || isAdmin.value))
 
 function goLogin() {
   uni.navigateTo({ url: '/pages-sub/login/login' })
@@ -539,6 +552,9 @@ onShow(async () => {
   // 加载页面配置 (玄学工具开关等), 按端独立跟随后台配置
   try {
     const cfg = await getPayConfig()
+    // 第二阶段: 研究院 / 养生 入口开关 (三端同一字段)
+    showAcademy.value = cfg.show_academy === true
+    showHealth.value = cfg.show_health === true
     // #ifdef MP-WEIXIN
     showTools.value = cfg.show_tools === true
     // #endif

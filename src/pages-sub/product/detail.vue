@@ -62,6 +62,51 @@
       </view>
     </view>
 
+    <!-- 道家养生次卡区（仅养生商品 cate_id=12 显示）：有效期设置 + 下单 + 我的次卡核销 -->
+    <view class="hc-panel" v-if="isHealthProduct">
+      <view class="hc-panel-head">
+        <text class="hcp-title">养生次卡</text>
+        <text class="hcp-sub">开通后到店消费，每使用一次核销一次</text>
+      </view>
+
+      <!-- 有效期设置 -->
+      <view class="hcp-row">
+        <text class="hcp-label">有效期</text>
+        <view class="hcp-opts">
+          <view
+            class="hcp-opt"
+            v-for="opt in validOpts"
+            :key="opt.days"
+            :class="{ on: validDays === opt.days }"
+            @tap="validDays = opt.days"
+          >{{ opt.label }}</view>
+        </view>
+      </view>
+
+      <!-- 开通次卡（下单） -->
+      <view class="hcp-open">
+        <view class="hcp-open-info">
+          <text class="hcp-open-t">每次 {{ timesOfProduct(product) }} 次 · ¥{{ product ? product.price : '' }}</text>
+          <text class="hcp-open-d">有效期 {{ validLabel }}，开通后按次核销</text>
+        </view>
+        <view class="btn-p sm" @tap="openHealthCard"><text>开通次卡</text></view>
+      </view>
+
+      <!-- 我的该商品次卡 + 核销按钮 -->
+      <view class="hcp-my" v-if="myCards.length">
+        <text class="hcp-my-title">我的次卡（{{ myCards.length }}）</text>
+        <view class="hcp-card" v-for="c in myCards" :key="c.cardNo" :class="{ expired: !isCardValid(c) }">
+          <view class="hcpc-info">
+            <text class="hcpc-no">{{ c.cardNo }}</text>
+            <text class="hcpc-remain">剩余 {{ c.remain }}/{{ c.total }} 次 · 有效至 {{ fmtDate(c.expireAt) }}</text>
+          </view>
+          <view class="hcpc-btn" :class="{ disabled: !isCardValid(c) || c.remain <= 0 }" @tap="doHealthCheckin(c)">
+            <text>{{ !isCardValid(c) ? '已过期' : (c.remain > 0 ? '核销1次' : '已用完') }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 底部操作栏 -->
     <view class="action-bar">
       <view class="act-collect" @tap="toggleCollect">
@@ -118,6 +163,10 @@ import { getProduct, toggleFavoriteProduct, addFootprint } from '../../api/api'
 import { addToCart } from '../utils/cart'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
+import {
+  HEALTH_CATE_ID, buyCardSim, cardsOfProduct, checkinOnceSim,
+  isCardValid, timesOfProduct, DEFAULT_CARD_VALID_DAYS,
+} from '../../config/phase2.js'
 
 // 分享图标 (SVG 紫色转发箭头) —— 微信/抖音小程序 CSS 不支持 SVG 背景图, 故用 data-uri 内联到 <image>
 const SHARE_SVG =
@@ -142,10 +191,65 @@ const attrList = computed(() => {
   return Object.entries(product.value.attrs)
 })
 
+/* ==================== 道家养生次卡（cate_id=12）==================== */
+const validOpts = [
+  { days: 180, label: '6个月' },
+  { days: 365, label: '12个月' },
+  { days: 730, label: '24个月' },
+]
+const validDays = ref(DEFAULT_CARD_VALID_DAYS)
+const myCards = ref([])
+const isHealthProduct = computed(() => !!product.value && Number(product.value.cate_id) === HEALTH_CATE_ID)
+const validLabel = computed(() => {
+  const o = validOpts.find((x) => x.days === validDays.value)
+  return o ? o.label : '12个月'
+})
+function refreshMyCards() {
+  myCards.value = product.value ? cardsOfProduct(product.value._id || product.value.id) : []
+}
+function fmtDate(ts) {
+  if (!ts) return '长期有效'
+  const d = new Date(ts)
+  const p = (n) => (n < 10 ? '0' + n : '' + n)
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+function openHealthCard() {
+  if (!userStore.isLoggedIn) {
+    uni.showToast({ title: '请先登录后开通', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '开通养生次卡',
+    content: `「${product.value.name}」共 ${timesOfProduct(product.value)} 次，有效期 ${validLabel.value}。演示版本地模拟，不产生真实扣款。`,
+    confirmText: '确认开通',
+    success: (r) => {
+      if (!r.confirm) return
+      buyCardSim(product.value, validDays.value)
+      refreshMyCards()
+      uni.showToast({ title: '开通成功', icon: 'success' })
+    },
+  })
+}
+function doHealthCheckin(c) {
+  if (!isCardValid(c) || c.remain <= 0) return
+  uni.showModal({
+    title: '核销一次',
+    content: `确认本次消费？将从该次卡核销 1 次。`,
+    confirmText: '确认核销',
+    success: (r) => {
+      if (!r.confirm) return
+      const res = checkinOnceSim(c.cardNo)
+      refreshMyCards()
+      uni.showToast({ title: res.msg, icon: res.ok ? 'success' : 'none' })
+    },
+  })
+}
+
 onLoad(async (options) => {
   try {
     product.value = await getProduct(options.id)
     uni.setNavigationBarTitle({ title: product.value ? product.value.name : '商品详情' })
+    if (isHealthProduct.value) refreshMyCards()
     // 浏览足迹
     if (userStore.isLoggedIn && product.value) {
       addFootprint({
@@ -440,6 +544,46 @@ function buyNow() {
 .collect-label.on {
   color: #9c1630;
 }
+
+/* ==================== 道家养生次卡区 ==================== */
+.hc-panel {
+  margin: 24rpx; padding: 28rpx;
+  background: #fffafa; border: 1rpx solid #e8dcc8; border-radius: 16rpx;
+}
+.hc-panel-head { display: flex; flex-direction: column; margin-bottom: 24rpx; }
+.hcp-title { font-size: 30rpx; font-weight: 500; color: #7a1220; }
+.hcp-sub { font-size: 21rpx; color: #a89a88; margin-top: 8rpx; }
+.hcp-row { display: flex; align-items: center; margin-bottom: 22rpx; }
+.hcp-label { font-size: 26rpx; color: #4a3b2a; margin-right: 20rpx; flex-shrink: 0; }
+.hcp-opts { display: flex; flex-wrap: wrap; }
+.hcp-opt {
+  font-size: 23rpx; color: #8c6b1f; padding: 8rpx 22rpx; margin-right: 14rpx;
+  border: 1rpx solid #e8d9b8; border-radius: 999rpx; background: #fbf3e2;
+}
+.hcp-opt.on { background: #c41e3a; color: #fff; border-color: #c41e3a; }
+.hcp-open {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22rpx; background: #fbf3e2; border-radius: 12rpx;
+}
+.hcp-open-info { display: flex; flex-direction: column; }
+.hcp-open-t { font-size: 26rpx; color: #7a1220; font-weight: 500; }
+.hcp-open-d { font-size: 20rpx; color: #a89a88; margin-top: 8rpx; }
+.hcp-my { margin-top: 24rpx; border-top: 1rpx solid var(--dy-line); padding-top: 20rpx; }
+.hcp-my-title { font-size: 26rpx; color: #4a3b2a; font-weight: 500; }
+.hcp-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18rpx; margin-top: 14rpx; background: #fff;
+  border: 1rpx solid #e8dcc8; border-radius: 12rpx;
+}
+.hcp-card.expired { opacity: 0.6; }
+.hcpc-info { display: flex; flex-direction: column; }
+.hcpc-no { font-size: 24rpx; color: #4a3b2a; }
+.hcpc-remain { font-size: 20rpx; color: #a89a88; margin-top: 8rpx; }
+.hcpc-btn {
+  font-size: 23rpx; color: #fff; background: #c41e3a;
+  padding: 12rpx 24rpx; border-radius: 999rpx; flex-shrink: 0;
+}
+.hcpc-btn.disabled { background: #c9b8a4; }
 
 /* 底部操作栏 (框效果) */
 .action-bar {

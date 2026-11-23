@@ -18,18 +18,22 @@
         <text class="td-intro">{{ teacher.intro }}</text>
       </view>
 
-      <!-- 主讲课程：仿课程详情简介卡片里的"主讲课程"，独立成卡可点击 -->
+      <!-- 主讲课程：依据真实 courses.teacher 匹配的上架课程，点击进课程详情 -->
       <view class="card td-card">
         <view class="card-title">主讲课程 · {{ teacher.courses.length }} 门</view>
-        <view class="course-list">
-          <view class="course-row" v-for="(c, i) in teacher.courses" :key="i" @tap="goCourse(c)">
-            <view class="cr-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
+        <view class="course-list" v-if="teacher.courses.length">
+          <view class="course-row" v-for="(c, i) in teacher.courses" :key="c._id || i" @tap="goCourse(c)">
+            <image v-if="c.cover" lazy-load class="cr-cover" :src="c.cover" mode="aspectFill"></image>
+            <view v-else class="cr-idx">{{ i + 1 < 10 ? '0' + (i + 1) : i + 1 }}</view>
             <view class="cr-main">
-              <text class="cr-title">{{ c.title }}</text>
-              <text class="cr-sub">{{ c.sub }}</text>
+              <text class="cr-title ellipsis-1">{{ c.title }}</text>
+              <text class="cr-sub">{{ fmtPrice(c.price) }} · 点击进入课程</text>
             </view>
             <text class="cr-go">›</text>
           </view>
+        </view>
+        <view class="cr-empty" v-else>
+          <text>该老师暂无上架课程</text>
         </view>
       </view>
 
@@ -44,24 +48,29 @@
 <script setup>
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { ACADEMY_TEACHERS } from '../../config/phase2.js'
+import { getCourses } from '../../api/api'
+import { ACADEMY_TEACHERS, coursesOfTeacher } from '../../config/phase2.js'
+import { fmtPrice } from '../../utils/price'
 
 const teacher = ref(null)
 
-onLoad((options) => {
-  teacher.value = ACADEMY_TEACHERS.find((t) => t.id === options.id) || null
-  if (teacher.value) {
-    uni.setNavigationBarTitle({ title: teacher.value.name })
+onLoad(async (options) => {
+  const base = ACADEMY_TEACHERS.find((t) => t.id === options.id)
+  if (!base) return
+  teacher.value = { ...base, courses: [] }
+  uni.setNavigationBarTitle({ title: base.name })
+  try {
+    const list = await getCourses()
+    const courses = Array.isArray(list) ? list : (list && list.data) || []
+    teacher.value.courses = coursesOfTeacher(courses, base.name)
+  } catch (e) {
+    console.warn('[teacher] 课程加载失败', e)
   }
 })
 
 function goCourse(c) {
-  if (c.id) {
-    uni.navigateTo({ url: `/pages-sub/course/detail?id=${c.id}` })
-  } else {
-    // 骨架阶段未绑定真实课程 id → 跳课程列表；填入 id 后自动改跳课程详情
-    uni.showToast({ title: '课程详情待绑定，先进入课程列表', icon: 'none' })
-    setTimeout(() => uni.switchTab({ url: '/pages/course/course' }), 600)
+  if (c._id || c.id) {
+    uni.navigateTo({ url: `/pages-sub/course/detail?id=${c._id || c.id}` })
   }
 }
 </script>
@@ -82,10 +91,12 @@ function goCourse(c) {
 .course-row { display: flex; align-items: center; padding: 22rpx 0; border-bottom: 1rpx solid var(--dy-line); }
 .course-row:last-child { border-bottom: none; }
 .cr-idx { width: 56rpx; height: 56rpx; flex-shrink: 0; border-radius: 12rpx; background: #fbe9ec; color: #a31930; display: flex; align-items: center; justify-content: center; font-size: 24rpx; margin-right: 20rpx; }
+.cr-cover { width: 110rpx; height: 74rpx; flex-shrink: 0; border-radius: 10rpx; background: #f0e8dc; margin-right: 20rpx; }
 .cr-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .cr-title { font-size: 28rpx; color: #4a3b2a; }
 .cr-sub { font-size: 20rpx; color: #a89a88; margin-top: 8rpx; }
 .cr-go { font-size: 36rpx; color: #c9b8a4; margin-left: 12rpx; }
+.cr-empty { text-align: center; padding: 40rpx 0; font-size: 24rpx; color: #b8a894; }
 .td-foot { text-align: center; font-size: 22rpx; color: #b8a894; margin-top: 36rpx; }
 .td-empty { display: flex; justify-content: center; padding: 120rpx 0; }
 </style>

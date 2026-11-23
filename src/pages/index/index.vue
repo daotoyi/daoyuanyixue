@@ -9,21 +9,21 @@
       </view>
     </view>
 
-    <!-- 第二阶段入口（研究院 / 养生）：骨架阶段由前端常量控制，合并 main 前关闭 -->
-    <view class="phase2-entry" v-if="phase2Enabled">
-      <view class="p2-item" @tap="goAcademy">
+    <!-- 第二阶段入口（研究院 / 养生）：后台 mypage 分组开关控制, 默认隐藏 -->
+    <view class="phase2-entry" v-if="phase2Enabled && (showAcademy || showHealth)">
+      <view class="p2-item" v-if="showAcademy" @tap="goAcademy">
         <view class="p2-icon ac">道</view>
         <view class="p2-txt">
-          <text class="p2-name">道学易学研究院</text>
+          <text class="p2-name">研究院</text>
           <text class="p2-desc">明师引路 · 各擅其学</text>
         </view>
         <text class="p2-arrow">›</text>
       </view>
-      <view class="p2-item" @tap="goHealth">
+      <view class="p2-item" v-if="showHealth" @tap="goHealth">
         <view class="p2-icon hl">養</view>
         <view class="p2-txt">
-          <text class="p2-name">养生 · 次卡打卡</text>
-          <text class="p2-desc">循天时而养 · 打卡见功夫</text>
+          <text class="p2-name">养生</text>
+          <text class="p2-desc">道家养生 · 打卡见功夫</text>
         </view>
         <text class="p2-arrow">›</text>
       </view>
@@ -393,6 +393,8 @@ import { isFreePrice, fmtPrice } from '../../utils/price'
 import { PHASE2_ENABLED } from '../../config/phase2.js'
 
 const phase2Enabled = PHASE2_ENABLED
+const showAcademy = ref(false) // 研究院入口开关(后台 mypage, 默认隐藏)
+const showHealth = ref(false)  // 养生入口开关(后台 mypage, 默认隐藏)
 function goAcademy() { uni.navigateTo({ url: '/pages-sub/academy/index' }) }
 function goHealth() { uni.navigateTo({ url: '/pages-sub/health/index' }) }
 
@@ -1000,6 +1002,8 @@ onShow(async () => {
     const cfg = await getPayConfig()
     homeShowPublish.value = cfg.show_publish === true
     allowPublishMoment.value = cfg.allow_publish_moment !== false
+    showAcademy.value = cfg.show_academy === true
+    showHealth.value = cfg.show_health === true
     buildTabs(cfg)
     if (Array.isArray(cfg.pandao_fixed) && cfg.pandao_fixed.length) pandaoFixed.value = cfg.pandao_fixed
     // 盘道动态轮播图 (cloud:// fileID → 签名 URL 后才能渲染)

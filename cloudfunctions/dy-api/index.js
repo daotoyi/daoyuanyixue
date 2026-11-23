@@ -5695,9 +5695,12 @@ async function appPayConfig() {
       show_tools: masterTools,
       show_tools_app: masterTools,
       show_tools_h5: masterTools,
+      // 第二阶段(health): 研究院 / 养生 入口开关 (mypage 分组, 默认关闭, 只增字段不影响 main 版)
+      show_academy: mypageDoc.show_academy === '1' || mypageDoc.show_academy === true || false,
+      show_health: mypageDoc.show_health === '1' || mypageDoc.show_health === true || false,
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true, show_academy: false, show_health: false })
   }
 }
 
