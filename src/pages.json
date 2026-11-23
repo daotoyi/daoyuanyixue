@@ -271,6 +271,22 @@
     "navigationBarBackgroundColor": "#FFFCF5",
     "navigationBarTextStyle": "black"
    }
+  },
+  {
+   "path": "pages-sub/travel/index",
+   "style": {
+    "navigationBarTitleText": "文旅",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/study/index",
+   "style": {
+    "navigationBarTitleText": "游学",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
   }
  ],
  "globalStyle": {

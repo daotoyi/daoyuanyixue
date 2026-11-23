@@ -90,40 +90,40 @@
           <view class="settings-card">
             <view class="settings-desc">
               <text class="sd-title">首页显示</text>
-              <text class="sd-text">控制小程序首页功能入口的显示/隐藏</text>
+              <text class="sd-text">控制首页频道标签与功能入口的显示/隐藏</text>
             </view>
-            <view class="f-row">
-              <text class="f-label">精选推荐</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_recommend" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_recommend = $event.detail.value" />
+            <view class="switch-grid">
+              <view class="switch-cell">
+                <text class="sc-label">推荐</text>
+                <switch :checked="homeCfg.show_recommend" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_recommend = $event.detail.value" />
               </view>
-            </view>
-            <view class="f-row">
-              <text class="f-label">发布动态</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_publish" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_publish = $event.detail.value" />
+              <view class="switch-cell">
+                <text class="sc-label">盘道</text>
+                <switch :checked="homeCfg.show_pandao" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_pandao = $event.detail.value" />
               </view>
-            </view>
-            <view class="f-row">
-              <text class="f-label">用户动态</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_follow" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_follow = $event.detail.value" />
+              <view class="switch-cell">
+                <text class="sc-label">动态</text>
+                <switch :checked="homeCfg.show_follow" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_follow = $event.detail.value" />
               </view>
-            </view>
-            <view class="f-row">
-              <text class="f-label">盘道入口</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_pandao" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_pandao = $event.detail.value" />
+              <view class="switch-cell">
+                <text class="sc-label">直播</text>
+                <switch :checked="homeCfg.show_live" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
-            </view>
-            <view class="f-row">
-              <text class="f-label">直播入口</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_live" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_live = $event.detail.value" />
+              <view class="switch-cell">
+                <text class="sc-label">发布</text>
+                <switch :checked="homeCfg.show_publish" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_publish = $event.detail.value" />
+              </view>
+              <view class="switch-cell">
+                <text class="sc-label">研究院</text>
+                <switch :checked="homeCfg.show_academy" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_academy = $event.detail.value" />
+              </view>
+              <view class="switch-cell">
+                <text class="sc-label">养生</text>
+                <switch :checked="homeCfg.show_health" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_health = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
-              <text class="settings-tip">关闭后小程序首页对应入口将隐藏</text>
+              <text class="settings-tip">关闭后首页对应标签/入口隐藏；研究院、养生同时控制「我的」页功能板块</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -181,20 +181,8 @@
                 <switch :checked="homeCfg.show_tools" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_tools = $event.detail.value" />
               </view>
             </view>
-            <view class="f-row">
-              <text class="f-label">研究院</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_academy" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_academy = $event.detail.value" />
-              </view>
-            </view>
-            <view class="f-row">
-              <text class="f-label">养生</text>
-              <view class="f-input-wrap">
-                <switch :checked="homeCfg.show_health" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_health = $event.detail.value" />
-              </view>
-            </view>
             <view class="settings-actions">
-              <text class="settings-tip">玄学工具总开关控制三端显隐；研究院/养生控制首页入口与「我的」页图标板块（默认关闭）</text>
+              <text class="settings-tip">玄学工具总开关控制三端显隐；研究院/养生开关已移至上方「首页显示」卡片</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -5783,6 +5771,22 @@ onUnmounted(() => {
 .settings-card .settings-actions {
   min-width: 680rpx;
 }
+/* 首页显示开关: 并排紧凑网格 (小程序勿用 gap, 用 space-between + 百分比宽度) */
+.switch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  min-width: 680rpx;
+}
+.switch-cell {
+  width: 31%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14rpx 0;
+}
+.sc-label { font-size: 24rpx; color: #55524c; margin-bottom: 8rpx; }
 .settings-desc {
   display: flex;
   align-items: baseline;

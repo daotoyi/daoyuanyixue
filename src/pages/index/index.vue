@@ -9,27 +9,7 @@
       </view>
     </view>
 
-    <!-- 第二阶段入口（研究院 / 养生）：后台 mypage 分组开关控制, 默认隐藏 -->
-    <view class="phase2-entry" v-if="phase2Enabled && (showAcademy || showHealth)">
-      <view class="p2-item" v-if="showAcademy" @tap="goAcademy">
-        <view class="p2-icon ac">道</view>
-        <view class="p2-txt">
-          <text class="p2-name">研究院</text>
-          <text class="p2-desc">明师引路 · 各擅其学</text>
-        </view>
-        <text class="p2-arrow">›</text>
-      </view>
-      <view class="p2-item" v-if="showHealth" @tap="goHealth">
-        <view class="p2-icon hl">養</view>
-        <view class="p2-txt">
-          <text class="p2-name">养生</text>
-          <text class="p2-desc">道家养生 · 打卡见功夫</text>
-        </view>
-        <text class="p2-arrow">›</text>
-      </view>
-    </view>
-
-    <!-- 子频道 Tab -->
+    <!-- 子频道 Tab：研究院/养生并入同一行(跳转型标签, 后台开关控制) -->
     <view class="channel-tabs">
       <view
         v-for="tab in tabs"
@@ -40,6 +20,14 @@
       >
         <text>{{ tab.label }}</text>
         <view class="tab-line" v-if="currentTab === tab.key"></view>
+      </view>
+      <view class="channel-tab jump" v-if="phase2Enabled && showAcademy" @tap="goAcademy">
+        <text>研究院</text>
+        <text class="jump-mark">›</text>
+      </view>
+      <view class="channel-tab jump" v-if="phase2Enabled && showHealth" @tap="goHealth">
+        <text>养生</text>
+        <text class="jump-mark">›</text>
       </view>
     </view>
 
@@ -1133,32 +1121,6 @@ onShow(async () => {
   height: 72rpx;
 }
 
-/* 第二阶段入口（骨架） */
-.phase2-entry {
-  display: flex;
-  flex-direction: column;
-  background: #fffafa;
-  border-bottom: 1rpx solid #e8e2da;
-}
-.p2-item {
-  display: flex;
-  align-items: center;
-  padding: 20rpx 32rpx;
-  border-bottom: 1rpx solid #f2ece2;
-}
-.p2-item:last-child { border-bottom: none; }
-.p2-icon {
-  width: 72rpx; height: 72rpx; flex-shrink: 0; border-radius: 16rpx;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 34rpx; font-family: serif; margin-right: 22rpx;
-}
-.p2-icon.ac { background: linear-gradient(135deg, #7a1220 0%, #a31930 100%); }
-.p2-icon.hl { background: linear-gradient(135deg, #6e7f5a 0%, #8fa06f 100%); }
-.p2-txt { flex: 1; display: flex; flex-direction: column; }
-.p2-name { font-size: 28rpx; color: #4a3b2a; font-weight: 500; }
-.p2-desc { font-size: 21rpx; color: #a89a88; margin-top: 6rpx; }
-.p2-arrow { font-size: 36rpx; color: #c9b8a4; margin-left: 12rpx; }
-
 /* 子频道 */
 .channel-tabs {
   display: flex;
@@ -1168,15 +1130,20 @@ onShow(async () => {
 .channel-tab {
   position: relative;
   flex: 1;
+  min-width: 0;
   text-align: center;
   padding: 24rpx 0 20rpx;
   font-size: 28rpx;
   color: #55524c;
+  white-space: nowrap;
 }
 .channel-tab.active {
   color: #c41e3a;
   font-weight: 500;
 }
+/* 研究院/养生跳转型标签：与内容标签并排，颜色略区分 + 箭头提示可跳转 */
+.channel-tab.jump { color: #7a1220; }
+.jump-mark { font-size: 26rpx; margin-left: 4rpx; color: #a31930; }
 .tab-line {
   position: absolute;
   bottom: 0;
@@ -1929,12 +1896,8 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
-  /* 第二阶段入口(骨架): rpx 会随屏宽撑大, PC 用固定 px 覆写 */
-  .p2-item { padding: 14px 20px; }
-  .p2-icon { width: 46px; height: 46px; font-size: 21px; border-radius: 10px; margin-right: 14px; }
-  .p2-name { font-size: 15px; }
-  .p2-desc { font-size: 12px; }
-  .p2-arrow { font-size: 22px; }
+  /* 研究院/养生跳转标签: PC 用固定 px 覆写箭头尺寸 */
+  .jump-mark { font-size: 18px; }
   /* 盘道动态轮播图: 高度由 :style 按原图比例动态计算(px), PC 无需额外覆盖;
      仅在窄屏/宽屏下给单张图一个更宽松的高度上限区间 */
   .pb-item {

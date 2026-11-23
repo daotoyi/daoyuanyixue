@@ -67,10 +67,10 @@
       </view>
     </view>
 
-    <!-- 研究院 / 养生 图标板块 (位于我的课程上方, 后台开关控制, 默认隐藏) -->
+    <!-- 功能板块 (研究院/养生/文旅/游学, 位于我的课程上方, 图标从左到右横排) -->
     <view class="panel" v-if="phase2Menus.length">
       <view class="panel-head">
-        <text class="panel-title">道学养生</text>
+        <text class="panel-title">功能板块</text>
       </view>
       <view class="order-entry phase2-entry">
         <view class="entry-item" v-for="m in phase2Menus" :key="m.key" @tap="onMenu(m)">
@@ -309,13 +309,16 @@ const menuItems = [
   { key: 'admin', label: '管理后台', icon: '⚙' },
 ]
 
-/* 第二阶段入口（研究院 / 养生）：独立图标板块, 由后台 mypage 开关控制 */
+/* 功能板块（研究院/养生受后台开关控制；文旅/游学骨架常显, 商品上架后自链接） */
 const showAcademy = ref(false)
 const showHealth = ref(false)
 const phase2Menus = computed(() => {
+  if (!PHASE2_ENABLED) return []
   const list = []
-  if (PHASE2_ENABLED && showAcademy.value) list.push({ key: 'academy', label: '研究院', icon: '☯' })
-  if (PHASE2_ENABLED && showHealth.value) list.push({ key: 'health', label: '养生', icon: '🌿' })
+  if (showAcademy.value) list.push({ key: 'academy', label: '研究院', icon: '☯' })
+  if (showHealth.value) list.push({ key: 'health', label: '养生', icon: '🌿' })
+  list.push({ key: 'travel', label: '文旅', icon: '🏯' })
+  list.push({ key: 'study', label: '游学', icon: '🎒' })
   return list
 })
 
@@ -488,6 +491,12 @@ function onMenu(m) {
       break
     case 'health':
       uni.navigateTo({ url: '/pages-sub/health/index' })
+      break
+    case 'travel':
+      uni.navigateTo({ url: '/pages-sub/travel/index' })
+      break
+    case 'study':
+      uni.navigateTo({ url: '/pages-sub/study/index' })
       break
     default:
       uni.showToast({ title: m.label + ' · 开发中', icon: 'none' })

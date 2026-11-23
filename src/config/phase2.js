@@ -21,6 +21,16 @@ export const PHASE2_ENABLED = true
 export const HEALTH_CATE_ID = 12
 
 /**
+ * 文旅 / 游学分类 id（骨架阶段预留）
+ * 0 = 后台尚未建对应商品分类；商品上架后：
+ *   1) 在 categories 集合新建分类拿到 id
+ *   2) 把这里改成真实 id
+ *   3) travel/study 页面按 cate_id 从 products 拉取生成卡片并跳商品详情（同 health/index.vue）
+ */
+export const TRAVEL_CATE_ID = 0
+export const STUDY_CATE_ID = 0
+
+/**
  * 研究院老师 → 真实课程匹配规则
  * 页面按 teacher 字段精确匹配 courses 集合，只展示上架(status=true)课程；
  * 下架或不存在则不显示课程卡片（如观复道人的六爻课 status=off，不展示）。
