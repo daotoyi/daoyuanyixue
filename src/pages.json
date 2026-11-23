@@ -247,6 +247,30 @@
     "navigationBarBackgroundColor": "#FFFCF5",
     "navigationBarTextStyle": "black"
    }
+  },
+  {
+   "path": "pages-sub/health/index",
+   "style": {
+    "navigationBarTitleText": "养生 · 次卡打卡",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/academy/index",
+   "style": {
+    "navigationBarTitleText": "道学易学研究院",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
+  },
+  {
+   "path": "pages-sub/academy/teacher",
+   "style": {
+    "navigationBarTitleText": "老师简介",
+    "navigationBarBackgroundColor": "#FFFCF5",
+    "navigationBarTextStyle": "black"
+   }
   }
  ],
  "globalStyle": {

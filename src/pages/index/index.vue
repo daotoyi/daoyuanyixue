@@ -9,6 +9,26 @@
       </view>
     </view>
 
+    <!-- 第二阶段入口（研究院 / 养生）：骨架阶段由前端常量控制，合并 main 前关闭 -->
+    <view class="phase2-entry" v-if="phase2Enabled">
+      <view class="p2-item" @tap="goAcademy">
+        <view class="p2-icon ac">道</view>
+        <view class="p2-txt">
+          <text class="p2-name">道学易学研究院</text>
+          <text class="p2-desc">明师引路 · 各擅其学</text>
+        </view>
+        <text class="p2-arrow">›</text>
+      </view>
+      <view class="p2-item" @tap="goHealth">
+        <view class="p2-icon hl">養</view>
+        <view class="p2-txt">
+          <text class="p2-name">养生 · 次卡打卡</text>
+          <text class="p2-desc">循天时而养 · 打卡见功夫</text>
+        </view>
+        <text class="p2-arrow">›</text>
+      </view>
+    </view>
+
     <!-- 子频道 Tab -->
     <view class="channel-tabs">
       <view
@@ -370,6 +390,11 @@ import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
+import { PHASE2_ENABLED } from '../../config/phase2.js'
+
+const phase2Enabled = PHASE2_ENABLED
+function goAcademy() { uni.navigateTo({ url: '/pages-sub/academy/index' }) }
+function goHealth() { uni.navigateTo({ url: '/pages-sub/health/index' }) }
 
 // tab 顺序固定: 推荐 → 盘道 → 直播 → 动态 (显示与否由后台首页管理开关控制)
 const tabs = ref([
@@ -1103,6 +1128,32 @@ onShow(async () => {
   width: 72rpx;
   height: 72rpx;
 }
+
+/* 第二阶段入口（骨架） */
+.phase2-entry {
+  display: flex;
+  flex-direction: column;
+  background: #fffafa;
+  border-bottom: 1rpx solid #e8e2da;
+}
+.p2-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 32rpx;
+  border-bottom: 1rpx solid #f2ece2;
+}
+.p2-item:last-child { border-bottom: none; }
+.p2-icon {
+  width: 72rpx; height: 72rpx; flex-shrink: 0; border-radius: 16rpx;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 34rpx; font-family: serif; margin-right: 22rpx;
+}
+.p2-icon.ac { background: linear-gradient(135deg, #7a1220 0%, #a31930 100%); }
+.p2-icon.hl { background: linear-gradient(135deg, #6e7f5a 0%, #8fa06f 100%); }
+.p2-txt { flex: 1; display: flex; flex-direction: column; }
+.p2-name { font-size: 28rpx; color: #4a3b2a; font-weight: 500; }
+.p2-desc { font-size: 21rpx; color: #a89a88; margin-top: 6rpx; }
+.p2-arrow { font-size: 36rpx; color: #c9b8a4; margin-left: 12rpx; }
 
 /* 子频道 */
 .channel-tabs {
@@ -1874,6 +1925,12 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
+  /* 第二阶段入口(骨架): rpx 会随屏宽撑大, PC 用固定 px 覆写 */
+  .p2-item { padding: 14px 20px; }
+  .p2-icon { width: 46px; height: 46px; font-size: 21px; border-radius: 10px; margin-right: 14px; }
+  .p2-name { font-size: 15px; }
+  .p2-desc { font-size: 12px; }
+  .p2-arrow { font-size: 22px; }
   /* 盘道动态轮播图: 高度由 :style 按原图比例动态计算(px), PC 无需额外覆盖;
      仅在窄屏/宽屏下给单张图一个更宽松的高度上限区间 */
   .pb-item {

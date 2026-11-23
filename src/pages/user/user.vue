@@ -216,6 +216,7 @@ import { useUserStore } from '../../store/index'
 import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile, getPayConfig } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { APP_FULL_VERSION } from '../../version'
+import { PHASE2_ENABLED } from '../../config/phase2.js'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -295,9 +296,17 @@ const menuItems = [
   { key: 'admin', label: '管理后台', icon: '⚙' },
 ]
 
-const visibleMenus = computed(() =>
-  menuItems.filter((m) => m.key !== 'admin' || isAdmin.value)
-)
+/* 第二阶段入口（研究院 / 养生）：骨架阶段由前端常量控制，合并 main 前关闭 */
+const phase2Menus = [
+  { key: 'academy', label: '道学易学研究院', icon: '☯' },
+  { key: 'health', label: '养生 · 次卡打卡', icon: '🌿' },
+]
+
+const visibleMenus = computed(() => {
+  let list = menuItems.filter((m) => m.key !== 'admin' || isAdmin.value)
+  if (PHASE2_ENABLED) list = [...phase2Menus, ...list]
+  return list
+})
 
 function goLogin() {
   uni.navigateTo({ url: '/pages-sub/login/login' })
@@ -460,6 +469,12 @@ function onMenu(m) {
       break
     case 'about':
       uni.navigateTo({ url: '/pages-sub/setting/about' })
+      break
+    case 'academy':
+      uni.navigateTo({ url: '/pages-sub/academy/index' })
+      break
+    case 'health':
+      uni.navigateTo({ url: '/pages-sub/health/index' })
       break
     default:
       uni.showToast({ title: m.label + ' · 开发中', icon: 'none' })
