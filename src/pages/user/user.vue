@@ -516,7 +516,40 @@ function onLogout() {
   })
 }
 
+/* 加载页面显示配置: 研究院/养生/玄学工具开关。
+   注意: getPayConfig 是公开接口, 未登录也可读取; 必须在 onShow 的登录判断之前调用,
+   否则退出登录后 showAcademy/showHealth 保持 false, 功能板块丢失研究院/养生入口。 */
+async function loadPageConfig() {
+  try {
+    const cfg = await getPayConfig()
+    showAcademy.value = cfg.show_academy === true
+    showHealth.value = cfg.show_health === true
+    // #ifdef MP-WEIXIN
+    showTools.value = cfg.show_tools === true
+    // #endif
+    // #ifdef APP-PLUS
+    showTools.value = cfg.show_tools_app === true
+    // #endif
+    // #ifdef H5
+    showTools.value = cfg.show_tools_h5 === true
+    // #endif
+  } catch (e) {
+    // 异常时按各端默认: 微信小程序关, App/H5 开
+    // #ifdef MP-WEIXIN
+    showTools.value = false
+    // #endif
+    // #ifdef APP-PLUS
+    showTools.value = true
+    // #endif
+    // #ifdef H5
+    showTools.value = true
+    // #endif
+  }
+}
+
 onShow(async () => {
+  // 显示配置先于登录判断加载: 未登录也能看到研究院/养生/文旅/游学入口
+  await loadPageConfig()
   if (!isLoggedIn.value) return
   // 从后端刷新最新用户信息 (头像/道号以服务端为准, 避免本地缓存旧数据 H5 显示不一致)
   try {
@@ -557,33 +590,6 @@ onShow(async () => {
     }
   } catch (e) {
     /* 忽略 */
-  }
-  // 加载页面配置 (玄学工具开关等), 按端独立跟随后台配置
-  try {
-    const cfg = await getPayConfig()
-    // 第二阶段: 研究院 / 养生 入口开关 (三端同一字段)
-    showAcademy.value = cfg.show_academy === true
-    showHealth.value = cfg.show_health === true
-    // #ifdef MP-WEIXIN
-    showTools.value = cfg.show_tools === true
-    // #endif
-    // #ifdef APP-PLUS
-    showTools.value = cfg.show_tools_app === true
-    // #endif
-    // #ifdef H5
-    showTools.value = cfg.show_tools_h5 === true
-    // #endif
-  } catch (e) {
-    // 异常时按各端默认: 微信小程序关, App/H5 开
-    // #ifdef MP-WEIXIN
-    showTools.value = false
-    // #endif
-    // #ifdef APP-PLUS
-    showTools.value = true
-    // #endif
-    // #ifdef H5
-    showTools.value = true
-    // #endif
   }
 })
 </script>

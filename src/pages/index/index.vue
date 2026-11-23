@@ -99,6 +99,46 @@
             </view>
           </scroll-view>
         </view>
+        <!-- 养生 (第二阶段: 按道家养生分类 cate_id=12 拉真实商品) -->
+        <view class="rec-sec" v-if="recShowHealth && recHealthProducts.length">
+          <view class="rec-head">
+            <text class="rec-title">🌿 道家养生</text>
+            <text class="rec-more" @tap="goHealth">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-prod-card" v-for="p in recHealthProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
+              <image lazy-load class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
+              <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
+              <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 文旅 / 游学 (第二阶段骨架: 商品上架后自动呈现, 当前显示筹备入口) -->
+        <view class="rec-sec rec-phase2" v-if="recShowTravel || recShowStudy">
+          <view class="rec-head">
+            <text class="rec-title">🧭 文旅 · 游学</text>
+          </view>
+          <view class="rec-p2-row">
+            <view class="rec-p2-item" v-if="recShowTravel" @tap="goTravel">
+              <text class="rec-p2-icon">🏯</text>
+              <view class="rec-p2-txt">
+                <text class="rec-p2-name">文旅</text>
+                <text class="rec-p2-desc">名山道场参访 · 筹备中</text>
+              </view>
+              <text class="rec-p2-arrow">›</text>
+            </view>
+            <view class="rec-p2-item" v-if="recShowStudy" @tap="goStudy">
+              <text class="rec-p2-icon">🎒</text>
+              <view class="rec-p2-txt">
+                <text class="rec-p2-name">游学</text>
+                <text class="rec-p2-desc">访名师而问道 · 筹备中</text>
+              </view>
+              <text class="rec-p2-arrow">›</text>
+            </view>
+          </view>
+        </view>
+
         <!-- 动态精选 (推荐页最底部内容模块: 后台精选的全部用户动态, 横向滑动显示) -->
         <view class="rec-sec" v-if="recShowMoment && recMoments.length">
           <view class="rec-head">
@@ -378,7 +418,7 @@ import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
-import { PHASE2_ENABLED } from '../../config/phase2.js'
+import { PHASE2_ENABLED, HEALTH_CATE_ID } from '../../config/phase2.js'
 
 const phase2Enabled = PHASE2_ENABLED
 const showAcademy = ref(false) // 研究院入口开关(后台 mypage, 默认隐藏)
@@ -420,12 +460,20 @@ const recShowPandao = ref(true)
 const recShowProduct = ref(true)
 const recShowCourse = ref(true)
 const recShowMoment = ref(true)
+/* 第二阶段推荐页模块: 养生/文旅/游学 (后台新增开关, 默认关闭) */
+const recShowHealth = ref(false)
+const recShowTravel = ref(false)
+const recShowStudy = ref(false)
 const recMoments = ref([])
 /* 推荐页商品/课程列表 (仅显示后台标记"首页推荐"的) */
 const productList = ref([])
 const courseList = ref([])
 const recProducts = computed(() => productList.value.filter((p) => p.home_recommend === true))
 const recCourses = computed(() => courseList.value.filter((c) => c.home_recommend === true))
+/* 养生模块: 按真实分类 id=12「道家养生」过滤商品 (与养生页同源) */
+const recHealthProducts = computed(() => productList.value.filter((p) => Number(p.cate_id) === HEALTH_CATE_ID && p.is_show !== false))
+function goTravel() { uni.navigateTo({ url: '/pages-sub/travel/index' }) }
+function goStudy() { uni.navigateTo({ url: '/pages-sub/study/index' }) }
 
 /* ============ 盘道活动日历 (本月/下月, 固定周规则) ============ */
 const calOffset = ref(0) // 0=本月 1=下月
@@ -1008,13 +1056,17 @@ onShow(async () => {
     recShowProduct.value = cfg.rec_show_product !== false
     recShowCourse.value = cfg.rec_show_course !== false
     recShowMoment.value = cfg.rec_show_moment !== false
+    // 第二阶段推荐页模块 (默认关闭, 严格 === true 才显示)
+    recShowHealth.value = cfg.rec_show_health === true
+    recShowTravel.value = cfg.rec_show_travel === true
+    recShowStudy.value = cfg.rec_show_study === true
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
 
-  // ①.5 推荐页商品/课程列表 (独立加载, 失败不影响其他)
-  if (recShowProduct.value || recShowCourse.value) {
+  // ①.5 推荐页商品/课程列表 (独立加载, 失败不影响其他; 养生模块也复用商品列表按 cate_id=12 过滤)
+  if (recShowProduct.value || recShowCourse.value || recShowHealth.value) {
     try {
       const [prods, courses] = await Promise.all([
-        recShowProduct.value ? getProducts({}).catch(() => []) : Promise.resolve([]),
+        (recShowProduct.value || recShowHealth.value) ? getProducts({}).catch(() => []) : Promise.resolve([]),
         recShowCourse.value ? getCourses({}).catch(() => []) : Promise.resolve([]),
       ])
       productList.value = prods || []
@@ -1806,6 +1858,19 @@ onShow(async () => {
   font-weight: 600;
   color: #9c1630;
 }
+/* 文旅/游学 筹备入口条 (第二阶段推荐页模块) */
+.rec-p2-row { display: flex; flex-direction: column; }
+.rec-p2-item {
+  display: flex; align-items: center; padding: 20rpx 24rpx; margin-bottom: 16rpx;
+  background: linear-gradient(135deg, #f6f2e8 0%, #eef1e6 100%);
+  border: 1rpx solid #e8e2da; border-radius: 14rpx;
+}
+.rec-p2-item:last-child { margin-bottom: 0; }
+.rec-p2-icon { font-size: 44rpx; margin-right: 20rpx; }
+.rec-p2-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.rec-p2-name { font-size: 28rpx; font-weight: 500; color: #4a3b2a; }
+.rec-p2-desc { font-size: 21rpx; color: #a89a88; margin-top: 6rpx; }
+.rec-p2-arrow { font-size: 36rpx; color: #a31930; margin-left: 12rpx; }
 .ellipsis-1 {
   overflow: hidden;
   white-space: nowrap;
@@ -1987,6 +2052,16 @@ onShow(async () => {
   .rec-more {
     font-size: 24rpx;
   }
+  /* 文旅/游学筹备入口: PC 用固定 px 覆写, 避免 rpx 随屏宽撑大 */
+  .rec-p2-item {
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 9px;
+  }
+  .rec-p2-icon { font-size: 26px; margin-right: 12px; }
+  .rec-p2-name { font-size: 16px; }
+  .rec-p2-desc { font-size: 12px; }
+  .rec-p2-arrow { font-size: 20px; }
   .rec-scroll {
     padding-bottom: 0;
   }

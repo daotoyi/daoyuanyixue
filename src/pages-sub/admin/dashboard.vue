@@ -163,8 +163,26 @@
                 <switch :checked="homeCfg.rec_show_moment" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_moment = $event.detail.value" />
               </view>
             </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·养生</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_health" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_health = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·文旅</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_travel" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_travel = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
+              <text class="f-label">推荐页·游学</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.rec_show_study" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.rec_show_study = $event.detail.value" />
+              </view>
+            </view>
             <view class="settings-actions">
-              <text class="settings-tip">关闭后「推荐」页签将不展示对应内容模块</text>
+              <text class="settings-tip">关闭后「推荐」页签将不展示对应内容模块；养生/文旅/游学为第二阶段新增模块（默认关闭）</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -1904,7 +1922,7 @@ async function loadModule(key) {
 }
 
 /* ===== 页面管理 ===== */
-const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, show_tools: false, show_academy: false, show_health: false })
+const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, rec_show_health: false, rec_show_travel: false, rec_show_study: false, show_tools: false, show_academy: false, show_health: false })
 const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
 // 玄学工具总开关: 单字段 show_tools 控制三端; 未显式设置时默认开启, 避免线上原 App/H5 已开启的玄学工具被回退隐藏
 function masterToolsOf(mp) {
@@ -2069,6 +2087,9 @@ async function loadHomeConfig() {
       rec_show_product: rc.rec_show_product !== '0' && rc.rec_show_product !== false,
       rec_show_course: rc.rec_show_course !== '0' && rc.rec_show_course !== false,
       rec_show_moment: rc.rec_show_moment !== '0' && rc.rec_show_moment !== false,
+      rec_show_health: rc.rec_show_health === '1' || rc.rec_show_health === true,
+      rec_show_travel: rc.rec_show_travel === '1' || rc.rec_show_travel === true,
+      rec_show_study: rc.rec_show_study === '1' || rc.rec_show_study === true,
       show_tools: masterToolsOf(mp),
       show_academy: mp.show_academy === '1' || mp.show_academy === true,
       show_health: mp.show_health === '1' || mp.show_health === true,
@@ -2100,7 +2121,7 @@ async function loadPandaoConfig() {
 async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0', show_wechat_login: homeCfg.value.show_wechat_login ? '1' : '0' } })
-    await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0' } })
+    await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0', rec_show_health: homeCfg.value.rec_show_health ? '1' : '0', rec_show_travel: homeCfg.value.rec_show_travel ? '1' : '0', rec_show_study: homeCfg.value.rec_show_study ? '1' : '0' } })
     await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0', show_tools_app: homeCfg.value.show_tools ? '1' : '0', show_tools_h5: homeCfg.value.show_tools ? '1' : '0', show_academy: homeCfg.value.show_academy ? '1' : '0', show_health: homeCfg.value.show_health ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {

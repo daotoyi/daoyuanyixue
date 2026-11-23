@@ -5689,6 +5689,10 @@ async function appPayConfig() {
       rec_show_product: recDoc.rec_show_product !== '0',
       rec_show_course: recDoc.rec_show_course !== '0',
       rec_show_moment: recDoc.rec_show_moment !== '0',
+      // 第二阶段(health): 推荐页展示模块 — 养生/文旅/游学 (默认关闭, 只增字段不影响 main 版)
+      rec_show_health: recDoc.rec_show_health === '1' || recDoc.rec_show_health === true || false,
+      rec_show_travel: recDoc.rec_show_travel === '1' || recDoc.rec_show_travel === true || false,
+      rec_show_study: recDoc.rec_show_study === '1' || recDoc.rec_show_study === true || false,
       // 动态发布控制: 普通用户/员工是否允许发布动态 (默认关闭), 超管/管理员始终可发布
       allow_publish_moment: momentDoc.allow_publish_moment === '1' || momentDoc.allow_publish_moment === true || false,
       // 我的页面: 玄学工具板块 — 单一总开关控制 H5 / App / 微信小程序 三端
@@ -5700,7 +5704,7 @@ async function appPayConfig() {
       show_health: mypageDoc.show_health === '1' || mypageDoc.show_health === true || false,
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true, show_academy: false, show_health: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, rec_show_health: false, rec_show_travel: false, rec_show_study: false, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true, show_academy: false, show_health: false })
   }
 }
 
