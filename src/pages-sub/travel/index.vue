@@ -9,15 +9,9 @@
       </view>
     </view>
 
-    <!-- 基本介绍 -->
+    <!-- 基本介绍: 真和盛文化理念 + 分节详述 (共享组件/文案同源) -->
     <view class="tp-card tp-intro-card">
-      <text class="ti-title">关于文旅</text>
-      <text class="ti-text">以山水为课堂，走访道观古迹与人文胜地，把书卷上的义理放到眼前印证。行程由熟悉当地掌故的老师带队，路线不求多而求透，行一处得一处；参访之余留有静坐与抄经的时间，使身心与山水同调。</text>
-      <view class="ti-tags">
-        <text class="ti-tag">道场参访</text>
-        <text class="ti-tag">古迹寻访</text>
-        <text class="ti-tag">随行讲解</text>
-      </view>
+      <SectionIntro :intro="sectionIntro" :theme="sectionTheme" />
     </view>
 
     <!-- 商城文旅商品卡片（按真实分类拉取，点击进商品详情） -->
@@ -64,6 +58,11 @@ import { onShow } from '@dcloudio/uni-app'
 import { getProducts } from '../../api/api'
 import { TRAVEL_CATE_ID } from '../../config/phase2.js'
 import { fmtPrice } from '../../utils/price'
+import SectionIntro from '../../components/SectionIntro.vue'
+import { SECTION_INTROS, SECTION_THEME } from '../../config/sectionIntro.js'
+
+const sectionIntro = SECTION_INTROS.travel
+const sectionTheme = SECTION_THEME.travel
 
 const cateId = TRAVEL_CATE_ID
 const products = ref([])
@@ -123,16 +122,8 @@ onShow(loadProducts)
 .sec-title { font-size: 30rpx; font-weight: 500; color: #4a3b2a; }
 .sec-more { font-size: 24rpx; color: #6e7f5a; }
 
-/* 基本介绍 */
+/* 基本介绍: 内容由 SectionIntro 组件渲染, 此处只保留外层容器 */
 .tp-intro-card { display: flex; flex-direction: column; }
-.ti-title { font-size: 30rpx; font-weight: 500; color: #6e7f5a; }
-.ti-text { margin-top: 16rpx; font-size: 24rpx; color: #8a7d6c; line-height: 1.8; }
-.ti-tags { display: flex; flex-wrap: wrap; margin-top: 18rpx; }
-.ti-tag {
-  font-size: 20rpx; color: #6e7f5a; background: #f2f5ec;
-  border: 1rpx solid #dde5d0; border-radius: 999rpx;
-  padding: 4rpx 16rpx; margin: 0 12rpx 8rpx 0;
-}
 
 /* 商品列表 */
 .prod-list { display: flex; flex-direction: column; }
@@ -165,7 +156,6 @@ onShow(loadProducts)
     min-height: 100vh;
   }
   .tp-card { margin: 18px auto; max-width: 1160px; }
-  .ti-text { font-size: 15px; }
 }
 @media screen and (min-width: 1440px) {
   .tp-page { max-width: 1320px; }

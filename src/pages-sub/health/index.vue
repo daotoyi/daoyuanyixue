@@ -9,15 +9,9 @@
       </view>
     </view>
 
-    <!-- 基本介绍 -->
+    <!-- 基本介绍: 真和盛文化理念 + 分节详述 (共享组件/文案同源) -->
     <view class="hp-card hp-intro-card">
-      <text class="hi-title">关于道家养生</text>
-      <text class="hi-text">道元易学养生以道家「法于阴阳、和于术数」为本，按次调理、以次计费。购卡即开通次数与有效期，每次到店消费由本人打卡核销一次，余次与完整记录随时可查，不催不赶、循序而养。</text>
-      <view class="hi-tags">
-        <text class="hi-tag">按次计费</text>
-        <text class="hi-tag">打卡核销</text>
-        <text class="hi-tag">有效期明示</text>
-      </view>
+      <SectionIntro :intro="sectionIntro" :theme="sectionTheme" />
     </view>
 
     <!-- 道家养生商品卡片（真实商品，点击进入商品详情下单） -->
@@ -156,6 +150,11 @@ import { getProducts, myHealthCards, myHealthCheckins, healthCheckin } from '../
 import { useUserStore } from '../../store/index'
 import { HEALTH_CATE_ID } from '../../config/phase2.js'
 import { fmtPrice } from '../../utils/price'
+import SectionIntro from '../../components/SectionIntro.vue'
+import { SECTION_INTROS, SECTION_THEME } from '../../config/sectionIntro.js'
+
+const sectionIntro = SECTION_INTROS.health
+const sectionTheme = SECTION_THEME.health
 
 /* 次卡数据全部来自服务端: 支付成功的次卡商品由云函数自动发卡 (health_cards 集合) */
 const userStore = useUserStore()
@@ -434,16 +433,8 @@ onShow(() => {
 .pc-go { font-size: 22rpx; color: #8c6b1f; margin-left: auto; }
 .hp-foot { text-align: center; font-size: 22rpx; color: #b8a894; margin-top: 40rpx; }
 
-/* 基本介绍卡片 */
+/* 基本介绍卡片: 内容由 SectionIntro 组件渲染, 此处只保留外层容器 */
 .hp-intro-card { display: flex; flex-direction: column; }
-.hi-title { font-size: 30rpx; font-weight: 500; color: #7a1220; }
-.hi-text { margin-top: 16rpx; font-size: 24rpx; color: #8a7d6c; line-height: 1.8; }
-.hi-tags { display: flex; flex-wrap: wrap; margin-top: 18rpx; }
-.hi-tag {
-  font-size: 20rpx; color: #6e7f5a; background: #f2f5ec;
-  border: 1rpx solid #dde5d0; border-radius: 999rpx;
-  padding: 4rpx 16rpx; margin: 0 12rpx 8rpx 0;
-}
 
 /* PC 宽屏: 页面收拢居中, 不铺满整个显示器 (与其他页面一致) */
 @media screen and (min-width: 1025px) {
@@ -454,7 +445,6 @@ onShow(() => {
     min-height: 100vh;
   }
   .hp-card { margin: 18px auto; max-width: 1160px; }
-  .hi-text { font-size: 15px; }
   /* PC 端 rpx 随屏宽放大: 备注行小字与弹层文字用绝对 px 固定 */
   .hc-remark { font-size: 12px; margin-top: 8px; }
   .hc-remark-label { margin-right: 6px; }

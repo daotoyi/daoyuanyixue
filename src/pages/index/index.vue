@@ -396,9 +396,12 @@
     <!-- 养生 / 文旅 / 游学 频道: 点击标签在首页直接显示内容(同盘道), 不跳新页面 -->
     <scroll-view scroll-y class="feed-scroll" v-else-if="p2Tab">
       <view class="p2b-hero">
+        <text class="p2b-brand">{{ BRAND.name }} · {{ BRAND.motto }}</text>
         <text class="p2b-title">{{ p2Tab.title }}</text>
         <text class="p2b-sub">{{ p2Tab.sub }}</text>
+        <text class="p2b-motto">{{ p2Tab.motto }}</text>
         <text class="p2b-desc">{{ p2Tab.desc }}</text>
+        <text class="p2b-mission">{{ BRAND.mission }} · {{ BRAND.principle }}</text>
       </view>
 
       <view class="p2b-sec" v-if="p2Tab.products.length">
@@ -487,6 +490,7 @@ import { staticUrl } from '../../utils/static-url'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
 import { PHASE2_ENABLED, HEALTH_CATE_ID, TRAVEL_CATE_ID, STUDY_CATE_ID } from '../../config/phase2.js'
+import { BRAND, SECTION_INTROS } from '../../config/sectionIntro.js'
 
 const phase2Enabled = PHASE2_ENABLED
 // 功能板块入口开关 (后台「首页显示」控制, 云函数默认显示, 显式关闭才隐藏)
@@ -571,7 +575,8 @@ const P2_TABS = {
     label: '养生',
     title: '道家养生',
     sub: '循天时而养 · 以打卡见功夫',
-    desc: '按次调理、以次计费，购卡即开通次数与有效期，每次消费打卡核销一次，余次与记录随时可查。',
+    desc: SECTION_INTROS.health.brief,
+    motto: SECTION_INTROS.health.subtitle,
     goodsTitle: '养生次卡 · 商城商品',
     cateId: HEALTH_CATE_ID,
     entry: '进入养生板块（我的次卡 / 打卡记录）›',
@@ -580,7 +585,8 @@ const P2_TABS = {
     label: '文旅',
     title: '文旅',
     sub: '寻访道场胜境 · 于山水之间体证道法自然',
-    desc: '以山水为课堂，走访道观古迹与人文胜地，由熟悉当地掌故的老师带队，行一处得一处。',
+    desc: SECTION_INTROS.travel.brief,
+    motto: SECTION_INTROS.travel.subtitle,
     goodsTitle: '文旅商品',
     cateId: TRAVEL_CATE_ID,
     entry: '进入文旅板块 ›',
@@ -589,7 +595,8 @@ const P2_TABS = {
     label: '游学',
     title: '游学',
     sub: '读万卷书 · 行万里路 · 访名师而问道',
-    desc: '短期研学行程，随师同行、现场讲解，边走边学；归来再入课程深入，知行相续不使中断。',
+    desc: SECTION_INTROS.study.brief,
+    motto: SECTION_INTROS.study.subtitle,
     goodsTitle: '游学商品',
     cateId: STUDY_CATE_ID,
     entry: '进入游学板块 ›',
@@ -1918,9 +1925,12 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
 }
+.p2b-brand { font-size: 20rpx; color: #8c6b1f; letter-spacing: 1rpx; margin-bottom: 14rpx; }
 .p2b-title { font-size: 34rpx; font-weight: 500; color: #7a1220; }
 .p2b-sub { margin-top: 10rpx; font-size: 23rpx; color: #9c7a68; }
+.p2b-motto { margin-top: 10rpx; font-size: 22rpx; color: #7a1220; }
 .p2b-desc { margin-top: 16rpx; font-size: 23rpx; color: #8a7d6c; line-height: 1.75; }
+.p2b-mission { margin-top: 14rpx; font-size: 20rpx; color: #a89a88; letter-spacing: 1rpx; }
 
 .p2b-sec { margin: 28rpx 24rpx 0; }
 .p2b-sec-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18rpx; }
@@ -2297,6 +2307,8 @@ onShow(async () => {
   .p2b-title { font-size: 22px; }
   .p2b-sub { font-size: 15px; margin-top: 7px; }
   .p2b-desc { font-size: 15px; margin-top: 11px; }
+  .p2b-brand, .p2b-mission { font-size: 12px; }
+  .p2b-motto { font-size: 13px; }
   .p2b-sec { margin: 20px 24px 0; }
   .p2b-sec-title { font-size: 19px; }
   .p2b-sec-more { font-size: 14px; }

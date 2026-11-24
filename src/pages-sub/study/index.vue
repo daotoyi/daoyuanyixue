@@ -9,15 +9,9 @@
       </view>
     </view>
 
-    <!-- 基本介绍 -->
+    <!-- 基本介绍: 真和盛文化理念 + 分节详述 (共享组件/文案同源) -->
     <view class="sp-card sp-intro-card">
-      <text class="si-title">关于游学</text>
-      <text class="si-text">短期研学行程，随师同行、现场讲解，边走边学。行程结束回到课程里再深入一层，知行相续不使中断；适合已入门、欲在实践中印证书本所学之人，亦适合初次接触、想先看一看到的学人。</text>
-      <view class="si-tags">
-        <text class="si-tag">随师讲解</text>
-        <text class="si-tag">短期营期</text>
-        <text class="si-tag">知行相续</text>
-      </view>
+      <SectionIntro :intro="sectionIntro" :theme="sectionTheme" />
     </view>
 
     <!-- 商城游学商品卡片（按真实分类拉取，点击进商品详情） -->
@@ -64,6 +58,11 @@ import { onShow } from '@dcloudio/uni-app'
 import { getProducts } from '../../api/api'
 import { STUDY_CATE_ID } from '../../config/phase2.js'
 import { fmtPrice } from '../../utils/price'
+import SectionIntro from '../../components/SectionIntro.vue'
+import { SECTION_INTROS, SECTION_THEME } from '../../config/sectionIntro.js'
+
+const sectionIntro = SECTION_INTROS.study
+const sectionTheme = SECTION_THEME.study
 
 const cateId = STUDY_CATE_ID
 const products = ref([])
@@ -122,16 +121,8 @@ onShow(loadProducts)
 .sec-title { font-size: 30rpx; font-weight: 500; color: #4a3b2a; }
 .sec-more { font-size: 24rpx; color: #2b5778; }
 
-/* 基本介绍 */
+/* 基本介绍: 内容由 SectionIntro 组件渲染, 此处只保留外层容器 */
 .sp-intro-card { display: flex; flex-direction: column; }
-.si-title { font-size: 30rpx; font-weight: 500; color: #2b5778; }
-.si-text { margin-top: 16rpx; font-size: 24rpx; color: #8a7d6c; line-height: 1.8; }
-.si-tags { display: flex; flex-wrap: wrap; margin-top: 18rpx; }
-.si-tag {
-  font-size: 20rpx; color: #2b5778; background: #eef3f7;
-  border: 1rpx solid #d5e2ea; border-radius: 999rpx;
-  padding: 4rpx 16rpx; margin: 0 12rpx 8rpx 0;
-}
 
 /* 商品列表 */
 .prod-list { display: flex; flex-direction: column; }
@@ -164,7 +155,6 @@ onShow(loadProducts)
     min-height: 100vh;
   }
   .sp-card { margin: 18px auto; max-width: 1160px; }
-  .si-text { font-size: 15px; }
 }
 @media screen and (min-width: 1440px) {
   .sp-page { max-width: 1320px; }

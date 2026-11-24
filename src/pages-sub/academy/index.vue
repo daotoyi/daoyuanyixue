@@ -8,15 +8,9 @@
       </view>
     </view>
 
-    <!-- 基本介绍 -->
+    <!-- 基本介绍: 真和盛文化理念 + 分节详述 (共享组件/文案同源) -->
     <view class="ac-intro">
-      <text class="ac-intro-title">关于研究院</text>
-      <text class="ac-intro-text">研究院汇集道学、易学与书道诸门明师，各以所长立课。四柱、奇门为入世之学，书法、古汉字为载道之器，德道经为归根之典。可先看老师所长与所讲课程，择一门深入，亦可诸门并观、互相印证。</text>
-      <view class="ac-intro-tags">
-        <text class="ac-intro-tag">明师讲席</text>
-        <text class="ac-intro-tag">课程可直达</text>
-        <text class="ac-intro-tag">一门深入</text>
-      </view>
+      <SectionIntro :intro="sectionIntro" :theme="sectionTheme" />
     </view>
 
     <view class="ac-list">
@@ -86,6 +80,11 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getCourses, getProducts } from '../../api/api'
 import { ACADEMY_TEACHERS, coursesOfTeacher } from '../../config/phase2.js'
 import { fmtPrice } from '../../utils/price'
+import SectionIntro from '../../components/SectionIntro.vue'
+import { SECTION_INTROS, SECTION_THEME } from '../../config/sectionIntro.js'
+
+const sectionIntro = SECTION_INTROS.academy
+const sectionTheme = SECTION_THEME.academy
 
 const teacherCards = ref(ACADEMY_TEACHERS.map((t) => ({ ...t, courses: [] })))
 const goods = ref([])
@@ -182,19 +181,11 @@ function goCourse(c) {
 .tc-nocourse { margin-top: 18rpx; padding-top: 14rpx; border-top: 1rpx dashed rgba(140,90,43,0.25); font-size: 22rpx; color: #b8a894; text-align: center; }
 .ac-foot { text-align: center; font-size: 22rpx; color: #b8a894; margin-top: 40rpx; }
 
-/* 基本介绍 */
+/* 基本介绍: 内容由 SectionIntro 组件渲染, 此处只保留外层容器 */
 .ac-intro {
   margin: 24rpx; padding: 28rpx;
   background: #fffafa; border: 1rpx solid var(--dy-line); border-radius: 16rpx;
   display: flex; flex-direction: column;
-}
-.ac-intro-title { font-size: 30rpx; font-weight: 500; color: #7a1220; }
-.ac-intro-text { margin-top: 16rpx; font-size: 24rpx; color: #8a7d6c; line-height: 1.8; }
-.ac-intro-tags { display: flex; flex-wrap: wrap; margin-top: 18rpx; }
-.ac-intro-tag {
-  font-size: 20rpx; color: #8c6b1f; background: #fbf3e2;
-  border: 1rpx solid #e8d9b8; border-radius: 999rpx;
-  padding: 4rpx 16rpx; margin: 0 12rpx 8rpx 0;
 }
 
 /* 商城好物 */
@@ -222,7 +213,6 @@ function goCourse(c) {
     min-height: 100vh;
   }
   .ac-intro { margin: 18px auto; max-width: 1160px; padding: 18px; }
-  .ac-intro-text { font-size: 15px; }
   .ac-list { max-width: 1160px; margin: 0 auto; padding: 4px 18px; }
   .ac-goods { margin: 8px auto 0; max-width: 1104px; padding: 18px; }
 }
