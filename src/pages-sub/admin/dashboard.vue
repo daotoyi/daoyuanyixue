@@ -595,6 +595,10 @@
               <text class="ots-val">{{ t.count }}单 / ¥{{ t.amount.toFixed(0) }}</text>
             </view>
           </view>
+          <!-- 表头与数据行同宽, 内容一律不换行, 整表可左右滑动
+               (小程序端 view 的 overflow-x:auto 不产生滚动 → 用 scroll-view scroll-x 包裹) -->
+          <view class="table-scroll-tip">← 左右滑动表头，查看全部列 →</view>
+          <scroll-view scroll-x class="table-scroll">
           <view class="table orders-table">
             <view class="tr th">
               <text class="td w-no">订单号</text>
@@ -636,6 +640,7 @@
               </view>
             </view>
           </view>
+          </scroll-view>
         </view>
 
         <!-- ===== 次卡核销 (布局参考订单管理) ===== -->
@@ -666,6 +671,8 @@
             </view>
           </view>
 
+          <view class="table-scroll-tip">← 左右滑动表头，查看全部列 →</view>
+          <scroll-view scroll-x class="table-scroll">
           <view class="table orders-table cards-table">
             <view class="tr th">
               <text class="td w-no">次卡号</text>
@@ -697,6 +704,7 @@
               </view>
             </view>
           </view>
+          </scroll-view>
           <view class="empty-tip" v-if="!sortedCards.length">暂无次卡记录（用户购买养生次卡并支付成功后自动生成）</view>
         </view>
 
@@ -6001,6 +6009,35 @@ onUnmounted(() => {
 }
 .card-order-link:active { color: #c4753a; }
 .card-remark-none { color: #8a857c; }
+
+/* ===== 订单 / 次卡表格: 内容不换行, 表头与数据行严格同宽, 整表左右滑动 =====
+   小程序端 view 的 overflow-x:auto 不会产生滚动 → 外层用 <scroll-view scroll-x>,
+   .table 自身按 min-width 撑开, 内部所有 .tr width:100% 等宽, 表头随内容一起横向滑动;
+   列宽固定不再靠 flex 伸缩, 避免表头与数据行列错位。 */
+.table-scroll { width: 100%; white-space: nowrap; }
+.table-scroll-tip { font-size: 20rpx; color: #9a8b76; margin: 0 0 10rpx; }
+.table-scroll .table {
+  display: inline-block;
+  box-sizing: border-box;
+  min-width: 100%;
+  overflow-x: visible;
+}
+.table-scroll .table.orders-table,
+.table-scroll .table.cards-table { width: 2000rpx; min-width: 100%; }
+.table-scroll .tr {
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  box-sizing: border-box;
+}
+/* 所有单元格（含表头）文字一律不折行; 金额列的现金/元宝双行是刻意分账展示, 不受影响 */
+.table-scroll .tr .td { white-space: nowrap; }
+.table-scroll .orders-table .w-name {
+  flex: 0 0 300rpx;
+  width: 300rpx;
+  min-width: 300rpx;
+  max-width: 300rpx;
+}
 /* ===== 次卡核销流水弹层: 用户自助(绿) / 管理员代核(红) ===== */
 .cl-sheet { max-width: 900rpx; }
 .cl-head { display: flex; justify-content: space-between; align-items: center; }
@@ -7498,6 +7535,17 @@ onUnmounted(() => {
   .orders-table .w-channel .td-platform { font-size: 12px; padding: 1px 6px; }
   .orders-table .w-ops-4 { width: 280px; }
   .orders-table .w-ops-5 { width: 350px; }
+  /* 表格横向滑动: PC 也用固定 px 总宽, 列不压缩换行, 超宽时表头随内容左右滑动 */
+  .table-scroll .table.orders-table,
+  .table-scroll .table.cards-table { width: 1280px; }
+  .table-scroll .tr { padding: 10px 12px; }
+  .table-scroll-tip { font-size: 12px; margin-bottom: 6px; }
+  .table-scroll .orders-table .w-name {
+    flex: 0 0 200px;
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+  }
 }
 /* ===== 现金 / 元宝分账展示 (2026-11-24) ===== */
 .td-amount { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2rpx; }

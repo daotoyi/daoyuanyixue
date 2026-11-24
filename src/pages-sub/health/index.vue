@@ -65,11 +65,7 @@
               </view>
               <view class="hc-bar"><view class="hc-bar-in" :style="{ width: pct(c) + '%' }"></view></view>
               <view class="hc-expire">有效期至 {{ fmtDate(c.expireAt) }}</view>
-              <!-- 备注: 显示发卡订单号, 点击直达订单详情 -->
-              <view class="hc-remark" v-if="c.orderNo">
-                <text class="hc-remark-label">备注</text>
-                <text class="hc-order-link" @tap.stop="goCardOrder(c.orderNo)">订单号 {{ c.orderNo }} ›</text>
-              </view>
+              <!-- 备注(发卡订单号)不占卡片表面, 点击卡片后在弹窗里查看并可跳订单 -->
               <view class="hc-actions">
                 <view
                   class="btn-p sm hc-btn"
@@ -120,7 +116,11 @@
         <view class="cd-meta">
           <text>次卡号 {{ cardDetail.cardNo }}</text>
           <text>剩余 {{ cardDetail.remain }} / {{ cardDetail.total }} 次 · 有效期至 {{ fmtDate(cardDetail.expireAt) }}</text>
-          <text v-if="cardDetail.orderNo" class="cd-order" @tap="goCardOrder(cardDetail.orderNo)">订单号 {{ cardDetail.orderNo }} ›</text>
+          <!-- 备注: 发卡订单号只在点击卡片后的弹窗里展示, 点击直达订单详情 -->
+          <view class="cd-remark" v-if="cardDetail.orderNo">
+            <text class="cd-remark-label">备注</text>
+            <text class="cd-order" @tap="goCardOrder(cardDetail.orderNo)">订单号 {{ cardDetail.orderNo }} ›</text>
+          </view>
         </view>
         <view class="cd-sec-title">核销记录（{{ cardLogs.length }} 次）</view>
         <scroll-view scroll-y class="cd-logs">
@@ -232,10 +232,8 @@ function pct(c) { return c.total ? Math.round((c.remain / c.total) * 100) : 0 }
 function cardStatus(c) { return c.status || '有效' }
 function isCardValid(c) { return (c.status || '有效') === '有效' && Number(c.remain) > 0 }
 function canCheckin(c) { return isCardValid(c) }
-function checkinBtnText(c) {
-  if (!isCardValid(c)) return c.status === '已过期' ? '已过期' : '次数已用完'
-  return '打卡核销 · 1次'
-}
+/* 卡片/弹窗按钮只标注「打卡销核」; 过期、次数用完由卡片状态标签 + 按钮禁用态表达 */
+function checkinBtnText() { return '打卡销核' }
 function fmtTime(ts) {
   // 服务端 at 为 'YYYY/MM/DD HH:mm:ss', 小程序 iOS 对斜杠格式解析不稳 → 统一换成 '-'
   const raw = typeof ts === 'string' ? ts.replace(/\//g, '-') : ts
@@ -366,10 +364,7 @@ onShow(() => {
 .hc-bar { height: 8rpx; background: rgba(255,255,255,0.25); border-radius: 999rpx; overflow: hidden; }
 .hc-bar-in { height: 100%; background: #fff; border-radius: 999rpx; }
 .hc-expire { font-size: 20rpx; opacity: 0.75; margin-top: 12rpx; }
-/* 备注行: 订单号可点击跳订单详情 (深红卡面上用白色下划线区分) */
-.hc-remark { display: flex; align-items: center; margin-top: 12rpx; font-size: 20rpx; line-height: 1.5; }
-.hc-remark-label { opacity: 0.7; margin-right: 10rpx; flex-shrink: 0; }
-.hc-order-link { color: #fff; opacity: 0.95; text-decoration: underline; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* 备注(发卡订单号)已移入点击卡片后的弹窗, 卡片表面只保留按钮与核销记录入口 */
 .hc-actions { margin-top: 20rpx; display: flex; align-items: center; justify-content: space-between; }
 .hc-btn { background: #fff; color: #a31930; }
 .hc-btn.disabled { background: rgba(255,255,255,0.3); color: #fff; }
@@ -397,6 +392,9 @@ onShow(() => {
 .cd-close { font-size: 30rpx; color: #a89a88; padding: 0 10rpx; }
 .cd-meta { display: flex; flex-direction: column; margin-top: 18rpx; font-size: 23rpx; color: #8a7d6c; line-height: 1.9; }
 .cd-order { color: #c41e3a; text-decoration: underline; }
+/* 弹窗内的备注行: 标签 + 可点击的订单号 */
+.cd-remark { display: flex; align-items: center; }
+.cd-remark-label { color: #a89a88; margin-right: 12rpx; flex-shrink: 0; }
 .cd-sec-title {
   margin: 26rpx 0 10rpx; padding-top: 20rpx; border-top: 1rpx solid var(--dy-line);
   font-size: 26rpx; font-weight: 500; color: #4a3b2a;
@@ -445,14 +443,13 @@ onShow(() => {
     min-height: 100vh;
   }
   .hp-card { margin: 18px auto; max-width: 1160px; }
-  /* PC 端 rpx 随屏宽放大: 备注行小字与弹层文字用绝对 px 固定 */
-  .hc-remark { font-size: 12px; margin-top: 8px; }
-  .hc-remark-label { margin-right: 6px; }
+  /* PC 端 rpx 随屏宽放大: 弹层文字用绝对 px 固定 */
   .hc-logs-link, .log-op { font-size: 11px; }
   .log-time { font-size: 12px; }
   .hc-sheet { max-width: 480px; }
   .cd-title { font-size: 20px; }
   .cd-meta, .cd-log-time, .cd-log-minus { font-size: 14px; }
+  .cd-remark-label { margin-right: 6px; }
   .cd-sec-title { font-size: 16px; }
   .cd-log-op, .cd-empty { font-size: 12px; }
   .cd-logs { max-height: 260px; }
