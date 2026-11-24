@@ -246,6 +246,24 @@ function refundPointsOfOrder(o) {
   if (o.status === '已退款' && isYuanbaoOrder(o) && !Number(o.balance_used_points)) return pointsOfOrder(o)
   return 0
 }
+/* 记录时间 → 毫秒时间戳，用于按「真实时间」排序。
+   库里时间是本地串 "2026/9/8 11:48:58"（月/日不补零），若直接用字符串 localeCompare，
+   会按字符逐位比较：'9' > '1' → 2026/9/8 被误判为比 2026/11/24 更新，
+   看起来像"按数字顺序"而非时间顺序。这里统一解析成时间戳再排。 */
+function recordTimeMs(s) {
+  if (!s) return 0
+  const str = String(s).trim()
+  // ISO UTC 串（带 Z）用标准解析，避免被下面的本地正则当成北京时间而偏差 8 小时
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}.*Z$/.test(str)) {
+    const t = Date.parse(str)
+    return Number.isFinite(t) ? t : 0
+  }
+  // 本地串 YYYY/MM/DD 或 YYYY-MM-DD HH:mm[:ss]（月/日可不补零）
+  const m = str.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[\sT](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/)
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)).getTime()
+  const t = Date.parse(str)
+  return Number.isFinite(t) ? t : 0
+}
 function buildPointsRecords(orders) {
   const out = []
   orders.forEach((o) => {
@@ -281,7 +299,8 @@ function buildPointsRecords(orders) {
       }
     }
   })
-  return out.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+  // 按真实时间倒序（最新在前）；时间戳相同则保持原顺序
+  return out.sort((a, b) => recordTimeMs(b.at) - recordTimeMs(a.at))
 }
 
 function goProduct(id) {
