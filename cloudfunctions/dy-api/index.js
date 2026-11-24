@@ -3072,9 +3072,9 @@ async function revertSalesAfterRefund(order) {
 /* ================= 虚拟商品 / 次卡 (2026-11-24) =================
    虚拟业务(付款后立即完成、无需发货): 课程 / 预约 / 工具解锁 / 充值
      + 商品标记 is_virtual === true
-     + 养生类商品 cate_id=12 (次卡商品)。文旅/游学分类建好后把分类 id 加进 VIRTUAL_CATE_IDS 即可。
+     + 养生(次卡)12 / 文旅 13 / 游学 6 —— 三板块都是付款即完成、无实体配送
    items 快照在下单时由服务端补齐 cate_id / is_virtual / card_times, 不依赖前端传值。 */
-const VIRTUAL_CATE_IDS = [12]
+const VIRTUAL_CATE_IDS = [12, 13, 6]
 const HEALTH_CATE_ID = 12
 
 /* 下单时补齐 items 商品元数据 (分类、虚拟标记、次卡次数), 供虚拟订单判定与次卡发放使用 */

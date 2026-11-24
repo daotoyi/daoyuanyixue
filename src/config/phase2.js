@@ -21,14 +21,13 @@ export const PHASE2_ENABLED = true
 export const HEALTH_CATE_ID = 12
 
 /**
- * 文旅 / 游学分类 id（骨架阶段预留）
- * 0 = 后台尚未建对应商品分类；商品上架后：
- *   1) 在 categories 集合新建分类拿到 id
- *   2) 把这里改成真实 id
- *   3) travel/study 页面按 cate_id 从 products 拉取生成卡片并跳商品详情（同 health/index.vue）
+ * 文旅 / 游学分类 id（2026-11-24 后台已建分类）
+ *   文旅 = 13, 游学 = 6
+ * 页面按 cate_id 从 products 拉取生成卡片并跳商品详情（同 health/index.vue）
+ * 注意: 云函数 VIRTUAL_CATE_IDS 需同步包含这两个 id，付款后才算「已完成」而不是「待发货」
  */
-export const TRAVEL_CATE_ID = 0
-export const STUDY_CATE_ID = 0
+export const TRAVEL_CATE_ID = 13
+export const STUDY_CATE_ID = 6
 
 /**
  * 研究院老师 → 真实课程匹配规则
