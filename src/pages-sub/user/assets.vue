@@ -212,7 +212,9 @@ function fmtPoints(v) {
 
 /* ===== 元宝消费/退款记录 =====
    判定: pay_method 含"余额" 或 balance_used / balance_used_points > 0 (纯微信支付的不进列表)
-   金额: 优先 balance_used_points(元宝数); 否则 balance_used(元)×10 兜底老订单 */
+   金额: 优先 balance_used_points(元宝数);
+        历史订单(2026-11-24 之前)元宝扣减是 1 元=1 元宝, 余额字段数值即元宝数 → 直接取 balance_used,
+        不再 ×10, 否则老记录会被放大 10 倍 */
 function isYuanbaoOrder(o) {
   return String(o.pay_method || '').includes('余额') || Number(o.balance_used) > 0 || Number(o.balance_used_points) > 0
 }
@@ -220,17 +222,16 @@ function pointsOfOrder(o) {
   const p = Number(o.balance_used_points)
   if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
   const yuan = Number(o.balance_used) || 0
-  if (yuan > 0) return Math.round(yuan * POINTS_PER_YUAN * 100) / 100
-  // 元宝支付但无抵扣字段(历史订单): 按订单实付折算
-  return Math.round((Number(o.total_price) || 0) * POINTS_PER_YUAN * 100) / 100
+  return Math.round(yuan * 100) / 100
 }
 function refundPointsOfOrder(o) {
   const p = Number(o.refund_balance_points)
   if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
+  // 历史退款无明细字段时: refund_balance_amount 的数值即当时实际退回的元宝数
   const yuan = Number(o.refund_balance_amount) || 0
-  if (yuan > 0) return Math.round(yuan * POINTS_PER_YUAN * 100) / 100
-  // 历史退款订单(无明细字段): 元宝支付按抵扣额折算, 微信原路退的不计入
-  if (isYuanbaoOrder(o)) return pointsOfOrder(o)
+  if (yuan > 0) return Math.round(yuan * 100) / 100
+  // 更早的元宝支付订单退款(无任何明细): 当时按扣减额退回元宝, 用消费额兜底
+  if (o.status === '已退款' && isYuanbaoOrder(o)) return pointsOfOrder(o)
   return 0
 }
 function buildPointsRecords(orders) {
