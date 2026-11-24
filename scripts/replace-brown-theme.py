@@ -35,7 +35,8 @@ def replace_colors(file_path):
         return True
     return False
 
-src_dir = '/Users/wenhua/WorkBuddy/zhs-deploy/src'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(SCRIPT_DIR, '..', 'src')
 count = 0
 for root, dirs, files in os.walk(src_dir):
     for fn in files:
