@@ -110,13 +110,45 @@
           </scroll-view>
         </view>
 
-        <!-- 文旅 / 游学 (第二阶段骨架: 商品上架后自动呈现, 当前显示筹备入口) -->
-        <view class="rec-sec rec-phase2" v-if="recShowTravel || recShowStudy">
+        <!-- 文旅 (与「道家养生」同款真实商品卡片, 分类 id=13) -->
+        <view class="rec-sec" v-if="recShowTravel && recTravelProducts.length">
+          <view class="rec-head">
+            <text class="rec-title">🏯 文旅</text>
+            <text class="rec-more" @tap="switchTab('travel')">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-prod-card" v-for="p in recTravelProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
+              <image lazy-load class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
+              <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
+              <text class="rec-prod-sub ellipsis-1" v-if="p.subtitle">{{ p.subtitle }}</text>
+              <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 游学 (与「道家养生」同款真实商品卡片, 分类 id=6) -->
+        <view class="rec-sec" v-if="recShowStudy && recStudyProducts.length">
+          <view class="rec-head">
+            <text class="rec-title">🎒 游学</text>
+            <text class="rec-more" @tap="switchTab('study')">更多 ›</text>
+          </view>
+          <scroll-view scroll-x class="rec-scroll" :show-scrollbar="false">
+            <view class="rec-prod-card" v-for="p in recStudyProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
+              <image lazy-load class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
+              <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
+              <text class="rec-prod-sub ellipsis-1" v-if="p.subtitle">{{ p.subtitle }}</text>
+              <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
+            </view>
+          </scroll-view>
+        </view>
+
+        <!-- 分类下暂无商品时才显示筹备入口 (兜底, 不再遮挡已上架商品) -->
+        <view class="rec-sec rec-phase2" v-if="(recShowTravel && !recTravelProducts.length) || (recShowStudy && !recStudyProducts.length)">
           <view class="rec-head">
             <text class="rec-title">🧭 文旅 · 游学</text>
           </view>
           <view class="rec-p2-row">
-            <view class="rec-p2-item" v-if="recShowTravel" @tap="goTravel">
+            <view class="rec-p2-item" v-if="recShowTravel && !recTravelProducts.length" @tap="goTravel">
               <text class="rec-p2-icon">🏯</text>
               <view class="rec-p2-txt">
                 <text class="rec-p2-name">文旅</text>
@@ -124,7 +156,7 @@
               </view>
               <text class="rec-p2-arrow">›</text>
             </view>
-            <view class="rec-p2-item" v-if="recShowStudy" @tap="goStudy">
+            <view class="rec-p2-item" v-if="recShowStudy && !recStudyProducts.length" @tap="goStudy">
               <text class="rec-p2-icon">🎒</text>
               <view class="rec-p2-txt">
                 <text class="rec-p2-name">游学</text>
@@ -526,6 +558,10 @@ const recProducts = computed(() => productList.value.filter((p) => p.home_recomm
 const recCourses = computed(() => courseList.value.filter((c) => c.home_recommend === true))
 /* 养生模块: 按真实分类 id=12「道家养生」过滤商品 (与养生页同源) */
 const recHealthProducts = computed(() => productList.value.filter((p) => Number(p.cate_id) === HEALTH_CATE_ID && p.is_show !== false))
+/* 文旅 / 游学模块: 按真实分类 id=13 / 6 过滤商品, 展示样式与养生完全一致
+   (2026-11-24 修复: 原推荐页只有「筹备中」文字入口条, 未渲染商品卡片) */
+const recTravelProducts = computed(() => productList.value.filter((p) => Number(p.cate_id) === TRAVEL_CATE_ID && p.is_show !== false))
+const recStudyProducts = computed(() => productList.value.filter((p) => Number(p.cate_id) === STUDY_CATE_ID && p.is_show !== false))
 
 /* ============ 首页内容型板块: 养生 / 文旅 / 游学 ============
    与盘道一样, 点击标签后直接在首页显示内容(不再跳新页面)。
@@ -656,7 +692,7 @@ function switchTab(key) {
   if (P2_TABS[key]) ensureP2Products(key)
 }
 
-/* 板块商品兜底加载: 仅在当前分类商品为空时拉一次, 避免每次切 tab 都请求 */
+/* 板块商品兜底加载: 首屏全量列表失败/被截断时, 按分类定向补拉并合并 (不覆盖已有商品) */
 const p2Tried = ref({})
 async function ensureP2Products(key) {
   const meta = P2_TABS[key]
@@ -665,8 +701,12 @@ async function ensureP2Products(key) {
   if (has || p2Tried.value[key]) return
   p2Tried.value[key] = true
   try {
-    const list = await getProducts({})
-    if (Array.isArray(list) && list.length) productList.value = list
+    const list = await getProducts({ cate_id: meta.cateId })
+    if (Array.isArray(list) && list.length) {
+      const known = new Set(productList.value.map((p) => String(p.id ?? p._id)))
+      const fresh = list.filter((p) => !known.has(String(p.id ?? p._id)))
+      if (fresh.length) productList.value = [...productList.value, ...fresh]
+    }
   } catch (e) { /* 静默失败, 显示空态 */ }
 }
 
@@ -1188,6 +1228,9 @@ onShow(async () => {
       ])
       productList.value = prods || []
       courseList.value = courses || []
+      // 文旅/游学: 全量列表里该分类为空时定向补拉一次, 保证推荐页与频道页都能出商品卡片
+      if (recShowTravel.value && !recTravelProducts.value.length) ensureP2Products('travel')
+      if (recShowStudy.value && !recStudyProducts.value.length) ensureP2Products('study')
     } catch (e) { /* 忽略 */ }
   }
 
