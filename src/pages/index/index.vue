@@ -359,6 +359,46 @@
       </view>
     </scroll-view>
 
+    <!-- 养生 / 文旅 / 游学 频道: 点击标签在首页直接显示内容(同盘道), 不跳新页面 -->
+    <scroll-view scroll-y class="feed-scroll" v-else-if="p2Tab">
+      <view class="p2b-hero">
+        <text class="p2b-title">{{ p2Tab.title }}</text>
+        <text class="p2b-sub">{{ p2Tab.sub }}</text>
+        <text class="p2b-desc">{{ p2Tab.desc }}</text>
+      </view>
+
+      <view class="p2b-sec" v-if="p2Tab.products.length">
+        <view class="p2b-sec-head">
+          <text class="p2b-sec-title">{{ p2Tab.goodsTitle }}</text>
+          <text class="p2b-sec-more" @tap="goShopTab">逛商城 ›</text>
+        </view>
+        <view class="p2b-grid">
+          <view class="p2b-good" v-for="p in p2Tab.products" :key="p.id || p._id" @tap="goProductDetail(p)">
+            <image
+              v-if="p.images && p.images[0]"
+              lazy-load class="p2b-good-img" :src="p.images[0]" mode="aspectFill"
+            ></image>
+            <view v-else class="p2b-good-img p2b-ph">{{ p2Tab.label.slice(0, 1) }}</view>
+            <text class="p2b-good-name ellipsis-2">{{ p.name }}</text>
+            <view class="p2b-good-meta">
+              <text class="p2b-good-price">{{ fmtPrice(p.price) }}</text>
+              <text class="p2b-good-go">选购 ›</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 分类未建或暂无商品 -->
+      <view class="empty" v-else>
+        <text class="empty-icon">{{ p2Tab.key === 'health' ? '🌿' : (p2Tab.key === 'travel' ? '🏯' : '🎒') }}</text>
+        <text class="empty-tip">{{ p2Tab.label }}项目筹备中，商品上架后自动呈现</text>
+      </view>
+
+      <view class="p2b-entry" @tap="goJumpPage(p2Tab.key)">
+        <text>{{ p2Tab.entry }}</text>
+      </view>
+    </scroll-view>
+
     <!-- 直播频道 -->
     <scroll-view scroll-y class="feed-scroll" v-else>
       <view class="live-list">
@@ -412,10 +452,10 @@ import { isCloudFile, resolveCloudUrl } from '../../utils/avatar'
 import { staticUrl } from '../../utils/static-url'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
-import { PHASE2_ENABLED, HEALTH_CATE_ID } from '../../config/phase2.js'
+import { PHASE2_ENABLED, HEALTH_CATE_ID, TRAVEL_CATE_ID, STUDY_CATE_ID } from '../../config/phase2.js'
 
 const phase2Enabled = PHASE2_ENABLED
-// 功能板块四个入口开关 (后台「首页显示」控制, 云函数默认显示, 显式关闭才隐藏)
+// 功能板块入口开关 (后台「首页显示」控制, 云函数默认显示, 显式关闭才隐藏)
 const showHealth = ref(true)
 const showTravel = ref(true)
 const showStudy = ref(true)
@@ -433,7 +473,8 @@ function goJumpPage(key) {
 function goAcademy() { uni.navigateTo({ url: '/pages-sub/academy/index' }) }
 function goHealth() { uni.navigateTo({ url: '/pages-sub/health/index' }) }
 
-// tab 顺序固定: 推荐 → 盘道 → 养生 → 直播 → 动态 → 文旅 → 游学 → 研究院
+// tab 顺序固定: 推荐 → 盘道 → 直播 → 养生 → 文旅 → 游学 → 动态 → 研究院
+// 养生/文旅/游学为「内容型」标签(点击在首页直接显示内容, 同盘道)；研究院为跳转型
 const tabs = ref([
   { key: 'recommend', label: '推荐', type: 'tab' },
   { key: 'pandao', label: '盘道', type: 'tab' },
@@ -444,11 +485,11 @@ function buildTabs(cfg) {
   const arr = []
   if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐', type: 'tab' })
   if (cfg.show_pandao !== false) arr.push({ key: 'pandao', label: '盘道', type: 'tab' }) // 盘道默认显示, 后台可关
-  if (phase2Enabled && showHealth.value) arr.push({ key: 'health', label: '养生', type: 'jump' })
   if (cfg.show_live === true) arr.push({ key: 'live', label: '直播', type: 'tab' })
+  if (phase2Enabled && showHealth.value) arr.push({ key: 'health', label: '养生', type: 'tab' })
+  if (phase2Enabled && showTravel.value) arr.push({ key: 'travel', label: '文旅', type: 'tab' })
+  if (phase2Enabled && showStudy.value) arr.push({ key: 'study', label: '游学', type: 'tab' })
   if (cfg.show_follow === true) arr.push({ key: 'follow', label: '动态', type: 'tab' })
-  if (phase2Enabled && showTravel.value) arr.push({ key: 'travel', label: '文旅', type: 'jump' })
-  if (phase2Enabled && showStudy.value) arr.push({ key: 'study', label: '游学', type: 'jump' })
   if (phase2Enabled && showAcademy.value) arr.push({ key: 'academy', label: '研究院', type: 'jump' })
   tabs.value = arr
   if (!arr.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
@@ -483,6 +524,49 @@ const recProducts = computed(() => productList.value.filter((p) => p.home_recomm
 const recCourses = computed(() => courseList.value.filter((c) => c.home_recommend === true))
 /* 养生模块: 按真实分类 id=12「道家养生」过滤商品 (与养生页同源) */
 const recHealthProducts = computed(() => productList.value.filter((p) => Number(p.cate_id) === HEALTH_CATE_ID && p.is_show !== false))
+
+/* ============ 首页内容型板块: 养生 / 文旅 / 游学 ============
+   与盘道一样, 点击标签后直接在首页显示内容(不再跳新页面)。
+   商品按各自分类从 productList 过滤; 文旅/游学分类未建(CATE_ID=0)时显示筹备空态。 */
+const P2_TABS = {
+  health: {
+    label: '养生',
+    title: '道家养生',
+    sub: '循天时而养 · 以打卡见功夫',
+    desc: '按次调理、以次计费，购卡即开通次数与有效期，每次消费打卡核销一次，余次与记录随时可查。',
+    goodsTitle: '养生次卡 · 商城商品',
+    cateId: HEALTH_CATE_ID,
+    entry: '进入养生板块（我的次卡 / 打卡记录）›',
+  },
+  travel: {
+    label: '文旅',
+    title: '文旅',
+    sub: '寻访道场胜境 · 于山水之间体证道法自然',
+    desc: '以山水为课堂，走访道观古迹与人文胜地，由熟悉当地掌故的老师带队，行一处得一处。',
+    goodsTitle: '文旅商品',
+    cateId: TRAVEL_CATE_ID,
+    entry: '进入文旅板块 ›',
+  },
+  study: {
+    label: '游学',
+    title: '游学',
+    sub: '读万卷书 · 行万里路 · 访名师而问道',
+    desc: '短期研学行程，随师同行、现场讲解，边走边学；归来再入课程深入，知行相续不使中断。',
+    goodsTitle: '游学商品',
+    cateId: STUDY_CATE_ID,
+    entry: '进入游学板块 ›',
+  },
+}
+
+const p2Tab = computed(() => {
+  const key = currentTab.value
+  const meta = P2_TABS[key]
+  if (!meta || !phase2Enabled) return null
+  const products = meta.cateId
+    ? productList.value.filter((p) => Number(p.cate_id) === Number(meta.cateId) && p.is_show !== false)
+    : []
+  return { key, ...meta, products }
+})
 function goTravel() { uni.navigateTo({ url: '/pages-sub/travel/index' }) }
 function goStudy() { uni.navigateTo({ url: '/pages-sub/study/index' }) }
 
@@ -1076,11 +1160,12 @@ onShow(async () => {
     recShowStudy.value = cfg.rec_show_study === true
   } catch (e) { /* 配置失败: 保持默认 推荐+盘道 */ }
 
-  // ①.5 推荐页商品/课程列表 (独立加载, 失败不影响其他; 养生模块也复用商品列表按 cate_id=12 过滤)
-  if (recShowProduct.value || recShowCourse.value || recShowHealth.value) {
+  // ①.5 推荐页商品/课程列表 (独立加载, 失败不影响其他)
+  // 商品列表同时供: 推荐页好物、养生板块、文旅/游学板块(按各自 cate_id 过滤)
+  if (recShowProduct.value || recShowCourse.value || recShowHealth.value || phase2Enabled) {
     try {
       const [prods, courses] = await Promise.all([
-        (recShowProduct.value || recShowHealth.value) ? getProducts({}).catch(() => []) : Promise.resolve([]),
+        (recShowProduct.value || recShowHealth.value || phase2Enabled) ? getProducts({}).catch(() => []) : Promise.resolve([]),
         recShowCourse.value ? getCourses({}).catch(() => []) : Promise.resolve([]),
       ])
       productList.value = prods || []
@@ -1762,6 +1847,66 @@ onShow(async () => {
 .empty-icon { font-size: 64rpx; }
 .empty-tip { margin-top: 16rpx; font-size: 26rpx; color: #8a857c; }
 
+/* ===== 首页内容型板块 (养生 / 文旅 / 游学) ===== */
+.p2b-hero {
+  margin: 24rpx 24rpx 0;
+  padding: 28rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #fff6f2 0%, #fbf0e4 100%);
+  border: 1rpx solid #f0e2d2;
+  display: flex;
+  flex-direction: column;
+}
+.p2b-title { font-size: 34rpx; font-weight: 500; color: #7a1220; }
+.p2b-sub { margin-top: 10rpx; font-size: 23rpx; color: #9c7a68; }
+.p2b-desc { margin-top: 16rpx; font-size: 23rpx; color: #8a7d6c; line-height: 1.75; }
+
+.p2b-sec { margin: 28rpx 24rpx 0; }
+.p2b-sec-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 18rpx; }
+.p2b-sec-title { font-size: 30rpx; font-weight: 500; color: #4a3b2a; }
+.p2b-sec-more { font-size: 22rpx; color: #8a857c; }
+
+/* 商品两列网格: 小程序 scroll-view 内勿用 gap, 用 space-between + 百分比宽度 */
+.p2b-grid { display: flex; flex-wrap: wrap; justify-content: space-between; }
+.p2b-good {
+  width: calc(50% - 10rpx);
+  margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-radius: 14rpx;
+  overflow: hidden;
+  background: #fffafa;
+  border: 1rpx solid var(--dy-line);
+  display: flex;
+  flex-direction: column;
+}
+.p2b-good-img { width: 100%; height: 280rpx; background: #f5efe6; }
+.p2b-ph {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 72rpx; color: #c9a8a0; font-family: serif;
+}
+.p2b-good-name {
+  padding: 14rpx 16rpx 0;
+  font-size: 25rpx;
+  color: #4a3b2a;
+  line-height: 1.4;
+}
+.p2b-good-meta {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 10rpx 16rpx 0;
+}
+.p2b-good-price { font-size: 28rpx; font-weight: 600; color: #9c1630; }
+.p2b-good-go { font-size: 20rpx; color: #8c6b1f; }
+
+.p2b-entry {
+  margin: 8rpx 24rpx 40rpx;
+  padding: 24rpx;
+  border-radius: 14rpx;
+  text-align: center;
+  background: #fbe9ec;
+  color: #a31930;
+  font-size: 25rpx;
+}
+
 /* PC 宽屏: 页面收拢居中 (H5 桌面浏览器生效, 手机/小程序窄屏不触发) */
 /* ===== 推荐页内容模块 (直播/盘道/商品/课程) ===== */
 .rec-modules {
@@ -2079,6 +2224,21 @@ onShow(async () => {
   .rec-scroll {
     padding-bottom: 0;
   }
+  /* 首页内容型板块(养生/文旅/游学): PC 固定 px 覆写, 商品两列改三列 */
+  .p2b-hero { margin: 18px 24px 0; padding: 20px; border-radius: 12px; }
+  .p2b-title { font-size: 22px; }
+  .p2b-sub { font-size: 15px; margin-top: 7px; }
+  .p2b-desc { font-size: 15px; margin-top: 11px; }
+  .p2b-sec { margin: 20px 24px 0; }
+  .p2b-sec-title { font-size: 19px; }
+  .p2b-sec-more { font-size: 14px; }
+  .p2b-good { width: calc(33.33% - 11px); margin-bottom: 14px; border-radius: 10px; }
+  .p2b-good-img { height: 180px; }
+  .p2b-ph { font-size: 46px; }
+  .p2b-good-name { font-size: 16px; padding: 9px 11px 0; }
+  .p2b-good-price { font-size: 18px; }
+  .p2b-good-go { font-size: 13px; }
+  .p2b-entry { margin: 6px 24px 30px; padding: 16px; border-radius: 10px; font-size: 16px; }
   .rec-live-card,
   .rec-pd-card,
   .rec-prod-card,

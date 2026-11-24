@@ -9,6 +9,43 @@
       </view>
     </view>
 
+    <!-- 基本介绍 -->
+    <view class="hp-card hp-intro-card">
+      <text class="hi-title">关于道家养生</text>
+      <text class="hi-text">道元易学养生以道家「法于阴阳、和于术数」为本，按次调理、以次计费。购卡即开通次数与有效期，每次到店消费由本人打卡核销一次，余次与完整记录随时可查，不催不赶、循序而养。</text>
+      <view class="hi-tags">
+        <text class="hi-tag">按次计费</text>
+        <text class="hi-tag">打卡核销</text>
+        <text class="hi-tag">有效期明示</text>
+      </view>
+    </view>
+
+    <!-- 道家养生商品卡片（真实商品，点击进入商品详情下单） -->
+    <view class="hp-card" v-if="viewMode === 'cards'">
+      <view class="sec-head">
+        <text class="sec-title">养生次卡 · 商城商品</text>
+        <text class="sec-more" @tap="goShop">逛商城 ›</text>
+      </view>
+      <view v-if="products.length" class="prod-list">
+        <view class="prod-card" v-for="p in products" :key="p._id || p.id" @tap="goProduct(p)">
+          <image v-if="p.images && p.images[0]" lazy-load class="pc-cover" :src="p.images[0]" mode="aspectFill"></image>
+          <view v-else class="pc-cover pc-ph">養</view>
+          <view class="pc-main">
+            <text class="pc-name">{{ p.name }}</text>
+            <text class="pc-desc">{{ p.description || ('道家养生 · ' + timesOf(p) + ' 次卡') }}</text>
+            <view class="pc-meta">
+              <text class="pc-price">{{ fmtPrice(p.price) }}</text>
+              <text class="pc-times">{{ timesOf(p) }} 次</text>
+              <text class="pc-go">选购 ›</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view v-else class="hp-empty">
+        <text class="hp-empty-tip">{{ loading ? '加载中…' : '暂未上架养生商品' }}</text>
+      </view>
+    </view>
+
     <!-- 我的次卡 -->
     <view class="hp-card">
       <view class="sec-head">
@@ -62,34 +99,9 @@
       </view>
     </view>
 
-    <!-- 道家养生商品卡片（真实商品，点击进入商品详情下单） -->
-    <view class="hp-card" v-if="viewMode === 'cards'">
-      <view class="sec-head">
-        <text class="sec-title">道家养生</text>
-        <text class="sec-sub">选购次卡 · 到店消费按次核销</text>
-      </view>
-      <view v-if="products.length" class="prod-list">
-        <view class="prod-card" v-for="p in products" :key="p._id || p.id" @tap="goProduct(p)">
-          <image v-if="p.images && p.images[0]" lazy-load class="pc-cover" :src="p.images[0]" mode="aspectFill"></image>
-          <view v-else class="pc-cover pc-ph">養</view>
-          <view class="pc-main">
-            <text class="pc-name">{{ p.name }}</text>
-            <text class="pc-desc">{{ p.description || ('道家养生 · ' + timesOf(p) + ' 次卡') }}</text>
-            <view class="pc-meta">
-              <text class="pc-price">{{ fmtPrice(p.price) }}</text>
-              <text class="pc-times">{{ timesOf(p) }} 次</text>
-              <text class="pc-go">选购 ›</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view v-else class="hp-empty">
-        <text class="hp-empty-tip">{{ loading ? '加载中…' : '暂未上架养生商品' }}</text>
-      </view>
-    </view>
-
     <view class="hp-foot">— 养生有道 · 起居有常 —</view>
   </view>
+
 </template>
 
 <script setup>
@@ -150,6 +162,10 @@ function goProduct(p) {
   const id = p.id || p._id
   if (!id) return
   uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
+}
+
+function goShop() {
+  uni.switchTab({ url: '/pages/shop/shop' })
 }
 
 function doCheckin(c) {
@@ -244,4 +260,30 @@ onShow(() => {
 .pc-times { font-size: 20rpx; color: #8c6b1f; background: #fbf3e2; border-radius: 999rpx; padding: 2rpx 14rpx; margin-left: 16rpx; }
 .pc-go { font-size: 22rpx; color: #8c6b1f; margin-left: auto; }
 .hp-foot { text-align: center; font-size: 22rpx; color: #b8a894; margin-top: 40rpx; }
+
+/* 基本介绍卡片 */
+.hp-intro-card { display: flex; flex-direction: column; }
+.hi-title { font-size: 30rpx; font-weight: 500; color: #7a1220; }
+.hi-text { margin-top: 16rpx; font-size: 24rpx; color: #8a7d6c; line-height: 1.8; }
+.hi-tags { display: flex; flex-wrap: wrap; margin-top: 18rpx; }
+.hi-tag {
+  font-size: 20rpx; color: #6e7f5a; background: #f2f5ec;
+  border: 1rpx solid #dde5d0; border-radius: 999rpx;
+  padding: 4rpx 16rpx; margin: 0 12rpx 8rpx 0;
+}
+
+/* PC 宽屏: 页面收拢居中, 不铺满整个显示器 (与其他页面一致) */
+@media screen and (min-width: 1025px) {
+  .health-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
+    min-height: 100vh;
+  }
+  .hp-card { margin: 18px auto; max-width: 1160px; }
+  .hi-text { font-size: 15px; }
+}
+@media screen and (min-width: 1440px) {
+  .health-page { max-width: 1320px; }
+}
 </style>
