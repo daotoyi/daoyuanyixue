@@ -73,7 +73,7 @@
           <view class="order-foot">
             <text class="of-time">{{ o.created_at }}</text>
             <view class="of-right">
-              <text class="of-total">合计 {{ fmtPrice(o.total_price) }}</text>
+              <text class="of-total">合计 {{ orderTotalText(o) }}</text>
               <view v-if="o.status === '待付款'" class="btn-fill btn-pay" @tap.stop="doPay(o)">
                 <text>去支付</text>
               </view>
@@ -122,7 +122,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getOrders, confirmOrder, deleteOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxpayQuerySync, getMyAftersales } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
-import { fmtPrice } from '../../utils/price'
+import { fmtPrice, orderTotalText } from '../../utils/price'
 
 const statuses = ['全部', '待付款', '待发货', '待收货', '已完成', '已退款']
 const activeStatus = ref('全部')

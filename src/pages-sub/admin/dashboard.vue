@@ -608,7 +608,11 @@
               <text class="td w-no">{{ o.order_no }}</text>
               <text class="td w-user ellipsis">{{ o.nickname || ('UID ' + o.uid) }}</text>
               <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
-              <text class="td w-price">¥{{ o.total_price }}</text>
+              <!-- 现金营业额与元宝单独计账: 元宝支付单现金为 ¥0.00, 必须同时显示实际支付的元宝数 -->
+              <view class="td w-price td-amount">
+                <text class="amt-cash">¥{{ o.total_price }}</text>
+                <text class="amt-points" v-if="orderPoints(o) > 0">{{ fmtPoints(orderPoints(o)) }} 元宝</text>
+              </view>
               <text class="td w-time">{{ fmtOrderTime(o.created_at) }}</text>
               <view class="td w-status">
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
@@ -685,6 +689,91 @@
           <view class="empty-tip" v-if="!sortedCards.length">暂无次卡记录（用户购买养生次卡并支付成功后自动生成）</view>
         </view>
 
+        <!-- ===== 元宝账本 (单独计账, 不计入现金营业额) ===== -->
+        <view v-else-if="activeModule === 'points'" class="module">
+          <view class="module-head">
+            <text class="module-title">元宝账本（{{ pointsTotal }} 笔）</text>
+            <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="loadPointsLedger">刷新</view>
+            <view class="filter-pills">
+              <text
+                v-for="r in analysisRangeOptions"
+                :key="r.value"
+                class="pill"
+                :class="{ on: pointsRange === r.value }"
+                @tap="switchPointsRange(r.value)"
+              >{{ r.label }}</text>
+            </view>
+          </view>
+
+          <view class="points-note">
+            <text>口径说明：元宝在【充值时】已计入营业额，消费时不再重复计入实际营业额，故订单现金金额为 ¥0.00。此处将元宝的充值、消费、退款单独计账，与现金营业额分开统计。</text>
+          </view>
+
+          <!-- 元宝收支汇总 (颜色口径与「我的元宝」一致: 出账绿 / 进账红) -->
+          <view class="order-type-stats points-stats">
+            <view class="ots-item">
+              <text class="ots-label">充值入账 {{ pointsSummary.rechargeCount }} 笔</text>
+              <text class="ots-val plus">+{{ fmtPoints(pointsSummary.recharge) }}</text>
+            </view>
+            <view class="ots-item">
+              <text class="ots-label">消费出账 {{ pointsSummary.consumeCount }} 笔</text>
+              <text class="ots-val minus">-{{ fmtPoints(pointsSummary.consume) }}</text>
+            </view>
+            <view class="ots-item">
+              <text class="ots-label">退款入账 {{ pointsSummary.refundCount }} 笔</text>
+              <text class="ots-val plus">+{{ fmtPoints(pointsSummary.refund) }}</text>
+            </view>
+            <view class="ots-item">
+              <text class="ots-label">元宝净变动</text>
+              <text class="ots-val">{{ pointsSummary.net >= 0 ? '+' : '' }}{{ fmtPoints(pointsSummary.net) }}</text>
+            </view>
+            <view class="ots-item">
+              <text class="ots-label">现金营业额（对照）</text>
+              <text class="ots-val">¥{{ (pointsSummary.cashSales || 0).toFixed(2) }}</text>
+            </view>
+          </view>
+
+          <view class="filter-pills points-filter">
+            <text
+              v-for="t in pointsTypeOptions"
+              :key="t"
+              class="pill"
+              :class="{ on: pointsType === t }"
+              @tap="pointsType = t"
+            >{{ t }}</text>
+          </view>
+
+          <view class="table orders-table points-table">
+            <view class="tr th">
+              <text class="td w-time">时间</text>
+              <text class="td w-user">用户</text>
+              <text class="td w-no">订单号</text>
+              <text class="td w-name">商品 / 内容</text>
+              <text class="td w-price">现金金额</text>
+              <text class="td w-price">元宝金额</text>
+              <text class="td w-status">类型 / 状态</text>
+            </view>
+            <view class="tr" v-for="r in filteredPointsRecords" :key="r.key">
+              <text class="td w-time">{{ (r.at || '').slice(0, 16) }}</text>
+              <text class="td w-user ellipsis">{{ r.nickname || ('UID ' + r.uid) }}</text>
+              <text class="td w-no">{{ r.order_no }}</text>
+              <text class="td w-name ellipsis">{{ r.title }}</text>
+              <text class="td w-price">¥{{ (r.cash || 0).toFixed(2) }}</text>
+              <text class="td w-price pts-amt" :class="r.type === 'consume' ? 'minus' : 'plus'">
+                {{ r.type === 'consume' ? '-' : '+' }}{{ fmtPoints(r.points) }} 元宝
+              </text>
+              <view class="td w-status">
+                <text>{{ pointsTypeText(r.type) }}</text>
+                <text class="td-logis"> · {{ r.status }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="empty-tip" v-if="!filteredPointsRecords.length">暂无元宝流水</view>
+          <view class="points-note" v-if="pointsTotal > pointsRecords.length">
+            <text>共 {{ pointsTotal }} 笔，当前显示最近 {{ pointsRecords.length }} 笔</text>
+          </view>
+        </view>
+
         <!-- ===== 订单分析 ===== -->
         <view v-else-if="activeModule === 'orderAnalysis'" class="module">
           <view class="module-head">
@@ -758,6 +847,11 @@
             <text class="as-sum-item">总金额 <text class="as-num price">¥{{ analysisTotalAmount.toFixed(2) }}</text></text>
             <view class="as-sum-divider"></view>
             <text class="as-sum-item">笔均 <text class="as-num">¥{{ analysisTotalCount ? (analysisTotalAmount / analysisTotalCount).toFixed(2) : '0.00' }}</text></text>
+          </view>
+
+          <!-- 现金 / 元宝两套账口径提示 -->
+          <view class="points-note">
+            <text>上方金额仅为【现金营业额】。元宝支付订单实付现金为 ¥0.00，不计入营业额；本期元宝消费 {{ fmtPoints(analysisPoints.consume) }} 元宝（{{ analysisPoints.consumeCount }} 单），在「元宝账本」单独计账。</text>
           </view>
 
           <!-- 产品销售统计 (表头可点击切换排序) -->
@@ -1732,7 +1826,7 @@ import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
-  adminOrderAnalysis,
+  adminOrderAnalysis, adminPointsLedger,
   adminCourseCreate, adminCourseUpdate, adminCourseEpisodeUpdate, adminOrderShip, adminOrderRefund, adminOrderRefundCourse, adminOrderDelete, adminOrderForceRefund,
   adminOrderReconcile,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
@@ -1749,6 +1843,7 @@ import { useUserStore } from '../../store/index'
 import { getStorage } from '../../api/cloudbase'
 import { resolveCloudList, resolveCloudUrl } from '../../utils/avatar'
 import { clearCourseCache } from '../../utils/courseCache'
+import { orderPoints, fmtPoints, isYuanbaoPayOrder } from '../../utils/price'
 
 const userStore = useUserStore()
 const verNum = computed(() => APP_VERSION.replace(/^v/, ''))
@@ -1762,6 +1857,7 @@ const modules = [
   { key: 'orders', label: '订单管理', icon: '📦' },
   { key: 'cards', label: '次卡核销', icon: '🎫' },
   { key: 'orderAnalysis', label: '订单分析', icon: '📈' },
+  { key: 'points', label: '元宝账本', icon: '💰' },
   { key: 'aftersales', label: '售后管理', icon: '🛠' },
   { key: 'coupons', label: '优惠券', icon: '🎟' },
   { key: 'moments', label: '动态管理', icon: '📝' },
@@ -1983,6 +2079,7 @@ async function loadModule(key) {
     else if (key === 'orders') await loadOrders()
     else if (key === 'cards') await loadCards()
     else if (key === 'orderAnalysis') await loadOrderAnalysis()
+    else if (key === 'points') await loadPointsLedger()
     else if (key === 'users') {
       users.value = await adminList({ collection: 'users' })
       // cloud:// 头像转可访问 URL (H5 image 无法渲染 cloud://, 双端统一)
@@ -2620,7 +2717,39 @@ const orderTypeStats = computed(() => {
   })
 })
 
+/* ===== 元宝账本 (单独计账, 不计入现金营业额) ===== */
+const EMPTY_POINTS = { recharge: 0, rechargeCount: 0, consume: 0, consumeCount: 0, refund: 0, refundCount: 0, net: 0, cashSales: 0 }
+const pointsSummary = ref({ ...EMPTY_POINTS })
+const pointsRecords = ref([])
+const pointsTotal = ref(0)
+const pointsRange = ref('all')
+const pointsType = ref('全部')
+const pointsTypeOptions = ['全部', '充值', '消费', '退款']
+const POINTS_TYPE_KEY = { 充值: 'recharge', 消费: 'consume', 退款: 'refund' }
+const pointsTypeText = (t) => (t === 'recharge' ? '充值' : t === 'consume' ? '消费' : '退款')
+const filteredPointsRecords = computed(() => (
+  pointsType.value === '全部'
+    ? pointsRecords.value
+    : pointsRecords.value.filter((r) => r.type === POINTS_TYPE_KEY[pointsType.value])
+))
+async function loadPointsLedger() {
+  try {
+    const res = await adminPointsLedger({ range: pointsRange.value })
+    pointsSummary.value = { ...EMPTY_POINTS, ...(res.summary || {}) }
+    pointsRecords.value = res.records || []
+    pointsTotal.value = res.total || 0
+  } catch (e) {
+    uni.showToast({ title: e.message || '加载失败', icon: 'none' })
+  }
+}
+function switchPointsRange(v) {
+  if (pointsRange.value === v) return
+  pointsRange.value = v
+  loadPointsLedger()
+}
+
 /* ===== 订单分析 ===== */
+const analysisPoints = ref({ consume: 0, consumeCount: 0, cashAmount: 0 })
 const analysisPie = ref([])
 const analysisRanking = ref([])
 const analysisProducts = ref([])
@@ -2706,6 +2835,7 @@ async function loadOrderAnalysis() {
     analysisPie.value = res.pieData || []
     analysisRanking.value = res.ranking || []
     analysisProducts.value = res.products || []
+    analysisPoints.value = { consume: 0, consumeCount: 0, cashAmount: 0, ...(res.pointsSummary || {}) }
     productSort.value = { key: 'amount', dir: 'desc' }
   } catch (e) {
     uni.showToast({ title: e.message || '加载失败', icon: 'none' })
@@ -4295,11 +4425,15 @@ function forceRefundVirtual(o) {
     uni.showToast({ title: '仅虚拟订单可强制退款', icon: 'none' })
     return
   }
-  const paid = Number(o.total_price) || 0
+  /* 元宝支付单: 实付现金 0, 实付的是元宝。弹窗默认值/单位/退款基数一律按元宝口径,
+     否则默认 "0" 会被金额校验拦下 (提示"请输入正确的退款金额")。 */
+  const isPoints = isYuanbaoPayOrder(o)
+  const paid = isPoints ? orderPoints(o) : (Number(o.total_price) || 0)
+  const unit = isPoints ? '元宝' : '¥'
   uni.showModal({
-    title: '强制退款（可改金额）',
+    title: isPoints ? '强制退款（元宝，可改数量）' : '强制退款（可改金额）',
     editable: true,
-    placeholderText: '请输入退款金额',
+    placeholderText: isPoints ? '请输入退回元宝数' : '请输入退款金额',
     content: String(paid),
     confirmText: '确认退款',
     confirmColor: '#9c1630',
@@ -4308,7 +4442,7 @@ function forceRefundVirtual(o) {
       const raw = String(res.content === undefined || res.content === null ? '' : res.content).replace(/[^\d.]/g, '')
       const amount = Number(raw)
       if (!raw || !Number.isFinite(amount) || amount <= 0) {
-        uni.showToast({ title: '请输入正确的退款金额', icon: 'none' })
+        uni.showToast({ title: isPoints ? '请输入正确的元宝数' : '请输入正确的退款金额', icon: 'none' })
         return
       }
       // 超额部分需二次确认: 提示会转为元宝补偿
@@ -4317,7 +4451,7 @@ function forceRefundVirtual(o) {
           uni.showLoading({ title: '退款中…' })
           const r = await adminOrderForceRefund({ order_no: o.order_no, amount })
           uni.hideLoading()
-          uni.showToast({ title: (r && r.message) || `已退 ¥${amount}`, icon: 'none' })
+          uni.showToast({ title: (r && r.message) || `已退 ${unit}${amount}${isPoints ? ' 元宝' : ''}`, icon: 'none' })
           await loadOrders()
         } catch (e) {
           uni.hideLoading()
@@ -4327,8 +4461,10 @@ function forceRefundVirtual(o) {
       if (amount > paid) {
         const extra = Math.round((amount - paid) * 100) / 100
         uni.showModal({
-          title: '退款金额超过实付',
-          content: `实付 ¥${paid}，本次退款 ¥${amount}。其中 ¥${paid} 退回原支付渠道，超出部分 ¥${extra} 将补偿至用户元宝余额。确认继续？`,
+          title: isPoints ? '退款元宝数超过实付' : '退款金额超过实付',
+          content: isPoints
+            ? `实付 ${paid} 元宝，本次退回 ${amount} 元宝，超出部分 ${extra} 元宝将一并补偿至用户元宝余额（全部单独计账，不计入营业额）。确认继续？`
+            : `实付 ¥${paid}，本次退款 ¥${amount}。其中 ¥${paid} 退回原支付渠道，超出部分 ¥${extra} 将补偿至用户元宝余额。确认继续？`,
           confirmText: '确认退款',
           confirmColor: '#9c1630',
           success: (r2) => { if (r2.confirm) doRefund() },
@@ -7231,6 +7367,29 @@ onUnmounted(() => {
   .orders-table .w-ops-4 { width: 280px; }
   .orders-table .w-ops-5 { width: 350px; }
 }
+/* ===== 现金 / 元宝分账展示 (2026-11-24) ===== */
+.td-amount { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2rpx; }
+.amt-cash { font-size: 24rpx; color: #4a3c2c; }
+.amt-points { font-size: 20rpx; color: #b26a20; font-weight: 600; white-space: nowrap; }
+.points-note {
+  background: #fbf5e9;
+  border: 1rpx solid #eadfc8;
+  border-radius: 12rpx;
+  padding: 18rpx 22rpx;
+  margin: 18rpx 0;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #7a6548;
+}
+.points-stats { flex-wrap: wrap; }
+.points-stats .ots-val.plus { color: #c41e3a; }
+.points-stats .ots-val.minus { color: #2e7d32; }
+.points-filter { margin: 20rpx 0 12rpx; }
+.table.points-table .w-price { width: 150rpx; }
+.points-table .pts-amt { font-weight: 600; white-space: nowrap; }
+.points-table .pts-amt.plus { color: #c41e3a; }
+.points-table .pts-amt.minus { color: #2e7d32; }
+
 /* 后台: 保持 1400px 宽 (原有设计), 收拢居中 */
 @media screen and (min-width: 1025px) {
   .admin-dash {
@@ -7256,6 +7415,12 @@ onUnmounted(() => {
   .product-sheet .form-sheet {
     max-height: 78vh;
   }
+  /* 元宝账本列宽用绝对 px, 避免 rpx 在 PC 端被撑大 */
+  .table.points-table .w-price { width: 110px; }
+  .td-amount { gap: 2px; }
+  .amt-cash { font-size: 13px; }
+  .amt-points { font-size: 11px; }
+  .points-note { font-size: 12px; padding: 10px 14px; }
 }
 
 </style>

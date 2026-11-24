@@ -92,11 +92,14 @@
       </view>
     </view>
 
-    <!-- 金额明细 -->
+    <!-- 金额明细: 元宝支付单 total_price(现金) = 0, 须单独显示实付元宝, 不能显示"免费" -->
     <view class="card">
-      <view class="row"><text class="rk">商品总额</text><text class="rv">{{ fmtPrice(order.total_price) }}</text></view>
+      <view class="row"><text class="rk">商品总额</text><text class="rv">{{ fmtPrice(goodsTotalOf(order)) }}</text></view>
       <view class="row"><text class="rk">运费</text><text class="rv">包邮</text></view>
-      <view class="row total"><text class="rk">实付款</text><text class="rv red">{{ fmtPrice(order.total_price) }}</text></view>
+      <view class="row" v-if="orderPoints(order) > 0"><text class="rk">元宝支付</text><text class="rv red">{{ fmtPoints(orderPoints(order)) }} 元宝</text></view>
+      <view class="row total"><text class="rk">实付款</text><text class="rv red">{{ orderTotalText(order) }}</text></view>
+      <view class="row" v-if="isYuanbaoPayOrder(order)"><text class="rk">计账说明</text><text class="rv note">元宝支付单独计账，不计入现金营业额</text></view>
+      <view class="row" v-if="Number(order.refund_balance_points) > 0"><text class="rk">已退元宝</text><text class="rv red">+{{ fmtPoints(order.refund_balance_points) }} 元宝</text></view>
     </view>
 
     <!-- 订单信息 -->
@@ -198,7 +201,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { getOrder, confirmOrder, cancelOrder, courseRefund, wxpayPrepay, wxRequestPayment, wxmpScheme, wxpayH5, wxpayNative, orderPayBalance, alipayPrepay, getPayConfig, getMyAftersales, wxpayQuerySync, getOrderLogistics, douyinPrepay, douyinPayQuery } from '../../api/api'
 import { useUserStore } from '../../store/index'
 import { resolveOrderImages } from '../../utils/avatar'
-import { isFreePrice, fmtPrice } from '../../utils/price'
+import { isFreePrice, fmtPrice, orderTotalText, goodsTotalOf, orderPoints, fmtPoints, isYuanbaoPayOrder } from '../../utils/price'
 // H5 支付兜底 (2026-11-06): 商户号 H5支付权限未开通时, 降级跳小程序完成支付
 import { isH5PayUnavailable, payByWxmpScheme, wxmpFallbackTip } from '../../utils/h5pay'
 
@@ -648,11 +651,15 @@ async function doCancel() {
     return
   }
   const isPaid = order.value && order.value.status === '待发货'
-  const isFree = isFreePrice((order.value && order.value.total_price) || 0)
-  // 免费订单取消不提退款，直接确认
+  const isPointsOrder = isYuanbaoPayOrder(order.value)
+  // 元宝支付单 cash=0 但已扣元宝, 不能按"免费单"处理
+  const isFree = isFreePrice((order.value && order.value.total_price) || 0) && !isPointsOrder
+  const cancelTip = isPaid && isPointsOrder
+    ? `确定取消该订单吗？取消后实付的 ${fmtPoints(orderPoints(order.value))} 元宝将退回元宝余额。`
+    : (isPaid && !isFree ? '确定取消该订单吗？取消后款项将原路退回。' : '确定取消该订单吗？')
   uni.showModal({
     title: '取消订单',
-    content: isPaid && !isFree ? '确定取消该订单吗？取消后款项将原路退回。' : '确定取消该订单吗？',
+    content: cancelTip,
     confirmText: isFree ? '确认取消' : undefined,
     success: async (r) => {
       if (!r.confirm) return
@@ -849,6 +856,10 @@ async function douyinRequestPay(orderNo, prepay) {
   color: #9c1630;
   font-weight: 500;
   font-size: 30rpx;
+}
+.rv.note {
+  color: #8a857c;
+  font-size: 23rpx;
 }
 
 /* 支付方式选择 (预约订单): 微信默认/支付宝默认隐藏 */

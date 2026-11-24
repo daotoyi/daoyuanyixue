@@ -2329,6 +2329,66 @@ const POINTS_PER_YUAN = 10
 function yuanToPoints(y) {
   return Math.round((Number(y) || 0) * POINTS_PER_YUAN * 100) / 100
 }
+
+/* ===== 元宝账口径 (2026-11-24) =====
+   业务规则: 元宝是用户充值时已计入营业额的预付额度, 消费时【不计入实际营业额】,
+   但订单必须显示实际支付的元宝金额, 并在后台【单独计账】。
+   - 新订单: balance_used_points = 实际扣减元宝数 (1 元 = 10 元宝)
+   - 历史订单(旧 1:1 口径): balance_used 数值即元宝数, 不再 ×10
+   - 充值单: recharge_points 优先, 否则 total_price × 10, 且仅付款成功才入账
+   - 退款单: refund_balance_points / refund_balance_amount 优先, 老单按消费额兜底 */
+const POINTS_PAID_SKIP = ['待付款', '待支付', '已取消', '已结束']
+const POINTS_RECHARGE_OK = ['已完成', '已支付']
+function isRechargeOrder(o) {
+  return (o && o.order_type === 'recharge') || /^RC/i.test(String((o && o.order_no) || ''))
+}
+function isYuanbaoPayOrder(o) {
+  return String((o && o.pay_method) || '').includes('余额')
+    || Number(o && o.balance_used) > 0
+    || Number(o && o.balance_used_points) > 0
+}
+function orderPointsOf(o) {
+  if (!o) return 0
+  const p = Number(o.balance_used_points)
+  if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
+  return Math.round((Number(o.balance_used) || 0) * 100) / 100
+}
+function orderRefundPointsOf(o) {
+  if (!o) return 0
+  const p = Number(o.refund_balance_points)
+  if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
+  const a = Number(o.refund_balance_amount)
+  if (Number.isFinite(a) && a > 0) return Math.round(a * 100) / 100
+  // 仅历史老订单兜底; 新订单无退款明细=当时未真退, 不虚增进账
+  if (o.status === '已退款' && isYuanbaoPayOrder(o) && !Number(o.balance_used_points)) return orderPointsOf(o)
+  return 0
+}
+function pointsOfRecharge(o) {
+  const p = Number(o && o.recharge_points)
+  if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
+  return Math.round((Number(o && o.total_price) || 0) * POINTS_PER_YUAN * 100) / 100
+}
+/* 元宝支付订单退款: 按【实际扣减的元宝数】退回用户余额。
+   元宝单 total_price(现金实付) 恒为 0, 不能用它当退款基数, 否则会被判成免费单 → 不退钱。
+   返回实际退回的元宝数; 非元宝订单返回 0 (由调用方走微信原路退)。 */
+async function refundYuanbaoOrder(order) {
+  if (!order || !isYuanbaoPayOrder(order) || !order.uid) return 0
+  const pts = orderPointsOf(order)
+  if (!(pts > 0)) return 0
+  const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
+  const bal = Number((u && u.balance) || 0) || 0
+  await db.collection('users').where({ uid: Number(order.uid) })
+    .update({ balance: String(Math.round((bal + pts) * 100) / 100) })
+  return pts
+}
+/* 退款写入的元宝明细 (所有退款入口统一): 让「我的元宝」能显示 +元宝 进账 */
+function refundPointsFields(points, cashAmount) {
+  return {
+    refund_amount: cashAmount,                 // 现金退款额(元宝单=0, 不计入营业额)
+    refund_balance_points: points,            // 实际退回元宝数
+    refund_balance_amount: points > 0 ? Math.round((points / POINTS_PER_YUAN) * 100) / 100 : 0,
+  }
+}
 async function rechargeCreate(data) {
   const { uid, amount } = data
   if (!uid) return fail('请先登录')
@@ -2565,9 +2625,10 @@ async function cancelOrder(data) {
   // 已支付(待发货)取消 → 自动退款 (防重复退款)
   if (order.status === '待发货') {
     const refundAmt = Number(order.total_price) || 0
-    const isBalance = String(order.pay_method || '').includes('余额')
-    // 免费订单/金额为0: 直接取消, 不发起退款 (微信退款金额最小为 1 分)
-    const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
+    const isBalance = isYuanbaoPayOrder(order)
+    const backPoints = isBalance ? orderPointsOf(order) : 0
+    // 真免费单 = 现金与元宝都没付过; 元宝单 cash=0 但已扣元宝, 不能判成免费
+    const isFreeOrder = (refundAmt <= 0 && backPoints <= 0) || String(order.pay_method || '') === '免费'
     if (isFreeOrder) {
       await db.collection('orders').where(cond).update({
         status: '已取消',
@@ -2580,11 +2641,8 @@ async function cancelOrder(data) {
       // (wxpay-v3.request 已加 8s 超时, 这里再兜底一层, 保证订单一定取消)
       const refundP = (async () => {
         if (isBalance) {
-          // 元宝支付: 直接退回元宝余额
-          const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
-          const bal = Number((u && u.balance) || 0) || 0
-          await db.collection('users').where({ uid: Number(order.uid) })
-            .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+          // 元宝支付: 按实际扣减元宝数退回 (不按 total_price, 元宝单该值为 0)
+          await refundYuanbaoOrder(order)
         } else {
           // 微信支付(含 trade_no 兜底): 调微信退款 API v3 — 失败不阻断取消
           const wxpay = require('./wxpay-v3')
@@ -2612,6 +2670,7 @@ async function cancelOrder(data) {
         refund_reason: '用户取消订单',
         refund_failed: refundFailed,
         refund_error: refundFailed ? String(refundErr || '').slice(0, 200) : '',
+        ...(refundFailed ? {} : refundPointsFields(backPoints, isBalance ? 0 : refundAmt)),
       })
       // 退款回退销量 (商品/课程) — 仅退款成功时回退, 失败留后台处理
       if (!refundFailed) {
@@ -2675,15 +2734,13 @@ async function courseRefund(data) {
     }
   }
 
-  // 退款: 按支付方式原路退回
+  // 退款: 现金单走微信原路, 元宝单按实际扣减元宝数退回余额 (元宝单 total_price=0)
   const refundAmt = Number(order.total_price) || 0
-  const isBalance = String(order.pay_method || '').includes('余额')
+  const isBalance = isYuanbaoPayOrder(order)
+  let backPoints = 0
   if (isBalance) {
-    const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
-    const bal = Number((u && u.balance) || 0) || 0
-    await db.collection('users').where({ uid: Number(uid) })
-      .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
-  } else {
+    backPoints = await refundYuanbaoOrder(order)
+  } else if (refundAmt > 0) {
     try {
       const wxpay = require('./wxpay-v3')
       await wxpay.refund({
@@ -2705,11 +2762,12 @@ async function courseRefund(data) {
       .remove()
   } catch (e) {}
 
-  // 标记订单已退款
+  // 标记订单已退款 (元宝退款写入明细, 供「我的元宝」显示进账)
   await db.collection('orders').where({ order_no }).update({
     status: '已退款',
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: '课程7日退款',
+    ...refundPointsFields(backPoints, isBalance ? 0 : refundAmt),
   })
   // 退款回退销量 (课程学习人数 -1)
   try { await revertSalesAfterRefund(order) } catch (e) {}
@@ -2761,50 +2819,63 @@ async function adminVirtualForceRefund(data) {
   if (['待付款', '待支付', '已取消', '已结束'].includes(order.status)) return fail('该订单未支付或已关闭，无法退款')
 
   const targetUid = Number(order.uid)
-  const paid = Math.round((Number(order.total_price) || 0) * 100) / 100
-  const balUsed = Math.round((Number(order.balance_used) || 0) * 100) / 100
+  const paid = Math.round((Number(order.total_price) || 0) * 100) / 100 // 现金实付(元宝单=0)
+  const isBalancePay = isYuanbaoPayOrder(order)
+  const paidPoints = orderPointsOf(order) // 元宝实付(元宝单用它当退款基数)
+  const payMethod = String(order.pay_method || '')
+  const isFreePay = payMethod.includes('免费')
+  /* 金额单位: 元宝支付单 = 元宝数, 现金单 = 元。
+     元宝单默认值取实付元宝数而非 total_price(0), 否则弹窗默认 0 且被 >0 校验拦下。 */
+  const defaultAmount = isBalancePay ? paidPoints : paid
   const rawAmount = data.amount === undefined || data.amount === null || data.amount === ''
-    ? paid
+    ? defaultAmount
     : Number(String(data.amount).replace(/[^\d.]/g, ''))
-  if (!Number.isFinite(rawAmount) || !(rawAmount > 0)) return fail('退款金额需大于 0')
+  if (!Number.isFinite(rawAmount) || !(rawAmount > 0)) {
+    return fail(isBalancePay ? '退款元宝数需大于 0' : '退款金额需大于 0')
+  }
   const want = Math.round(rawAmount * 100) / 100
 
-  // 原路/余额退还部分不超过实付, 超出部分走元宝补偿
-  const channelAmt = Math.round(Math.min(want, paid) * 100) / 100
-  const extraAmt = Math.round((want - channelAmt) * 100) / 100
-  // 全额退款时把下单抵扣的元宝一并退回
-  const backBalance = want >= paid ? balUsed : 0
+  let channelDone = 0          // 微信原路退回(元)
+  let channelAmt = 0
+  let extraAmt = 0             // 现金单超出实付部分(元)
+  let balanceBackAmt = 0       // 现金单补偿到元宝的金额(元)
+  let balanceBackPoints = 0    // 实际入账元宝数
 
-  const payMethod = String(order.pay_method || '')
-  const isBalancePay = payMethod.includes('余额')
-  const isFreePay = payMethod.includes('免费') || paid <= 0
-
-  // 1) 渠道退款
-  let channelDone = 0
-  if (channelAmt > 0 && !isBalancePay && !isFreePay) {
-    try {
-      const wxpay = require('./wxpay-v3')
-      await wxpay.refund({
-        outTradeNo: order.order_no,
-        outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
-        totalFee: Math.round(paid * 100),
-        refundFee: Math.round(channelAmt * 100),
-        reason: '超级管理员强制退款',
-      })
+  if (isBalancePay) {
+    // 元宝支付虚拟订单: 整笔(含超额补偿)直接退回元宝余额。
+    // 无微信流水, 且不可再按 balUsed 补一次 —— 那样会重复退款。
+    await addUserBalance(targetUid, want)
+    balanceBackPoints = want
+    extraAmt = Math.max(0, Math.round((want - paidPoints) * 100) / 100)
+  } else {
+    channelAmt = Math.round(Math.min(want, paid) * 100) / 100
+    extraAmt = Math.round((want - channelAmt) * 100) / 100
+    const balUsed = Math.round((Number(order.balance_used) || 0) * 100) / 100
+    // 全额退款时把下单抵扣的元宝一并退回
+    const backBalance = want >= paid ? balUsed : 0
+    if (channelAmt > 0 && !isFreePay && paid > 0) {
+      try {
+        const wxpay = require('./wxpay-v3')
+        await wxpay.refund({
+          outTradeNo: order.order_no,
+          outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
+          totalFee: Math.round(paid * 100),
+          refundFee: Math.round(channelAmt * 100),
+          reason: '超级管理员强制退款',
+        })
+        channelDone = channelAmt
+      } catch (e) {
+        return fail('退款发起失败: ' + (e.message || '请稍后重试'))
+      }
+    } else if (channelAmt > 0) {
+      await addUserBalance(targetUid, yuanToPoints(channelAmt))
       channelDone = channelAmt
-    } catch (e) {
-      return fail('退款发起失败: ' + (e.message || '请稍后重试'))
     }
-  } else if (channelAmt > 0) {
-    // 余额支付 / 免费订单: 无微信流水, 直接回元宝 (1元=10元宝)
-    await addUserBalance(targetUid, yuanToPoints(channelAmt))
-    channelDone = channelAmt
-  }
-  // 2) 超出实付部分 + 抵扣的元宝 → 元宝补偿 (按 1元=10元宝 入账)
-  const balanceBackAmt = Math.round((backBalance + extraAmt) * 100) / 100
-  const balanceBackPoints = yuanToPoints(balanceBackAmt)
-  if (balanceBackPoints > 0) {
-    try { await addUserBalance(targetUid, balanceBackPoints) } catch (e) { /* 余额写入失败不阻断订单状态 */ }
+    balanceBackAmt = Math.round((backBalance + extraAmt) * 100) / 100
+    balanceBackPoints = yuanToPoints(balanceBackAmt)
+    if (balanceBackPoints > 0) {
+      try { await addUserBalance(targetUid, balanceBackPoints) } catch (e) { /* 余额写入失败不阻断订单状态 */ }
+    }
   }
 
   // 3) 收回权益: 课程访问权 / 次卡作废
@@ -2822,21 +2893,24 @@ async function adminVirtualForceRefund(data) {
     status: '已退款',
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: '超级管理员强制退款',
-    refund_amount: want,                                   // 管理员设定的退款总额(元)
-    refund_channel_amount: channelDone,                    // 原路/元宝按实付退还(元)
-    refund_balance_amount: balanceBackAmt,                 // 额外补偿到元宝的金额(元)
-    refund_balance_points: balanceBackPoints,              // 同上, 元宝数(实际入账余额)
+    refund_amount: isBalancePay ? 0 : want,                // 现金退款额(元宝单=0, 不计入营业额)
+    refund_channel_amount: channelDone,                    // 微信原路退回(元)
+    refund_balance_amount: isBalancePay ? 0 : balanceBackAmt, // 现金单超额补偿金额(元)
+    refund_balance_points: balanceBackPoints,              // 实际入账元宝数(元宝页进账记录据此展示)
+    refund_paid_points: isBalancePay ? paidPoints : 0,     // 元宝单原实付元宝数(对账用)
   })
   // 5) 回退销量(课程学习人数/商品销量)
   try { await revertSalesAfterRefund(order) } catch (e) {}
 
   // 6) 推送消息
   const msgTitle = order.course_id ? '课程退款成功' : '订单退款成功'
-  const msgContent = extraAmt > 0
-    ? `订单 ${order_no} 已退款 ¥${want}：其中 ¥${channelDone} 已退回原支付渠道${balanceBackPoints > 0 ? `，另 ¥${balanceBackAmt} 已按 1:10 补偿至元宝余额（${balanceBackPoints} 元宝）` : ''}`
-    : (channelDone > 0 && !isBalancePay && !isFreePay
-        ? `订单 ${order_no} 已退款 ¥${want}，款项已原路退回`
-        : `订单 ${order_no} 已退款 ¥${want}，已退回元宝余额${balanceBackPoints > 0 ? `（${balanceBackPoints} 元宝）` : ''}`)
+  const msgContent = isBalancePay
+    ? `订单 ${order_no} 已退款 ${want} 元宝（原实付 ${paidPoints} 元宝${extraAmt > 0 ? `，另补偿 ${extraAmt} 元宝` : ''}），已退回元宝余额`
+    : (extraAmt > 0
+        ? `订单 ${order_no} 已退款 ¥${want}：其中 ¥${channelDone} 已退回原支付渠道${balanceBackPoints > 0 ? `，另 ¥${balanceBackAmt} 已按 1:10 补偿至元宝余额（${balanceBackPoints} 元宝）` : ''}`
+        : (channelDone > 0 && !isFreePay
+            ? `订单 ${order_no} 已退款 ¥${want}，款项已原路退回`
+            : `订单 ${order_no} 已退款 ¥${want}，已退回元宝余额${balanceBackPoints > 0 ? `（${balanceBackPoints} 元宝）` : ''}`))
   try {
     await db.collection('messages').add({
       id: Date.now() % 1000000,
@@ -3911,8 +3985,10 @@ async function pandaoCancel(data) {
   // 已支付 → 自动退款 (防重复退款)
   if (order.status !== '已退款' && order.status !== '已取消') {
     const refundAmt = Number(order.total_price) || 0
-    // 免费场次/金额为0: 直接取消, 不发起退款 (微信退款金额最小为 1 分)
-    const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
+    const isBalance = isYuanbaoPayOrder(order)
+    const backPoints = isBalance ? orderPointsOf(order) : 0
+    // 真免费场次 = 现金与元宝都没付过; 元宝单 cash=0 但已扣元宝, 不能判成免费
+    const isFreeOrder = (refundAmt <= 0 && backPoints <= 0) || String(order.pay_method || '') === '免费'
     if (isFreeOrder) {
       await db.collection('orders').where({ order_no: order.order_no }).update({
         status: '已取消',
@@ -3921,13 +3997,9 @@ async function pandaoCancel(data) {
       })
       return ok({ refunded: false, message: '预约已取消' })
     }
-    const isBalance = String(order.pay_method || '').includes('余额')
     if (isBalance) {
-      // 余额/元宝支付: 直接退回余额
-      const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
-      const bal = Number((u && u.balance) || 0) || 0
-      await db.collection('users').where({ uid: Number(uid) })
-        .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+      // 余额/元宝支付: 按实际扣减元宝数退回 (不按 total_price)
+      await refundYuanbaoOrder(order)
     } else {
       // 微信支付: 调微信退款 API v3
       try {
@@ -3947,6 +4019,7 @@ async function pandaoCancel(data) {
       status: '已退款',
       refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
       refund_reason: '用户取消预约',
+      ...refundPointsFields(backPoints, isBalance ? 0 : refundAmt),
     })
     return ok({ refunded: true, message: '已取消预约并自动退款' })
   }
@@ -5561,19 +5634,17 @@ async function adminOrderRefund(data) {
   }
   // 仅已支付订单(待发货/待收货/已完成)需要真正退款; 待付款/待支付订单未支付, 直接标记取消
   const needRefund = order.status === '待发货' || order.status === '待收货' || order.status === '已完成'
+  const refundAmt = Math.round((Number(order.total_price) || 0) * 100) / 100 // 现金实付(元宝单=0)
+  const isBalance = isYuanbaoPayOrder(order)
+  const isFreeOrder = (!isBalance && refundAmt <= 0) || String(order.pay_method || '') === '免费'
   let didRefund = false
   let refundPoints = 0 // 本次退回元宝数 (元宝页面据此展示退款记录)
   if (needRefund) {
-    const refundAmt = Number(order.total_price) || 0
-    const isBalance = String(order.pay_method || '').includes('余额')
-    const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
     try {
-      if (!isFreeOrder && isBalance) {
-        // 元宝支付: 退回元宝余额 (1元=10元宝, 与充值与消费口径一致)
-        const backPoints = yuanToPoints(refundAmt)
-        await addUserBalance(Number(order.uid), backPoints)
-        refundPoints = backPoints
-        didRefund = true
+      if (isBalance) {
+        // 元宝支付: 按实际扣减的元宝数退回余额, 不发起微信退款 (无微信流水)
+        refundPoints = await refundYuanbaoOrder(order)
+        didRefund = refundPoints > 0
       } else if (!isFreeOrder) {
         // 微信支付: 调微信退款 API v3 (真实退款, 退款成功微信侧才会退钱)
         const wxpay = require('./wxpay-v3')
@@ -5597,9 +5668,7 @@ async function adminOrderRefund(data) {
     status: '已退款',
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: data.reason || '后台退款',
-    refund_amount: Number(order.total_price) || 0,
-    refund_balance_amount: refundPoints > 0 ? Math.round((refundPoints / POINTS_PER_YUAN) * 100) / 100 : 0,
-    refund_balance_points: refundPoints,
+    ...refundPointsFields(refundPoints, isBalance ? 0 : refundAmt),
   })
   // 养生次卡订单退款 → 作废该订单已发放的次卡 (防退款后继续消费)
   try { await revokeHealthCards(data.order_no, data.reason || '订单退款') } catch (e) {}
@@ -5931,6 +6000,92 @@ async function adminRecentOrders(data) {
 /* 订单分析: 按类型(商品/课程/AI解盘)统计成交额 + 用户消费排名 + 产品销售统计
  * data.range: 'all'|'week'|'month'|'quarter'|'year' 时间范围过滤 (默认 all 全部)
  */
+/* ===== 元宝账本 (单独计账, 不计入现金营业额) =====
+   流水三类: 充值入账 / 元宝消费出账 / 元宝退款入账
+   汇总基于区间内全量订单; 明细最多返回 300 条 (网关体限制), 按时间倒序 */
+async function adminPointsLedger(data) {
+  const RANGE_DAYS = { week: 7, month: 30, quarter: 90, year: 365 }
+  const rangeKey = (data && data.range) || 'all'
+  const rangeDays = RANGE_DAYS[rangeKey] || 0
+  const rangeStart = rangeDays ? Date.now() - rangeDays * 86400000 : 0
+
+  const res = await db.collection('orders').limit(1000).get()
+  const all = rangeStart
+    ? res.data.filter((o) => {
+        const t = Date.parse(String(o.created_at || '').replace(/-/g, '/'))
+        return !Number.isNaN(t) && t >= rangeStart
+      })
+    : res.data
+
+  const summary = {
+    recharge: 0, rechargeCount: 0,
+    consume: 0, consumeCount: 0,
+    refund: 0, refundCount: 0,
+    net: 0, cashSales: 0,
+  }
+  const records = []
+  for (const o of all) {
+    const status = String(o.status || '')
+    // 现金营业额: 与数据概览 totalSales 同口径; 元宝支付单 total_price=0 自然不计入
+    if (status !== '待付款' && status !== '待支付') summary.cashSales += Number(o.total_price) || 0
+
+    const title = (Array.isArray(o.items) ? o.items : []).map((i) => i && i.name).filter(Boolean).join('、')
+      || o.session_title || o.item_names || '订单'
+    const base = {
+      uid: o.uid || 0,
+      nickname: o.nickname || '',
+      order_no: o.order_no || '',
+      title,
+      status,
+      platform: o.platform || '',
+      cash: Number(o.total_price) || 0,
+      at: o.pay_time || o.created_at || '',
+    }
+    // ① 充值入账 (仅付款成功)
+    if (isRechargeOrder(o) && POINTS_RECHARGE_OK.includes(status)) {
+      const p = pointsOfRecharge(o)
+      summary.recharge += p
+      summary.rechargeCount++
+      records.push({ ...base, key: base.order_no + '-recharge', type: 'recharge', points: p })
+      continue
+    }
+    // ② 元宝消费出账 (排除未付款/取消单)
+    if (!isRechargeOrder(o) && isYuanbaoPayOrder(o) && !POINTS_PAID_SKIP.includes(status)) {
+      const p = orderPointsOf(o)
+      summary.consume += p
+      summary.consumeCount++
+      records.push({ ...base, key: base.order_no + '-consume', type: 'consume', points: p })
+    }
+    // ③ 元宝退款入账
+    const back = orderRefundPointsOf(o)
+    if (back > 0) {
+      summary.refund += back
+      summary.refundCount++
+      records.push({
+        ...base, key: base.order_no + '-refund', type: 'refund', points: back,
+        at: o.refund_time || o.pay_time || o.created_at || '',
+      })
+    }
+  }
+  ;['cashSales', 'recharge', 'consume', 'refund'].forEach((k) => {
+    summary[k] = Math.round(summary[k] * 100) / 100
+  })
+  summary.net = Math.round((summary.recharge + summary.refund - summary.consume) * 100) / 100
+
+  // 补全用户昵称
+  const uids = [...new Set(records.map((r) => r.uid).filter(Boolean))]
+  if (uids.length) {
+    try {
+      const users = await db.collection('users').where({ uid: _.in(uids) }).limit(500).get()
+      const nameMap = {}
+      for (const u of users.data) nameMap[String(u.uid)] = u.nickname || u.phone || ('UID ' + u.uid)
+      records.forEach((r) => { if (!r.nickname) r.nickname = nameMap[String(r.uid)] || ('UID ' + r.uid) })
+    } catch (e) { /* 昵称补全失败不影响账目 */ }
+  }
+  records.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+  return ok({ summary, total: records.length, records: records.slice(0, 300) })
+}
+
 async function adminOrderAnalysis(data) {
   // 时间范围: week=7天 month=30天 quarter=90天 year=365天
   const RANGE_DAYS = { week: 7, month: 30, quarter: 90, year: 365 }
@@ -5961,6 +6116,9 @@ async function adminOrderAnalysis(data) {
   const userMap = {} // uid → { uid, nickname, total, count }
   // 产品销售聚合 (按 items[].name, 排除已退款)
   const productMap = {} // name → { name, count, amount }
+  // 元宝账 (单独计账, 不计入现金营业额)
+  let pointsConsume = 0
+  let pointsConsumeCount = 0
 
   for (const o of orders) {
     let t = o.order_type || (o.course_id ? 'course' : 'product')
@@ -5974,6 +6132,11 @@ async function adminOrderAnalysis(data) {
     if (typeMap[t]) {
       typeMap[t].count++
       typeMap[t].amount += amt
+    }
+    // 元宝消费单独计账: 不并入上面的现金营业额
+    if (!isRechargeOrder(o) && isYuanbaoPayOrder(o) && !POINTS_PAID_SKIP.includes(String(o.status || ''))) {
+      pointsConsume += orderPointsOf(o)
+      pointsConsumeCount++
     }
     // 产品销售 (排除退款订单)
     if (o.status !== '已退款') {
@@ -6024,7 +6187,14 @@ async function adminOrderAnalysis(data) {
       amount: Math.round(v.amount * 100) / 100,
     }))
 
-  return ok({ pieData, ranking, products })
+  return ok({
+    pieData, ranking, products,
+    pointsSummary: {
+      consume: Math.round(pointsConsume * 100) / 100,
+      consumeCount: pointsConsumeCount,
+      cashAmount: Math.round(pieData.reduce((s, p) => s + p.amount, 0) * 100) / 100,
+    },
+  })
 }
 
 /* ---- 系统设置 (settings 集合, 按 group 分组存储) ---- */
@@ -6910,6 +7080,7 @@ const ROUTES = {
   'admin.coupons.delete': adminCouponDelete,
   'admin.recentOrders': adminRecentOrders,
   'admin.orderAnalysis': adminOrderAnalysis,
+  'admin.pointsLedger': adminPointsLedger,
   'admin.settings.get': adminSettingsGet,
   'admin.settings.save': adminSettingsSave,
   'admin.oss.videos.list': adminOssVideosList,

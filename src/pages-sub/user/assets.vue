@@ -233,8 +233,9 @@ function refundPointsOfOrder(o) {
   // 历史退款无明细字段时: refund_balance_amount 的数值即当时实际退回的元宝数
   const yuan = Number(o.refund_balance_amount) || 0
   if (yuan > 0) return Math.round(yuan * 100) / 100
-  // 更早的元宝支付订单退款(无任何明细): 当时按扣减额退回元宝, 用消费额兜底
-  if (o.status === '已退款' && isYuanbaoOrder(o)) return pointsOfOrder(o)
+  // 仅历史老订单(旧 1:1 口径、无 balance_used_points)用消费额兜底;
+  // 新订单若没有退款明细, 说明当时压根没退元宝 → 不显示虚假进账
+  if (o.status === '已退款' && isYuanbaoOrder(o) && !Number(o.balance_used_points)) return pointsOfOrder(o)
   return 0
 }
 function buildPointsRecords(orders) {

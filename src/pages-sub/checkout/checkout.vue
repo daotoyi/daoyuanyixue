@@ -566,8 +566,28 @@ async function submitOrder() {
       submitting.value = false
       return
     }
-    // 微信小程序: JSAPI 微信支付; 其他端: 微信H5收银台/元宝支付
+    // 微信小程序: 微信选 JSAPI 微信支付; 选元宝支付则真实扣减元宝
     // #ifdef MP-WEIXIN
+    if (payMethod.value === 'balance') {
+      // 小程序端曾无条件走 wxpayPrepay: 选了元宝支付却拉起微信收银台, 元宝余额与消费记录都不会变
+      try {
+        await orderPayBalance({ order_no: order.order_no, uid: userStore.userInfo.uid })
+        clearSelected()
+        uni.showToast({ title: '支付成功', icon: 'success' })
+        setTimeout(() => {
+          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
+        }, 800)
+        submitting.value = false
+        return
+      } catch (e) {
+        submitting.value = false
+        uni.showToast({ title: (e && e.message) || '元宝支付失败', icon: 'none' })
+        setTimeout(() => {
+          uni.redirectTo({ url: `/pages-sub/order/detail?order_no=${order.order_no}` })
+        }, 800)
+        return
+      }
+    }
     try {
       const prepay = await wxpayPrepay(order.order_no)
       if (prepay && prepay.payment) {
