@@ -71,6 +71,11 @@
               </view>
               <view class="hc-bar"><view class="hc-bar-in" :style="{ width: pct(c) + '%' }"></view></view>
               <view class="hc-expire">有效期至 {{ fmtDate(c.expireAt) }}</view>
+              <!-- 备注: 显示发卡订单号, 点击直达订单详情 -->
+              <view class="hc-remark" v-if="c.orderNo">
+                <text class="hc-remark-label">备注</text>
+                <text class="hc-order-link" @tap.stop="goCardOrder(c.orderNo)">订单号 {{ c.orderNo }} ›</text>
+              </view>
               <view class="hc-actions">
                 <view
                   class="btn-p sm hc-btn"
@@ -180,6 +185,11 @@ function switchRec() {
   viewMode.value = viewMode.value === 'cards' ? 'records' : 'cards'
   if (viewMode.value === 'records') loadCheckins()
 }
+/* 次卡备注里的订单号: 直达该订单详情, 便于核对付款/退款 */
+function goCardOrder(no) {
+  if (!no) return
+  uni.navigateTo({ url: `/pages-sub/order/detail?order_no=${no}` })
+}
 function timesOf(p) {
   const attrs = (p && p.attrs) || {}
   const raw = attrs['次数'] ?? attrs.times ?? attrs['次'] ?? 1
@@ -283,6 +293,10 @@ onShow(() => {
 .hc-bar { height: 8rpx; background: rgba(255,255,255,0.25); border-radius: 999rpx; overflow: hidden; }
 .hc-bar-in { height: 100%; background: #fff; border-radius: 999rpx; }
 .hc-expire { font-size: 20rpx; opacity: 0.75; margin-top: 12rpx; }
+/* 备注行: 订单号可点击跳订单详情 (深红卡面上用白色下划线区分) */
+.hc-remark { display: flex; align-items: center; margin-top: 12rpx; font-size: 20rpx; line-height: 1.5; }
+.hc-remark-label { opacity: 0.7; margin-right: 10rpx; flex-shrink: 0; }
+.hc-order-link { color: #fff; opacity: 0.95; text-decoration: underline; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .hc-actions { margin-top: 20rpx; }
 .hc-btn { background: #fff; color: #a31930; }
 .hc-btn.disabled { background: rgba(255,255,255,0.3); color: #fff; }
@@ -333,6 +347,9 @@ onShow(() => {
   }
   .hp-card { margin: 18px auto; max-width: 1160px; }
   .hi-text { font-size: 15px; }
+  /* PC 端 rpx 随屏宽放大: 备注行小字用绝对 px 固定 */
+  .hc-remark { font-size: 12px; margin-top: 8px; }
+  .hc-remark-label { margin-right: 6px; }
 }
 @media screen and (min-width: 1440px) {
   .health-page { max-width: 1320px; }

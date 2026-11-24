@@ -583,6 +583,10 @@
                 @tap="orderFilter = s; loadOrders()"
               >{{ s }}</text>
             </view>
+            <!-- 从次卡备注跳转过来时定位到该订单, 点 ✕ 恢复全部 -->
+            <view class="filter-pills" v-if="orderFocusNo">
+              <text class="pill on" @tap="clearOrderFocus">定位: {{ orderFocusNo }} ✕</text>
+            </view>
           </view>
           <!-- 订单分类统计: 商品/课程/AI解盘/预约 -->
           <view class="order-type-stats">
@@ -661,11 +665,12 @@
             </view>
           </view>
 
-          <view class="table orders-table">
+          <view class="table orders-table cards-table">
             <view class="tr th">
               <text class="td w-no">次卡号</text>
               <text class="td w-user">用户</text>
               <text class="td w-name">商品</text>
+              <text class="td w-card-remark">备注</text>
               <text class="td w-price">剩余/总次</text>
               <text class="td w-time">有效期至</text>
               <text class="td w-status">状态</text>
@@ -675,6 +680,11 @@
               <text class="td w-no">{{ c.cardNo }}</text>
               <text class="td w-user ellipsis">{{ c.nickname || ('UID ' + c.uid) }}</text>
               <text class="td w-name ellipsis">{{ c.productName }}</text>
+              <!-- 备注: 发卡订单号, 点击跳订单管理并定位该单 -->
+              <view class="td w-card-remark">
+                <text class="card-order-link" v-if="c.orderNo" @tap="goCardOrder(c.orderNo)">订单 {{ c.orderNo }} ›</text>
+                <text class="card-remark-none" v-else>—</text>
+              </view>
               <text class="td w-price">{{ c.remain }} / {{ c.total }}</text>
               <text class="td w-time">{{ (c.expireAt || '').slice(0, 10) }}</text>
               <view class="td w-status">
@@ -1979,6 +1989,8 @@ const orderTypeFilterOptions = [
 ]
 const orderTypeFilter = ref('全部')
 const orderFilter = ref('全部')
+/* 次卡备注点击订单号 → 跳订单管理并只显示该单 (前端定位, 不额外请求) */
+const orderFocusNo = ref('')
 
 /* 收款渠道筛选 (2026-11-06): 表头下拉, 前端按 platform 字段过滤 (h5/web 统一归为 H5) */
 const CHANNEL_OPTIONS = [
@@ -2065,6 +2077,18 @@ async function loadCourseCates() {
 function switchModule(key) {
   activeModule.value = key
   loadModule(key)
+}
+
+/* 次卡备注里的订单号: 直接跳到订单管理并定位该订单 */
+function goCardOrder(no) {
+  if (!no) return
+  orderFocusNo.value = String(no)
+  orderFilter.value = '全部'
+  switchModule('orders')
+  uni.showToast({ title: '已定位订单 ' + orderFocusNo.value, icon: 'none' })
+}
+function clearOrderFocus() {
+  orderFocusNo.value = ''
 }
 
 async function loadModule(key) {
@@ -2666,8 +2690,10 @@ const sortedOrders = computed(() => {
   const { key, dir } = orderSort.value
   const mul = dir === 'asc' ? 1 : -1
   const ch = channelFilter.value
+  const focus = orderFocusNo.value
   return [...orders.value]
     .filter((o) => {
+      if (focus && String(o.order_no || '') !== focus) return false
       if (ch === '全部') return true
       const p = String(o.platform || '').toLowerCase()
       if (ch === 'h5') return p === 'h5' || p === 'web'
@@ -5899,6 +5925,19 @@ onUnmounted(() => {
 .orders-table .w-ops-4 { width: 460rpx; }
 .orders-table .w-ops-5 { width: 580rpx; }
 .orders-table .w-ops-2 { width: 260rpx; }
+/* 次卡核销: 备注列 = 发卡订单号, 可点击跳订单管理 */
+.cards-table .tr { min-width: 2100rpx; }
+/* 专用类名: 不能复用 .w-remark (用户管理表格的备注列已占用该类名) */
+.w-card-remark { width: 300rpx; font-size: 20rpx; white-space: nowrap; overflow: hidden; }
+.card-order-link {
+  color: #9c1630;
+  text-decoration: underline;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-order-link:active { color: #c4753a; }
+.card-remark-none { color: #8a857c; }
 /* 可排序表头 */
 .orders-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .orders-table .sortable:active { color: #c4753a; }

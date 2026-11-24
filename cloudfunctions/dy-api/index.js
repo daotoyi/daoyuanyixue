@@ -3463,7 +3463,8 @@ async function adminCardsList(data) {
   if (st !== '全部') list = list.filter((c) => c.status === st)
   if (data.keyword) {
     const kw = String(data.keyword)
-    list = list.filter((c) => (c.cardNo || '').includes(kw) || (c.productName || '').includes(kw) || (c.nickname || '').includes(kw))
+    // 备注展示发卡订单号后, 搜索也支持按订单号定位 (卡号/商品/用户/订单号)
+    list = list.filter((c) => (c.cardNo || '').includes(kw) || (c.productName || '').includes(kw) || (c.nickname || '').includes(kw) || (c.orderNo || '').includes(kw))
   }
   return ok(list)
 }
