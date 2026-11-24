@@ -665,7 +665,7 @@
               <text class="td w-price">剩余/总次</text>
               <text class="td w-time">有效期至</text>
               <text class="td w-status">状态</text>
-              <text class="td w-ops w-ops-5" v-if="canWrite">操作</text>
+              <text class="td w-ops w-ops-2" v-if="canWrite">操作</text>
             </view>
             <view class="tr" v-for="c in sortedCards" :key="c.cardNo">
               <text class="td w-no">{{ c.cardNo }}</text>
@@ -676,7 +676,7 @@
               <view class="td w-status">
                 <text :class="'st-' + cardStCls(c.status)">{{ c.status }}</text>
               </view>
-              <view class="td w-ops w-ops-5 ops" v-if="canWrite">
+              <view class="td w-ops w-ops-2 ops" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: c.status !== '有效' }" @tap="checkinCard(c)">核销1次</text>
                 <text class="op op-col" @tap="showCardLogs(c)">核销流水</text>
               </view>
@@ -5692,6 +5692,7 @@ onUnmounted(() => {
 .orders-table .w-channel { width: 150rpx; }
 .orders-table .w-ops-4 { width: 460rpx; }
 .orders-table .w-ops-5 { width: 580rpx; }
+.orders-table .w-ops-2 { width: 260rpx; }
 /* 可排序表头 */
 .orders-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .orders-table .sortable:active { color: #c4753a; }
@@ -7148,6 +7149,7 @@ onUnmounted(() => {
   /* 订单表格宽屏列宽 (px, 避免商品列空白过宽) */
   .orders-table .tr { min-width: 0; }
   .orders-table .w-no { width: 130px; }
+  .orders-table .w-ops-2 { width: 160px; }
   .orders-table .w-user { width: 80px; }
   .orders-table .w-name { flex: 1 1 100px; min-width: 100px; max-width: 200px; }
   .orders-table .w-price { width: 70px; }
