@@ -60,7 +60,7 @@
         </view>
         <view v-else-if="cards.length" class="card-scroll">
           <scroll-view scroll-x class="cards-scroll" :show-scrollbar="false">
-            <view class="hcard" v-for="c in cards" :key="c.cardNo" :class="{ expired: !isCardValid(c) }">
+            <view class="hcard" v-for="c in cards" :key="c.cardNo" :class="{ expired: !isCardValid(c) }" @tap="openCardDetail(c)">
               <view class="hc-top">
                 <text class="hc-name">{{ c.productName }}</text>
                 <text class="hc-status">{{ cardStatus(c) }}</text>
@@ -80,10 +80,12 @@
                 <view
                   class="btn-p sm hc-btn"
                   :class="{ disabled: !canCheckin(c) }"
-                  @tap="doCheckin(c)"
+                  @tap.stop="doCheckin(c)"
                 >
                   <text>{{ checkinBtnText(c) }}</text>
                 </view>
+                <!-- 点击卡片/此行: 查看这张次卡自己的核销记录 -->
+                <text class="hc-logs-link" @tap.stop="openCardDetail(c)">核销记录 ›</text>
               </view>
             </view>
           </scroll-view>
@@ -99,8 +101,11 @@
         <view v-if="checkins.length" class="log-list">
           <view class="log-row" v-for="l in checkins" :key="l.id">
             <view class="log-left">
-              <text class="log-name">{{ l.productName || l.cardName }}</text>
-              <text class="log-time">{{ fmtTime(l.at) }}</text>
+              <view class="log-name-line">
+                <text class="log-name">{{ l.productName || l.cardName }}</text>
+                <text class="log-op" :class="l.operator === 'admin' ? 'by-admin' : 'by-user'">{{ l.operator === 'admin' ? '管理员代核' : '用户自助' }}</text>
+              </view>
+              <text class="log-time">{{ fmtTime(l.at) }} · {{ l.cardNo }}</text>
             </view>
             <text class="log-tag">-1 次</text>
           </view>
@@ -110,6 +115,36 @@
     </view>
 
     <view class="hp-foot">— 养生有道 · 起居有常 —</view>
+
+    <!-- 次卡详情: 点击次卡后展示这一张卡的核销记录 -->
+    <view class="pp-mask center" v-if="cardDetail" @tap="closeCardDetail">
+      <view class="pp-sheet hc-sheet" @tap.stop>
+        <view class="cd-head">
+          <text class="cd-title">{{ cardDetail.productName }}</text>
+          <text class="cd-close" @tap="closeCardDetail">✕</text>
+        </view>
+        <view class="cd-meta">
+          <text>次卡号 {{ cardDetail.cardNo }}</text>
+          <text>剩余 {{ cardDetail.remain }} / {{ cardDetail.total }} 次 · 有效期至 {{ fmtDate(cardDetail.expireAt) }}</text>
+          <text v-if="cardDetail.orderNo" class="cd-order" @tap="goCardOrder(cardDetail.orderNo)">订单号 {{ cardDetail.orderNo }} ›</text>
+        </view>
+        <view class="cd-sec-title">核销记录（{{ cardLogs.length }} 次）</view>
+        <scroll-view scroll-y class="cd-logs">
+          <view class="cd-log" v-for="l in cardLogs" :key="l.id">
+            <view class="cd-log-main">
+              <text class="cd-log-time">{{ fmtTime(l.at) }}</text>
+              <text class="cd-log-op" :class="l.operator === 'admin' ? 'by-admin' : 'by-user'">{{ l.operator === 'admin' ? '管理员代核' : '用户自助' }}</text>
+            </view>
+            <text class="cd-log-minus">-1 次</text>
+          </view>
+          <view class="cd-empty" v-if="!cardLogs.length">{{ cardLogsLoading ? '加载中…' : '这张次卡还没有核销记录' }}</view>
+        </scroll-view>
+        <view class="cd-actions">
+          <view class="btn-p plain sm" @tap="closeCardDetail">关闭</view>
+          <view class="btn-p sm" :class="{ disabled: !canCheckin(cardDetail) }" @tap="doCheckinFromDetail">{{ checkinBtnText(cardDetail) }}</view>
+        </view>
+      </view>
+    </view>
   </view>
 
 </template>
@@ -132,6 +167,10 @@ const checkins = ref([])
 const products = ref([])
 const viewMode = ref('cards')
 const loading = ref(true)
+/* 次卡详情弹层: 当前卡 + 这张卡专属的核销流水 */
+const cardDetail = ref(null)
+const cardLogs = ref([])
+const cardLogsLoading = ref(false)
 
 async function loadCards() {
   if (!isLoggedIn.value) { cards.value = []; loading.value = false; return }
@@ -152,9 +191,39 @@ async function loadCheckins() {
     checkins.value = []
   }
 }
-function refresh() {
-  loadCards()
-  loadCheckins()
+/* 单张次卡的核销流水: 服务端按 uid + card_no 过滤, 只能查本人的卡 */
+async function loadCardLogs(no) {
+  if (!no || !isLoggedIn.value) { cardLogs.value = []; return }
+  try {
+    cardLogs.value = (await myHealthCheckins({ uid: uid.value, card_no: no })) || []
+  } catch (e) {
+    cardLogs.value = []
+  }
+}
+async function openCardDetail(c) {
+  if (!c) return
+  cardDetail.value = c
+  cardLogs.value = []
+  cardLogsLoading.value = true
+  await loadCardLogs(c.cardNo)
+  cardLogsLoading.value = false
+}
+function closeCardDetail() {
+  cardDetail.value = null
+  cardLogs.value = []
+}
+function doCheckinFromDetail() {
+  const c = cardDetail.value
+  if (c) doCheckin(c)
+}
+async function refresh() {
+  await loadCards()
+  await loadCheckins()
+  // 弹层打开时同步最新次数: 核销后卡列表会整体刷新, 旧的 cardDetail 引用会过期
+  if (cardDetail.value) {
+    const fresh = cards.value.find((x) => x.cardNo === cardDetail.value.cardNo)
+    if (fresh) cardDetail.value = fresh
+  }
 }
 function goLogin() {
   uni.navigateTo({ url: '/pages-sub/login/login' })
@@ -169,7 +238,10 @@ function checkinBtnText(c) {
   return '打卡核销 · 1次'
 }
 function fmtTime(ts) {
-  const d = new Date(ts)
+  // 服务端 at 为 'YYYY/MM/DD HH:mm:ss', 小程序 iOS 对斜杠格式解析不稳 → 统一换成 '-'
+  const raw = typeof ts === 'string' ? ts.replace(/\//g, '-') : ts
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return String(ts || '')
   const p = (n) => (n < 10 ? '0' + n : '' + n)
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
@@ -188,6 +260,7 @@ function switchRec() {
 /* 次卡备注里的订单号: 直达该订单详情, 便于核对付款/退款 */
 function goCardOrder(no) {
   if (!no) return
+  closeCardDetail()
   uni.navigateTo({ url: `/pages-sub/order/detail?order_no=${no}` })
 }
 function timesOf(p) {
@@ -232,7 +305,8 @@ function doCheckin(c) {
         const res = await healthCheckin({ uid: uid.value, card_no: c.cardNo, platform: 'h5' })
         uni.hideLoading()
         uni.showToast({ title: (res && res.message) || '核销成功', icon: 'success' })
-        refresh()
+        await refresh()
+        if (cardDetail.value) await loadCardLogs(c.cardNo)
       } catch (e) {
         uni.hideLoading()
         uni.showToast({ title: (e && e.message) || '核销失败', icon: 'none' })
@@ -297,18 +371,52 @@ onShow(() => {
 .hc-remark { display: flex; align-items: center; margin-top: 12rpx; font-size: 20rpx; line-height: 1.5; }
 .hc-remark-label { opacity: 0.7; margin-right: 10rpx; flex-shrink: 0; }
 .hc-order-link { color: #fff; opacity: 0.95; text-decoration: underline; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.hc-actions { margin-top: 20rpx; }
+.hc-actions { margin-top: 20rpx; display: flex; align-items: center; justify-content: space-between; }
 .hc-btn { background: #fff; color: #a31930; }
 .hc-btn.disabled { background: rgba(255,255,255,0.3); color: #fff; }
+/* 卡片上的核销记录入口 (深红卡面上白色下划线) */
+.hc-logs-link { font-size: 21rpx; color: #fff; opacity: 0.9; text-decoration: underline; margin-left: 12rpx; flex-shrink: 0; }
 .log-list { display: flex; flex-direction: column; }
 .log-row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 20rpx 0; border-bottom: 1rpx solid var(--dy-line);
 }
-.log-left { display: flex; flex-direction: column; }
+.log-left { display: flex; flex-direction: column; min-width: 0; }
+.log-name-line { display: flex; align-items: center; }
 .log-name { font-size: 26rpx; color: #4a3b2a; }
 .log-time { font-size: 20rpx; color: #a89a88; margin-top: 8rpx; }
-.log-tag { font-size: 24rpx; color: #c41e3a; }
+.log-tag { font-size: 24rpx; color: #c41e3a; flex-shrink: 0; }
+/* 操作人标签: 用户自助=绿, 管理员代核=红 (与元宝出/进账配色一致) */
+.log-op { font-size: 18rpx; padding: 2rpx 12rpx; margin-left: 12rpx; border-radius: 999rpx; flex-shrink: 0; }
+.log-op.by-user { color: #6e7f5a; background: #f2f5ec; border: 1rpx solid #dde5d0; }
+.log-op.by-admin { color: #9c1630; background: #fbe9ec; border: 1rpx solid #f0d0d7; }
+
+/* ===== 次卡详情弹层: 该卡专属核销流水 ===== */
+.hc-sheet { max-width: 620rpx; }
+.cd-head { display: flex; justify-content: space-between; align-items: center; }
+.cd-title { font-size: 32rpx; font-weight: 600; color: #7a1220; }
+.cd-close { font-size: 30rpx; color: #a89a88; padding: 0 10rpx; }
+.cd-meta { display: flex; flex-direction: column; margin-top: 18rpx; font-size: 23rpx; color: #8a7d6c; line-height: 1.9; }
+.cd-order { color: #c41e3a; text-decoration: underline; }
+.cd-sec-title {
+  margin: 26rpx 0 10rpx; padding-top: 20rpx; border-top: 1rpx solid var(--dy-line);
+  font-size: 26rpx; font-weight: 500; color: #4a3b2a;
+}
+.cd-logs { max-height: 420rpx; }
+.cd-log {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18rpx 0; border-bottom: 1rpx solid var(--dy-line);
+}
+.cd-log-main { display: flex; flex-direction: column; }
+.cd-log-time { font-size: 24rpx; color: #4a3b2a; }
+.cd-log-op { font-size: 20rpx; margin-top: 8rpx; }
+.cd-log-op.by-user { color: #6e7f5a; }
+.cd-log-op.by-admin { color: #c41e3a; }
+.cd-log-minus { font-size: 24rpx; color: #c41e3a; flex-shrink: 0; }
+.cd-empty { text-align: center; font-size: 22rpx; color: #a89a88; padding: 46rpx 0; }
+.cd-actions { display: flex; justify-content: flex-end; align-items: center; margin-top: 26rpx; }
+.cd-actions .btn-p + .btn-p { margin-left: 16rpx; }
+.cd-actions .btn-p.disabled { opacity: 0.5; }
 .prod-list { display: flex; flex-direction: column; }
 .prod-card {
   display: flex; align-items: center; padding: 18rpx 0;
@@ -347,9 +455,17 @@ onShow(() => {
   }
   .hp-card { margin: 18px auto; max-width: 1160px; }
   .hi-text { font-size: 15px; }
-  /* PC 端 rpx 随屏宽放大: 备注行小字用绝对 px 固定 */
+  /* PC 端 rpx 随屏宽放大: 备注行小字与弹层文字用绝对 px 固定 */
   .hc-remark { font-size: 12px; margin-top: 8px; }
   .hc-remark-label { margin-right: 6px; }
+  .hc-logs-link, .log-op { font-size: 11px; }
+  .log-time { font-size: 12px; }
+  .hc-sheet { max-width: 480px; }
+  .cd-title { font-size: 20px; }
+  .cd-meta, .cd-log-time, .cd-log-minus { font-size: 14px; }
+  .cd-sec-title { font-size: 16px; }
+  .cd-log-op, .cd-empty { font-size: 12px; }
+  .cd-logs { max-height: 260px; }
 }
 @media screen and (min-width: 1440px) {
   .health-page { max-width: 1320px; }

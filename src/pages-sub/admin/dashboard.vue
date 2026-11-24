@@ -643,6 +643,7 @@
           <view class="module-head">
             <text class="module-title">次卡核销（{{ sortedCards.length }}）</text>
             <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="loadCards">刷新</view>
+            <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="showCardLogs(null)">全部流水</view>
             <view class="filter-pills">
               <text
                 v-for="s in cardStatusOptions"
@@ -1374,6 +1375,47 @@
         </view>
         </view>
       </scroll-view>
+    </view>
+
+    <!-- ===== 次卡核销流水弹层: 明确区分「用户自助」与「管理员代核」 ===== -->
+    <view class="pp-mask center" v-if="cardLogsOpen" @tap="closeCardLogs">
+      <view class="pp-sheet cl-sheet" @tap.stop>
+        <view class="cl-head">
+          <text class="cl-title">核销流水 · {{ cardLogsCard ? cardLogsCard.productName : '全部次卡' }}</text>
+          <text class="cl-close" @tap="closeCardLogs">✕</text>
+        </view>
+        <view class="cl-meta" v-if="cardLogsCard">次卡号 {{ cardLogsCard.cardNo }} · 归属 {{ cardLogsCard.nickname || ('UID ' + cardLogsCard.uid) }}</view>
+        <view class="cl-meta" v-else>全部次卡的核销明细，按时间倒序</view>
+        <view class="cl-stats">
+          <view class="cl-stat"><text class="cl-stat-num">{{ cardLogRows.length }}</text><text class="cl-stat-label">总核销次数</text></view>
+          <view class="cl-stat"><text class="cl-stat-num user">{{ cardLogUserCount }}</text><text class="cl-stat-label">用户自助</text></view>
+          <view class="cl-stat"><text class="cl-stat-num admin">{{ cardLogAdminCount }}</text><text class="cl-stat-label">管理员代核</text></view>
+        </view>
+        <view class="cl-pills">
+          <text
+            v-for="f in ['全部', '用户自助', '管理员代核']"
+            :key="f"
+            class="pill"
+            :class="{ on: cardLogFilter === f }"
+            @tap="cardLogFilter = f"
+          >{{ f }}</text>
+        </view>
+        <scroll-view scroll-y class="cl-logs">
+          <view class="cl-row" v-for="r in filteredCardLogs" :key="r.id || (r.card_no + '_' + r.at_ts)">
+            <view class="cl-row-main">
+              <view class="cl-row-top">
+                <text class="cl-op" :class="r.operator === 'admin' ? 'by-admin' : 'by-user'">{{ r.operator === 'admin' ? '管理员代核' : '用户自助' }}</text>
+                <text class="cl-op-by" v-if="r.operator === 'admin'">{{ r.operatorUid ? ('UID ' + r.operatorUid) : '后台操作' }}</text>
+                <text class="cl-minus">-1 次</text>
+              </view>
+              <text class="cl-time">{{ r.at || '' }}</text>
+              <text class="cl-sub">{{ r.product_name || '次卡' }} · {{ r.nickname || ('UID ' + (r.uid || 0)) }} · {{ r.card_no }} · {{ r.platform || '—' }}</text>
+            </view>
+          </view>
+          <view class="cl-empty" v-if="!filteredCardLogs.length">{{ cardLogsLoading ? '加载中…' : '暂无核销记录' }}</view>
+        </scroll-view>
+        <view class="cl-actions"><view class="btn-p plain sm" @click="closeCardLogs">关闭</view></view>
+      </view>
     </view>
 
     <!-- ===== 小程序绑定弹窗 (填 AppID → 生成授权链接) ===== -->
@@ -2560,6 +2602,20 @@ const cardKeyword = ref('')
 const CARD_ST_CLS = { '有效': 'done', '已用完': 'unpaid', '已过期': 'cancelled', '已作废': 'refunded' }
 const cardStCls = (v) => CARD_ST_CLS[v] || ''
 const sortedCards = computed(() => cards.value)
+/* 核销流水面板: operator=user(用户自助) / admin(管理员代核) */
+const cardLogsOpen = ref(false)
+const cardLogsCard = ref(null)
+const cardLogRows = ref([])
+const cardLogFilter = ref('全部')
+const cardLogsLoading = ref(false)
+const cardLogUserCount = computed(() => cardLogRows.value.filter((r) => r.operator !== 'admin').length)
+const cardLogAdminCount = computed(() => cardLogRows.value.filter((r) => r.operator === 'admin').length)
+const filteredCardLogs = computed(() => {
+  const f = cardLogFilter.value
+  if (f === '用户自助') return cardLogRows.value.filter((r) => r.operator !== 'admin')
+  if (f === '管理员代核') return cardLogRows.value.filter((r) => r.operator === 'admin')
+  return cardLogRows.value
+})
 /* 统计: 全部/有效/已用完/已过期 */
 const cardStats = computed(() => {
   const all = cards.value || []
@@ -2616,19 +2672,26 @@ function checkinCard(c) {
   })
 }
 
-/* 核销流水: 弹窗列出最近记录 */
+/* 核销流水: 面板列出全部记录, 明确标注「用户自助 / 管理员代核」及操作者 uid。
+   c 为 null 时查全部次卡 (模块头「全部流水」入口) */
 async function showCardLogs(c) {
+  cardLogsCard.value = c
+  cardLogsOpen.value = true
+  cardLogRows.value = []
+  cardLogFilter.value = '全部'
+  cardLogsLoading.value = true
   try {
-    const rows = (await adminCardsCheckins({ card_no: c.cardNo })) || []
-    if (!rows.length) {
-      uni.showToast({ title: '暂无核销记录', icon: 'none' })
-      return
-    }
-    const text = rows.slice(0, 8).map((r) => `${r.at || ''}  ${r.operator === 'admin' ? '后台' : '用户'}核销`).join('\n')
-    uni.showModal({ title: `核销流水（${rows.length}）`, content: text, showCancel: false })
+    cardLogRows.value = (await adminCardsCheckins(c ? { card_no: c.cardNo } : {})) || []
   } catch (e) {
     uni.showToast({ title: (e && e.message) || '流水加载失败', icon: 'none' })
+  } finally {
+    cardLogsLoading.value = false
   }
+}
+function closeCardLogs() {
+  cardLogsOpen.value = false
+  cardLogsCard.value = null
+  cardLogRows.value = []
 }
 
 /* 对账修复: 微信已支付但回调丢失的订单自动同步状态 (后台一键修复) */
@@ -5938,6 +6001,36 @@ onUnmounted(() => {
 }
 .card-order-link:active { color: #c4753a; }
 .card-remark-none { color: #8a857c; }
+/* ===== 次卡核销流水弹层: 用户自助(绿) / 管理员代核(红) ===== */
+.cl-sheet { max-width: 900rpx; }
+.cl-head { display: flex; justify-content: space-between; align-items: center; }
+.cl-title { font-size: 30rpx; font-weight: 600; color: #7a1220; }
+.cl-close { font-size: 28rpx; color: #8a857c; padding: 0 10rpx; cursor: pointer; }
+.cl-meta { font-size: 22rpx; color: #8a857c; margin-top: 12rpx; }
+.cl-stats {
+  display: flex; margin: 24rpx 0 18rpx; padding: 20rpx 0;
+  border-top: 1rpx solid var(--dy-line); border-bottom: 1rpx solid var(--dy-line);
+}
+.cl-stat { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.cl-stat-num { font-size: 34rpx; font-weight: 600; color: #4a3b2a; }
+.cl-stat-num.user { color: #6e7f5a; }
+.cl-stat-num.admin { color: #c41e3a; }
+.cl-stat-label { font-size: 20rpx; color: #8a857c; margin-top: 6rpx; }
+.cl-pills { display: flex; margin-bottom: 12rpx; }
+.cl-pills .pill + .pill { margin-left: 12rpx; }
+.cl-logs { max-height: 46vh; }
+.cl-row { padding: 18rpx 0; border-bottom: 1rpx solid var(--dy-line); }
+.cl-row-main { display: flex; flex-direction: column; }
+.cl-row-top { display: flex; align-items: center; }
+.cl-op { font-size: 20rpx; padding: 3rpx 14rpx; border-radius: 999rpx; flex-shrink: 0; }
+.cl-op.by-user { color: #6e7f5a; background: #f2f5ec; border: 1rpx solid #dde5d0; }
+.cl-op.by-admin { color: #9c1630; background: #fbe9ec; border: 1rpx solid #f0d0d7; }
+.cl-op-by { font-size: 20rpx; color: #8a857c; margin-left: 12rpx; }
+.cl-minus { font-size: 22rpx; color: #c41e3a; margin-left: auto; }
+.cl-time { font-size: 24rpx; color: #4a3b2a; margin-top: 10rpx; }
+.cl-sub { font-size: 20rpx; color: #8a857c; margin-top: 6rpx; }
+.cl-empty { text-align: center; font-size: 22rpx; color: #8a857c; padding: 50rpx 0; }
+.cl-actions { display: flex; justify-content: flex-end; margin-top: 22rpx; }
 /* 可排序表头 */
 .orders-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 .orders-table .sortable:active { color: #c4753a; }
@@ -7460,6 +7553,13 @@ onUnmounted(() => {
   .amt-cash { font-size: 13px; }
   .amt-points { font-size: 11px; }
   .points-note { font-size: 12px; padding: 10px 14px; }
+  /* 次卡核销流水弹层: PC 用绝对 px, 避免 rpx 随屏宽放大 */
+  .cl-sheet { max-width: 620px; }
+  .cl-title { font-size: 18px; }
+  .cl-meta, .cl-sub, .cl-op, .cl-op-by, .cl-stat-label, .cl-empty { font-size: 12px; }
+  .cl-stat-num { font-size: 22px; }
+  .cl-time, .cl-minus { font-size: 14px; }
+  .cl-logs { max-height: 360px; }
 }
 
 </style>

@@ -3364,8 +3364,9 @@ function normalizeCard(c) {
     createdAt: c.created_at || '',
   }
 }
-/* 核销一次: 原子递减(where remain>0 + inc(-1)) + 写流水; uid 传 0 表示后台管理员操作 */
-async function doCardCheckin({ cardNo, uid, operator, platform }) {
+/* 核销一次: 原子递减(where remain>0 + inc(-1)) + 写流水; uid 传 0 表示后台管理员操作
+   operator = user(用户自助) / admin(管理员代核), operatorUid = 管理员 uid(便于后台追溯谁操作的) */
+async function doCardCheckin({ cardNo, uid, operator, platform, operatorUid }) {
   await ensureCollection('health_cards')
   await ensureCollection('health_checkins')
   const card = (await db.collection('health_cards').where({ card_no: cardNo }).limit(1).get()).data[0]
@@ -3390,6 +3391,7 @@ async function doCardCheckin({ cardNo, uid, operator, platform }) {
       product_name: card.product_name || '',
       operator: operator || 'user',
       platform: String(platform || 'unknown'),
+      operator_uid: Number(operatorUid) || 0, // 管理员代核时记录操作者 uid
       at: nowCn(),
       at_ts: Date.now(),
     })
@@ -3412,14 +3414,16 @@ async function healthMyCards(data) {
   })
   return ok(list)
 }
-/* 用户端: 我的核销流水 */
+/* 用户端: 我的核销流水 (可传 card_no 只看该张次卡; where 强制带 uid, 防止查他人流水) */
 async function healthMyCheckins(data) {
   const uid = Number(data.uid) || 0
   if (!uid) return fail('请先登录')
   await ensureCollection('health_checkins')
+  const cond = { uid }
+  if (data.card_no) cond.card_no = String(data.card_no)
   let rows = []
   try {
-    const res = await db.collection('health_checkins').where({ uid }).limit(200).get()
+    const res = await db.collection('health_checkins').where(cond).limit(200).get()
     rows = res.data || []
   } catch (e) {}
   rows.sort((a, b) => (Number(b.at_ts) || 0) - (Number(a.at_ts) || 0))
@@ -3427,7 +3431,8 @@ async function healthMyCheckins(data) {
     id: r.id,
     cardNo: r.card_no,
     productName: r.product_name,
-    operator: r.operator,
+    operator: r.operator || (r.platform === 'admin' ? 'admin' : 'user'), // 兼容历史无 operator 流水
+    platform: r.platform || '',
     at: r.at,
     atTs: Number(r.at_ts) || 0,
   })))
@@ -3468,13 +3473,16 @@ async function adminCardsList(data) {
   }
   return ok(list)
 }
-/* 后台: 核销一次 */
+/* 后台: 核销一次 (记录是哪个管理员操作的) */
 async function adminCardsCheckin(data) {
   const cardNo = String(data.card_no || '').trim()
   if (!cardNo) return fail('缺少次卡号')
-  return doCardCheckin({ cardNo, uid: 0, operator: 'admin', platform: 'admin' })
+  return doCardCheckin({
+    cardNo, uid: 0, operator: 'admin', platform: 'admin',
+    operatorUid: Number(data.opUid) || 0,
+  })
 }
-/* 后台: 核销流水 (按次卡号或全部) */
+/* 后台: 核销流水 (按次卡号或全部; 明确标注用户自助 / 管理员代核 + 操作者) */
 async function adminCardsCheckins(data) {
   await ensureCollection('health_checkins')
   let rows = []
@@ -3485,8 +3493,19 @@ async function adminCardsCheckins(data) {
     const res = await q.limit(300).get()
     rows = res.data || []
   } catch (e) {}
+  // 用户昵称映射 (与次卡列表口径一致)
+  const nick = {}
+  try {
+    const us = await db.collection('users').limit(1000).get()
+    ;(us.data || []).forEach((u) => { nick[Number(u.uid)] = u.nickname || u.dao_code || ('UID ' + u.uid) })
+  } catch (e) {}
   rows.sort((a, b) => (Number(b.at_ts) || 0) - (Number(a.at_ts) || 0))
-  return ok(rows)
+  return ok(rows.map((r) => ({
+    ...r,
+    operator: r.operator || (r.platform === 'admin' ? 'admin' : 'user'), // 兼容历史无 operator 流水
+    nickname: nick[Number(r.uid)] || ('UID ' + (r.uid || 0)),
+    operatorUid: Number(r.operator_uid) || 0,
+  })))
 }
 
 /* 作废某订单发出的次卡 (退款/取消时调用, 防退款后继续消费) */
