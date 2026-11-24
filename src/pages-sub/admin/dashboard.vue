@@ -1248,8 +1248,9 @@
       </view>
     </view></view>
 
-    <!-- ===== 商品编辑弹窗 ===== -->
-    <view class="pp-mask" v-if="showProduct" @tap="showProduct = false"><view class="pp-sheet" @tap.stop>
+    <!-- ===== 商品编辑弹窗 =====
+         遮罩不绑定关闭: 只有点「取消」或「保存」才退出, 避免误触丢填写内容 -->
+    <view class="pp-mask product-mask" v-if="showProduct"><view class="pp-sheet product-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">{{ productForm.id ? '编辑商品' : '新增商品' }}</view>
         <view class="f-row"><text class="f-label">名称</text><input class="f-input" v-model="productForm.name" /></view>
@@ -1292,8 +1293,9 @@
       </view>
     </view></view>
 
-    <!-- ===== 课程编辑弹窗 ===== -->
-    <view class="pp-mask course-mask" v-if="showCourse" @tap="showCourse = false"><view class="pp-sheet course-sheet" @tap.stop>
+    <!-- ===== 课程编辑弹窗 =====
+         遮罩不绑定关闭: 只有点「取消」或「保存」才退出(与商品编辑弹窗一致) -->
+    <view class="pp-mask course-mask" v-if="showCourse"><view class="pp-sheet course-sheet" @tap.stop>
       <view class="form-sheet">
         <view class="sheet-title">
           {{ courseForm.id ? '编辑课程' : '新增课程' }}
@@ -7012,18 +7014,21 @@ onUnmounted(() => {
     min-height: 100vh;
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.06);
   }
-  /* PC 端课程编辑弹窗更宽: 突破底部弹出宽度限制, 垂直居中大面板 */
-  .pp-mask.course-mask {
+  /* PC 端编辑弹窗(课程/商品): 同宽 900px, 垂直居中大面板, 突破底部弹出宽度限制 */
+  .pp-mask.course-mask,
+  .pp-mask.product-mask {
     align-items: center;
   }
-  .course-mask .course-sheet {
+  .course-mask .course-sheet,
+  .product-mask .product-sheet {
     width: 900px;
     max-width: 94vw;
     max-height: 86vh;
     border-radius: 20rpx;
     margin: 0 auto;
   }
-  .course-sheet .form-sheet {
+  .course-sheet .form-sheet,
+  .product-sheet .form-sheet {
     max-height: 78vh;
   }
 }
