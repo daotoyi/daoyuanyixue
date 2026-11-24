@@ -60,7 +60,9 @@
 - **H5 构建 safe-delete 护栏**: 环境批量删除保护(阈值50)拦截 uni build 对 dist/build/h5/assets|static 的清理 → Build failed; 也拦截直接 rm -rf 大目录。绕过: `mv dist/build/h5 /tmp/h5bak/h5-<ts>` 再 build; mp 两端无此问题; 并发写 dist 也会假失败, 串行构建
 - v2.0.18 图标基准: 收藏/分享按钮 99×90rpx/图标36rpx/宽112rpx/字22rpx, PC 72×63px/27px/81px/15px; tabBar 图标 96 画布内 77×77 居中(原始 PNG 在 git `d48d73f^`)
 - **首页「养生/文旅/游学」有两套独立展示位**(2026-11-24 踩坑): ① 推荐页 `rec-sec` 模块(rec_show_health/travel/study 开关, rec*Products 横滑商品卡) ② 顶部 tab 板块(`P2_TABS`/`p2Tab`, show_health/travel/study 开关, p2b-good 网格)。改其中一套不等于另一套生效; 用户说"首页没显示商品卡片"先确认看的是哪一处。另: 正式版 `club.zhenhesheng.cn/h5/` 常停留旧构建, 预览版在 `/preview/health/`, 排查"没生效"先确认测试地址与版本 JS
-- **后台宽表格横向滑动 (v2.2.20 起)**: 订单管理/次卡核销内容一律 `white-space:nowrap`, 表头与数据行严格等宽并整体左右滑动。**小程序端 view 的 `overflow-x:auto` 不产生滚动**, 必须用 `<scroll-view scroll-x class="table-scroll">` 包住 `.table`; `.table` 设 `display:inline-block; width:2000rpx; min-width:100%`(PC media 覆写 `width:1280px`), 内部 `.tr { width:100%; min-width:0 }`, 商品列 `.w-name` 固定宽(不再 flex 伸缩) 保证表头/行对齐; 表格上方加「← 左右滑动表头 →」提示。元宝账本等其它表格仍用旧 `.table overflow-x:auto` 方案, 勿误删 `.orders-table .tr { min-width }` 基础规则。
+- **后台宽表格横向滑动 (v2.2.20 起)**: 订单管理/次卡核销内容一律 `white-space:nowrap`, 整表用 `<scroll-view scroll-x class="table-scroll">` 包裹左右滑动。**小程序端 view 的 `overflow-x:auto` 不产生滚动**, 必须用 scroll-view。
+- **表头拖动列宽 (v2.2.21 起)**: 用户说"表头左右滑动/无法移动"指的是**拖动表头调列宽**, 不是整表滚动(v2.2.20 误做成滚动被返工)。实现: `colW` 列宽表(rpx) → 表头+数据行 td 同绑 `:style="cellStyle()"`(带 `flex:0 0 auto`), 表宽 `tableStyle()`=列宽和+48rpx; `.col-rz` 把手 H5 mousedown+document mousemove/mouseup、小程序 touchstart/touchmove/touchend; px→rpx 用 `uni.upx2px(1)`, 列宽边界 90~1200rpx。H5 内联 rpx 由 vue runtime `normalizeRpx` 自动转换, 小程序原生支持。
+- **时间时区铁律 (v2.2.21)**: 云函数 `new Date().toLocaleString('zh-CN',{hour12:false})` 写库**已是东八区**(服务器 TZ=CST, 不是注释说的 UTC), 前端 `fmtUtcTime` 之流**禁止对 `YYYY/MM/DD HH:mm:ss` 本地串再 +8h**(否则 17:06 显示成次日 01:06)。只有 ISO `...T..Z` 串(toISOString 写入)才 +8。验证手法: 订单号 `DY<13位ms>` 解时间戳, 与库里 created_at 对比即可判定是否重复加时区。
 
 ## fish / 提权 / 沙箱坑
 - 沙箱提权包装器是 bash 风格 `unset ... && eval`, fish 无 unset → 提权命令 exit 127; **已修** `~/.config/fish/functions/unset.fish` shim(`set -e $argv`)
