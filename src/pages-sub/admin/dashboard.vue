@@ -623,7 +623,7 @@
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
                 <text class="op op-col" :class="{ hide: o.status !== '待发货' }" @tap="openShip(o)">发货</text>
                 <text class="op op-col danger" :class="{ hide: !canRefund(o) || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
-                <text class="op op-col danger" :class="{ hide: !(isCourseOrder(o) && userRole === 'admin' && o.status !== '已退款' && o.status !== '待付款' && o.status !== '待支付' && o.status !== '已取消') }" @tap="forceRefundCourse(o)">强制退款</text>
+                <text class="op op-col danger" :class="{ hide: !(isVirtualOrderRow(o) && userRole === 'admin' && o.status !== '已退款' && o.status !== '待付款' && o.status !== '待支付' && o.status !== '已取消') }" @tap="forceRefundVirtual(o)">强制退款</text>
                 <text class="op op-col danger" :class="{ hide: userRole !== 'admin' }" @tap="deleteOrder(o)">删除</text>
               </view>
             </view>
@@ -1733,7 +1733,7 @@ import { APP_VERSION, APP_COMMIT, APP_BUILD_DATE } from '@/version'
 import {
   adminDashboard, adminList, adminProductCreate, adminProductUpdate, adminProductDelete,
   adminOrderAnalysis,
-  adminCourseCreate, adminCourseUpdate, adminCourseEpisodeUpdate, adminOrderShip, adminOrderRefund, adminOrderRefundCourse, adminOrderDelete,
+  adminCourseCreate, adminCourseUpdate, adminCourseEpisodeUpdate, adminOrderShip, adminOrderRefund, adminOrderRefundCourse, adminOrderDelete, adminOrderForceRefund,
   adminOrderReconcile,
   adminUserCreate, adminUserUpdate, adminUserDelete, adminLiveCreate, adminLiveUpdate, adminMomentAudit, adminMomentDelete,
   adminCouponCreate, adminCouponUpdate, adminCouponDelete, adminRecentOrders,
@@ -2410,8 +2410,25 @@ async function deletePandaoSession(pd) {
   })
 }
 
+/* 商品元数据映射 (供订单虚拟判定兜底, 只加载一次) */
+const prodMeta = ref({})
+
 async function loadOrders() {
+  // 商品元数据 (id → 分类/虚拟标记): 历史订单 items 无快照时用于判断是否虚拟订单
+  await ensureProdMeta()
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
+}
+
+async function ensureProdMeta() {
+  if (Object.keys(prodMeta.value).length) return
+  try {
+    const list = (await adminList({ collection: 'products' })) || []
+    const m = {}
+    list.forEach((p) => {
+      m[Number(p.id)] = { cate_id: Number(p.cate_id) || 0, is_virtual: p.is_virtual === true }
+    })
+    prodMeta.value = m
+  } catch (e) { /* 加载失败不影响订单列表 */ }
 }
 
 /* ===== 次卡核销 (2026-11-24): 数据来自 health_cards 集合, 支付成功后自动生成 ===== */
@@ -4251,28 +4268,81 @@ function isCourseOrder(o) {
   return (o.order_type || (o.course_id ? 'course' : 'product')) === 'course'
 }
 
-/* 超级管理员强制退款课程订单: 不论 7日/已观看/订单状态, 只要已支付未退款 (仅超管可用, 后端二次校验) */
-async function forceRefundCourse(o) {
-  if (!isCourseOrder(o)) {
-    uni.showToast({ title: '仅课程订单可强制退款', icon: 'none' })
+/* 虚拟订单判定 (课程全部算虚拟): 课程/预约/工具解锁/充值、is_virtual、或商品全为虚拟分类(12养生/13文旅/6游学)
+   历史订单 items 无 cate_id 快照时, 用 prodMeta(id→分类) 兜底, 保证老订单也能强制退款 */
+const VIRTUAL_CATE_IDS = [12, 13, 6]
+function isVirtualOrderRow(o) {
+  if (!o) return false
+  const t = o.order_type
+  if (t === 'course' || t === 'appointment' || t === 'tool_unlock' || t === 'recharge') return true
+  if (Number(o.course_id) > 0) return true
+  if (o.is_virtual === true) return true
+  const items = Array.isArray(o.items) ? o.items : []
+  if (!items.length) return false
+  return items.every((i) => {
+    if (!i) return false
+    const meta = prodMeta.value[Number(i.id)]
+    const cateId = Number(i.cate_id) || (meta ? meta.cate_id : 0)
+    const virt = i.is_virtual === true || (meta ? meta.is_virtual === true : false)
+    return virt || VIRTUAL_CATE_IDS.includes(cateId)
+  })
+}
+
+/* 超管强制退款 (虚拟订单): 可自定义退款金额, 允许超过实付
+   超过实付的部分由服务端补偿至用户元宝余额(支付渠道不支持超额退款) */
+function forceRefundVirtual(o) {
+  if (!isVirtualOrderRow(o)) {
+    uni.showToast({ title: '仅虚拟订单可强制退款', icon: 'none' })
     return
   }
+  const paid = Number(o.total_price) || 0
   uni.showModal({
-    title: '强制退款（课程）',
-    content: `超级管理员强制退款：订单 ${o.order_no} 将立即原路退回 ¥${o.total_price} 并收回课程访问权，不可撤销。确认吗？`,
+    title: '强制退款（可改金额）',
+    editable: true,
+    placeholderText: '请输入退款金额',
+    content: String(paid),
+    confirmText: '确认退款',
     confirmColor: '#9c1630',
     success: async (res) => {
-      if (res.confirm) {
+      if (!res.confirm) return
+      const raw = String(res.content === undefined || res.content === null ? '' : res.content).replace(/[^\d.]/g, '')
+      const amount = Number(raw)
+      if (!raw || !Number.isFinite(amount) || amount <= 0) {
+        uni.showToast({ title: '请输入正确的退款金额', icon: 'none' })
+        return
+      }
+      // 超额部分需二次确认: 提示会转为元宝补偿
+      const doRefund = async () => {
         try {
-          await adminOrderRefundCourse({ order_no: o.order_no })
-          uni.showToast({ title: '已强制退款', icon: 'success' })
+          uni.showLoading({ title: '退款中…' })
+          const r = await adminOrderForceRefund({ order_no: o.order_no, amount })
+          uni.hideLoading()
+          uni.showToast({ title: (r && r.message) || `已退 ¥${amount}`, icon: 'none' })
           await loadOrders()
         } catch (e) {
-          uni.showToast({ title: e.message || '退款失败', icon: 'none' })
+          uni.hideLoading()
+          uni.showToast({ title: (e && e.message) || '退款失败', icon: 'none' })
         }
+      }
+      if (amount > paid) {
+        const extra = Math.round((amount - paid) * 100) / 100
+        uni.showModal({
+          title: '退款金额超过实付',
+          content: `实付 ¥${paid}，本次退款 ¥${amount}。其中 ¥${paid} 退回原支付渠道，超出部分 ¥${extra} 将补偿至用户元宝余额。确认继续？`,
+          confirmText: '确认退款',
+          confirmColor: '#9c1630',
+          success: (r2) => { if (r2.confirm) doRefund() },
+        })
+      } else {
+        doRefund()
       }
     },
   })
+}
+
+/* 兼容旧调用: 课程订单强制退款 (内部走通用虚拟退款, 默认全额) */
+function forceRefundCourse(o) {
+  forceRefundVirtual(o)
 }
 
 /* 用户 */

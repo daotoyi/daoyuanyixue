@@ -2723,7 +2723,22 @@ async function courseRefund(data) {
 }
 
 /* 后台: 超级管理员强制退款课程订单 (不论 7日/已观看/订单状态, 只要已支付未退款) */
-async function adminCourseForceRefund(data) {
+/* 虚拟订单强制退款 (超管): 课程 / 虚拟商品 / 养生次卡 / 文旅 / 游学 / 预约 / 工具解锁
+   支持自定义退款金额 data.amount (不传=实付金额), 允许超过实付:
+     - 不超过实付的部分 → 微信原路退回 / 余额支付回元宝
+     - 超过实付的部分 → 补偿至用户元宝余额 (支付渠道本身不允许超额退款)
+   全额退款时一并退还下单时抵扣的元宝(balance_used); 同时收回课程访问权、作废次卡 */
+async function addUserBalance(uid, amount) {
+  const amt = Math.round(Number(amount) * 100) / 100
+  if (!uid || !Number.isFinite(amt) || amt === 0) return null
+  const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+  const bal = Number((u && u.balance) || 0) || 0
+  const next = Math.round((bal + amt) * 100) / 100
+  await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(next) })
+  return next
+}
+
+async function adminVirtualForceRefund(data) {
   // 仅超级管理员可操作 (操作者身份由前端 _adminAuth 注入 opUid, 以数据库角色为准)
   const opRole = await dbUserRole(data)
   if (opRole !== 'admin') return fail('该操作需要超级管理员权限', 403)
@@ -2732,61 +2747,108 @@ async function adminCourseForceRefund(data) {
   const exist = await db.collection('orders').where({ order_no }).limit(1).get()
   if (!exist.data.length) return fail('订单不存在')
   const order = exist.data[0]
-  // 仅课程订单 (order_type 或 course_id 判定, 兼容历史订单)
-  const oType = order.order_type || (order.course_id ? 'course' : 'product')
-  if (oType !== 'course') return fail('仅课程订单可强制退款')
-  // 已支付且未退款 (待发货/待收货/已完成) 才可退; 待付款(未付)/已取消/已退款 不可
+  // 仅虚拟订单: 课程/预约/工具解锁/充值, 或 is_virtual, 或商品全为虚拟分类(12养生/13文旅/6游学)
+  if (!isVirtualOrder(order)) return fail('仅虚拟订单（课程/虚拟商品/次卡/文旅/游学）可强制退款')
   if (order.status === '已退款') return fail('该订单已退款')
-  if (['待付款', '待支付', '已取消'].includes(order.status)) return fail('该订单未支付或已关闭，无法退款')
+  if (['待付款', '待支付', '已取消', '已结束'].includes(order.status)) return fail('该订单未支付或已关闭，无法退款')
+
   const targetUid = Number(order.uid)
-  const refundAmt = Number(order.total_price) || 0
-  const isBalance = String(order.pay_method || '').includes('余额')
-  if (isBalance) {
-    const u = (await db.collection('users').where({ uid: targetUid }).limit(1).get()).data[0]
-    const bal = Number((u && u.balance) || 0) || 0
-    await db.collection('users').where({ uid: targetUid })
-      .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
-  } else {
+  const paid = Math.round((Number(order.total_price) || 0) * 100) / 100
+  const balUsed = Math.round((Number(order.balance_used) || 0) * 100) / 100
+  const rawAmount = data.amount === undefined || data.amount === null || data.amount === ''
+    ? paid
+    : Number(String(data.amount).replace(/[^\d.]/g, ''))
+  if (!Number.isFinite(rawAmount) || !(rawAmount > 0)) return fail('退款金额需大于 0')
+  const want = Math.round(rawAmount * 100) / 100
+
+  // 原路/余额退还部分不超过实付, 超出部分走元宝补偿
+  const channelAmt = Math.round(Math.min(want, paid) * 100) / 100
+  const extraAmt = Math.round((want - channelAmt) * 100) / 100
+  // 全额退款时把下单抵扣的元宝一并退回
+  const backBalance = want >= paid ? balUsed : 0
+
+  const payMethod = String(order.pay_method || '')
+  const isBalancePay = payMethod.includes('余额')
+  const isFreePay = payMethod.includes('免费') || paid <= 0
+
+  // 1) 渠道退款
+  let channelDone = 0
+  if (channelAmt > 0 && !isBalancePay && !isFreePay) {
     try {
       const wxpay = require('./wxpay-v3')
       await wxpay.refund({
         outTradeNo: order.order_no,
         outRefundNo: 'RF' + Date.now() + Math.floor(Math.random() * 1000),
-        totalFee: Math.round(refundAmt * 100),
-        refundFee: Math.round(refundAmt * 100),
+        totalFee: Math.round(paid * 100),
+        refundFee: Math.round(channelAmt * 100),
         reason: '超级管理员强制退款',
       })
+      channelDone = channelAmt
     } catch (e) {
       return fail('退款发起失败: ' + (e.message || '请稍后重试'))
     }
+  } else if (channelAmt > 0) {
+    // 余额支付 / 免费订单: 无微信流水, 直接回元宝
+    await addUserBalance(targetUid, channelAmt)
+    channelDone = channelAmt
   }
-  // 收回课程访问权 (删除 user_courses)
-  try {
-    await db.collection('user_courses')
-      .where({ uid: targetUid, course_id: Number(order.course_id) })
-      .remove()
-  } catch (e) {}
-  // 标记订单已退款
+  // 2) 超出实付部分 + 抵扣的元宝 → 元宝补偿
+  const balanceBackAmt = Math.round((backBalance + extraAmt) * 100) / 100
+  if (balanceBackAmt > 0) {
+    try { await addUserBalance(targetUid, balanceBackAmt) } catch (e) { /* 余额写入失败不阻断订单状态 */ }
+  }
+
+  // 3) 收回权益: 课程访问权 / 次卡作废
+  if (order.course_id) {
+    try {
+      await db.collection('user_courses')
+        .where({ uid: targetUid, course_id: Number(order.course_id) })
+        .remove()
+    } catch (e) {}
+  }
+  try { await revokeHealthCards(order.order_no, '强制退款') } catch (e) {}
+
+  // 4) 标记订单已退款 (记录金额明细, 便于后台对账)
   await db.collection('orders').where({ order_no }).update({
     status: '已退款',
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: '超级管理员强制退款',
+    refund_amount: want,                                   // 管理员设定的退款总额
+    refund_channel_amount: channelDone,                    // 原路/元宝按实付退还
+    refund_balance_amount: balanceBackAmt,                 // 额外补偿到元宝的金额
   })
-  // 退款回退销量 (课程学习人数 -1)
+  // 5) 回退销量(课程学习人数/商品销量)
   try { await revertSalesAfterRefund(order) } catch (e) {}
-  // 推送消息
+
+  // 6) 推送消息
+  const msgTitle = order.course_id ? '课程退款成功' : '订单退款成功'
+  const msgContent = extraAmt > 0
+    ? `订单 ${order_no} 已退款 ¥${want}：其中 ¥${channelDone} 已退回原支付渠道${balanceBackAmt > 0 ? `，另 ¥${balanceBackAmt} 已补偿至元宝余额` : ''}`
+    : (channelDone > 0 && !isBalancePay && !isFreePay
+        ? `订单 ${order_no} 已退款 ¥${want}，款项已原路退回`
+        : `订单 ${order_no} 已退款 ¥${want}，款项已退回元宝余额`)
   try {
     await db.collection('messages').add({
       id: Date.now() % 1000000,
       uid: targetUid,
       type: 'order',
-      title: '课程退款成功',
-      content: `课程订单 ${order_no} 已退款，款项已原路退回`,
+      title: msgTitle,
+      content: msgContent,
       read: false,
       created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     })
   } catch (e) {}
-  return ok({ refunded: true, message: '退款成功' })
+
+  return ok({
+    refunded: true,
+    amount: want,
+    channel_amount: channelDone,
+    balance_amount: balanceBackAmt,
+    over_paid: extraAmt > 0,
+    message: extraAmt > 0
+      ? `已退 ¥${want}（原路 ¥${channelDone} + 元宝 ¥${balanceBackAmt}）`
+      : `已退 ¥${want}`,
+  })
 }
 
 /* 用户端: 删除自己的订单 (校验 uid 归属, 防止删他人订单) */
@@ -6798,7 +6860,8 @@ const ROUTES = {
   'admin.cards.checkin': adminCardsCheckin,
   'admin.cards.checkins': adminCardsCheckins,
   'admin.orders.refund': adminOrderRefund,
-  'admin.orders.refundCourse': adminCourseForceRefund,
+  'admin.orders.refundCourse': adminVirtualForceRefund, // 兼容旧调用(课程)
+  'admin.orders.forceRefund': adminVirtualForceRefund,   // 通用: 虚拟订单强制退款(可自定义金额)
   'admin.orders.reconcile': adminOrderReconcile,
   'admin.recalcSales': adminRecalcSales,
   'admin.orders.delete': adminOrderDelete,

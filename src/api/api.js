@@ -355,6 +355,8 @@ export const adminCardsCheckin = _admin('admin.cards.checkin')
 export const adminCardsCheckins = _admin('admin.cards.checkins')
 export const adminOrderRefund = _admin('admin.orders.refund')
 export const adminOrderRefundCourse = _admin('admin.orders.refundCourse')
+/* 虚拟订单强制退款 (超管): 可传 amount 自定义金额, 超过实付的部分由服务端补偿为元宝 */
+export const adminOrderForceRefund = _admin('admin.orders.forceRefund')
 export const adminOrderDelete = _admin('admin.orders.delete')
 export const adminPandaoCreate = _admin('admin.pandao.create')
 export const adminPandaoDelete = _admin('admin.pandao.delete')
