@@ -102,28 +102,36 @@
                 <switch :checked="homeCfg.show_pandao" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_pandao = $event.detail.value" />
               </view>
               <view class="switch-cell">
-                <text class="sc-label">动态</text>
-                <switch :checked="homeCfg.show_follow" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_follow = $event.detail.value" />
+                <text class="sc-label">养生</text>
+                <switch :checked="homeCfg.show_health" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_health = $event.detail.value" />
               </view>
               <view class="switch-cell">
                 <text class="sc-label">直播</text>
                 <switch :checked="homeCfg.show_live" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_live = $event.detail.value" />
               </view>
               <view class="switch-cell">
-                <text class="sc-label">发布</text>
-                <switch :checked="homeCfg.show_publish" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_publish = $event.detail.value" />
+                <text class="sc-label">动态</text>
+                <switch :checked="homeCfg.show_follow" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_follow = $event.detail.value" />
+              </view>
+              <view class="switch-cell">
+                <text class="sc-label">文旅</text>
+                <switch :checked="homeCfg.show_travel" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_travel = $event.detail.value" />
+              </view>
+              <view class="switch-cell">
+                <text class="sc-label">游学</text>
+                <switch :checked="homeCfg.show_study" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_study = $event.detail.value" />
               </view>
               <view class="switch-cell">
                 <text class="sc-label">研究院</text>
                 <switch :checked="homeCfg.show_academy" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_academy = $event.detail.value" />
               </view>
               <view class="switch-cell">
-                <text class="sc-label">养生</text>
-                <switch :checked="homeCfg.show_health" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_health = $event.detail.value" />
+                <text class="sc-label">发布</text>
+                <switch :checked="homeCfg.show_publish" color="#c41e3a" style="transform: scale(0.8)" @change="homeCfg.show_publish = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
-              <text class="settings-tip">关闭后首页对应标签/入口隐藏；研究院、养生同时控制「我的」页功能板块</text>
+              <text class="settings-tip">按 推荐 → 盘道 → 养生 → 直播 → 动态 → 文旅 → 游学 → 研究院 顺序显示；关闭后首页对应标签隐藏（发布为动态发布权限，不占频道位）</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -194,13 +202,19 @@
               <text class="sd-text">控制「我的」页面功能板块的显示/隐藏</text>
             </view>
             <view class="f-row">
+              <text class="f-label">功能板块（总开关）</text>
+              <view class="f-input-wrap">
+                <switch :checked="homeCfg.show_functions" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_functions = $event.detail.value" />
+              </view>
+            </view>
+            <view class="f-row">
               <text class="f-label">玄学工具（总开关）</text>
               <view class="f-input-wrap">
                 <switch :checked="homeCfg.show_tools" color="#c41e3a" style="transform: scale(0.85)" @change="homeCfg.show_tools = $event.detail.value" />
               </view>
             </view>
             <view class="settings-actions">
-              <text class="settings-tip">玄学工具总开关控制三端显隐；研究院/养生开关已移至上方「首页显示」卡片</text>
+              <text class="settings-tip">功能板块（默认关闭）控制「我的」页研究院/养生/文旅/游学整块显隐；玄学工具总开关控制三端显隐；首页频道入口在「首页显示」卡片单独控制</text>
               <view class="btn-p sm" v-if="canManageHome" @click="saveHomeConfig">保存配置</view>
             </view>
           </view>
@@ -1922,7 +1936,7 @@ async function loadModule(key) {
 }
 
 /* ===== 页面管理 ===== */
-const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, rec_show_health: false, rec_show_travel: false, rec_show_study: false, show_tools: false, show_academy: false, show_health: false })
+const homeCfg = ref({ show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, rec_show_live: true, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, rec_show_health: false, rec_show_travel: false, rec_show_study: false, show_tools: false, show_functions: false, show_academy: true, show_health: true, show_travel: true, show_study: true })
 const momentCfg = ref({ allow_publish_moment: true }) // 动态发布权限开关 (默认允许)
 // 玄学工具总开关: 单字段 show_tools 控制三端; 未显式设置时默认开启, 避免线上原 App/H5 已开启的玄学工具被回退隐藏
 function masterToolsOf(mp) {
@@ -2091,8 +2105,11 @@ async function loadHomeConfig() {
       rec_show_travel: rc.rec_show_travel === '1' || rc.rec_show_travel === true,
       rec_show_study: rc.rec_show_study === '1' || rc.rec_show_study === true,
       show_tools: masterToolsOf(mp),
-      show_academy: mp.show_academy === '1' || mp.show_academy === true,
-      show_health: mp.show_health === '1' || mp.show_health === true,
+      show_functions: mp.show_functions === '1' || mp.show_functions === true,
+      show_academy: mp.show_academy !== '0' && mp.show_academy !== false,
+      show_health: mp.show_health !== '0' && mp.show_health !== false,
+      show_travel: mp.show_travel !== '0' && mp.show_travel !== false,
+      show_study: mp.show_study !== '0' && mp.show_study !== false,
     }
     const pd = await adminList({ collection: 'pandao_sessions' })
     homePandaoList.value = pd || []
@@ -2122,7 +2139,7 @@ async function saveHomeConfig() {
   try {
     await adminSettingsSave({ group: 'home', configs: { show_recommend: homeCfg.value.show_recommend ? '1' : '0', show_publish: homeCfg.value.show_publish ? '1' : '0', show_pandao: homeCfg.value.show_pandao ? '1' : '0', show_live: homeCfg.value.show_live ? '1' : '0', show_follow: homeCfg.value.show_follow ? '1' : '0', show_wechat_login: homeCfg.value.show_wechat_login ? '1' : '0' } })
     await adminSettingsSave({ group: 'recommend', configs: { rec_show_live: homeCfg.value.rec_show_live ? '1' : '0', rec_show_pandao: homeCfg.value.rec_show_pandao ? '1' : '0', rec_show_product: homeCfg.value.rec_show_product ? '1' : '0', rec_show_course: homeCfg.value.rec_show_course ? '1' : '0', rec_show_moment: homeCfg.value.rec_show_moment ? '1' : '0', rec_show_health: homeCfg.value.rec_show_health ? '1' : '0', rec_show_travel: homeCfg.value.rec_show_travel ? '1' : '0', rec_show_study: homeCfg.value.rec_show_study ? '1' : '0' } })
-    await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0', show_tools_app: homeCfg.value.show_tools ? '1' : '0', show_tools_h5: homeCfg.value.show_tools ? '1' : '0', show_academy: homeCfg.value.show_academy ? '1' : '0', show_health: homeCfg.value.show_health ? '1' : '0' } })
+    await adminSettingsSave({ group: 'mypage', configs: { show_tools: homeCfg.value.show_tools ? '1' : '0', show_tools_app: homeCfg.value.show_tools ? '1' : '0', show_tools_h5: homeCfg.value.show_tools ? '1' : '0', show_functions: homeCfg.value.show_functions ? '1' : '0', show_academy: homeCfg.value.show_academy ? '1' : '0', show_health: homeCfg.value.show_health ? '1' : '0', show_travel: homeCfg.value.show_travel ? '1' : '0', show_study: homeCfg.value.show_study ? '1' : '0' } })
     uni.showToast({ title: '已保存', icon: 'success' })
   } catch (e) {
     uni.showToast({ title: e.message || '保存失败', icon: 'none' })

@@ -9,25 +9,19 @@
       </view>
     </view>
 
-    <!-- 子频道 Tab：研究院/养生并入同一行(跳转型标签, 后台开关控制) -->
+    <!-- 子频道 Tab：固定顺序 推荐→盘道→养生→直播→动态→文旅→游学→研究院
+         前五项为内容标签(切换下方内容), 后四项为跳转型标签(进功能板块页面) -->
     <view class="channel-tabs">
       <view
         v-for="tab in tabs"
         :key="tab.key"
         class="channel-tab"
-        :class="{ active: currentTab === tab.key }"
-        @tap="switchTab(tab.key)"
+        :class="{ active: tab.type !== 'jump' && currentTab === tab.key, jump: tab.type === 'jump' }"
+        @tap="tab.type === 'jump' ? goJumpPage(tab.key) : switchTab(tab.key)"
       >
         <text>{{ tab.label }}</text>
-        <view class="tab-line" v-if="currentTab === tab.key"></view>
-      </view>
-      <view class="channel-tab jump" v-if="phase2Enabled && showAcademy" @tap="goAcademy">
-        <text>研究院</text>
-        <text class="jump-mark">›</text>
-      </view>
-      <view class="channel-tab jump" v-if="phase2Enabled && showHealth" @tap="goHealth">
-        <text>养生</text>
-        <text class="jump-mark">›</text>
+        <text class="jump-mark" v-if="tab.type === 'jump'">›</text>
+        <view class="tab-line" v-if="tab.type !== 'jump' && currentTab === tab.key"></view>
       </view>
     </view>
 
@@ -421,24 +415,41 @@ import { isFreePrice, fmtPrice } from '../../utils/price'
 import { PHASE2_ENABLED, HEALTH_CATE_ID } from '../../config/phase2.js'
 
 const phase2Enabled = PHASE2_ENABLED
-const showAcademy = ref(false) // 研究院入口开关(后台 mypage, 默认隐藏)
-const showHealth = ref(false)  // 养生入口开关(后台 mypage, 默认隐藏)
+// 功能板块四个入口开关 (后台「首页显示」控制, 云函数默认显示, 显式关闭才隐藏)
+const showHealth = ref(true)
+const showTravel = ref(true)
+const showStudy = ref(true)
+const showAcademy = ref(true)
+
+function goJumpPage(key) {
+  const map = {
+    health: '/pages-sub/health/index',
+    travel: '/pages-sub/travel/index',
+    study: '/pages-sub/study/index',
+    academy: '/pages-sub/academy/index',
+  }
+  if (map[key]) uni.navigateTo({ url: map[key] })
+}
 function goAcademy() { uni.navigateTo({ url: '/pages-sub/academy/index' }) }
 function goHealth() { uni.navigateTo({ url: '/pages-sub/health/index' }) }
 
-// tab 顺序固定: 推荐 → 盘道 → 直播 → 动态 (显示与否由后台首页管理开关控制)
+// tab 顺序固定: 推荐 → 盘道 → 养生 → 直播 → 动态 → 文旅 → 游学 → 研究院
 const tabs = ref([
-  { key: 'recommend', label: '推荐' },
-  { key: 'pandao', label: '盘道' },
+  { key: 'recommend', label: '推荐', type: 'tab' },
+  { key: 'pandao', label: '盘道', type: 'tab' },
 ])
 
-/* 按后台配置构建 tabs (保持固定顺序) */
+/* 按后台配置构建 tabs (顺序固定, 与「我的」页功能板块同一套开关) */
 function buildTabs(cfg) {
   const arr = []
-  if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐' })
-  if (cfg.show_pandao !== false) arr.push({ key: 'pandao', label: '盘道' }) // 盘道默认显示, 后台可关
-  if (cfg.show_live === true) arr.push({ key: 'live', label: '直播' })
-  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '动态' }) // 动态放最后 (直播右面)
+  if (cfg.show_recommend !== false) arr.push({ key: 'recommend', label: '推荐', type: 'tab' })
+  if (cfg.show_pandao !== false) arr.push({ key: 'pandao', label: '盘道', type: 'tab' }) // 盘道默认显示, 后台可关
+  if (phase2Enabled && showHealth.value) arr.push({ key: 'health', label: '养生', type: 'jump' })
+  if (cfg.show_live === true) arr.push({ key: 'live', label: '直播', type: 'tab' })
+  if (cfg.show_follow === true) arr.push({ key: 'follow', label: '动态', type: 'tab' })
+  if (phase2Enabled && showTravel.value) arr.push({ key: 'travel', label: '文旅', type: 'jump' })
+  if (phase2Enabled && showStudy.value) arr.push({ key: 'study', label: '游学', type: 'jump' })
+  if (phase2Enabled && showAcademy.value) arr.push({ key: 'academy', label: '研究院', type: 'jump' })
   tabs.value = arr
   if (!arr.some((t) => t.key === currentTab.value)) currentTab.value = 'recommend'
 }
@@ -1038,8 +1049,11 @@ onShow(async () => {
     const cfg = await getPayConfig()
     homeShowPublish.value = cfg.show_publish === true
     allowPublishMoment.value = cfg.allow_publish_moment !== false
-    showAcademy.value = cfg.show_academy === true
-    showHealth.value = cfg.show_health === true
+    // 功能板块四个入口 (云函数默认 true, 后台显式关才隐藏)
+    showHealth.value = cfg.show_health !== false
+    showTravel.value = cfg.show_travel !== false
+    showStudy.value = cfg.show_study !== false
+    showAcademy.value = cfg.show_academy !== false
     buildTabs(cfg)
     if (Array.isArray(cfg.pandao_fixed) && cfg.pandao_fixed.length) pandaoFixed.value = cfg.pandao_fixed
     // 盘道动态轮播图 (cloud:// fileID → 签名 URL 后才能渲染)
@@ -1185,7 +1199,8 @@ onShow(async () => {
   min-width: 0;
   text-align: center;
   padding: 24rpx 0 20rpx;
-  font-size: 28rpx;
+  /* 8 个标签(推荐/盘道/养生/直播/动态/文旅/游学/研究院)需挤在一行, 字号收到 24rpx */
+  font-size: 24rpx;
   color: #55524c;
   white-space: nowrap;
 }
@@ -1193,9 +1208,9 @@ onShow(async () => {
   color: #c41e3a;
   font-weight: 500;
 }
-/* 研究院/养生跳转型标签：与内容标签并排，颜色略区分 + 箭头提示可跳转 */
+/* 养生/文旅/游学/研究院 跳转型标签: 与内容标签并排, 颜色略区分 + 箭头提示可跳转 */
 .channel-tab.jump { color: #7a1220; }
-.jump-mark { font-size: 26rpx; margin-left: 4rpx; color: #a31930; }
+.jump-mark { font-size: 20rpx; margin-left: 2rpx; color: #a31930; }
 .tab-line {
   position: absolute;
   bottom: 0;
@@ -1961,8 +1976,6 @@ onShow(async () => {
     box-shadow: 0 0 60rpx rgba(69, 26, 3, 0.08);
     min-height: 100vh;
   }
-  /* 研究院/养生跳转标签: PC 用固定 px 覆写箭头尺寸 */
-  .jump-mark { font-size: 18px; }
   /* 盘道动态轮播图: 高度由 :style 按原图比例动态计算(px), PC 无需额外覆盖;
      仅在窄屏/宽屏下给单张图一个更宽松的高度上限区间 */
   .pb-item {
@@ -1978,8 +1991,9 @@ onShow(async () => {
   }
   .channel-tab {
     padding: 22px 0 18px;
-    font-size: 19px;
+    font-size: 16px;
   }
+  .jump-mark { font-size: 13px; }
   .tab-line {
     width: 48px;
     height: 6px;

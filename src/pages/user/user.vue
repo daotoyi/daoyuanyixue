@@ -67,16 +67,39 @@
       </view>
     </view>
 
-    <!-- 功能板块 (研究院/养生/文旅/游学, 位于我的课程上方, 图标从左到右横排) -->
-    <view class="panel" v-if="phase2Menus.length">
+    <!-- 功能板块 (研究院/养生/文旅/游学, 后台总开关控制, 默认关闭) -->
+    <view class="panel" v-if="showFunctions && funcEntries.length">
       <view class="panel-head">
         <text class="panel-title">功能板块</text>
       </view>
-      <view class="order-entry phase2-entry">
-        <view class="entry-item" v-for="m in phase2Menus" :key="m.key" @tap="onMenu(m)">
-          <text class="entry-icon">{{ m.icon }}</text>
-          <text class="entry-label">{{ m.label }}</text>
+      <view class="fn-list">
+        <view class="fn-card" v-for="f in funcEntries" :key="f.key" @tap="onMenu(f)">
+          <view class="fn-icon" :class="'fn-' + f.key">{{ f.icon }}</view>
+          <view class="fn-main">
+            <view class="fn-title-row">
+              <text class="fn-name">{{ f.label }}</text>
+              <text class="fn-tag">{{ f.tag }}</text>
+            </view>
+            <text class="fn-desc">{{ f.desc }}</text>
+          </view>
+          <text class="fn-go">›</text>
         </view>
+      </view>
+      <!-- 商城商品卡片链接 (下方链接商城在售商品, 点击进商品详情) -->
+      <view class="fn-goods" v-if="fnGoods.length">
+        <view class="fn-goods-head">
+          <text class="fn-goods-title">商城好物</text>
+          <text class="fn-goods-more" @tap="goShop">逛商城 ›</text>
+        </view>
+        <scroll-view scroll-x class="fn-goods-scroll" :show-scrollbar="false">
+          <view class="fn-goods-row">
+            <view class="fn-good" v-for="g in fnGoods" :key="g.id" @tap="goGoods(g)">
+              <image lazy-load class="fn-good-img" :src="(g.images && g.images[0]) || g.image || g.cover" mode="aspectFill"></image>
+              <text class="fn-good-name">{{ g.name }}</text>
+              <text class="fn-good-price">{{ fmtPrice(g.price) }}</text>
+            </view>
+          </view>
+        </scroll-view>
       </view>
     </view>
 
@@ -226,10 +249,11 @@ import { ref, computed } from 'vue'
 import { onShow, onShareAppMessage } from '@dcloudio/uni-app'
 import { resolveCloudUrl } from '../../utils/avatar'
 import { useUserStore } from '../../store/index'
-import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile, getPayConfig } from '../../api/api'
+import { getMyCoupons, getMyFavorites, getMyFootprints, userAssets, updateProfile, getUnreadCount, getMyVip, userProfile, getPayConfig, getProducts } from '../../api/api'
 import { getStorage } from '../../api/cloudbase'
 import { APP_FULL_VERSION } from '../../version'
 import { PHASE2_ENABLED } from '../../config/phase2.js'
+import { fmtPrice } from '../../utils/price'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -309,18 +333,68 @@ const menuItems = [
   { key: 'admin', label: '管理后台', icon: '⚙' },
 ]
 
-/* 功能板块（研究院/养生受后台开关控制；文旅/游学骨架常显, 商品上架后自链接） */
-const showAcademy = ref(false)
-const showHealth = ref(false)
-const phase2Menus = computed(() => {
+/* 功能板块：总开关 show_functions 控制整块显隐(后台默认关闭)；四个入口各自开关控制单项显示 */
+const showFunctions = ref(false)
+const showAcademy = ref(true)
+const showHealth = ref(true)
+const showTravel = ref(true)
+const showStudy = ref(true)
+
+/* 四个入口 + 概括性说明 (说明文案用于「我的」页功能板块卡片) */
+const FUNC_ENTRIES = [
+  {
+    key: 'academy', label: '研究院', icon: '☯', tag: '明师讲席',
+    desc: '四柱、奇门、书法、德道经各有专精，先识老师所长，再由一门深入，义理与术数两条线并进。',
+  },
+  {
+    key: 'health', label: '养生', icon: '🌿', tag: '次卡调理',
+    desc: '道家养生按次计费，购卡即开通次数与有效期，每消费一次打卡核销一次，余次与记录随时可查。',
+  },
+  {
+    key: 'travel', label: '文旅', icon: '🏯', tag: '山水问道',
+    desc: '以山水为课堂，走访道观古迹与人文胜地，把书卷上的义理放到眼前印证，行一处得一处。',
+  },
+  {
+    key: 'study', label: '游学', icon: '🎒', tag: '随师同行',
+    desc: '短期研学行程，随师现场讲解、边走边学，归来再入课程深入，知行相续不使中断。',
+  },
+]
+
+const funcEntries = computed(() => {
   if (!PHASE2_ENABLED) return []
-  const list = []
-  if (showAcademy.value) list.push({ key: 'academy', label: '研究院', icon: '☯' })
-  if (showHealth.value) list.push({ key: 'health', label: '养生', icon: '🌿' })
-  list.push({ key: 'travel', label: '文旅', icon: '🏯' })
-  list.push({ key: 'study', label: '游学', icon: '🎒' })
-  return list
+  return FUNC_ENTRIES.filter((f) => {
+    if (f.key === 'academy') return showAcademy.value
+    if (f.key === 'health') return showHealth.value
+    if (f.key === 'travel') return showTravel.value
+    if (f.key === 'study') return showStudy.value
+    return true
+  })
 })
+
+/* 功能板块下方: 商城在售商品卡片 (取前 8 个, 首页推荐优先) */
+const fnGoods = ref([])
+
+async function loadFnGoods() {
+  if (!showFunctions.value || fnGoods.value.length) return
+  try {
+    const list = (await getProducts({})) || []
+    const visible = list.filter((p) => p && p.id != null && p.is_show !== false)
+    // 首页推荐的排前, 其余按原顺序补足
+    const rec = visible.filter((p) => p.home_recommend === true)
+    const rest = visible.filter((p) => p.home_recommend !== true)
+    fnGoods.value = [...rec, ...rest].slice(0, 8)
+  } catch (e) {
+    fnGoods.value = []
+  }
+}
+
+function goGoods(p) {
+  uni.navigateTo({ url: `/pages-sub/product/detail?id=${p.id}` })
+}
+
+function goShop() {
+  uni.switchTab({ url: '/pages/shop/shop' })
+}
 
 const visibleMenus = computed(() => menuItems.filter((m) => m.key !== 'admin' || isAdmin.value))
 
@@ -468,8 +542,11 @@ onShareAppMessage(() => {
   }
 })
 
+// 功能板块四个入口与「关于我们」为浏览型页面, 未登录也可进入(页面内部再按需登录)
+const OPEN_KEYS = ['about', 'academy', 'health', 'travel', 'study']
+
 function onMenu(m) {
-  if (!isLoggedIn.value && m.key !== 'about') return goLogin()
+  if (!isLoggedIn.value && !OPEN_KEYS.includes(m.key)) return goLogin()
   switch (m.key) {
     case 'invite':
       showInvite.value = true
@@ -522,8 +599,12 @@ function onLogout() {
 async function loadPageConfig() {
   try {
     const cfg = await getPayConfig()
-    showAcademy.value = cfg.show_academy === true
-    showHealth.value = cfg.show_health === true
+    // 功能板块总开关 (后台默认关闭) + 四个入口 (默认显示, 后台显式关才隐藏)
+    showFunctions.value = cfg.show_functions === true
+    showAcademy.value = cfg.show_academy !== false
+    showHealth.value = cfg.show_health !== false
+    showTravel.value = cfg.show_travel !== false
+    showStudy.value = cfg.show_study !== false
     // #ifdef MP-WEIXIN
     showTools.value = cfg.show_tools === true
     // #endif
@@ -533,6 +614,8 @@ async function loadPageConfig() {
     // #ifdef H5
     showTools.value = cfg.show_tools_h5 === true
     // #endif
+    // 功能板块开启时才加载下方商城商品 (失败不影响页面)
+    if (showFunctions.value) loadFnGoods()
   } catch (e) {
     // 异常时按各端默认: 微信小程序关, App/H5 开
     // #ifdef MP-WEIXIN
@@ -851,6 +934,91 @@ onShow(async () => {
 .panel-more {
   font-size: 22rpx;
   color: #8a857c;
+}
+
+/* 功能板块: 说明卡片(四项) + 商城商品卡片链接 */
+.fn-list { padding: 8rpx 24rpx 10rpx; }
+.fn-card {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 20rpx;
+  margin-top: 14rpx;
+  border-radius: 16rpx;
+  background: #fffaf6;
+  border: 1rpx solid #f0e7dc;
+}
+.fn-icon {
+  width: 76rpx;
+  height: 76rpx;
+  flex-shrink: 0;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  color: #fffafa;
+  margin-right: 20rpx;
+  background: linear-gradient(135deg, #7a1220 0%, #a31930 100%);
+}
+.fn-icon.fn-health { background: linear-gradient(135deg, #6e7f5a 0%, #8fa06f 100%); }
+.fn-icon.fn-travel { background: linear-gradient(135deg, #2b5778 0%, #3f7396 100%); }
+.fn-icon.fn-study { background: linear-gradient(135deg, #8a6a2f 0%, #b08c46 100%); }
+.fn-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.fn-title-row { display: flex; align-items: center; }
+.fn-name { font-size: 28rpx; font-weight: 500; color: #3a2a1c; }
+.fn-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  background: #fbe9ec;
+  color: #a31930;
+  font-size: 19rpx;
+}
+.fn-desc {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #8a857c;
+  line-height: 1.5;
+}
+.fn-go { font-size: 34rpx; color: #c9b8a4; margin-left: 10rpx; }
+
+.fn-goods { padding: 4rpx 24rpx 22rpx; }
+.fn-goods-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10rpx 0 14rpx;
+}
+.fn-goods-title { font-size: 24rpx; font-weight: 500; color: #3a2a1c; }
+.fn-goods-more { font-size: 21rpx; color: #8a857c; }
+.fn-goods-scroll { width: 100%; white-space: nowrap; }
+.fn-goods-row { display: inline-flex; }
+/* 小程序 scroll-view 内勿用 gap, 用 margin-right 保证宽度计算正确 */
+.fn-good {
+  width: 200rpx;
+  margin-right: 16rpx;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14rpx;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1rpx solid #f0e7dc;
+}
+.fn-good-img { width: 200rpx; height: 200rpx; background: #f5efe6; }
+.fn-good-name {
+  padding: 12rpx 12rpx 0;
+  font-size: 22rpx;
+  color: #3a2a1c;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fn-good-price {
+  padding: 8rpx 12rpx 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #9c1630;
 }
 
 .order-entry {
@@ -1198,6 +1366,21 @@ button.btn-invite::after { border: none; }
     border-radius: 24rpx;
     margin-bottom: 30rpx;
   }
+  /* 功能板块: rpx 在 PC 会随屏宽撑大, 关键尺寸用 px 覆写 */
+  .fn-list { padding: 6px 18px 8px; }
+  .fn-card { padding: 16px 15px; margin-top: 10px; border-radius: 12px; }
+  .fn-icon { width: 54px; height: 54px; border-radius: 13px; font-size: 26px; margin-right: 14px; }
+  .fn-name { font-size: 20px; }
+  .fn-tag { font-size: 13px; padding: 1px 7px; margin-left: 9px; }
+  .fn-desc { font-size: 15px; margin-top: 6px; }
+  .fn-go { font-size: 24px; }
+  .fn-goods { padding: 4px 18px 16px; }
+  .fn-goods-title { font-size: 17px; }
+  .fn-goods-more { font-size: 15px; }
+  .fn-good { width: 140px; margin-right: 12px; border-radius: 10px; }
+  .fn-good-img { width: 140px; height: 140px; }
+  .fn-good-name { font-size: 15px; padding: 8px 8px 0; }
+  .fn-good-price { font-size: 17px; padding: 6px 8px 10px; }
 }
 @media screen and (min-width: 1440px) {
   .user-page {

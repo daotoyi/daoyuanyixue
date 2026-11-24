@@ -5699,12 +5699,16 @@ async function appPayConfig() {
       show_tools: masterTools,
       show_tools_app: masterTools,
       show_tools_h5: masterTools,
-      // 第二阶段(health): 研究院 / 养生 入口开关 (mypage 分组, 默认关闭, 只增字段不影响 main 版)
-      show_academy: mypageDoc.show_academy === '1' || mypageDoc.show_academy === true || false,
-      show_health: mypageDoc.show_health === '1' || mypageDoc.show_health === true || false,
+      // 第二阶段(health): 「我的」页功能板块总开关 (默认关闭, 需后台显式开启)
+      show_functions: mypageDoc.show_functions === '1' || mypageDoc.show_functions === true || false,
+      // 第二阶段(health): 功能板块四个入口 (默认显示, 后台显式关才隐藏) — 首页频道行直接可见
+      show_academy: mypageDoc.show_academy !== '0',
+      show_health: mypageDoc.show_health !== '0',
+      show_travel: mypageDoc.show_travel !== '0',
+      show_study: mypageDoc.show_study !== '0',
     })
   } catch (e) {
-    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, rec_show_health: false, rec_show_travel: false, rec_show_study: false, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true, show_academy: false, show_health: false })
+    return ok({ show_alipay: false, show_balance: true, show_recommend: true, show_publish: false, show_pandao: true, show_live: false, show_follow: false, show_wechat_login: false, pandao_fixed: DEFAULT_PANDAO_FIXED, pandao_banners: [], rec_show_live: false, rec_show_pandao: true, rec_show_product: true, rec_show_course: true, rec_show_moment: true, rec_show_health: false, rec_show_travel: false, rec_show_study: false, allow_publish_moment: false, show_tools: true, show_tools_app: true, show_tools_h5: true, show_functions: false, show_academy: true, show_health: true, show_travel: true, show_study: true })
   }
 }
 
