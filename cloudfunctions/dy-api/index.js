@@ -103,7 +103,7 @@ async function listProducts(data) {
   if (data.keyword) {
     const kw = String(data.keyword)
     list = list.filter(
-      (p) => (p.name && p.name.includes(kw)) || (p.description && p.description.includes(kw))
+      (p) => (p.name && p.name.includes(kw)) || (p.subtitle && p.subtitle.includes(kw)) || (p.description && p.description.includes(kw))
     )
   }
   // 过滤后台下架商品 (is_show === false)
@@ -4382,6 +4382,7 @@ async function adminProductCreate(data) {
   const doc = {
     id: nextId,
     name: data.name,
+    subtitle: data.subtitle || '', // 副标题 (商城列表/详情在名称下方展示)
     price: data.price || '0.00',
     ot_price: data.ot_price || '',
     images: data.images && data.images.length ? data.images : ['/static/placeholder/product-01.png'],
@@ -4398,7 +4399,7 @@ async function adminProductCreate(data) {
 
 async function adminProductUpdate(data) {
   const doc = {}
-  ;['name', 'price', 'ot_price', 'images', 'cate_id', 'sales', 'stock', 'description', 'is_show', 'attrs', 'home_recommend'].forEach((k) => {
+  ;['name', 'subtitle', 'price', 'ot_price', 'images', 'cate_id', 'sales', 'stock', 'description', 'is_show', 'attrs', 'home_recommend'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   await db.collection('products').where({ id: Number(data.id) }).update(doc)

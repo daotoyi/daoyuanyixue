@@ -40,6 +40,7 @@
         <text class="sales">已售 {{ product.sales }}</text>
       </view>
       <text class="p-name">{{ product.name }}</text>
+      <text class="p-sub" v-if="product.subtitle">{{ product.subtitle }}</text>
       <text class="p-desc">{{ product.description }}</text>
 
       <!-- 购买数量 -->
@@ -442,6 +443,14 @@ function buyNow() {
   color: #55524c;
   line-height: 1.6;
 }
+/* 商品副标题 (后台「副标题」字段, 名称下方) */
+.p-sub {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  color: #8a857c;
+  line-height: 1.5;
+}
 
 .attrs {
   margin-top: 24rpx;
@@ -743,6 +752,10 @@ function buyNow() {
     font-size: 15px;
     margin-top: 8px;
     line-height: 1.7;
+  }
+  .p-sub {
+    font-size: 14px;
+    margin-top: 6px;
   }
   .attrs {
     margin-top: 18px;

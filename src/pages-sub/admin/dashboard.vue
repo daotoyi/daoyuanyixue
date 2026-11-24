@@ -1254,6 +1254,7 @@
       <view class="form-sheet">
         <view class="sheet-title">{{ productForm.id ? '编辑商品' : '新增商品' }}</view>
         <view class="f-row"><text class="f-label">名称</text><input class="f-input" v-model="productForm.name" /></view>
+        <view class="f-row"><text class="f-label">副标题</text><input class="f-input" v-model="productForm.subtitle" placeholder="选填，显示在商城商品名称下方" /></view>
         <view class="f-row"><text class="f-label">售价</text><input class="f-input" v-model="productForm.price" /></view>
         <view class="f-row"><text class="f-label">原价</text><input class="f-input" v-model="productForm.ot_price" /></view>
         <view class="f-row"><text class="f-label">库存</text><input class="f-input" type="number" v-model="productForm.stock" /></view>
@@ -3840,8 +3841,8 @@ function openProductForm(p) {
     ? Object.keys(p.attrs).map((k) => ({ key: k, value: String(p.attrs[k]) }))
     : []
   productForm.value = p
-    ? { ...p, imagesText: (p.images || []).join(','), attrsList }
-    : { id: null, name: '', price: '0.00', ot_price: '', stock: 0, cate_id: productActiveCate.value || 1, description: '', imagesText: '', attrsList }
+    ? { ...p, subtitle: p.subtitle || '', imagesText: (p.images || []).join(','), attrsList }
+    : { id: null, name: '', subtitle: '', price: '0.00', ot_price: '', stock: 0, cate_id: productActiveCate.value || 1, description: '', imagesText: '', attrsList }
   showProduct.value = true
 }
 

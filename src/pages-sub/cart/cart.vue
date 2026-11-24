@@ -14,6 +14,7 @@
 
           <view class="cart-info">
             <text class="cart-name ellipsis-2">{{ item.name }}</text>
+            <text class="cart-sub" v-if="item.subtitle">{{ item.subtitle }}</text>
             <view class="cart-attrs" v-if="Object.keys(item.attrs || {}).length">
               <text class="attr-chip" v-for="(v, k) in item.attrs" :key="k">{{ k }}:{{ v }}</text>
             </view>
@@ -190,6 +191,17 @@ function goShop() {
   font-size: 28rpx;
   color: #2a2a2a;
   line-height: 1.4;
+}
+/* 商品副标题 (与商城列表一致) */
+.cart-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8a857c;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .cart-attrs {
   display: flex;

@@ -51,6 +51,7 @@
                 <image lazy-load class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
                 <view class="goods-info">
                   <text class="goods-name ellipsis-2">{{ p.name }}</text>
+                  <text class="goods-sub" v-if="p.subtitle">{{ p.subtitle }}</text>
                   <view class="goods-price-row">
                     <text class="goods-price">{{ fmtPrice(p.price) }}</text>
                     <text class="goods-otprice" v-if="!isFreePrice(p.price) && Number(p.ot_price) > 0">¥{{ p.ot_price }}</text>
@@ -84,6 +85,7 @@
                 <image lazy-load class="goods-img" :src="p.images[0]" mode="aspectFill"></image>
                 <view class="goods-info">
                   <text class="goods-name ellipsis-2">{{ p.name }}</text>
+                  <text class="goods-sub" v-if="p.subtitle">{{ p.subtitle }}</text>
                   <view class="goods-price-row">
                     <text class="goods-price">{{ fmtPrice(p.price) }}</text>
                     <text class="goods-otprice" v-if="!isFreePrice(p.price) && Number(p.ot_price) > 0">¥{{ p.ot_price }}</text>
@@ -349,6 +351,17 @@ onShow(async () => {
   line-height: 1.4;
   height: 72rpx;
 }
+/* 商品副标题 (后台商品编辑「副标题」字段, 名称下方单行展示) */
+.goods-sub {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8a857c;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .goods-price-row {
   display: flex;
   align-items: baseline;
@@ -434,6 +447,10 @@ onShow(async () => {
     font-size: 28rpx; /* 与课程标题 28rpx 一致 (PC 根字号14px → 约12.25px) */
     height: 80rpx;
     line-height: 1.5;
+  }
+  .goods-sub {
+    margin-top: 4px;
+    font-size: 22rpx; /* 约 9.6px, 视觉略小于名称 */
   }
   .goods-price {
     font-size: 32rpx; /* 与课程价格 32rpx 一致 (约14px) */

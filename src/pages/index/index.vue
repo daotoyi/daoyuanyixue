@@ -74,6 +74,7 @@
             <view class="rec-prod-card" v-for="p in recProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
               <image lazy-load class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
               <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
+              <text class="rec-prod-sub ellipsis-1" v-if="p.subtitle">{{ p.subtitle }}</text>
               <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
             </view>
           </scroll-view>
@@ -103,6 +104,7 @@
             <view class="rec-prod-card" v-for="p in recHealthProducts.slice(0, 6)" :key="p.id" @tap="goProductDetail(p)">
               <image lazy-load class="rec-prod-img" :src="(p.images && p.images[0]) || p.image || p.cover" mode="aspectFill"></image>
               <text class="rec-prod-name ellipsis-1">{{ p.name }}</text>
+              <text class="rec-prod-sub ellipsis-1" v-if="p.subtitle">{{ p.subtitle }}</text>
               <text class="rec-prod-price">{{ fmtPrice(p.price) }}</text>
             </view>
           </scroll-view>
@@ -1972,6 +1974,13 @@ onShow(async () => {
   font-size: 20rpx;
   color: #8a857c;
 }
+/* 商品副标题 (后台商品「副标题」字段) */
+.rec-prod-sub {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #a89a88;
+}
 .rec-live-time {
   display: block;
   margin-top: 6rpx;
@@ -2264,6 +2273,10 @@ onShow(async () => {
   }
   .rec-live-time {
     margin-top: 9rpx;
+    font-size: 22rpx;
+  }
+  .rec-prod-sub {
+    margin-top: 6rpx;
     font-size: 22rpx;
   }
   .rec-live-status {

@@ -27,6 +27,7 @@ export function addToCart(product, qty = 1) {
     list.unshift({
       id: product.id,
       name: product.name,
+      subtitle: product.subtitle || '', // 副标题 (与商城列表保持一致)
       price: product.price,
       image: product.images[0],
       attrs: product.attrs || {},
