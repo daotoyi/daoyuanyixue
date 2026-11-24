@@ -8,6 +8,7 @@
  */
 import mock from './mock'
 import { getCallableFunction } from './cloudbase'
+import { staticUrl } from '../utils/static-url'
 
 const __USE_MOCK__ = false
 
@@ -94,14 +95,41 @@ function _fromMock(fn) {
 
 /* ============ 商品 ============ */
 
+/* 商品图片路径规范化: 后台商品常用 /static/placeholder/xxx.png 占位图
+   H5 部署在 /h5/ 子路径, 绝对路径 /static/ 会 404 → 统一换成云托管完整 URL
+   (cloud:// 与 http(s) 原样保留, 由各自的签名/直连机制处理) */
+function _fixImg(u) {
+  if (!u || typeof u !== 'string') return ''
+  if (/^(https?:|cloud:|data:|blob:)/.test(u)) return u
+  if (u.startsWith('/static/') || u.startsWith('static/')) return staticUrl(u)
+  return u
+}
+function _fixProduct(p) {
+  if (!p || typeof p !== 'object') return p
+  const images = Array.isArray(p.images) ? p.images.map(_fixImg) : p.images
+  const image = p.image ? _fixImg(p.image) : p.image
+  const cover = p.cover ? _fixImg(p.cover) : p.cover
+  return { ...p, images, image, cover }
+}
+function _fixProductList(res) {
+  if (Array.isArray(res)) return res.map(_fixProduct)
+  if (res && Array.isArray(res.data)) return { ...res, data: res.data.map(_fixProduct) }
+  if (res && Array.isArray(res.list)) return { ...res, list: res.list.map(_fixProduct) }
+  return res
+}
+
 export const getCategories = () =>
   __USE_MOCK__ ? _fromMock(() => mock.categories)() : _callFunction('categories.list')
 
 export const getProducts = (params = {}) =>
-  __USE_MOCK__ ? _fromMock(() => mock.products)() : _callFunction('products.list', params)
+  __USE_MOCK__
+    ? _fromMock(() => mock.products)()
+    : _callFunction('products.list', params).then(_fixProductList)
 
 export const getProduct = (id) =>
-  __USE_MOCK__ ? _fromMock(() => mock.products.find((p) => p.id === Number(id)) || null)() : _callFunction('products.detail', { id })
+  __USE_MOCK__
+    ? _fromMock(() => mock.products.find((p) => p.id === Number(id)) || null)()
+    : _callFunction('products.detail', { id }).then(_fixProduct)
 
 /* ============ 课程 ============ */
 

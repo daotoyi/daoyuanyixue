@@ -12,25 +12,62 @@
       </view>
     </view>
 
-    <!-- 元宝充值记录 -->
+    <!-- 元宝记录: 充值 / 消费 左右两列点选 -->
     <view class="rc-records" v-if="type === 'balance'">
-      <view class="rr-head">
-        <text class="rr-title">充值记录</text>
-        <text class="rr-total" v-if="rechargeList.length">共 {{ rechargeList.length }} 笔</text>
-      </view>
-      <view class="rr-list" v-if="rechargeList.length">
-        <view class="rr-row" v-for="o in rechargeList" :key="o._id || o.order_no">
-          <view class="rr-left">
-            <text class="rr-no">订单号：{{ o.order_no }}</text>
-            <text class="rr-time">时间：{{ fmtUtcTime(o.created_at) }}</text>
-          </view>
-          <view class="rr-right">
-            <text class="rr-amt">+{{ (Number(o.total_price) || 0).toFixed(2) }} 元<text class="rr-points">（{{ (Number(o.total_price) || 0) * 10 }} 元宝）</text></text>
-            <text class="rr-status" :class="{ paid: o.status === '已支付' || o.status === '已完成' }">{{ o.status }}</text>
-          </view>
+      <view class="rt-tabs">
+        <view class="rt-tab" :class="{ on: recordTab === 'recharge' }" @tap="recordTab = 'recharge'">
+          <text class="rt-tab-t">充值记录</text>
+          <text class="rt-tab-n">{{ rechargeList.length }}</text>
+        </view>
+        <view class="rt-tab" :class="{ on: recordTab === 'consume' }" @tap="recordTab = 'consume'">
+          <text class="rt-tab-t">消费记录</text>
+          <text class="rt-tab-n">{{ consumeList.length }}</text>
         </view>
       </view>
-      <view class="rr-empty" v-else>暂无充值记录</view>
+
+      <!-- 充值记录 -->
+      <view v-if="recordTab === 'recharge'">
+        <view class="rr-head">
+          <text class="rr-title">共 {{ rechargeList.length }} 笔充值</text>
+        </view>
+        <view class="rr-list" v-if="rechargeList.length">
+          <view class="rr-row" v-for="o in rechargeList" :key="o._id || o.order_no">
+            <view class="rr-left">
+              <text class="rr-no">订单号：{{ o.order_no }}</text>
+              <text class="rr-time">时间：{{ fmtUtcTime(o.created_at) }}</text>
+            </view>
+            <view class="rr-right">
+              <text class="rr-amt">+{{ (Number(o.total_price) || 0).toFixed(2) }} 元<text class="rr-points">（{{ (Number(o.total_price) || 0) * 10 }} 元宝）</text></text>
+              <text class="rr-status" :class="{ paid: o.status === '已支付' || o.status === '已完成' }">{{ o.status }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="rr-empty" v-else>暂无充值记录</view>
+      </view>
+
+      <!-- 消费记录: 消费 -金额(红) / 退款 +金额(绿) -->
+      <view v-else>
+        <view class="rr-head">
+          <text class="rr-title">共 {{ consumeList.length }} 笔消费 / 退款</text>
+          <text class="rr-legend"><text class="lg minus">-消费</text> <text class="lg plus">+退款</text></text>
+        </view>
+        <view class="rr-list" v-if="consumeList.length">
+          <view class="rr-row" v-for="c in consumeList" :key="c.key">
+            <view class="rr-left">
+              <view class="cr-title-row">
+                <text class="cr-badge" :class="c.plus ? 'plus' : 'minus'">{{ c.plus ? '退款' : '消费' }}</text>
+                <text class="cr-title ellipsis">{{ c.title }}</text>
+              </view>
+              <text class="rr-time">{{ fmtUtcTime(c.at) }} · {{ c.order_no }}</text>
+            </view>
+            <view class="rr-right">
+              <text class="cr-amt" :class="c.plus ? 'plus' : 'minus'">{{ c.plus ? '+' : '-' }}{{ c.amount.toFixed(2) }}</text>
+              <text class="rr-status" :class="{ paid: c.status === '已完成' }">{{ c.status }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="rr-empty" v-else>暂无消费记录</view>
+      </view>
     </view>
 
     <!-- 优惠券 -->
@@ -113,6 +150,8 @@ const userInfo = computed(() => userStore.userInfo)
 const type = ref('balance')
 const list = ref([])
 const rechargeList = ref([]) // 元宝充值记录
+const consumeList = ref([]) // 消费 / 退款记录
+const recordTab = ref('recharge') // recharge=充值记录, consume=消费记录
 
 /* UTC 字符串 → 东八区显示 (服务器生成时间为 UTC, Date.UTC 构造避免浏览器本地时区干扰) */
 function fmtUtcTime(s) {
@@ -142,9 +181,30 @@ async function load() {
   if (!uid) return
   try {
     if (type.value === 'balance') {
+      const orders = (await getOrders({ uid })) || []
       // 充值记录: 充值订单 (order_type=recharge 或订单号 RC 前缀)
-      const orders = await getOrders({ uid })
-      rechargeList.value = (orders || []).filter((o) => o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || '')))
+      rechargeList.value = orders.filter((o) => o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || '')))
+      // 消费记录: 已支付的普通订单; 已退款订单以「+退款」呈现
+      consumeList.value = orders
+        .filter((o) => !(o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || ''))))
+        .filter((o) => !['待付款', '待支付', '已取消', '已结束'].includes(o.status))
+        .map((o) => {
+          const isRefund = o.status === '已退款'
+          // 退款金额优先取后台设定的 refund_amount (可超实付), 否则按订单实付
+          const amount = Number(isRefund ? (o.refund_amount !== undefined ? o.refund_amount : o.total_price) : o.total_price) || 0
+          const title = (o.items || []).map((i) => i && i.name).filter(Boolean).join('、') || o.session_title || '订单消费'
+          return {
+            key: o.order_no,
+            order_no: o.order_no,
+            title,
+            amount: Math.round(amount * 100) / 100,
+            plus: isRefund,
+            at: isRefund ? (o.refund_at || o.pay_time || o.created_at) : (o.pay_time || o.created_at),
+            status: o.status,
+            payMethod: o.pay_method || '',
+          }
+        })
+        .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
     } else if (type.value === 'coupon') list.value = await getMyCoupons({ uid })
     else if (type.value === 'favorite') list.value = await getMyFavorites({ uid })
     else if (type.value === 'footprint') list.value = await getMyFootprints({ uid })
@@ -321,6 +381,84 @@ async function confirmRecharge() {
 .rr-status.paid {
   color: #6e7f5a;
 }
+
+/* 记录切换: 充值记录 / 消费记录 左右两列点选 */
+.rt-tabs {
+  display: flex;
+  margin-bottom: 18rpx;
+  border-bottom: 1rpx solid #f0e8da;
+}
+.rt-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18rpx 0;
+  position: relative;
+}
+.rt-tab-t {
+  font-size: 27rpx;
+  color: #8a857c;
+}
+.rt-tab-n {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  color: #b8a894;
+  background: #f5efe6;
+  border-radius: 999rpx;
+  padding: 0 10rpx;
+}
+.rt-tab.on .rt-tab-t {
+  color: #9c1630;
+  font-weight: 600;
+}
+.rt-tab.on .rt-tab-n {
+  color: #fff;
+  background: #c41e3a;
+}
+.rt-tab.on::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -1rpx;
+  transform: translateX(-50%);
+  width: 96rpx;
+  height: 4rpx;
+  background: #c41e3a;
+  border-radius: 4rpx;
+}
+
+/* 消费记录: 消费 -金额(红) / 退款 +金额(绿) */
+.cr-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.cr-badge {
+  font-size: 18rpx;
+  line-height: 1;
+  padding: 6rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+.cr-badge.minus { color: #c41e3a; background: #fbe9ec; }
+.cr-badge.plus { color: #2e7d32; background: #eaf4ea; }
+.cr-title {
+  font-size: 25rpx;
+  color: #2a2a2a;
+  max-width: 360rpx;
+}
+.cr-amt {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.cr-amt.minus { color: #c41e3a; }
+.cr-amt.plus { color: #2e7d32; }
+.rr-legend { font-size: 20rpx; color: #8a857c; }
+.lg { margin-left: 10rpx; }
+.lg.minus { color: #c41e3a; }
+.lg.plus { color: #2e7d32; }
 .rr-empty {
   padding: 50rpx 0;
   text-align: center;

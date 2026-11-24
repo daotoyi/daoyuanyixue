@@ -652,6 +652,22 @@ function switchTab(key) {
   if (key === 'recommend' || key === 'follow') {
     refreshMoments()
   }
+  // 养生/文旅/游学: 若该分类商品缺失(首屏加载失败或后台刚上架), 补拉一次
+  if (P2_TABS[key]) ensureP2Products(key)
+}
+
+/* 板块商品兜底加载: 仅在当前分类商品为空时拉一次, 避免每次切 tab 都请求 */
+const p2Tried = ref({})
+async function ensureP2Products(key) {
+  const meta = P2_TABS[key]
+  if (!meta || !meta.cateId) return
+  const has = productList.value.some((p) => Number(p.cate_id) === Number(meta.cateId) && p.is_show !== false)
+  if (has || p2Tried.value[key]) return
+  p2Tried.value[key] = true
+  try {
+    const list = await getProducts({})
+    if (Array.isArray(list) && list.length) productList.value = list
+  } catch (e) { /* 静默失败, 显示空态 */ }
 }
 
 /* 刷新动态列表 (推荐/动态共用) */
