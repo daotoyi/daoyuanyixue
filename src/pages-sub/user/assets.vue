@@ -37,7 +37,7 @@
               <text class="rr-time">时间：{{ fmtUtcTime(o.created_at) }}</text>
             </view>
             <view class="rr-right">
-              <text class="rr-amt">+{{ (Number(o.total_price) || 0).toFixed(2) }} 元<text class="rr-points">（{{ (Number(o.total_price) || 0) * 10 }} 元宝）</text></text>
+              <text class="rr-amt">+{{ pointsOfRecharge(o) }} 元宝<text class="rr-points">（¥{{ (Number(o.total_price) || 0).toFixed(2) }}）</text></text>
               <text class="rr-status" :class="{ paid: o.status === '已支付' || o.status === '已完成' }">{{ o.status }}</text>
             </view>
           </view>
@@ -45,10 +45,10 @@
         <view class="rr-empty" v-else>暂无充值记录</view>
       </view>
 
-      <!-- 消费记录: 消费 -金额(红) / 退款 +金额(绿) -->
+      <!-- 消费记录: 仅元宝渠道(微信支付不体现), 消费 -元宝(红) / 退款 +元宝(绿) -->
       <view v-else>
         <view class="rr-head">
-          <text class="rr-title">共 {{ consumeList.length }} 笔消费 / 退款</text>
+          <text class="rr-title">共 {{ consumeList.length }} 笔元宝消费 / 退款</text>
           <text class="rr-legend"><text class="lg minus">-消费</text> <text class="lg plus">+退款</text></text>
         </view>
         <view class="rr-list" v-if="consumeList.length">
@@ -61,12 +61,12 @@
               <text class="rr-time">{{ fmtUtcTime(c.at) }} · {{ c.order_no }}</text>
             </view>
             <view class="rr-right">
-              <text class="cr-amt" :class="c.plus ? 'plus' : 'minus'">{{ c.plus ? '+' : '-' }}{{ c.amount.toFixed(2) }}</text>
+              <text class="cr-amt" :class="c.plus ? 'plus' : 'minus'">{{ c.plus ? '+' : '-' }}{{ fmtPoints(c.amount) }}<text class="cr-unit"> 元宝</text></text>
               <text class="rr-status" :class="{ paid: c.status === '已完成' }">{{ c.status }}</text>
             </view>
           </view>
         </view>
-        <view class="rr-empty" v-else>暂无消费记录</view>
+        <view class="rr-empty" v-else>暂无元宝消费记录（微信支付订单不在此展示）</view>
       </view>
     </view>
 
@@ -184,33 +184,93 @@ async function load() {
       const orders = (await getOrders({ uid })) || []
       // 充值记录: 充值订单 (order_type=recharge 或订单号 RC 前缀)
       rechargeList.value = orders.filter((o) => o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || '')))
-      // 消费记录: 已支付的普通订单; 已退款订单以「+退款」呈现
-      consumeList.value = orders
-        .filter((o) => !(o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || ''))))
-        .filter((o) => !['待付款', '待支付', '已取消', '已结束'].includes(o.status))
-        .map((o) => {
-          const isRefund = o.status === '已退款'
-          // 退款金额优先取后台设定的 refund_amount (可超实付), 否则按订单实付
-          const amount = Number(isRefund ? (o.refund_amount !== undefined ? o.refund_amount : o.total_price) : o.total_price) || 0
-          const title = (o.items || []).map((i) => i && i.name).filter(Boolean).join('、') || o.session_title || '订单消费'
-          return {
-            key: o.order_no,
-            order_no: o.order_no,
-            title,
-            amount: Math.round(amount * 100) / 100,
-            plus: isRefund,
-            at: isRefund ? (o.refund_at || o.pay_time || o.created_at) : (o.pay_time || o.created_at),
-            status: o.status,
-            payMethod: o.pay_method || '',
-          }
-        })
-        .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+      /* 消费记录: 只统计「元宝渠道」——元宝支付(pay_method=余额) 或 含元宝抵扣(balance_used>0);
+         微信支付的订单不体现。金额一律换算成元宝 (1 元 = 10 元宝) */
+      consumeList.value = buildPointsRecords(orders)
     } else if (type.value === 'coupon') list.value = await getMyCoupons({ uid })
     else if (type.value === 'favorite') list.value = await getMyFavorites({ uid })
     else if (type.value === 'footprint') list.value = await getMyFootprints({ uid })
   } catch (e) {
     list.value = []
   }
+}
+
+/* 元宝换算: 1 元 = 10 元宝 (与充值/结算页一致) */
+const POINTS_PER_YUAN = 10
+
+/* 充值到账元宝数: 优先 recharge_points, 否则按 1元=10元宝 折算 */
+function pointsOfRecharge(o) {
+  const p = Number(o.recharge_points)
+  if (Number.isFinite(p) && p > 0) return fmtPoints(p)
+  return fmtPoints((Number(o.total_price) || 0) * POINTS_PER_YUAN)
+}
+/* 元宝数展示: 整数不带小数, 否则保留两位 */
+function fmtPoints(v) {
+  const n = Number(v) || 0
+  return Number.isInteger(n) ? String(n) : n.toFixed(2)
+}
+
+/* ===== 元宝消费/退款记录 =====
+   判定: pay_method 含"余额" 或 balance_used / balance_used_points > 0 (纯微信支付的不进列表)
+   金额: 优先 balance_used_points(元宝数); 否则 balance_used(元)×10 兜底老订单 */
+function isYuanbaoOrder(o) {
+  return String(o.pay_method || '').includes('余额') || Number(o.balance_used) > 0 || Number(o.balance_used_points) > 0
+}
+function pointsOfOrder(o) {
+  const p = Number(o.balance_used_points)
+  if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
+  const yuan = Number(o.balance_used) || 0
+  if (yuan > 0) return Math.round(yuan * POINTS_PER_YUAN * 100) / 100
+  // 元宝支付但无抵扣字段(历史订单): 按订单实付折算
+  return Math.round((Number(o.total_price) || 0) * POINTS_PER_YUAN * 100) / 100
+}
+function refundPointsOfOrder(o) {
+  const p = Number(o.refund_balance_points)
+  if (Number.isFinite(p) && p > 0) return Math.round(p * 100) / 100
+  const yuan = Number(o.refund_balance_amount) || 0
+  if (yuan > 0) return Math.round(yuan * POINTS_PER_YUAN * 100) / 100
+  // 历史退款订单(无明细字段): 元宝支付按抵扣额折算, 微信原路退的不计入
+  if (isYuanbaoOrder(o)) return pointsOfOrder(o)
+  return 0
+}
+function buildPointsRecords(orders) {
+  const out = []
+  orders.forEach((o) => {
+    const isRecharge = o.order_type === 'recharge' || /^RC/i.test(String(o.order_no || ''))
+    if (isRecharge) return
+    if (!isYuanbaoOrder(o)) return // 微信渠道不体现
+    if (['待付款', '待支付', '已取消', '已结束'].includes(o.status)) return
+    const title = (o.items || []).map((i) => i && i.name).filter(Boolean).join('、') || o.session_title || '订单消费'
+    // 1) 消费记录 (元宝扣减)
+    const used = pointsOfOrder(o)
+    if (used > 0) {
+      out.push({
+        key: o.order_no + '-use',
+        order_no: o.order_no,
+        title,
+        amount: used,
+        plus: false,
+        at: o.pay_time || o.created_at || '',
+        status: o.status,
+      })
+    }
+    // 2) 退款记录 (元宝退回): 仅当确实退到元宝才展示; 微信原路退的不体现
+    if (o.status === '已退款' || o.refund_balance_points > 0 || Number(o.refund_balance_amount) > 0) {
+      const back = refundPointsOfOrder(o)
+      if (back > 0) {
+        out.push({
+          key: o.order_no + '-refund',
+          order_no: o.order_no,
+          title,
+          amount: back,
+          plus: true,
+          at: o.refund_at || o.pay_time || o.created_at || '',
+          status: o.status,
+        })
+      }
+    }
+  })
+  return out.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
 }
 
 function goProduct(id) {
@@ -455,6 +515,11 @@ async function confirmRecharge() {
 }
 .cr-amt.minus { color: #c41e3a; }
 .cr-amt.plus { color: #2e7d32; }
+.cr-unit {
+  font-size: 20rpx;
+  font-weight: 400;
+  color: #8a857c;
+}
 .rr-legend { font-size: 20rpx; color: #8a857c; }
 .lg { margin-left: 10rpx; }
 .lg.minus { color: #c41e3a; }

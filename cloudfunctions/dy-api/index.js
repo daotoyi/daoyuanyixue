@@ -2322,6 +2322,13 @@ async function checkUpdate() {
 
 /* 元宝充值: 1元 = 10 元宝, 创建充值订单 → 微信支付 */
 const RECHARGE_RATE = 10 // 1元 = 10 元宝
+/* 元宝与人民币换算 (全站口径: 1 元 = 10 元宝, 与前端 checkout POINTS_TO_YUAN=0.1 一致)
+   订单金额相关字段(total_price/balance_used/refund_*_amount)单位=元;
+   元宝数单独用 *_points 字段记录, 避免单位混淆 */
+const POINTS_PER_YUAN = 10
+function yuanToPoints(y) {
+  return Math.round((Number(y) || 0) * POINTS_PER_YUAN * 100) / 100
+}
 async function rechargeCreate(data) {
   const { uid, amount } = data
   if (!uid) return fail('请先登录')
@@ -2418,6 +2425,7 @@ async function toolUnlock(data) {
       session_id: 0,
       order_type: 'tool_unlock',
       tool_type: String(tool),
+      balance_used_points: BAL_PRICE, // 元宝数(工具解锁按 9 元宝计, 单列记录便于元宝页统计)
       platform: String(data.platform || '').trim() || 'unknown',
       pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
       created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
@@ -2788,14 +2796,15 @@ async function adminVirtualForceRefund(data) {
       return fail('退款发起失败: ' + (e.message || '请稍后重试'))
     }
   } else if (channelAmt > 0) {
-    // 余额支付 / 免费订单: 无微信流水, 直接回元宝
-    await addUserBalance(targetUid, channelAmt)
+    // 余额支付 / 免费订单: 无微信流水, 直接回元宝 (1元=10元宝)
+    await addUserBalance(targetUid, yuanToPoints(channelAmt))
     channelDone = channelAmt
   }
-  // 2) 超出实付部分 + 抵扣的元宝 → 元宝补偿
+  // 2) 超出实付部分 + 抵扣的元宝 → 元宝补偿 (按 1元=10元宝 入账)
   const balanceBackAmt = Math.round((backBalance + extraAmt) * 100) / 100
-  if (balanceBackAmt > 0) {
-    try { await addUserBalance(targetUid, balanceBackAmt) } catch (e) { /* 余额写入失败不阻断订单状态 */ }
+  const balanceBackPoints = yuanToPoints(balanceBackAmt)
+  if (balanceBackPoints > 0) {
+    try { await addUserBalance(targetUid, balanceBackPoints) } catch (e) { /* 余额写入失败不阻断订单状态 */ }
   }
 
   // 3) 收回权益: 课程访问权 / 次卡作废
@@ -2813,9 +2822,10 @@ async function adminVirtualForceRefund(data) {
     status: '已退款',
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: '超级管理员强制退款',
-    refund_amount: want,                                   // 管理员设定的退款总额
-    refund_channel_amount: channelDone,                    // 原路/元宝按实付退还
-    refund_balance_amount: balanceBackAmt,                 // 额外补偿到元宝的金额
+    refund_amount: want,                                   // 管理员设定的退款总额(元)
+    refund_channel_amount: channelDone,                    // 原路/元宝按实付退还(元)
+    refund_balance_amount: balanceBackAmt,                 // 额外补偿到元宝的金额(元)
+    refund_balance_points: balanceBackPoints,              // 同上, 元宝数(实际入账余额)
   })
   // 5) 回退销量(课程学习人数/商品销量)
   try { await revertSalesAfterRefund(order) } catch (e) {}
@@ -2823,10 +2833,10 @@ async function adminVirtualForceRefund(data) {
   // 6) 推送消息
   const msgTitle = order.course_id ? '课程退款成功' : '订单退款成功'
   const msgContent = extraAmt > 0
-    ? `订单 ${order_no} 已退款 ¥${want}：其中 ¥${channelDone} 已退回原支付渠道${balanceBackAmt > 0 ? `，另 ¥${balanceBackAmt} 已补偿至元宝余额` : ''}`
+    ? `订单 ${order_no} 已退款 ¥${want}：其中 ¥${channelDone} 已退回原支付渠道${balanceBackPoints > 0 ? `，另 ¥${balanceBackAmt} 已按 1:10 补偿至元宝余额（${balanceBackPoints} 元宝）` : ''}`
     : (channelDone > 0 && !isBalancePay && !isFreePay
         ? `订单 ${order_no} 已退款 ¥${want}，款项已原路退回`
-        : `订单 ${order_no} 已退款 ¥${want}，款项已退回元宝余额`)
+        : `订单 ${order_no} 已退款 ¥${want}，已退回元宝余额${balanceBackPoints > 0 ? `（${balanceBackPoints} 元宝）` : ''}`)
   try {
     await db.collection('messages').add({
       id: Date.now() % 1000000,
@@ -3990,9 +4000,15 @@ async function orderPayBalance(data) {
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可支付')
   const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
   const bal = Number((u && u.balance) || 0) || 0
-  const price = Number(order.total_price) || 0
-  if (bal < price) return fail(`元宝不足（需 ${price} 元宝），请先充值`)
-  const newBal = Math.round((bal - price) * 100) / 100
+  const price = Number(order.total_price) || 0 // 剩余应付(元): 下单时已扣除元宝抵扣部分
+  const deductYuan = Number(order.balance_used) || 0 // 下单时已抵扣的元额(元)
+  // 元宝支付整单 = 抵扣部分 + 剩余应付, 统一按 1 元 = 10 元宝 扣减
+  const totalYuan = Math.round((price + deductYuan) * 100) / 100
+  const needPoints = yuanToPoints(totalYuan)
+  if (bal < needPoints) {
+    return fail(`元宝不足（本单需 ${needPoints} 元宝，当前 ${bal}），请先充值或改用微信支付`)
+  }
+  const newBal = Math.round((bal - needPoints) * 100) / 100
   await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
   // 同步销量 (商品已售/库存, 课程学习人数) — 仅待付款→已支付这一次
   try { await syncSalesAfterPay(order) } catch (e) {}
@@ -4001,7 +4017,8 @@ async function orderPayBalance(data) {
   await db.collection('orders').where({ order_no }).update({
     status: nextStatus,
     pay_method: '余额',
-    balance_used: price,
+    balance_used: totalYuan,
+    balance_used_points: needPoints, // 元宝实际扣减数(元宝页消费记录据此展示)
     pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
   // 养生次卡: 支付成功即发卡
@@ -4025,13 +4042,23 @@ async function orderFreeConfirm(data) {
   if (order.status !== '待付款' && order.status !== '待支付') return fail('订单状态不可操作')
   const price = Number(order.total_price) || 0
   if (price > 0) return fail('非免费订单，请完成支付')
+  // 元宝抵扣到 0 元的订单: 必须真实扣减元宝, 否则等于白拿 (2026-11-24 修)
+  const deductPoints = Number(order.balance_used_points) || yuanToPoints(order.balance_used)
+  let pointsLeft = 0
+  if (deductPoints > 0) {
+    const u = (await db.collection('users').where({ uid: Number(uid) }).limit(1).get()).data[0]
+    const bal = Number((u && u.balance) || 0) || 0
+    if (bal < deductPoints) return fail(`元宝不足（需 ${deductPoints} 元宝，当前 ${bal}），请先充值`)
+    pointsLeft = Math.round((bal - deductPoints) * 100) / 100
+    await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(pointsLeft) })
+  }
   // 同步销量 (商品已售/库存, 课程学习人数)
   try { await syncSalesAfterPay(order) } catch (e) {}
   const nextStatus = orderPaidStatus(order)
   await db.collection('orders').where({ order_no }).update({
     status: nextStatus,
-    pay_method: '免费',
-    balance_used: 0,
+    pay_method: deductPoints > 0 ? '余额' : '免费',
+    balance_used_points: deductPoints,
     pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
   // 养生次卡: 免费订单同样发卡
@@ -5535,17 +5562,17 @@ async function adminOrderRefund(data) {
   // 仅已支付订单(待发货/待收货/已完成)需要真正退款; 待付款/待支付订单未支付, 直接标记取消
   const needRefund = order.status === '待发货' || order.status === '待收货' || order.status === '已完成'
   let didRefund = false
+  let refundPoints = 0 // 本次退回元宝数 (元宝页面据此展示退款记录)
   if (needRefund) {
     const refundAmt = Number(order.total_price) || 0
     const isBalance = String(order.pay_method || '').includes('余额')
     const isFreeOrder = refundAmt <= 0 || String(order.pay_method || '') === '免费'
     try {
       if (!isFreeOrder && isBalance) {
-        // 元宝支付: 原路退回元宝余额
-        const u = (await db.collection('users').where({ uid: Number(order.uid) }).limit(1).get()).data[0]
-        const bal = Number((u && u.balance) || 0) || 0
-        await db.collection('users').where({ uid: Number(order.uid) })
-          .update({ balance: String(Math.round((bal + refundAmt) * 100) / 100) })
+        // 元宝支付: 退回元宝余额 (1元=10元宝, 与充值与消费口径一致)
+        const backPoints = yuanToPoints(refundAmt)
+        await addUserBalance(Number(order.uid), backPoints)
+        refundPoints = backPoints
         didRefund = true
       } else if (!isFreeOrder) {
         // 微信支付: 调微信退款 API v3 (真实退款, 退款成功微信侧才会退钱)
@@ -5570,6 +5597,9 @@ async function adminOrderRefund(data) {
     status: '已退款',
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: data.reason || '后台退款',
+    refund_amount: Number(order.total_price) || 0,
+    refund_balance_amount: refundPoints > 0 ? Math.round((refundPoints / POINTS_PER_YUAN) * 100) / 100 : 0,
+    refund_balance_points: refundPoints,
   })
   // 养生次卡订单退款 → 作废该订单已发放的次卡 (防退款后继续消费)
   try { await revokeHealthCards(data.order_no, data.reason || '订单退款') } catch (e) {}

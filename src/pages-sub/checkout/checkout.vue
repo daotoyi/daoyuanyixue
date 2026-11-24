@@ -528,6 +528,17 @@ async function submitOrder() {
     uni.showToast({ title: '请先选择收货地址', icon: 'none' })
     return
   }
+  // 元宝支付: 校验余额是否够付整单 (1 元 = 10 元宝, 含已抵扣部分), 避免下单后扣款失败
+  if (payMethod.value === 'balance') {
+    const usedYuan = balanceUsed.value ? Math.max(0, discount.value - couponDiscount.value) : 0
+    // POINTS_TO_YUAN = 0.1 (元/元宝) → 元 ÷ 0.1 = 元宝数
+    const needPoints = Math.round(((finalPrice.value + usedYuan) / POINTS_TO_YUAN) * 100) / 100
+    const have = Number(balance.value) || 0
+    if (have < needPoints) {
+      uni.showToast({ title: `元宝不足（需 ${needPoints} 元宝），请先充值或改用微信支付`, icon: 'none' })
+      return
+    }
+  }
   submitting.value = true
   try {
     const order = await createOrder({
