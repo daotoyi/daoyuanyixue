@@ -3,7 +3,7 @@
  * 请勿手动修改
  */
 export const APP_VERSION = 'v2.2.15'
-export const APP_COMMIT = '4ae6592'
+export const APP_COMMIT = 'd63ae38'
 export const APP_BRANCH = 'health'
 export const APP_BUILD_DATE = '2026-11-24'
-export const APP_FULL_VERSION = 'v2.2.14 (4ae6592)'
+export const APP_FULL_VERSION = 'v2.2.15 (d63ae38)'
