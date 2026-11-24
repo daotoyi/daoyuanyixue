@@ -338,6 +338,21 @@ export const adminCourseCreate = _admin('admin.courses.create')
 export const adminCourseUpdate = _admin('admin.courses.update')
 export const adminCourseEpisodeUpdate = _admin('admin.course.episode.update')
 export const adminOrderShip = _admin('admin.orders.ship')
+
+/* ============ 养生次卡 (2026-11-24) ============ */
+/* 我的次卡: 支付成功的次卡商品由云函数自动发卡, 此处按 uid 拉取 */
+export const myHealthCards = (params = {}) =>
+  __USE_MOCK__ ? _fromMock(() => [])() : _callFunction('health.myCards', params)
+/* 自助打卡核销一次 (服务端原子扣减 + 写流水) */
+export const healthCheckin = (params) =>
+  __USE_MOCK__ ? _fromMock(() => ({ remain: 0, message: 'ok' }))() : _callFunction('health.checkin', params)
+/* 我的核销流水 */
+export const myHealthCheckins = (params = {}) =>
+  __USE_MOCK__ ? _fromMock(() => [])() : _callFunction('health.checkins', params)
+/* 后台: 次卡列表 / 核销 / 核销流水 */
+export const adminCardsList = _admin('admin.cards.list')
+export const adminCardsCheckin = _admin('admin.cards.checkin')
+export const adminCardsCheckins = _admin('admin.cards.checkins')
 export const adminOrderRefund = _admin('admin.orders.refund')
 export const adminOrderRefundCourse = _admin('admin.orders.refundCourse')
 export const adminOrderDelete = _admin('admin.orders.delete')

@@ -31,6 +31,9 @@ export function addToCart(product, qty = 1) {
       price: product.price,
       image: product.images[0],
       attrs: product.attrs || {},
+      // 结算页据此判断是否需要收货地址 (虚拟商品/养生次卡免地址)
+      cate_id: Number(product.cate_id) || 0,
+      is_virtual: product.is_virtual === true,
       qty,
       selected: true,
     })

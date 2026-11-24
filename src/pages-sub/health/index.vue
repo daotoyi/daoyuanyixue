@@ -53,7 +53,12 @@
         <text class="sec-more" @tap="switchRec">{{ viewMode === 'cards' ? '打卡记录 ›' : '返回次卡 ›' }}</text>
       </view>
       <view v-if="viewMode === 'cards'">
-        <view v-if="cards.length" class="card-scroll">
+        <view v-if="!isLoggedIn" class="hp-empty">
+          <text class="hp-empty-icon">🔑</text>
+          <text class="hp-empty-tip">登录后查看我的次卡</text>
+          <view class="btn-p sm hc-login-btn" @tap="goLogin">去登录</view>
+        </view>
+        <view v-else-if="cards.length" class="card-scroll">
           <scroll-view scroll-x class="cards-scroll" :show-scrollbar="false">
             <view class="hcard" v-for="c in cards" :key="c.cardNo" :class="{ expired: !isCardValid(c) }">
               <view class="hc-top">
@@ -69,10 +74,10 @@
               <view class="hc-actions">
                 <view
                   class="btn-p sm hc-btn"
-                  :class="{ disabled: !isCardValid(c) || c.remain <= 0 }"
+                  :class="{ disabled: !canCheckin(c) }"
                   @tap="doCheckin(c)"
                 >
-                  <text>{{ !isCardValid(c) ? '已过期' : (c.remain > 0 ? '打卡核销 · 1次' : '次数已用完') }}</text>
+                  <text>{{ checkinBtnText(c) }}</text>
                 </view>
               </view>
             </view>
@@ -80,7 +85,7 @@
         </view>
         <view v-else class="hp-empty">
           <text class="hp-empty-icon">🌿</text>
-          <text class="hp-empty-tip">还没有次卡，下方选购一张吧</text>
+          <text class="hp-empty-tip">{{ loading ? '加载中…' : '还没有次卡，上方选购一张吧' }}</text>
         </view>
       </view>
 
@@ -105,13 +110,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getProducts } from '../../api/api'
-import {
-  HEALTH_CATE_ID, getMyCards, getCheckins, isCardValid, cardStatusText, checkinOnceSim,
-} from '../../config/phase2.js'
+import { getProducts, myHealthCards, myHealthCheckins, healthCheckin } from '../../api/api'
+import { useUserStore } from '../../store/index'
+import { HEALTH_CATE_ID } from '../../config/phase2.js'
 import { fmtPrice } from '../../utils/price'
+
+/* 次卡数据全部来自服务端: 支付成功的次卡商品由云函数自动发卡 (health_cards 集合) */
+const userStore = useUserStore()
+const isLoggedIn = computed(() => userStore.isLoggedIn)
+const uid = computed(() => Number(userStore.userInfo.uid) || 0)
 
 const cards = ref([])
 const checkins = ref([])
@@ -119,12 +128,41 @@ const products = ref([])
 const viewMode = ref('cards')
 const loading = ref(true)
 
+async function loadCards() {
+  if (!isLoggedIn.value) { cards.value = []; loading.value = false; return }
+  try {
+    cards.value = (await myHealthCards({ uid: uid.value })) || []
+  } catch (e) {
+    console.warn('[health] 次卡加载失败', e)
+    cards.value = []
+  } finally {
+    loading.value = false
+  }
+}
+async function loadCheckins() {
+  if (!isLoggedIn.value) { checkins.value = []; return }
+  try {
+    checkins.value = (await myHealthCheckins({ uid: uid.value })) || []
+  } catch (e) {
+    checkins.value = []
+  }
+}
 function refresh() {
-  cards.value = getMyCards()
-  checkins.value = getCheckins()
+  loadCards()
+  loadCheckins()
+}
+function goLogin() {
+  uni.navigateTo({ url: '/pages-sub/login/login' })
 }
 function pct(c) { return c.total ? Math.round((c.remain / c.total) * 100) : 0 }
-function cardStatus(c) { return cardStatusText(c) }
+/* 服务端已算好状态: 有效 / 已过期 / 已用完 */
+function cardStatus(c) { return c.status || '有效' }
+function isCardValid(c) { return (c.status || '有效') === '有效' && Number(c.remain) > 0 }
+function canCheckin(c) { return isCardValid(c) }
+function checkinBtnText(c) {
+  if (!isCardValid(c)) return c.status === '已过期' ? '已过期' : '次数已用完'
+  return '打卡核销 · 1次'
+}
 function fmtTime(ts) {
   const d = new Date(ts)
   const p = (n) => (n < 10 ? '0' + n : '' + n)
@@ -132,11 +170,16 @@ function fmtTime(ts) {
 }
 function fmtDate(ts) {
   if (!ts) return '长期有效'
+  // 服务端 expire_at 为 'YYYY-MM-DD HH:mm:ss' 字符串
+  if (typeof ts === 'string') return ts.slice(0, 10)
   const d = new Date(ts)
   const p = (n) => (n < 10 ? '0' + n : '' + n)
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
-function switchRec() { viewMode.value = viewMode.value === 'cards' ? 'records' : 'cards' }
+function switchRec() {
+  viewMode.value = viewMode.value === 'cards' ? 'records' : 'cards'
+  if (viewMode.value === 'records') loadCheckins()
+}
 function timesOf(p) {
   const attrs = (p && p.attrs) || {}
   const raw = attrs['次数'] ?? attrs.times ?? attrs['次'] ?? 1
@@ -153,8 +196,6 @@ async function loadProducts() {
   } catch (e) {
     console.warn('[health] 商品加载失败', e)
     products.value = []
-  } finally {
-    loading.value = false
   }
 }
 
@@ -163,27 +204,35 @@ function goProduct(p) {
   if (!id) return
   uni.navigateTo({ url: `/pages-sub/product/detail?id=${id}` })
 }
-
 function goShop() {
   uni.switchTab({ url: '/pages/shop/shop' })
 }
 
+/* 打卡核销: 调服务端原子扣减 (where remain>0 + inc(-1)), 防并发超扣; 成功后刷新次卡与流水 */
 function doCheckin(c) {
-  if (!isCardValid(c) || c.remain <= 0) return
+  if (!canCheckin(c)) return
   uni.showModal({
     title: '打卡核销',
-    content: `确认本次消费打卡？将从「${c.productName}」核销 1 次。`,
+    content: `确认本次消费打卡？将从「${c.productName}」核销 1 次，剩余 ${c.remain} 次。`,
     confirmText: '确认核销',
-    success: (r) => {
+    success: async (r) => {
       if (!r.confirm) return
-      const res = checkinOnceSim(c.cardNo)
-      refresh()
-      uni.showToast({ title: res.msg, icon: res.ok ? 'success' : 'none' })
+      uni.showLoading({ title: '核销中…' })
+      try {
+        const res = await healthCheckin({ uid: uid.value, card_no: c.cardNo, platform: 'h5' })
+        uni.hideLoading()
+        uni.showToast({ title: (res && res.message) || '核销成功', icon: 'success' })
+        refresh()
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: (e && e.message) || '核销失败', icon: 'none' })
+      }
     },
   })
 }
 
 onShow(() => {
+  loading.value = true
   refresh()
   loadProducts()
 })
@@ -215,6 +264,8 @@ onShow(() => {
 .hp-empty { display: flex; flex-direction: column; align-items: center; padding: 48rpx 0; }
 .hp-empty-icon { font-size: 64rpx; }
 .hp-empty-tip { font-size: 24rpx; color: #a89a88; margin-top: 16rpx; }
+/* 未登录时的登录引导按钮 */
+.hc-login-btn { margin-top: 24rpx; }
 .cards-scroll { white-space: nowrap; }
 .hcard {
   display: inline-block; vertical-align: top; width: 380rpx; margin-right: 20rpx;

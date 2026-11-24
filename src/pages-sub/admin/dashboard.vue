@@ -630,6 +630,61 @@
           </view>
         </view>
 
+        <!-- ===== 次卡核销 (布局参考订单管理) ===== -->
+        <view v-else-if="activeModule === 'cards'" class="module">
+          <view class="module-head">
+            <text class="module-title">次卡核销（{{ sortedCards.length }}）</text>
+            <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="loadCards">刷新</view>
+            <view class="filter-pills">
+              <text
+                v-for="s in cardStatusOptions"
+                :key="s"
+                class="pill"
+                :class="{ on: cardStatusFilter === s }"
+                @tap="cardStatusFilter = s; loadCards()"
+              >{{ s }}</text>
+            </view>
+            <view class="filter-pills">
+              <text class="pill" :class="{ on: !!cardKeyword }" @tap="cardKeywordMenu">{{ cardKeyword ? ('搜索: ' + cardKeyword) : '搜索' }}</text>
+            </view>
+          </view>
+
+          <!-- 次卡统计 -->
+          <view class="order-type-stats">
+            <view class="ots-item" v-for="t in cardStats" :key="t.key">
+              <text class="ots-label">{{ t.label }}</text>
+              <text class="ots-val">{{ t.count }} 张</text>
+            </view>
+          </view>
+
+          <view class="table orders-table">
+            <view class="tr th">
+              <text class="td w-no">次卡号</text>
+              <text class="td w-user">用户</text>
+              <text class="td w-name">商品</text>
+              <text class="td w-price">剩余/总次</text>
+              <text class="td w-time">有效期至</text>
+              <text class="td w-status">状态</text>
+              <text class="td w-ops w-ops-5" v-if="canWrite">操作</text>
+            </view>
+            <view class="tr" v-for="c in sortedCards" :key="c.cardNo">
+              <text class="td w-no">{{ c.cardNo }}</text>
+              <text class="td w-user ellipsis">{{ c.nickname || ('UID ' + c.uid) }}</text>
+              <text class="td w-name ellipsis">{{ c.productName }}</text>
+              <text class="td w-price">{{ c.remain }} / {{ c.total }}</text>
+              <text class="td w-time">{{ (c.expireAt || '').slice(0, 10) }}</text>
+              <view class="td w-status">
+                <text :class="'st-' + cardStCls(c.status)">{{ c.status }}</text>
+              </view>
+              <view class="td w-ops w-ops-5 ops" v-if="canWrite">
+                <text class="op op-col" :class="{ hide: c.status !== '有效' }" @tap="checkinCard(c)">核销1次</text>
+                <text class="op op-col" @tap="showCardLogs(c)">核销流水</text>
+              </view>
+            </view>
+          </view>
+          <view class="empty-tip" v-if="!sortedCards.length">暂无次卡记录（用户购买养生次卡并支付成功后自动生成）</view>
+        </view>
+
         <!-- ===== 订单分析 ===== -->
         <view v-else-if="activeModule === 'orderAnalysis'" class="module">
           <view class="module-head">
@@ -1260,6 +1315,13 @@
         <view class="f-row"><text class="f-label">库存</text><input class="f-input" type="number" v-model="productForm.stock" /></view>
         <view class="f-row"><text class="f-label">分类ID</text><input class="f-input" type="number" v-model="productForm.cate_id" /></view>
         <view class="f-row">
+          <text class="f-label">虚拟商品</text>
+          <view class="f-input-wrap">
+            <switch :checked="productForm.is_virtual === true" color="#c41e3a" style="transform: scale(0.85)" @change="productForm.is_virtual = $event.detail.value" />
+            <text class="f-hint">付款后立即完成，无需发货（次卡/课程类）</text>
+          </view>
+        </view>
+        <view class="f-row">
           <text class="f-label">图片</text>
           <view class="f-img-box">
             <textarea class="f-textarea" v-model="productForm.imagesText" :maxlength="-1" placeholder="多个图片用逗号分隔，或点下方上传"></textarea>
@@ -1680,6 +1742,7 @@ import {
   adminCateList, adminCateCreate, adminCateUpdate, adminCateDelete, adminLogisticsList,
   adminFeedbacksList, adminFeedbackReply, adminFeedbackDelete,
   adminAftersalesList, adminAftersaleReply, adminAftersaleDelete,
+  adminCardsList, adminCardsCheckin, adminCardsCheckins,
   wxmpGetAuthUrl, wxmpListBound, wxmpGetExperienceQr, wxmpUploadCode, wxmpSubmitAudit, wxmpRelease,
 } from '../../api/api'
 import { useUserStore } from '../../store/index'
@@ -1697,6 +1760,7 @@ const modules = [
   { key: 'products', label: '商品管理', icon: '🛍' },
   { key: 'courses', label: '课程管理', icon: '📚' },
   { key: 'orders', label: '订单管理', icon: '📦' },
+  { key: 'cards', label: '次卡核销', icon: '🎫' },
   { key: 'orderAnalysis', label: '订单分析', icon: '📈' },
   { key: 'aftersales', label: '售后管理', icon: '🛠' },
   { key: 'coupons', label: '优惠券', icon: '🎟' },
@@ -1917,6 +1981,7 @@ async function loadModule(key) {
     else if (key === 'products') await loadProductCates()
     else if (key === 'courses') await loadCourseCates()
     else if (key === 'orders') await loadOrders()
+    else if (key === 'cards') await loadCards()
     else if (key === 'orderAnalysis') await loadOrderAnalysis()
     else if (key === 'users') {
       users.value = await adminList({ collection: 'users' })
@@ -2347,6 +2412,85 @@ async function deletePandaoSession(pd) {
 
 async function loadOrders() {
   orders.value = await adminList({ collection: 'orders', status: orderFilter.value, order_type: orderTypeFilter.value })
+}
+
+/* ===== 次卡核销 (2026-11-24): 数据来自 health_cards 集合, 支付成功后自动生成 ===== */
+const cards = ref([])
+const cardStatusFilter = ref('全部')
+const cardStatusOptions = ['全部', '有效', '已用完', '已过期', '已作废']
+const cardKeyword = ref('')
+const CARD_ST_CLS = { '有效': 'done', '已用完': 'unpaid', '已过期': 'cancelled', '已作废': 'refunded' }
+const cardStCls = (v) => CARD_ST_CLS[v] || ''
+const sortedCards = computed(() => cards.value)
+/* 统计: 全部/有效/已用完/已过期 */
+const cardStats = computed(() => {
+  const all = cards.value || []
+  return [
+    { key: 'all', label: '全部', count: all.length },
+    { key: 'valid', label: '有效', count: all.filter((c) => c.status === '有效').length },
+    { key: 'used', label: '已用完', count: all.filter((c) => c.status === '已用完').length },
+    { key: 'expired', label: '已过期', count: all.filter((c) => c.status === '已过期').length },
+    { key: 'revoked', label: '已作废', count: all.filter((c) => c.status === '已作废').length },
+  ]
+})
+
+async function loadCards() {
+  try {
+    cards.value = (await adminCardsList({ status: cardStatusFilter.value, keyword: cardKeyword.value || '' })) || []
+  } catch (e) {
+    cards.value = []
+    uni.showToast({ title: (e && e.message) || '次卡加载失败', icon: 'none' })
+  }
+}
+
+/* 关键字筛选 (次卡号/商品/用户): 弹输入框 */
+function cardKeywordMenu() {
+  uni.showModal({
+    title: '搜索次卡',
+    editable: true,
+    placeholderText: '次卡号 / 商品 / 用户昵称',
+    content: cardKeyword.value || '',
+    success: (r) => {
+      if (!r.confirm) return
+      cardKeyword.value = String(r.content || '').trim()
+      loadCards()
+    },
+  })
+}
+
+/* 核销一次: 二次确认 → 服务端原子扣减 */
+function checkinCard(c) {
+  if (c.status !== '有效') return
+  uni.showModal({
+    title: '核销确认',
+    content: `用户「${c.nickname || ('UID ' + c.uid)}」的「${c.productName}」将核销 1 次，剩余 ${c.remain} 次。`,
+    confirmText: '确认核销',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        const res = await adminCardsCheckin({ card_no: c.cardNo })
+        uni.showToast({ title: (res && res.message) || '核销成功', icon: 'success' })
+        await loadCards()
+      } catch (e) {
+        uni.showToast({ title: (e && e.message) || '核销失败', icon: 'none' })
+      }
+    },
+  })
+}
+
+/* 核销流水: 弹窗列出最近记录 */
+async function showCardLogs(c) {
+  try {
+    const rows = (await adminCardsCheckins({ card_no: c.cardNo })) || []
+    if (!rows.length) {
+      uni.showToast({ title: '暂无核销记录', icon: 'none' })
+      return
+    }
+    const text = rows.slice(0, 8).map((r) => `${r.at || ''}  ${r.operator === 'admin' ? '后台' : '用户'}核销`).join('\n')
+    uni.showModal({ title: `核销流水（${rows.length}）`, content: text, showCancel: false })
+  } catch (e) {
+    uni.showToast({ title: (e && e.message) || '流水加载失败', icon: 'none' })
+  }
 }
 
 /* 对账修复: 微信已支付但回调丢失的订单自动同步状态 (后台一键修复) */
@@ -6753,6 +6897,14 @@ onUnmounted(() => {
   font-size: 24rpx;
   color: #55524c;
   flex-shrink: 0;
+}
+/* 开关类字段旁的说明文字 (虚拟商品等) */
+.f-hint {
+  margin-left: 16rpx;
+  flex: 1;
+  font-size: 21rpx;
+  color: #8a857c;
+  line-height: 1.4;
 }
 .f-input {
   flex: 1;

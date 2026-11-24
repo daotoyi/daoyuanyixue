@@ -63,37 +63,24 @@
       </view>
     </view>
 
-    <!-- 道家养生次卡区（仅养生商品 cate_id=12 显示）：有效期设置 + 下单 + 我的次卡核销 -->
+    <!-- 道家养生次卡区（仅养生商品 cate_id=12 显示）
+         付款成功后由云函数自动发卡, 到「我的-功能板块-养生」打卡核销 -->
     <view class="hc-panel" v-if="isHealthProduct">
       <view class="hc-panel-head">
         <text class="hcp-title">养生次卡</text>
-        <text class="hcp-sub">开通后到店消费，每使用一次核销一次</text>
+        <text class="hcp-sub">付款成功后自动开通，可在「我的 - 功能板块 - 养生」查看并打卡核销</text>
       </view>
 
-      <!-- 有效期设置 -->
-      <view class="hcp-row">
-        <text class="hcp-label">有效期</text>
-        <view class="hcp-opts">
-          <view
-            class="hcp-opt"
-            v-for="opt in validOpts"
-            :key="opt.days"
-            :class="{ on: validDays === opt.days }"
-            @tap="validDays = opt.days"
-          >{{ opt.label }}</view>
-        </view>
-      </view>
-
-      <!-- 开通次卡（下单） -->
+      <!-- 开通次卡（走真实下单支付） -->
       <view class="hcp-open">
         <view class="hcp-open-info">
           <text class="hcp-open-t">每次 {{ timesOfProduct(product) }} 次 · ¥{{ product ? product.price : '' }}</text>
-          <text class="hcp-open-d">有效期 {{ validLabel }}，开通后按次核销</text>
+          <text class="hcp-open-d">有效期 12 个月 · 支付成功立即到账</text>
         </view>
-        <view class="btn-p sm" @tap="openHealthCard"><text>开通次卡</text></view>
+        <view class="btn-p sm" @tap="openHealthCard"><text>立即开通</text></view>
       </view>
 
-      <!-- 我的该商品次卡 + 核销按钮 -->
+      <!-- 我的该商品次卡 + 核销按钮 (服务端次卡) -->
       <view class="hcp-my" v-if="myCards.length">
         <text class="hcp-my-title">我的次卡（{{ myCards.length }}）</text>
         <view class="hcp-card" v-for="c in myCards" :key="c.cardNo" :class="{ expired: !isCardValid(c) }">
@@ -101,8 +88,8 @@
             <text class="hcpc-no">{{ c.cardNo }}</text>
             <text class="hcpc-remain">剩余 {{ c.remain }}/{{ c.total }} 次 · 有效至 {{ fmtDate(c.expireAt) }}</text>
           </view>
-          <view class="hcpc-btn" :class="{ disabled: !isCardValid(c) || c.remain <= 0 }" @tap="doHealthCheckin(c)">
-            <text>{{ !isCardValid(c) ? '已过期' : (c.remain > 0 ? '核销1次' : '已用完') }}</text>
+          <view class="hcpc-btn" :class="{ disabled: !isCardValid(c) }" @tap="doHealthCheckin(c)">
+            <text>{{ !isCardValid(c) ? (c.status === '已过期' ? '已过期' : '已用完') : '核销1次' }}</text>
           </view>
         </view>
       </view>
@@ -160,14 +147,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { onLoad, onShareAppMessage } from '@dcloudio/uni-app'
-import { getProduct, toggleFavoriteProduct, addFootprint } from '../../api/api'
+import { getProduct, toggleFavoriteProduct, addFootprint, myHealthCards, healthCheckin } from '../../api/api'
 import { addToCart } from '../utils/cart'
 import { useUserStore } from '../../store/index'
 import { isFreePrice, fmtPrice } from '../../utils/price'
-import {
-  HEALTH_CATE_ID, buyCardSim, cardsOfProduct, checkinOnceSim,
-  isCardValid, timesOfProduct, DEFAULT_CARD_VALID_DAYS,
-} from '../../config/phase2.js'
+import { HEALTH_CATE_ID, timesOfProduct } from '../../config/phase2.js'
 
 // 分享图标 (SVG 紫色转发箭头) —— 微信/抖音小程序 CSS 不支持 SVG 背景图, 故用 data-uri 内联到 <image>
 const SHARE_SVG =
@@ -192,56 +176,55 @@ const attrList = computed(() => {
   return Object.entries(product.value.attrs)
 })
 
-/* ==================== 道家养生次卡（cate_id=12）==================== */
-const validOpts = [
-  { days: 180, label: '6个月' },
-  { days: 365, label: '12个月' },
-  { days: 730, label: '24个月' },
-]
-const validDays = ref(DEFAULT_CARD_VALID_DAYS)
+/* ==================== 道家养生次卡（cate_id=12）====================
+   次卡由服务端在支付成功后自动发放 (health_cards), 此处只做展示与自助核销 */
 const myCards = ref([])
 const isHealthProduct = computed(() => !!product.value && Number(product.value.cate_id) === HEALTH_CATE_ID)
-const validLabel = computed(() => {
-  const o = validOpts.find((x) => x.days === validDays.value)
-  return o ? o.label : '12个月'
-})
-function refreshMyCards() {
-  myCards.value = product.value ? cardsOfProduct(product.value._id || product.value.id) : []
+function isCardValid(c) { return (c.status || '有效') === '有效' && Number(c.remain) > 0 }
+async function refreshMyCards() {
+  if (!isHealthProduct.value || !userStore.isLoggedIn) { myCards.value = []; return }
+  try {
+    const pid = Number(product.value.id)
+    const list = (await myHealthCards({ uid: Number(userStore.userInfo.uid) })) || []
+    // 只显示当前商品的次卡
+    myCards.value = list.filter((c) => Number(c.productId) === pid)
+  } catch (e) {
+    myCards.value = []
+  }
 }
 function fmtDate(ts) {
   if (!ts) return '长期有效'
+  if (typeof ts === 'string') return ts.slice(0, 10)
   const d = new Date(ts)
   const p = (n) => (n < 10 ? '0' + n : '' + n)
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
+/* 立即开通: 走真实下单 → 结算页支付, 支付成功后云函数自动发次卡 */
 function openHealthCard() {
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录后开通', icon: 'none' })
     return
   }
-  uni.showModal({
-    title: '开通养生次卡',
-    content: `「${product.value.name}」共 ${timesOfProduct(product.value)} 次，有效期 ${validLabel.value}。演示版本地模拟，不产生真实扣款。`,
-    confirmText: '确认开通',
-    success: (r) => {
-      if (!r.confirm) return
-      buyCardSim(product.value, validDays.value)
-      refreshMyCards()
-      uni.showToast({ title: '开通成功', icon: 'success' })
-    },
-  })
+  buyNow()
 }
-function doHealthCheckin(c) {
-  if (!isCardValid(c) || c.remain <= 0) return
+async function doHealthCheckin(c) {
+  if (!isCardValid(c)) return
   uni.showModal({
     title: '核销一次',
-    content: `确认本次消费？将从该次卡核销 1 次。`,
+    content: `确认本次消费？将从该次卡核销 1 次，剩余 ${c.remain} 次。`,
     confirmText: '确认核销',
-    success: (r) => {
+    success: async (r) => {
       if (!r.confirm) return
-      const res = checkinOnceSim(c.cardNo)
-      refreshMyCards()
-      uni.showToast({ title: res.msg, icon: res.ok ? 'success' : 'none' })
+      uni.showLoading({ title: '核销中…' })
+      try {
+        const res = await healthCheckin({ uid: Number(userStore.userInfo.uid), card_no: c.cardNo, platform: 'h5' })
+        uni.hideLoading()
+        uni.showToast({ title: (res && res.message) || '核销成功', icon: 'success' })
+        refreshMyCards()
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: (e && e.message) || '核销失败', icon: 'none' })
+      }
     },
   })
 }

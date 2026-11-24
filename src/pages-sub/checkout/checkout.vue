@@ -1,7 +1,7 @@
 <template>
   <view class="checkout-page">
-    <!-- 收货地址 -->
-    <view class="card addr-card" @tap="chooseAddress">
+    <!-- 收货地址: 虚拟商品/课程/养生次卡无需配送, 不展示地址块 -->
+    <view class="card addr-card" v-if="needAddress" @tap="chooseAddress">
       <view class="addr-content" v-if="address">
         <view class="addr-top">
           <text class="addr-name">{{ address.name }}</text>
@@ -14,6 +14,9 @@
         <text>＋ 请选择收货地址</text>
       </view>
       <text class="addr-arrow">›</text>
+    </view>
+    <view class="card addr-card virtual-tip" v-else>
+      <text class="vt-text">虚拟商品 · 付款后立即完成，无需填写收货地址</text>
     </view>
 
     <!-- 商品清单 -->
@@ -179,6 +182,14 @@ const showAddr = ref(false)
 const showAddrForm = ref(false)
 const addrForm = ref({ name: '', phone: '', detail: '', is_default: false })
 const savingAddr = ref(false)
+/* 是否需要收货地址: 课程 / 虚拟商品(is_virtual) / 养生次卡(cate_id=12) 都无需配送
+   只要清单里有一件实体商品就要地址 */
+const needAddress = computed(() => {
+  if (courseId.value) return false
+  const list = items.value || []
+  if (!list.length) return true
+  return list.some((i) => !(i && (i.is_virtual === true || Number(i.cate_id) === 12)))
+})
 const coupons = ref([])
 const selectedCoupon = ref(null)
 const payMethod = ref('wechat')
@@ -322,6 +333,8 @@ onLoad(async (options) => {
           price: String(p.price),
           qty: q,
           image: (p.images && p.images[0]) || '',
+          cate_id: Number(p.cate_id) || 0,
+          is_virtual: p.is_virtual === true,
         }]
       }
     } catch (e) {}
@@ -510,14 +523,15 @@ function stopQrPolling() {
 
 async function submitOrder() {
   if (!items.value.length) return
-  if (!address.value) {
+  // 虚拟商品/课程无需地址
+  if (needAddress.value && !address.value) {
     uni.showToast({ title: '请先选择收货地址', icon: 'none' })
     return
   }
   submitting.value = true
   try {
     const order = await createOrder({
-      items: items.value.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image })),
+      items: items.value.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image, cate_id: i.cate_id || 0, is_virtual: i.is_virtual === true })),
       total_price: finalPrice.value,
       coupon_discount: couponDiscount.value,
       coupon_id: selectedCoupon.value ? selectedCoupon.value.id : null,
@@ -805,6 +819,17 @@ function onDouyinPaid() {
 .addr-card {
   display: flex;
   align-items: center;
+}
+/* 虚拟商品提示 (无需收货地址) */
+.virtual-tip {
+  justify-content: center;
+  background: #fbf3e2;
+  border: 1rpx solid #e8d9b8;
+}
+.vt-text {
+  font-size: 23rpx;
+  color: #8c6b1f;
+  line-height: 1.5;
 }
 .addr-content {
   flex: 1;

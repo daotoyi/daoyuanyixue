@@ -2183,12 +2183,13 @@ async function douyinPayNotify(event) {
       return { err_no: 0, err_tips: 'success' }
     }
     await db.collection('orders').where({ order_no: orderNo }).update({
-      status: '待发货',
+      status: orderPaidStatus(exist), // 虚拟/次卡商品直接已完成, 实体商品待发货
       pay_method: '抖音支付',
       pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
       trade_no: String(payload.order_id || payload.payment_order_no || ''),
       platform: 'mp-toutiao',
     })
+    try { await issueHealthCards(exist) } catch (e) { console.error('[dy-api] issueHealthCards:', e && e.message) }
     try {
       if (exist && exist.uid) {
         await db.collection('messages').add({
@@ -2225,12 +2226,13 @@ async function douyinPayQuery(data) {
     const exist = (await db.collection('orders').where({ order_no: String(order_no) }).limit(1).get()).data[0]
     if (exist && exist.status === '待付款') {
       await db.collection('orders').where({ order_no: String(order_no) }).update({
-        status: '待发货',
+        status: orderPaidStatus(exist), // 虚拟/次卡商品直接已完成
         pay_method: '抖音支付',
         pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
         trade_no: String(info.order_id || ''),
         platform: 'mp-toutiao',
       })
+      try { await issueHealthCards(exist) } catch (e) { console.error('[dy-api] issueHealthCards:', e && e.message) }
     }
   }
   return ok({ paid, status: info.pay_status || info.status || '' })
@@ -2348,13 +2350,16 @@ async function rechargeCreate(data) {
 }
 
 async function createOrder(data) {
+  // 补齐 items 商品元数据(分类/虚拟标记/次卡次数): 虚拟订单判定与次卡发放都依赖它
+  let items = Array.isArray(data.items) ? data.items : []
+  try { items = await enrichOrderItems(items) } catch (e) { /* 补齐失败按原 items 存 */ }
   const order = {
     order_no: `DY${Date.now()}${Math.floor(Math.random() * 1000)}`,
     status: '待付款',
     total_price: data.total_price,
     coupon_discount: data.coupon_discount || 0,
     balance_used: data.balance_used || 0,
-    items: data.items || [],
+    items,
     pay_method: data.pay_method || 'wechat',
     address: data.address || {},
     uid: data.uid || 0,
@@ -2366,6 +2371,8 @@ async function createOrder(data) {
     platform: String(data.platform || '').trim() || 'unknown',
     created_at: new Date().toLocaleString('zh-CN', { hour12: false }),
   }
+  // 全虚拟订单(课程/虚拟商品/养生次卡): 支付成功直接「已完成」, 不走发货
+  order.is_virtual = isVirtualOrder(order)
   const res = await db.collection('orders').add(order)
   // 核销优惠券
   if (data.coupon_id) {
@@ -2601,6 +2608,8 @@ async function cancelOrder(data) {
       // 退款回退销量 (商品/课程) — 仅退款成功时回退, 失败留后台处理
       if (!refundFailed) {
         try { await revertSalesAfterRefund(order) } catch (e) {}
+        // 次卡已发放的订单取消并退款 → 作废次卡
+        try { await revokeHealthCards(order.order_no, '用户取消订单') } catch (e) {}
       }
     }
   } else {
@@ -3060,6 +3069,292 @@ async function revertSalesAfterRefund(order) {
   }
 }
 
+/* ================= 虚拟商品 / 次卡 (2026-11-24) =================
+   虚拟业务(付款后立即完成、无需发货): 课程 / 预约 / 工具解锁 / 充值
+     + 商品标记 is_virtual === true
+     + 养生类商品 cate_id=12 (次卡商品)。文旅/游学分类建好后把分类 id 加进 VIRTUAL_CATE_IDS 即可。
+   items 快照在下单时由服务端补齐 cate_id / is_virtual / card_times, 不依赖前端传值。 */
+const VIRTUAL_CATE_IDS = [12]
+const HEALTH_CATE_ID = 12
+
+/* 下单时补齐 items 商品元数据 (分类、虚拟标记、次卡次数), 供虚拟订单判定与次卡发放使用 */
+async function enrichOrderItems(items) {
+  const list = Array.isArray(items) ? items : []
+  const ids = list.map((i) => Number(i && i.id)).filter((n) => Number.isFinite(n) && n > 0)
+  if (!ids.length) return list
+  let prods = []
+  try {
+    const res = await db.collection('products').where({ id: _.in(ids) }).limit(100).get()
+    prods = res.data || []
+  } catch (e) {
+    return list
+  }
+  const map = {}
+  prods.forEach((p) => { map[Number(p.id)] = p })
+  return list.map((it) => {
+    const p = map[Number(it && it.id)]
+    if (!p) return it
+    const attrs = p.attrs || {}
+    const rawTimes = attrs['次数'] !== undefined ? attrs['次数'] : (attrs.times !== undefined ? attrs.times : attrs['次'])
+    const times = parseInt(String(rawTimes == null ? '' : rawTimes).replace(/[^\d]/g, ''), 10) || 0
+    return {
+      ...it,
+      cate_id: Number(p.cate_id) || 0,
+      is_virtual: p.is_virtual === true,
+      card_times: times,
+    }
+  })
+}
+
+/* 订单是否全虚拟 (全虚拟 → 支付成功直接「已完成」, 否则走「待发货」) */
+function isVirtualOrder(o) {
+  if (!o) return false
+  const t = o.order_type
+  if (t === 'appointment' || t === 'course' || t === 'tool_unlock' || t === 'recharge') return true
+  if (o.is_virtual === true) return true
+  const items = Array.isArray(o.items) ? o.items : []
+  if (!items.length) return false
+  return items.every((it) => it && (it.is_virtual === true || VIRTUAL_CATE_IDS.includes(Number(it.cate_id))))
+}
+function orderPaidStatus(o) {
+  return isVirtualOrder(o) ? '已完成' : '待发货'
+}
+function nowCn() {
+  return new Date().toLocaleString('zh-CN', { hour12: false })
+}
+function dateCn(ts) {
+  const d = new Date(ts)
+  const p = (n) => (n < 10 ? '0' + n : '' + n)
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
+
+/* 支付成功自动发放养生次卡
+   - 触发条件: 订单 items 内有养生类商品(cate_id=12) 或带 card_times 的商品
+   - 次数 = 商品 attrs.次数 × 购买数量; 有效期默认 365 天
+   - 幂等: 同一 order_no 已生成则跳过(回调/查单/余额支付可能重复触发) */
+async function issueHealthCards(o) {
+  if (!o || !o.uid || !o.order_no) return 0
+  const items = Array.isArray(o.items) ? o.items : []
+  const cardItems = items.filter((it) => it && (Number(it.cate_id) === HEALTH_CATE_ID || Number(it.card_times) > 0))
+  if (!cardItems.length) return 0
+  let existed = []
+  try {
+    existed = (await db.collection('health_cards').where({ order_no: o.order_no }).limit(1).get()).data || []
+  } catch (e) {
+    await ensureCollection('health_cards')
+    await ensureCollection('health_checkins')
+  }
+  if (existed.length) return 0
+  const now = Date.now()
+  let issued = 0
+  for (let idx = 0; idx < cardItems.length; idx++) {
+    const it = cardItems[idx]
+    const times = Math.max(1, Number(it.card_times) || 1)
+    const qty = Math.max(1, Number(it.qty) || 1)
+    const total = times * qty
+    const validDays = Number(it.valid_days) || 365
+    const doc = {
+      card_no: `HC${now}${idx}${Math.floor(Math.random() * 100)}`,
+      uid: Number(o.uid),
+      order_no: String(o.order_no),
+      product_id: Number(it.id) || 0,
+      product_name: it.name || '',
+      total,
+      remain: total,
+      valid_days: validDays,
+      expire_at: dateCn(now + validDays * 86400000),
+      status: 'valid',
+      created_at: nowCn(),
+    }
+    try {
+      await db.collection('health_cards').add(doc)
+      issued++
+    } catch (e) {
+      console.error('[dy-api] 发次卡失败:', e && e.message)
+    }
+  }
+  // 站内消息: 告知次卡已到账 (失败不影响主流程)
+  try {
+    const first = cardItems[0]
+    await db.collection('messages').add({
+      id: Date.now() % 1000000,
+      uid: Number(o.uid),
+      type: 'order',
+      title: '养生次卡已到账',
+      content: `「${first.name || '养生次卡'}」已开通，可在「我的 - 功能板块 - 养生」中查看剩余次数并打卡核销`,
+      read: false,
+      created_at: nowCn(),
+    })
+  } catch (e) {}
+  return issued
+}
+
+/* ============ 养生次卡: 查询 / 核销 (2026-11-24) ============ */
+/* 次卡状态换算 (不落库, 按当前时间与剩余次数实时判定, 避免定时任务维护状态) */
+function cardState(c) {
+  const remain = Math.max(0, Number(c && c.remain) || 0)
+  const exp = Date.parse(String((c && c.expire_at) || '').replace(/-/g, '/'))
+  const expired = !Number.isNaN(exp) && exp < Date.now()
+  let status = '有效'
+  if (c && c.revoked) status = '已作废' // 订单退款/取消后作废
+  else if (expired) status = '已过期'
+  else if (remain <= 0) status = '已用完'
+  return { remain, expired, status }
+}
+/* 统一出参 (前端用驼峰, 与养生页既有字段保持一致) */
+function normalizeCard(c) {
+  const st = cardState(c)
+  return {
+    cardNo: c.card_no,
+    uid: Number(c.uid) || 0,
+    orderNo: c.order_no || '',
+    productId: Number(c.product_id) || 0,
+    productName: c.product_name || '',
+    total: Number(c.total) || 0,
+    remain: st.remain,
+    validDays: Number(c.valid_days) || 0,
+    expireAt: c.expire_at || '',
+    status: st.status,
+    createdAt: c.created_at || '',
+  }
+}
+/* 核销一次: 原子递减(where remain>0 + inc(-1)) + 写流水; uid 传 0 表示后台管理员操作 */
+async function doCardCheckin({ cardNo, uid, operator, platform }) {
+  await ensureCollection('health_cards')
+  await ensureCollection('health_checkins')
+  const card = (await db.collection('health_cards').where({ card_no: cardNo }).limit(1).get()).data[0]
+  if (!card) return fail('次卡不存在')
+  if (uid && Number(card.uid) !== Number(uid)) return fail('无权操作该次卡')
+  const st = cardState(card)
+  if (st.expired) return fail('次卡已过期，无法核销')
+  if (st.remain <= 0) return fail('该次卡次数已用完')
+  // 原子扣减: 只有 remain>0 才会命中, 防并发超扣
+  const upd = await db.collection('health_cards').where({ card_no: cardNo, remain: _.gt(0) }).update({
+    remain: _.inc(-1),
+    updated_at: nowCn(),
+  })
+  const changed = Number((upd && (upd.updated || (upd.stats && upd.stats.updated))) || 0)
+  if (!changed) return fail('核销失败，请重试')
+  const fresh = (await db.collection('health_cards').where({ card_no: cardNo }).limit(1).get()).data[0]
+  try {
+    await db.collection('health_checkins').add({
+      id: `CK${Date.now()}${Math.floor(Math.random() * 100)}`,
+      card_no: cardNo,
+      uid: Number(card.uid) || 0,
+      product_name: card.product_name || '',
+      operator: operator || 'user',
+      platform: String(platform || 'unknown'),
+      at: nowCn(),
+      at_ts: Date.now(),
+    })
+  } catch (e) { /* 流水失败不回滚核销, 主流程以次数为准 */ }
+  return ok({ card: normalizeCard(fresh), remain: Number(fresh.remain) || 0, message: '核销成功，已扣 1 次' })
+}
+/* 用户端: 我的次卡 */
+async function healthMyCards(data) {
+  const uid = Number(data.uid) || 0
+  if (!uid) return fail('请先登录')
+  await ensureCollection('health_cards')
+  const res = await db.collection('health_cards').where({ uid }).limit(100).get()
+  const list = (res.data || []).map(normalizeCard)
+  // 未用完且未过期的排前面, 其余按创建时间倒序
+  list.sort((a, b) => {
+    const av = a.status === '有效' ? 1 : 0
+    const bv = b.status === '有效' ? 1 : 0
+    if (av !== bv) return bv - av
+    return String(b.createdAt).localeCompare(String(a.createdAt))
+  })
+  return ok(list)
+}
+/* 用户端: 我的核销流水 */
+async function healthMyCheckins(data) {
+  const uid = Number(data.uid) || 0
+  if (!uid) return fail('请先登录')
+  await ensureCollection('health_checkins')
+  let rows = []
+  try {
+    const res = await db.collection('health_checkins').where({ uid }).limit(200).get()
+    rows = res.data || []
+  } catch (e) {}
+  rows.sort((a, b) => (Number(b.at_ts) || 0) - (Number(a.at_ts) || 0))
+  return ok(rows.map((r) => ({
+    id: r.id,
+    cardNo: r.card_no,
+    productName: r.product_name,
+    operator: r.operator,
+    at: r.at,
+    atTs: Number(r.at_ts) || 0,
+  })))
+}
+/* 用户端: 自助打卡核销 */
+async function healthCheckin(data) {
+  const uid = Number(data.uid) || 0
+  const cardNo = String(data.card_no || '').trim()
+  if (!uid) return fail('请先登录')
+  if (!cardNo) return fail('缺少次卡号')
+  return doCardCheckin({ cardNo, uid, operator: 'user', platform: data.platform })
+}
+/* 后台: 次卡列表 (含用户昵称) */
+async function adminCardsList(data) {
+  await ensureCollection('health_cards')
+  let rows = []
+  try {
+    const res = await db.collection('health_cards').orderBy('created_at', 'desc').limit(300).get()
+    rows = res.data || []
+  } catch (e) {
+    const res = await db.collection('health_cards').limit(300).get()
+    rows = res.data || []
+  }
+  // 用户昵称映射 (最多 1000 个用户, 与后台其它模块口径一致)
+  const nick = {}
+  try {
+    const us = await db.collection('users').limit(1000).get()
+    ;(us.data || []).forEach((u) => { nick[Number(u.uid)] = u.nickname || u.dao_code || ('UID ' + u.uid) })
+  } catch (e) {}
+  let list = rows.map((c) => ({ ...normalizeCard(c), nickname: nick[Number(c.uid)] || ('UID ' + c.uid) }))
+  // 状态筛选: 全部 / 有效 / 已用完 / 已过期
+  const st = String(data.status || '全部')
+  if (st !== '全部') list = list.filter((c) => c.status === st)
+  if (data.keyword) {
+    const kw = String(data.keyword)
+    list = list.filter((c) => (c.cardNo || '').includes(kw) || (c.productName || '').includes(kw) || (c.nickname || '').includes(kw))
+  }
+  return ok(list)
+}
+/* 后台: 核销一次 */
+async function adminCardsCheckin(data) {
+  const cardNo = String(data.card_no || '').trim()
+  if (!cardNo) return fail('缺少次卡号')
+  return doCardCheckin({ cardNo, uid: 0, operator: 'admin', platform: 'admin' })
+}
+/* 后台: 核销流水 (按次卡号或全部) */
+async function adminCardsCheckins(data) {
+  await ensureCollection('health_checkins')
+  let rows = []
+  try {
+    const q = data.card_no
+      ? db.collection('health_checkins').where({ card_no: String(data.card_no) })
+      : db.collection('health_checkins')
+    const res = await q.limit(300).get()
+    rows = res.data || []
+  } catch (e) {}
+  rows.sort((a, b) => (Number(b.at_ts) || 0) - (Number(a.at_ts) || 0))
+  return ok(rows)
+}
+
+/* 作废某订单发出的次卡 (退款/取消时调用, 防退款后继续消费) */
+async function revokeHealthCards(orderNo, reason) {
+  if (!orderNo) return
+  try {
+    await db.collection('health_cards').where({ order_no: String(orderNo) }).update({
+      remain: 0,
+      revoked: true,
+      revoke_reason: reason || '订单退款',
+      updated_at: nowCn(),
+    })
+  } catch (e) { /* 集合不存在/无次卡则忽略 */ }
+}
+
 /* 支付成功统一处理 (微信回调 / 主动查单 共用):
    1. 更新订单状态 (预约/课程/AI解盘/充值=已完成, 实体商品=待发货)
    2. 站内消息 + 服务号推送
@@ -3071,15 +3366,16 @@ async function markOrderPaid({ order_no, trade_no, openid }) {
   if (o.status !== '待付款' && o.status !== '待支付') return
   // 同步销量 (商品已售/库存, 课程学习人数) — 订单状态为待付款, 此处仅执行一次
   try { await syncSalesAfterPay(o) } catch (e) { console.error('[dy-api] syncSalesAfterPay:', e) }
-  // 预约/课程/AI解盘/充值 = 虚拟服务 → 已完成; 实体商品 → 待发货
-  const isVirtual = o.order_type === 'appointment' || o.order_type === 'course' || o.order_type === 'tool_unlock' || o.order_type === 'recharge'
-  const nextStatus = isVirtual ? '已完成' : '待发货'
+  // 预约/课程/AI解盘/充值/虚拟商品/养生次卡 = 虚拟服务 → 已完成; 实体商品 → 待发货
+  const nextStatus = orderPaidStatus(o)
   await db.collection('orders').where({ order_no }).update({
     status: nextStatus,
     pay_method: '微信支付',
     pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
     trade_no: trade_no || '',
   })
+  // 养生次卡商品: 支付成功即发卡(幂等), 用户「我的-功能板块-养生」立刻可见并打卡
+  try { await issueHealthCards(o) } catch (e) { console.error('[dy-api] issueHealthCards:', e && e.message) }
   try {
     if (!o.uid) return
     // 工具解锁订单: 消息文案不同, 不报虚拟发货
@@ -3195,12 +3491,14 @@ async function wxmpScheme(data) {
 async function wxpayCallback(event) {
   if (event && (event.returnCode === 'SUCCESS' || event.resultCode === 'SUCCESS') && event.outTradeNo) {
     const order_no = event.outTradeNo
+    const existOrder = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
     await db.collection('orders').where({ order_no }).update({
-      status: '待发货',
+      status: orderPaidStatus(existOrder), // 虚拟/次卡商品直接已完成
       pay_method: '微信支付',
       pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
       trade_no: event.transactionId || '',
     })
+    try { await issueHealthCards(existOrder) } catch (e) { console.error('[dy-api] issueHealthCards:', e && e.message) }
     try {
       const o = (await db.collection('orders').where({ order_no }).limit(1).get()).data[0]
       if (o && o.uid) {
@@ -3636,14 +3934,16 @@ async function orderPayBalance(data) {
   await db.collection('users').where({ uid: Number(uid) }).update({ balance: String(newBal) })
   // 同步销量 (商品已售/库存, 课程学习人数) — 仅待付款→已支付这一次
   try { await syncSalesAfterPay(order) } catch (e) {}
-  // 支付成功: 预约/虚拟商品标记已完成, 实体商品标记待发货
-  const nextStatus = order.order_type === 'appointment' || order.order_type === 'course' || order.order_type === 'tool_unlock' ? '已完成' : '待发货'
+  // 支付成功: 预约/课程/虚拟商品/养生次卡标记已完成, 实体商品标记待发货
+  const nextStatus = orderPaidStatus(order)
   await db.collection('orders').where({ order_no }).update({
     status: nextStatus,
     pay_method: '余额',
     balance_used: price,
     pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
+  // 养生次卡: 支付成功即发卡
+  try { await issueHealthCards(order) } catch (e) { console.error('[dy-api] issueHealthCards:', e && e.message) }
   // 课程支付成功自动发课
   if (order.order_type === 'course' && order.course_id) {
     try {
@@ -3665,13 +3965,15 @@ async function orderFreeConfirm(data) {
   if (price > 0) return fail('非免费订单，请完成支付')
   // 同步销量 (商品已售/库存, 课程学习人数)
   try { await syncSalesAfterPay(order) } catch (e) {}
-  const nextStatus = order.order_type === 'appointment' || order.order_type === 'course' || order.order_type === 'tool_unlock' ? '已完成' : '待发货'
+  const nextStatus = orderPaidStatus(order)
   await db.collection('orders').where({ order_no }).update({
     status: nextStatus,
     pay_method: '免费',
     balance_used: 0,
     pay_time: new Date().toLocaleString('zh-CN', { hour12: false }),
   })
+  // 养生次卡: 免费订单同样发卡
+  try { await issueHealthCards(order) } catch (e) { console.error('[dy-api] issueHealthCards:', e && e.message) }
   // 免费课程自动发课
   if (order.order_type === 'course' && order.course_id) {
     try { await buyCourse({ uid: Number(uid), course_id: order.course_id }) } catch (e) {}
@@ -4190,6 +4492,8 @@ const VIEWER_ROUTES = [
   'admin.feedbacks.list',
   'admin.aftersales.list',
   'admin.users.search',
+  'admin.cards.list', // 次卡核销: 只读列表 (manager/viewer 可查)
+  'admin.cards.checkins', // 次卡核销流水
 ]
 
 // 操作管理员(operator)禁止的操作: 用户创建/编辑 + 系统设置 + 数据库运维 (2026-08-26 用户确认: 用户管理/页面管理/系统设置仅超管可设置)
@@ -4391,6 +4695,7 @@ async function adminProductCreate(data) {
     stock: data.stock || 0,
     description: data.description || '',
     is_show: data.is_show !== false,
+    is_virtual: data.is_virtual === true, // 虚拟商品: 付款后立即完成, 无需发货 (次卡/课程类)
     attrs: data.attrs || {},
   }
   await db.collection('products').add(doc)
@@ -4399,7 +4704,7 @@ async function adminProductCreate(data) {
 
 async function adminProductUpdate(data) {
   const doc = {}
-  ;['name', 'subtitle', 'price', 'ot_price', 'images', 'cate_id', 'sales', 'stock', 'description', 'is_show', 'attrs', 'home_recommend'].forEach((k) => {
+  ;['name', 'subtitle', 'price', 'ot_price', 'images', 'cate_id', 'sales', 'stock', 'description', 'is_show', 'is_virtual', 'attrs', 'home_recommend'].forEach((k) => {
     if (data[k] !== undefined) doc[k] = data[k]
   })
   await db.collection('products').where({ id: Number(data.id) }).update(doc)
@@ -5204,6 +5509,8 @@ async function adminOrderRefund(data) {
     refund_at: new Date().toLocaleString('zh-CN', { hour12: false }),
     refund_reason: data.reason || '后台退款',
   })
+  // 养生次卡订单退款 → 作废该订单已发放的次卡 (防退款后继续消费)
+  try { await revokeHealthCards(data.order_no, data.reason || '订单退款') } catch (e) {}
   return ok({ updated: true, refunded: didRefund })
 }
 
@@ -6483,6 +6790,13 @@ const ROUTES = {
   'admin.courses.update': adminCourseUpdate,
   'admin.course.episode.update': adminCourseEpisodeUpdate,
   'admin.orders.ship': adminOrderShip,
+  /* 养生次卡: 用户端查询/自助核销 + 后台次卡核销模块 (2026-11-24, 只增接口) */
+  'health.myCards': healthMyCards,
+  'health.checkin': healthCheckin,
+  'health.checkins': healthMyCheckins,
+  'admin.cards.list': adminCardsList,
+  'admin.cards.checkin': adminCardsCheckin,
+  'admin.cards.checkins': adminCardsCheckins,
   'admin.orders.refund': adminOrderRefund,
   'admin.orders.refundCourse': adminCourseForceRefund,
   'admin.orders.reconcile': adminOrderReconcile,
