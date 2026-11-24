@@ -153,16 +153,24 @@ const rechargeList = ref([]) // 元宝充值记录
 const consumeList = ref([]) // 消费 / 退款记录
 const recordTab = ref('recharge') // recharge=充值记录, consume=消费记录
 
-/* UTC 字符串 → 东八区显示 (服务器生成时间为 UTC, Date.UTC 构造避免浏览器本地时区干扰) */
+/* 时间显示：接口返回的 created_at/pay_time/refund_at 已是东八区本地字符串
+   （云函数 new Date().toLocaleString('zh-CN') 直接写库，order.list 也会输出东八区），
+   这里绝不能再 +8 小时——旧实现把 17:06 显示成次日 01:06。
+   仅对 ISO UTC 串（带 T/Z）做 +8 转换，兼容少数 toISOString() 写入的数据。 */
 function fmtUtcTime(s) {
   if (!s) return '-'
-  const m = String(s).match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(?::(\d+))?/)
-  if (!m) return s
-  const [, y, mo, d, h, mi, se] = m
-  const t = Date.UTC(+y, +mo - 1, +d, +h, +mi, +(se || 0)) + 8 * 3600 * 1000
-  const dt = new Date(t)
+  const str = String(s)
   const p = (n) => String(n).padStart(2, '0')
-  return `${dt.getUTCFullYear()}/${dt.getUTCMonth() + 1}/${dt.getUTCDate()} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`
+  // ISO UTC: 2026-11-24T09:06:54.000Z → 北京时间
+  const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (iso) {
+    const dt = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], +iso[4], +iso[5]) + 8 * 3600 * 1000)
+    return `${dt.getUTCFullYear()}/${p(dt.getUTCMonth() + 1)}/${p(dt.getUTCDate())} ${p(dt.getUTCHours())}:${p(dt.getUTCMinutes())}`
+  }
+  // 本地串（YYYY/MM/DD 或 YYYY-MM-DD HH:mm:ss）：原样显示，仅统一补零
+  const m = str.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})\s+(\d{1,2}):(\d{1,2})/)
+  if (!m) return str
+  return `${m[1]}/${p(m[2])}/${p(m[3])} ${p(m[4])}:${p(m[5])}`
 }
 
 onLoad((options) => {

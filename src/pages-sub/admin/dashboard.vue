@@ -565,6 +565,7 @@
           <view class="module-head">
             <text class="module-title">订单管理（{{ sortedOrders.length }}）</text>
             <view class="btn-p plain sm" v-if="canWrite" style="margin-right: 16rpx;" @click="reconcileOrders">对账修复</view>
+            <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="resetColWidths">重置列宽</view>
             <view class="filter-pills">
               <text
                 v-for="s in orderTypeFilterOptions"
@@ -597,41 +598,39 @@
           </view>
           <!-- 表头与数据行同宽, 内容一律不换行, 整表可左右滑动
                (小程序端 view 的 overflow-x:auto 不产生滚动 → 用 scroll-view scroll-x 包裹) -->
-          <view class="table-scroll-tip">← 左右滑动表头，查看全部列 →</view>
+          <view class="table-scroll-tip">拖动表头右侧竖条可调列宽 · 表格可左右滑动查看全部列</view>
           <scroll-view scroll-x class="table-scroll">
-          <view class="table orders-table">
+          <view class="table orders-table" :style="tableStyle('orders')">
             <view class="tr th">
-              <text class="td w-no">订单号</text>
-              <text class="td w-user">用户名</text>
-              <text class="td w-name">商品</text>
-              <text class="td w-price sortable" @tap="toggleOrderSort('amount')">金额 {{ orderSortArrow('amount') }}</text>
-              <text class="td w-time sortable" @tap="toggleOrderSort('created_at')">下单时间 {{ orderSortArrow('created_at') }}</text>
-              <text class="td w-status">状态</text>
-              <view class="td w-channel" @tap="channelFilterMenu">
-                <text class="ch-filter" :class="{ on: channelFilter !== '全部' }">{{ channelFilterLabel }} ▾</text>
-              </view>
-              <text class="td w-ops w-ops-5" v-if="canWrite">操作</text>
+              <view class="td w-no" :style="cellStyle('orders', 'no')"><text>订单号</text><view class="col-rz" @touchstart="startResize($event, 'orders', 'no')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'orders', 'no')"></view></view>
+              <view class="td w-user" :style="cellStyle('orders', 'user')"><text>用户名</text><view class="col-rz" @touchstart="startResize($event, 'orders', 'user')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'orders', 'user')"></view></view>
+              <view class="td w-name" :style="cellStyle('orders', 'name')"><text>商品</text><view class="col-rz" @touchstart="startResize($event, 'orders', 'name')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'orders', 'name')"></view></view>
+              <view class="td w-price sortable" :style="cellStyle('orders', 'price')" @tap="toggleOrderSort('amount')"><text>金额 {{ orderSortArrow('amount') }}</text><view class="col-rz" @tap.stop @touchstart.stop="startResize($event, 'orders', 'price')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.stop.prevent="startResize($event, 'orders', 'price')"></view></view>
+              <view class="td w-time sortable" :style="cellStyle('orders', 'time')" @tap="toggleOrderSort('created_at')"><text>下单时间 {{ orderSortArrow('created_at') }}</text><view class="col-rz" @tap.stop @touchstart.stop="startResize($event, 'orders', 'time')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.stop.prevent="startResize($event, 'orders', 'time')"></view></view>
+              <view class="td w-status" :style="cellStyle('orders', 'status')"><text>状态</text><view class="col-rz" @touchstart="startResize($event, 'orders', 'status')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'orders', 'status')"></view></view>
+              <view class="td w-channel" :style="cellStyle('orders', 'channel')" @tap="channelFilterMenu"><text class="ch-filter" :class="{ on: channelFilter !== '全部' }">{{ channelFilterLabel }} ▾</text><view class="col-rz" @tap.stop @touchstart.stop="startResize($event, 'orders', 'channel')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.stop.prevent="startResize($event, 'orders', 'channel')"></view></view>
+              <view class="td w-ops w-ops-5" :style="cellStyle('orders', 'ops')" v-if="canWrite"><text>操作</text></view>
             </view>
             <view class="tr" v-for="o in sortedOrders" :key="o._id || o.order_no">
-              <text class="td w-no">{{ o.order_no }}</text>
-              <text class="td w-user ellipsis">{{ o.nickname || ('UID ' + o.uid) }}</text>
-              <text class="td w-name ellipsis">{{ (o.items || []).map((i) => i.name).join('、') }}</text>
+              <view class="td w-no" :style="cellStyle('orders', 'no')">{{ o.order_no }}</view>
+              <view class="td w-user ellipsis" :style="cellStyle('orders', 'user')">{{ o.nickname || ('UID ' + o.uid) }}</view>
+              <view class="td w-name ellipsis" :style="cellStyle('orders', 'name')">{{ (o.items || []).map((i) => i.name).join('、') }}</view>
               <!-- 现金营业额与元宝单独计账: 元宝支付单现金为 ¥0.00, 必须同时显示实际支付的元宝数 -->
-              <view class="td w-price td-amount">
+              <view class="td w-price td-amount" :style="cellStyle('orders', 'price')">
                 <text class="amt-cash">¥{{ o.total_price }}</text>
                 <text class="amt-points" v-if="orderPoints(o) > 0">{{ fmtPoints(orderPoints(o)) }} 元宝</text>
               </view>
-              <text class="td w-time">{{ fmtOrderTime(o.created_at) }}</text>
-              <view class="td w-status">
+              <text class="td w-time" :style="cellStyle('orders', 'time')">{{ fmtOrderTime(o.created_at) }}</text>
+              <view class="td w-status" :style="cellStyle('orders', 'status')">
                 <text :class="'st-' + stCls(o.status)">{{ o.status }}</text>
                 <text class="td-logis" v-if="o.logistics_company">[{{ o.logistics_company }} {{ o.tracking_no }}]</text>
               </view>
               <!-- 渠道列 (2026-11-06): 收款渠道, 表头可下拉筛选; unknown=老订单未记录 -->
-              <view class="td w-channel">
+              <view class="td w-channel" :style="cellStyle('orders', 'channel')">
                 <text class="td-platform" :class="'pf-' + pfCls(o.platform)" v-if="o.platform && o.platform !== 'unknown'">{{ pfText(o.platform) }}</text>
                 <text class="ch-none" v-else>—</text>
               </view>
-              <view class="td w-ops w-ops-5 ops" v-if="canWrite">
+              <view class="td w-ops w-ops-5 ops" :style="cellStyle('orders', 'ops')" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: o.status !== '待付款' }" @tap="payForOrder(o)">代收款</text>
                 <text class="op op-col" :class="{ hide: o.status !== '待发货' }" @tap="openShip(o)">发货</text>
                 <text class="op op-col danger" :class="{ hide: !canRefund(o) || userRole === 'staff' }" @tap="refundOrder(o)">退款</text>
@@ -648,6 +647,7 @@
           <view class="module-head">
             <text class="module-title">次卡核销（{{ sortedCards.length }}）</text>
             <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="loadCards">刷新</view>
+            <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="resetColWidths">重置列宽</view>
             <view class="btn-p plain sm" style="margin-right: 16rpx;" @click="showCardLogs(null)">全部流水</view>
             <view class="filter-pills">
               <text
@@ -671,34 +671,34 @@
             </view>
           </view>
 
-          <view class="table-scroll-tip">← 左右滑动表头，查看全部列 →</view>
+          <view class="table-scroll-tip">拖动表头右侧竖条可调列宽 · 表格可左右滑动查看全部列</view>
           <scroll-view scroll-x class="table-scroll">
-          <view class="table orders-table cards-table">
+          <view class="table orders-table cards-table" :style="tableStyle('cards')">
             <view class="tr th">
-              <text class="td w-no">次卡号</text>
-              <text class="td w-user">用户</text>
-              <text class="td w-name">商品</text>
-              <text class="td w-card-remark">备注</text>
-              <text class="td w-price">剩余/总次</text>
-              <text class="td w-time">有效期至</text>
-              <text class="td w-status">状态</text>
-              <text class="td w-ops w-ops-2" v-if="canWrite">操作</text>
+              <view class="td w-no" :style="cellStyle('cards', 'no')"><text>次卡号</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'no')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'no')"></view></view>
+              <view class="td w-user" :style="cellStyle('cards', 'user')"><text>用户</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'user')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'user')"></view></view>
+              <view class="td w-name" :style="cellStyle('cards', 'name')"><text>商品</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'name')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'name')"></view></view>
+              <view class="td w-card-remark" :style="cellStyle('cards', 'remark')"><text>备注</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'remark')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'remark')"></view></view>
+              <view class="td w-price" :style="cellStyle('cards', 'price')"><text>剩余/总次</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'price')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'price')"></view></view>
+              <view class="td w-time" :style="cellStyle('cards', 'time')"><text>有效期至</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'time')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'time')"></view></view>
+              <view class="td w-status" :style="cellStyle('cards', 'status')"><text>状态</text><view class="col-rz" @touchstart="startResize($event, 'cards', 'status')" @touchmove.stop="moveResize" @touchend="endResize" @mousedown.prevent="startResize($event, 'cards', 'status')"></view></view>
+              <view class="td w-ops w-ops-2" :style="cellStyle('cards', 'ops')" v-if="canWrite"><text>操作</text></view>
             </view>
             <view class="tr" v-for="c in sortedCards" :key="c.cardNo">
-              <text class="td w-no">{{ c.cardNo }}</text>
-              <text class="td w-user ellipsis">{{ c.nickname || ('UID ' + c.uid) }}</text>
-              <text class="td w-name ellipsis">{{ c.productName }}</text>
-              <!-- 备注: 发卡订单号, 点击跳订单管理并定位该单 -->
-              <view class="td w-card-remark">
-                <text class="card-order-link" v-if="c.orderNo" @tap="goCardOrder(c.orderNo)">订单 {{ c.orderNo }} ›</text>
+              <text class="td w-no" :style="cellStyle('cards', 'no')">{{ c.cardNo }}</text>
+              <text class="td w-user ellipsis" :style="cellStyle('cards', 'user')">{{ c.nickname || ('UID ' + c.uid) }}</text>
+              <text class="td w-name ellipsis" :style="cellStyle('cards', 'name')">{{ c.productName }}</text>
+              <!-- 备注: 发卡订单号, 强制单行不换行 + 超出省略; 点击跳订单管理并定位该单 -->
+              <view class="td w-card-remark" :style="cellStyle('cards', 'remark')">
+                <text class="card-order-link" v-if="c.orderNo" @tap="goCardOrder(c.orderNo)">{{ c.orderNo }} ›</text>
                 <text class="card-remark-none" v-else>—</text>
               </view>
-              <text class="td w-price">{{ c.remain }} / {{ c.total }}</text>
-              <text class="td w-time">{{ (c.expireAt || '').slice(0, 10) }}</text>
-              <view class="td w-status">
+              <text class="td w-price" :style="cellStyle('cards', 'price')">{{ c.remain }} / {{ c.total }}</text>
+              <text class="td w-time" :style="cellStyle('cards', 'time')">{{ (c.expireAt || '').slice(0, 10) }}</text>
+              <view class="td w-status" :style="cellStyle('cards', 'status')">
                 <text :class="'st-' + cardStCls(c.status)">{{ c.status }}</text>
               </view>
-              <view class="td w-ops w-ops-2 ops" v-if="canWrite">
+              <view class="td w-ops w-ops-2 ops" :style="cellStyle('cards', 'ops')" v-if="canWrite">
                 <text class="op op-col" :class="{ hide: c.status !== '有效' }" @tap="checkinCard(c)">核销1次</text>
                 <text class="op op-col" @tap="showCardLogs(c)">核销流水</text>
               </view>
@@ -2122,6 +2122,69 @@ async function loadCourseCates() {
     ;(g[key] = g[key] || []).push(c)
   })
   courseGrouped.value = g
+}
+
+/* ===== 表头拖动调列宽 (订单 / 次卡两张表) =====
+   - 列宽存 rpx 数值, 表头与数据行用同一份 colW → 表头/行严格对齐
+   - H5 mousedown/mousemove/mouseup; 小程序 touchstart/touchmove/touchend
+   - 鼠标/手指位移 px → rpx: 1rpx = uni.upx2px(1) px, 避免 PC/手机换算差异 */
+const DEFAULT_COL_W = {
+  orders: { no: 240, user: 120, name: 300, price: 130, time: 280, status: 130, channel: 150, ops: 580 },
+  cards: { no: 260, user: 120, name: 220, remark: 340, price: 130, time: 220, status: 130, ops: 260 },
+}
+const colW = reactive({
+  orders: { ...DEFAULT_COL_W.orders },
+  cards: { ...DEFAULT_COL_W.cards },
+})
+const COL_MIN = 90
+function cellStyle(table, key) {
+  const w = colW[table] && colW[table][key]
+  // flex:0 0 auto 保证内联 width 不被 .w-name 等列的 flex-basis 覆盖(尤其 PC media)
+  return w ? { width: w + 'rpx', flex: '0 0 auto' } : {}
+}
+function tableStyle(table) {
+  const cols = colW[table]
+  if (!cols) return {}
+  // 表格总宽 = 各列宽之和 + 行左右 padding(48rpx), 保证横向滚动范围随拖动同步增长
+  const total = Object.keys(cols).reduce((s, k) => s + cols[k], 0) + 48
+  return { width: total + 'rpx' }
+}
+let resizeState = null // { table, key, startX, startW }
+function pxToRpx(px) {
+  const unit = (typeof uni !== 'undefined' && uni.upx2px) ? uni.upx2px(1) : 0.5
+  return unit > 0 ? px / unit : px * 2
+}
+function startResize(e, table, key) {
+  const p = (e.touches && e.touches[0]) || e
+  const x = Number(p.clientX || 0)
+  resizeState = { table, key, startX: x, startW: colW[table][key] }
+  // H5: 鼠标移动事件挂在 document 上, 移出手柄也能继续拖
+  // #ifdef H5
+  if (typeof document !== 'undefined') {
+    document.addEventListener('mousemove', moveResize)
+    document.addEventListener('mouseup', endResize)
+  }
+  // #endif
+}
+function moveResize(e) {
+  if (!resizeState) return
+  const p = (e.touches && e.touches[0]) || e
+  const x = Number(p.clientX || 0)
+  const next = Math.round(resizeState.startW + pxToRpx(x - resizeState.startX))
+  colW[resizeState.table][resizeState.key] = Math.max(COL_MIN, Math.min(1200, next))
+}
+function endResize() {
+  resizeState = null
+  // #ifdef H5
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('mousemove', moveResize)
+    document.removeEventListener('mouseup', endResize)
+  }
+  // #endif
+}
+function resetColWidths() {
+  colW.orders = { ...DEFAULT_COL_W.orders }
+  colW.cards = { ...DEFAULT_COL_W.cards }
 }
 
 function switchModule(key) {
@@ -5308,6 +5371,7 @@ onMounted(async () => {
 // #ifdef H5
 onUnmounted(() => {
   try { document.querySelector('uni-page-head')?.classList.remove('dy-nav-red') } catch (e) { /* 忽略 */ }
+  endResize() // 清理表头拖动挂在 document 上的监听
 })
 // #endif
 </script>
@@ -5999,13 +6063,18 @@ onUnmounted(() => {
 /* 次卡核销: 备注列 = 发卡订单号, 可点击跳订单管理 */
 .cards-table .tr { min-width: 2100rpx; }
 /* 专用类名: 不能复用 .w-remark (用户管理表格的备注列已占用该类名) */
-.w-card-remark { width: 300rpx; font-size: 20rpx; white-space: nowrap; overflow: hidden; }
+.w-card-remark { width: 340rpx; min-width: 0; font-size: 20rpx; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+/* 订单号强制单行: 不换行 + 超出省略, 杜绝"备注栏订单跨行" */
 .card-order-link {
+  display: block;
+  width: 100%;
   color: #9c1630;
   text-decoration: underline;
   cursor: pointer;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.6;
 }
 .card-order-link:active { color: #c4753a; }
 .card-remark-none { color: #8a857c; }
@@ -6032,12 +6101,19 @@ onUnmounted(() => {
 }
 /* 所有单元格（含表头）文字一律不折行; 金额列的现金/元宝双行是刻意分账展示, 不受影响 */
 .table-scroll .tr .td { white-space: nowrap; }
-.table-scroll .orders-table .w-name {
-  flex: 0 0 300rpx;
-  width: 300rpx;
-  min-width: 300rpx;
-  max-width: 300rpx;
+/* 列宽由 :style(cellStyle) 内联 rpx 控制(表头/数据行共用), 这里只兜底 */
+.table-scroll .orders-table .w-name { min-width: 0; max-width: none; }
+/* 表头拖动把手: 贴在每列右边缘, 加宽点击热区(视觉竖条细, 热区 24rpx) */
+.table-scroll .th .td { position: relative; }
+.col-rz {
+  position: absolute; right: -12rpx; top: 0; bottom: 0; width: 24rpx;
+  z-index: 3; cursor: col-resize; touch-action: none;
 }
+.col-rz::after {
+  content: ''; position: absolute; right: 11rpx; top: 20%; bottom: 20%;
+  width: 3rpx; border-radius: 3rpx; background: rgba(156, 22, 48, 0.28);
+}
+.col-rz:active::after { background: #9c1630; }
 /* ===== 次卡核销流水弹层: 用户自助(绿) / 管理员代核(红) ===== */
 .cl-sheet { max-width: 900rpx; }
 .cl-head { display: flex; justify-content: space-between; align-items: center; }
