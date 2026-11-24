@@ -37,8 +37,8 @@
               <text class="rr-time">时间：{{ fmtUtcTime(o.created_at) }}</text>
             </view>
             <view class="rr-right">
-              <text class="rr-amt">+{{ pointsOfRecharge(o) }} 元宝<text class="rr-points">（¥{{ (Number(o.total_price) || 0).toFixed(2) }}）</text></text>
-              <text class="rr-status" :class="{ paid: o.status === '已支付' || o.status === '已完成' }">{{ o.status }}</text>
+              <text class="rr-amt">{{ Number(pointsOfRecharge(o)) > 0 ? '+' : '' }}{{ pointsOfRecharge(o) }} 元宝<text class="rr-points">（¥{{ (Number(o.total_price) || 0).toFixed(2) }}）</text></text>
+              <text class="rr-status" :class="{ paid: o.status === '已支付' || o.status === '已完成' }">{{ o.status === '待付款' || o.status === '待支付' ? '待付款 · 未入账' : o.status }}</text>
             </view>
           </view>
         </view>
@@ -61,7 +61,7 @@
               <text class="rr-time">{{ fmtUtcTime(c.at) }} · {{ c.order_no }}</text>
             </view>
             <view class="rr-right">
-              <text class="cr-amt" :class="c.plus ? 'plus' : 'minus'">{{ c.plus ? '+' : '-' }}{{ fmtPoints(c.amount) }}<text class="cr-unit"> 元宝</text></text>
+              <text class="cr-amt" :class="c.plus ? 'plus' : 'minus'">{{ c.amount > 0 ? (c.plus ? '+' : '-') : '' }}{{ fmtPoints(c.amount) }}<text class="cr-unit"> 元宝</text></text>
               <text class="rr-status" :class="{ paid: c.status === '已完成' }">{{ c.status }}</text>
             </view>
           </view>
@@ -198,8 +198,11 @@ async function load() {
 /* 元宝换算: 1 元 = 10 元宝 (与充值/结算页一致) */
 const POINTS_PER_YUAN = 10
 
-/* 充值到账元宝数: 优先 recharge_points, 否则按 1元=10元宝 折算 */
+/* 充值到账元宝数: 只有付款成功(已完成/已支付)才正式入账;
+   待付款/待支付/已取消 显示 0 (未入账) */
 function pointsOfRecharge(o) {
+  const paid = ['已完成', '已支付'].includes(String(o.status || ''))
+  if (!paid) return '0'
   const p = Number(o.recharge_points)
   if (Number.isFinite(p) && p > 0) return fmtPoints(p)
   return fmtPoints((Number(o.total_price) || 0) * POINTS_PER_YUAN)
@@ -242,19 +245,17 @@ function buildPointsRecords(orders) {
     if (!isYuanbaoOrder(o)) return // 微信渠道不体现
     if (['待付款', '待支付', '已取消', '已结束'].includes(o.status)) return
     const title = (o.items || []).map((i) => i && i.name).filter(Boolean).join('、') || o.session_title || '订单消费'
-    // 1) 消费记录 (元宝扣减)
-    const used = pointsOfOrder(o)
-    if (used > 0) {
-      out.push({
-        key: o.order_no + '-use',
-        order_no: o.order_no,
-        title,
-        amount: used,
-        plus: false,
-        at: o.pay_time || o.created_at || '',
-        status: o.status,
-      })
-    }
+    // 1) 消费记录 (元宝出账): 元宝渠道订单一律列出; 金额可能为 0
+    //    (历史元宝支付订单 total_price=0 且 balance_used 被清零 → 实际未扣元宝, 这里如实展示 0)
+    out.push({
+      key: o.order_no + '-use',
+      order_no: o.order_no,
+      title,
+      amount: pointsOfOrder(o),
+      plus: false,
+      at: o.pay_time || o.created_at || '',
+      status: o.status,
+    })
     // 2) 退款记录 (元宝退回): 仅当确实退到元宝才展示; 微信原路退的不体现
     if (o.status === '已退款' || o.refund_balance_points > 0 || Number(o.refund_balance_amount) > 0) {
       const back = refundPointsOfOrder(o)
@@ -503,8 +504,8 @@ async function confirmRecharge() {
   margin-right: 10rpx;
   flex-shrink: 0;
 }
-.cr-badge.minus { color: #c41e3a; background: #fbe9ec; }
-.cr-badge.plus { color: #2e7d32; background: #eaf4ea; }
+.cr-badge.minus { color: #2e7d32; background: #eaf4ea; }
+.cr-badge.plus { color: #c41e3a; background: #fbe9ec; }
 .cr-title {
   font-size: 25rpx;
   color: #2a2a2a;
@@ -514,8 +515,9 @@ async function confirmRecharge() {
   font-size: 30rpx;
   font-weight: 600;
 }
-.cr-amt.minus { color: #c41e3a; }
-.cr-amt.plus { color: #2e7d32; }
+/* 颜色规则 (用户要求): 出账(消费 -) 绿色, 进账(退款 +) 红色 */
+.cr-amt.minus { color: #2e7d32; }
+.cr-amt.plus { color: #c41e3a; }
 .cr-unit {
   font-size: 20rpx;
   font-weight: 400;
@@ -523,8 +525,8 @@ async function confirmRecharge() {
 }
 .rr-legend { font-size: 20rpx; color: #8a857c; }
 .lg { margin-left: 10rpx; }
-.lg.minus { color: #c41e3a; }
-.lg.plus { color: #2e7d32; }
+.lg.minus { color: #2e7d32; }
+.lg.plus { color: #c41e3a; }
 .rr-empty {
   padding: 50rpx 0;
   text-align: center;
